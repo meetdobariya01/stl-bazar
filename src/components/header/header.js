@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Navbar, Container, Form, FormControl } from "react-bootstrap";
+import { Navbar, Container, Form, FormControl,Nav } from "react-bootstrap";
 import {
   FaHeart,
   FaUser,
@@ -13,6 +13,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { NavLink } from "react-router-dom";
+
 import "./header.css";
 
 const Header = () => {
@@ -122,8 +124,9 @@ const Header = () => {
             </Form>
 
             <div className="mobile-links">
-              <span onClick={() => navigate("/wishlist")}>Wishlist</span>
-              <span onClick={() => navigate("/login")}>My Account</span>
+              <span onClick={() => navigate("/aboutus")}>About Us</span>
+              <span onClick={() => navigate("/Product")}>Product</span>
+               <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
           </motion.div>
         )}
@@ -176,6 +179,41 @@ const Header = () => {
           </motion.div>
         )}
       </AnimatePresence>
+        {/* navbar */}
+      <Navbar expand="lg" className="main-navbar" sticky="top">
+        <Container>
+          {/* LOGO */}
+          {/* <Navbar.Brand as={NavLink} to="/">
+          <img src="/images/logo.png" alt="Logo" className="nav-logo" />
+        </Navbar.Brand> */}
+
+          {/* TOGGLE */}
+          <Navbar.Toggle aria-controls="navbar-nav" />
+
+          <Navbar.Collapse id="navbar-nav">
+            <Nav className="mx-auto nav-links">
+              <motion.div whileHover={{ y: -2 }}>
+                <Nav.Link as={NavLink} to="/about">
+                  About Us
+                </Nav.Link>
+              </motion.div>
+
+              <motion.div whileHover={{ y: -2 }}>
+                {" "}
+                <Nav.Link as={NavLink} to="/products">
+                  Products
+                </Nav.Link>{" "}
+              </motion.div>
+
+              <motion.div whileHover={{ y: -2 }}>
+                <Nav.Link as={NavLink} to="/contact">
+                  Contact Us
+                </Nav.Link>
+              </motion.div>
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
     </>
   );
 };
