@@ -15,9 +15,6 @@ const Home = () => {
       {/* header */}
       <Header />
 
-      {/* navbar */}
-      <Mainnavbar/>
-
       {/* carousel */}
       <Carouselhero />
 

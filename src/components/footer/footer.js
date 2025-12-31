@@ -22,7 +22,7 @@ const Footer = () => {
 
   return (
     <>
-      <footer className="footer-section">
+      <footer className="footer-section funnel-sans">
         <Container fluid>
           {/* DESKTOP VIEW */}
           <Row className="d-none d-md-flex">
@@ -45,7 +45,7 @@ const Footer = () => {
             </Col>
 
             <Col md={2}>
-              <h5>INFO</h5>
+              <h5 className="lexend">INFO</h5>
               <ul>
                 <li>Our Story</li>
                 <li>Contact Us</li>
@@ -59,12 +59,12 @@ const Footer = () => {
             </Col>
 
             <Col md={3}>
-              <h5>OUR PROGRAMS</h5>
+              <h5 className="lexend">OUR PROGRAMS</h5>
               <ul>
                 <li>E-Gift Voucher</li>
               </ul>
 
-              <h5 className="mt-4">FOLLOW US ON</h5>
+              <h5 className="mt-4 lexend">FOLLOW US ON</h5>
               <div className="social-icons">
                 {/* <a href="https://facebook.com" target="_blank">
                   <FaFacebookF />
@@ -85,7 +85,7 @@ const Footer = () => {
             </Col>
 
             <Col md={3}>
-              <h5>POLICY</h5>
+              <h5 className="lexend">POLICY</h5>
               <ul>
                 <li>Disclaimer</li>
                 <li>Terms & Conditions</li>

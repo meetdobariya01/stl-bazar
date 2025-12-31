@@ -16,6 +16,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 // import { NavLink } from "react-router-dom";
 
 import "./header.css";
+import Mainnavbar from "../navbar/navbar";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ const Header = () => {
               <FormControl
                 type="search"
                 placeholder="Search"
-                className="search-input"
+                className="search-input lexend"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -114,7 +115,7 @@ const Header = () => {
               <FormControl
                 type="search"
                 placeholder="Search"
-                className="search-input"
+                className="search-input lexend"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -123,7 +124,7 @@ const Header = () => {
               </button>
             </Form>
 
-            <div className="mobile-links">
+            <div className="mobile-links lexend">
               <span onClick={() => navigate("/aboutus")}>About Us</span>
               <span onClick={() => navigate("/Product")}>Product</span>
               <span onClick={() => navigate("/contactus")}>Contact Us</span>
@@ -179,6 +180,9 @@ const Header = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* OVERLAY */}
+      <Mainnavbar />
     </>
   );
 };
