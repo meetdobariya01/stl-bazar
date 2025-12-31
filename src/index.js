@@ -1,19 +1,23 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import React from "react";
+import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import './index.css';
-// import App from './App';
-import reportWebVitals from './reportWebVitals';
-import Home from './pages/home/home';
-import Aboutus from './pages/aboutus/aboutus';
+import "./index.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
+import Home from "./pages/home/home";
+import Aboutus from "./pages/aboutus/aboutus";
+import ContactUs from "./pages/contactus/contactus";
+import Product from "./pages/product/product";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-   <Router>
+  <Router>
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/aboutus" element={<Aboutus/>} />
+      <Route path="/aboutus" element={<Aboutus />} />
+      <Route path="/contactus" element={<ContactUs />} />
+      <Route path="/product" element={<Product />} />
     </Routes>
   </Router>
 );
