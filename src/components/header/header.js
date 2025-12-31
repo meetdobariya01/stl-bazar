@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Navbar, Container, Form, FormControl, Nav } from "react-bootstrap";
+import { Navbar, Container, Form, FormControl } from "react-bootstrap";
 import {
   FaHeart,
   FaUser,
@@ -13,7 +13,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { NavLink } from "react-router-dom";
+// import { NavLink } from "react-router-dom";
 
 import "./header.css";
 
@@ -86,10 +86,10 @@ const Header = () => {
 
           {/* ICONS */}
           <div className="icon-group">
-            <FaSearch
+            {/* <FaSearch
               className="mobile-only"
               onClick={() => setShowMobileMenu(true)}
-            />
+            /> */}
             <FaHeart onClick={() => navigate("/wishlist")} />
             <FaUser onClick={() => navigate("/login")} />
             <div className="cart-icon" onClick={() => setShowCart(true)}>

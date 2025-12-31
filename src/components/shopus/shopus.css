@@ -1,0 +1,63 @@
+.why-shop-section {
+  padding: 80px 0;
+  background: #f9fafb;
+}
+
+.why-header h2 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.why-header p {
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.why-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 35px 25px;
+  text-align: center;
+  height: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.why-icon {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: #053262;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+}
+
+.why-card h5 {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.why-card p {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+/* Mobile Optimization */
+@media (max-width: 767px) {
+  .why-shop-section {
+    padding: 60px 15px;
+  }
+
+  .why-header h2 {
+    font-size: 26px;
+  }
+
+  .why-card {
+    padding: 30px 20px;
+  }
+}

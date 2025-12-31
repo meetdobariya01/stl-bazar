@@ -1,0 +1,70 @@
+/* Desktop only */
+.desktop-navbar {
+  background: #D2DCD6;
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
+
+/* Hide on mobile */
+@media (max-width: 991px) {
+  .desktop-navbar {
+    display: none;
+  }
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-links .nav-link,
+.nav-links .dropdown-toggle {
+  font-size: 15px;
+  font-weight: 500;
+  color: #444;
+  padding: 6px 10px;
+  white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.nav-links .nav-link:hover,
+.nav-links .dropdown-toggle:hover {
+  color: #a3001b;
+}
+
+/* Deals & Gifting highlight */
+.highlight {
+  color: #a3001b !important;
+  font-weight: 600;
+}
+
+/* Dropdown animation */
+.dropdown-menu {
+  border: none;
+  border-radius: 8px;
+  margin-top: 8px;
+  animation: fadeDown 0.3s ease;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+.dropdown-item:hover {
+  background: #f7f7f7;
+  color: #a3001b;
+}
