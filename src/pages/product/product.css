@@ -1,0 +1,104 @@
+.values-section {
+  padding: 80px 0;
+  background: #ffffff;
+}
+
+.value-row {
+  margin-bottom: 60px;
+}
+
+/* Images */
+.value-image {
+  width: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+/* Content box */
+.value-content {
+  padding: 40px;
+  border-radius: 6px;
+}
+
+.value-content h4 {
+  margin-bottom: 15px;
+  font-size: 22px;
+}
+
+.value-content p {
+  font-size: 16px;
+  color: #444;
+  line-height: 1.7;
+}
+
+/* Background styles */
+.value-content.light {
+  background: #f4f0e3;
+}
+
+.value-content.rose {
+  background: #d9a091;
+  color: #fff;
+}
+
+.value-content.rose p {
+  color: #fff;
+}
+
+.value-content.dark {
+  background: #8b4b3e;
+  color: #fff;
+}
+
+.value-content.dark p {
+  color: #fff;
+}
+.buy-btn {
+  margin-top: 20px;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 30px;
+  background: #d9a091;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.buy-btn:hover {
+  background: #fff;
+    color: #d9a091;
+}
+
+/* Dark / Rose background support */
+.value-content.dark .buy-btn,
+.value-content.rose .buy-btn {
+  background: #f4f0e3;
+  color: #333;
+}
+
+.value-content.dark .buy-btn:hover,
+.value-content.rose .buy-btn:hover {
+  background: #f1f1f1;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .buy-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .value-content {
+    margin-top: 20px;
+    padding: 30px;
+  }
+
+  .value-row {
+    margin-bottom: 40px;
+  }
+}
