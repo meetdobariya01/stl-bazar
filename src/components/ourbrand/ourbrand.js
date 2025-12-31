@@ -35,9 +35,9 @@ const Ourbrand = () => {
   };
 
   return (
-    <section className="featured-section">
+    <section className="featured-section funnel-sans">
       <div className="featured-fullwidth full-width-carousel">
-        <div className="featured-header">
+        <div className="featured-header container lexend">
           <h2>OUR BRAND</h2>
           <button
             className="view-all"

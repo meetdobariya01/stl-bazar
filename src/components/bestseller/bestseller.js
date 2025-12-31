@@ -125,8 +125,8 @@ const Bestseller = () => {
                     <Card>
                       <Card.Img src={item.image} />
 
-                      <Card.Body>
-                        <h6>{item.name}</h6>
+                      <Card.Body className="funnel-sans">
+                        <h5 className="lexend">{item.name}</h5>
 
                         <div className="rating">
                           {[...Array(item.rating)].map((_, i) => (
