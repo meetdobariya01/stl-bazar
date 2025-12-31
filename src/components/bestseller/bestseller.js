@@ -99,7 +99,7 @@ const Bestseller = () => {
   );
 
   return (
-    <section className="bestseller-section">
+    <section className="bestseller-section container">
       <Container fluid>
         <h2 className="section-title mt-5">BESTSELLER</h2>
 
