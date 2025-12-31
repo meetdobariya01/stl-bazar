@@ -1,0 +1,25 @@
+/* hero section */
+
+.image-carousel {
+  width: 100%;
+}
+
+/* IMAGE */
+.carousel-img {
+  height: auto;
+  object-fit: cover;
+}
+
+/* ARROWS */
+.carousel-control-prev,
+.carousel-control-next {
+  width: 6%;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .carousel-img {
+    height: auto;
+  }
+}
+/* tablet */

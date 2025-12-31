@@ -6,13 +6,14 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import Home from './pages/home/home';
+import Aboutus from './pages/aboutus/aboutus';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
    <Router>
     <Routes>
       <Route path="/" element={<Home />} />
-      
+      <Route path="/aboutus" element={<Aboutus/>} />
     </Routes>
   </Router>
 );
