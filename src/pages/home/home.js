@@ -7,6 +7,7 @@ import Mainnavbar from "../../components/navbar/navbar";
 import Bestseller from "../../components/bestseller/bestseller";
 import Ourbrand from "../../components/ourbrand/ourbrand";
 import Shopus from "../../components/shopus/shopus";
+import Newlunch from "../../components/newlunch/newlunch";
 
 const Home = () => {
   return (
@@ -28,6 +29,9 @@ const Home = () => {
 
       {/* shop with us */}
       <Shopus/>
+
+      {/* new lunch */}
+      <Newlunch/>
 
       {/* footer */}
       <Footer />

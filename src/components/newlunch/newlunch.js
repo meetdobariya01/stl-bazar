@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Carousel, Card, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { FaStar, FaShoppingCart, FaTruck } from "react-icons/fa";
-import "./bestseller.css";
+import "./newlunch.css";
 
 const products = [
   {
@@ -85,7 +85,7 @@ const chunk = (arr, size) =>
     return acc;
   }, []);
 
-const Bestseller = () => {
+const Newlunch = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [qty, setQty] = useState({});
 
@@ -108,7 +108,7 @@ const Bestseller = () => {
   return (
     <section className="bestseller-section">
       <Container fluid>
-        <h2 className="section-title">BESTSELLER</h2>
+        <h2 className="section-title">NEW lunch</h2>
 
         <Carousel indicators={false} interval={3000} pause={false} touch>
           {slides.map((group, index) => (
@@ -173,4 +173,4 @@ const Bestseller = () => {
   );
 };
 
-export default Bestseller;
+export default Newlunch;
