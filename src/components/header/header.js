@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Navbar, Container, Form, FormControl,Nav } from "react-bootstrap";
+import { Navbar, Container, Form, FormControl, Nav } from "react-bootstrap";
 import {
   FaHeart,
   FaUser,
@@ -126,7 +126,7 @@ const Header = () => {
             <div className="mobile-links">
               <span onClick={() => navigate("/aboutus")}>About Us</span>
               <span onClick={() => navigate("/Product")}>Product</span>
-               <span onClick={() => navigate("/contactus")}>Contact Us</span>
+              <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
           </motion.div>
         )}
@@ -179,41 +179,6 @@ const Header = () => {
           </motion.div>
         )}
       </AnimatePresence>
-        {/* navbar */}
-      <Navbar expand="lg" className="main-navbar" sticky="top">
-        <Container>
-          {/* LOGO */}
-          {/* <Navbar.Brand as={NavLink} to="/">
-          <img src="/images/logo.png" alt="Logo" className="nav-logo" />
-        </Navbar.Brand> */}
-
-          {/* TOGGLE */}
-          <Navbar.Toggle aria-controls="navbar-nav" />
-
-          <Navbar.Collapse id="navbar-nav">
-            <Nav className="mx-auto nav-links">
-              <motion.div whileHover={{ y: -2 }}>
-                <Nav.Link as={NavLink} to="/about">
-                  About Us
-                </Nav.Link>
-              </motion.div>
-
-              <motion.div whileHover={{ y: -2 }}>
-                {" "}
-                <Nav.Link as={NavLink} to="/products">
-                  Products
-                </Nav.Link>{" "}
-              </motion.div>
-
-              <motion.div whileHover={{ y: -2 }}>
-                <Nav.Link as={NavLink} to="/contact">
-                  Contact Us
-                </Nav.Link>
-              </motion.div>
-            </Nav>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
     </>
   );
 };
