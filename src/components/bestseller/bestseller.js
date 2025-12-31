@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Button, Carousel } from "react-bootstrap";
+import { Container, Carousel, Card, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaStar, FaShoppingCart } from "react-icons/fa";
+import { FaStar, FaShoppingCart, FaTruck } from "react-icons/fa";
 import "./bestseller.css";
 
 const products = [
@@ -41,108 +41,133 @@ const products = [
     rating: 4,
     reviews: 6,
   },
+  {
+    id: 5,
+    name: "Roasted Almonds",
+    image: "/images/almond.jpg",
+    price: 280,
+    oldPrice: 295,
+    rating: 4,
+    reviews: 9,
+  }, {
+    id: 5,
+    name: "Roasted Almonds",
+    image: "/images/almond.jpg",
+    price: 280,
+    oldPrice: 295,
+    rating: 4,
+    reviews: 9,
+  },
+   {
+    id: 5,
+    name: "Roasted Almonds",
+    image: "/images/almond.jpg",
+    price: 280,
+    oldPrice: 295,
+    rating: 4,
+    reviews: 9,
+  },
+   {
+    id: 5,
+    name: "Roasted Almonds",
+    image: "/images/almond.jpg",
+    price: 280,
+    oldPrice: 295,
+    rating: 4,
+    reviews: 9,
+  },
 ];
+
+// utility
+const chunk = (arr, size) =>
+  arr.reduce((acc, _, i) => {
+    if (i % size === 0) acc.push(arr.slice(i, i + size));
+    return acc;
+  }, []);
 
 const Bestseller = () => {
   const [isMobile, setIsMobile] = useState(false);
-  const [cart, setCart] = useState([]);
+  const [qty, setQty] = useState({});
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const resize = () => setIsMobile(window.innerWidth < 768);
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
   }, []);
 
-  const addToCart = (product) => {
-    setCart([...cart, product]);
-    alert(`${product.name} added to cart`);
+  const slides = chunk(products, isMobile ? 2 : 4);
+
+  const changeQty = (id, val) => {
+    setQty((prev) => ({
+      ...prev,
+      [id]: Math.max(1, (prev[id] || 1) + val),
+    }));
   };
-
-  // 👉 split products into groups of 2 for mobile carousel
-  const mobileSlides = [];
-  for (let i = 0; i < products.length; i += 2) {
-    mobileSlides.push(products.slice(i, i + 2));
-  }
-
-  const ProductCard = ({ item }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -8 }}
-      transition={{ duration: 0.4 }}
-    >
-      <Card className="bestseller-card">
-        <Card.Img src={item.image} />
-        <Card.Body>
-          <h6>{item.name}</h6>
-
-          <div className="rating">
-            {[...Array(item.rating)].map((_, i) => (
-              <FaStar key={i} />
-            ))}
-            <span>({item.reviews})</span>
-          </div>
-
-          <div className="price">
-            <span className="old">₹{item.oldPrice}</span>
-            <span className="new">₹{item.price}</span>
-            <span className="off">5% Off</span>
-          </div>
-
-          <Button className="cart-btn" onClick={() => addToCart(item)}>
-            <FaShoppingCart />
-          </Button>
-        </Card.Body>
-      </Card>
-    </motion.div>
-  );
 
   return (
     <section className="bestseller-section">
       <Container fluid>
-        <h2 className="section-title mt-5">BESTSELLER</h2>
+        <h2 className="section-title">BESTSELLER</h2>
 
-        {/* MOBILE: 2 ITEMS PER SLIDE */}
-        {isMobile ? (
-          <Carousel
-            interval={2500}
-            controls={false}
-            indicators={false}
-            pause={false}
-            touch
-          >
-            {mobileSlides.map((slide, index) => (
-              <Carousel.Item key={index}>
-                <Row>
-                  {slide.map((item) => (
-                    <Col xs={6} key={item.id}>
-                      <ProductCard item={item} />
-                    </Col>
-                  ))}
-                </Row>
-              </Carousel.Item>
-            ))}
-          </Carousel>
-        ) : (
-          /* DESKTOP GRID */
-        <Row className="justify-content-center">
-  {products.map((item) => (
-    <Col
-      key={item.id}
-      xl={2}
-      lg={3}
-      md={4}
-      sm={6}
-      xs={6}
-      className="d-flex justify-content-center"
-    >
-      <ProductCard item={item} />
-    </Col>
-  ))}
-</Row>
+        <Carousel indicators={false} interval={3000} pause={false} touch>
+          {slides.map((group, index) => (
+            <Carousel.Item key={index}>
+              <div className="bestseller-row">
+                {group.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    className="bestseller-card"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <Card>
+                      <Card.Img src={item.image} />
 
-        )}
+                      <Card.Body>
+                        <h6>{item.name}</h6>
+
+                        <div className="rating">
+                          {[...Array(item.rating)].map((_, i) => (
+                            <FaStar key={i} />
+                          ))}
+                          <span>({item.reviews})</span>
+                        </div>
+
+                        <div className="price">
+                          <span className="old">₹{item.oldPrice}</span>
+                          <span className="new">₹{item.price}</span>
+                          <span className="off">5% Off</span>
+                        </div>
+
+                        <div className="ship">
+                          <FaTruck /> Ships in 1 Day
+                        </div>
+
+                        <div className="qty-cart">
+                          <div className="qty">
+                            <button onClick={() => changeQty(item.id, -1)}>
+                              −
+                            </button>
+                            <span>{qty[item.id] || 1}</span>
+                            <button onClick={() => changeQty(item.id, 1)}>
+                              +
+                            </button>
+                          </div>
+
+                          <Button className="cart-btn">
+                            <FaShoppingCart />
+                          </Button>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </Carousel.Item>
+          ))}
+        </Carousel>
       </Container>
     </section>
   );
