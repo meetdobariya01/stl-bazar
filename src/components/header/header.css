@@ -207,3 +207,11 @@
     justify-content: space-between;
   }
 }
+.checkout-btn,
+.outline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+}

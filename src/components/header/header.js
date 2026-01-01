@@ -11,7 +11,7 @@ import {
   FaBars,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 // import { NavLink } from "react-router-dom";
 
@@ -173,9 +173,17 @@ const Header = () => {
                 ))
               )}
 
-              <button className="checkout-btn">Checkout</button>
-              <button className="outline-btn">View Cart</button>
-              <button className="outline-btn">Continue Shopping</button>
+              <NavLink to="/checkout" className="checkout-btn">
+                Checkout
+              </NavLink>
+
+              <NavLink to="/cart" className="outline-btn">
+                View Cart
+              </NavLink>
+
+              <NavLink to="/" className="outline-btn">
+                Continue Shopping
+              </NavLink>
             </motion.div>
           </motion.div>
         )}

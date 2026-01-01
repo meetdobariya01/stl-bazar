@@ -9,6 +9,9 @@ import Home from "./pages/home/home";
 import Aboutus from "./pages/aboutus/aboutus";
 import ContactUs from "./pages/contactus/contactus";
 import Product from "./pages/product/product";
+import Wishlist from "./pages/wishlist/wishlist";
+import Cart from "./pages/cart/cart";
+import Checkout from "./pages/checkout/checkout";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -18,6 +21,9 @@ root.render(
       <Route path="/aboutus" element={<Aboutus />} />
       <Route path="/contactus" element={<ContactUs />} />
       <Route path="/product" element={<Product />} />
+      <Route path="/wishlist" element={<Wishlist />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route path="/checkout" element={<Checkout   />} />
     </Routes>
   </Router>
 );

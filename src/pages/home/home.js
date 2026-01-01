@@ -20,22 +20,22 @@ const Home = () => {
       <Carouselhero />
 
       {/* best seller */}
-      <Bestseller/>
-
-      {/* our brand */}
-      <Ourbrand/>
-
-      {/* shop with us */}
-      <Shopus/>
-
-      {/* new lunch */}
-      <Newlunch/>
+      <Bestseller />
 
       {/* category */}
-      <Category/>
+      <Category />
+
+      {/* our brand */}
+      <Ourbrand />
+
+      {/* shop with us */}
+      <Shopus />
+
+      {/* new lunch */}
+      <Newlunch />
 
       {/* testimonial */}
-      <Testimonil/>
+      <Testimonil />
 
       {/* footer */}
       <Footer />

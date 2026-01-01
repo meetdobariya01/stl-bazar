@@ -17,7 +17,7 @@ const testimonials = [
     text: "From Ahmedabad to my heart (and tummy) 🍫, half the box gone in a day – that says it all! 💗",
     image: "https://i.pravatar.cc/100?img=12",
   },
-   {
+  {
     name: "Srushti Parate",
     rating: 5,
     text: "Tried Soulliqo for the first time and I’m hooked. Super smooth, and literally melts in your mouth",
@@ -29,7 +29,7 @@ const testimonials = [
     text: "Loving this colour and flavour bombs!!",
     image: "https://i.pravatar.cc/100?img=32",
   },
-   {
+  {
     name: "Srushti Parate",
     rating: 5,
     text: "Tried Soulliqo for the first time and I’m hooked. Super smooth, and literally melts in your mouth",
@@ -50,55 +50,64 @@ const chunk = (arr, size) =>
   }, []);
 
 const Testimonil = () => {
-     const slides = chunk(testimonials, 3);
+  const slides = chunk(testimonials, 3);
   return (
     <div>
-          <section className="testimonial-section">
-      <Container>
-        <Carousel
-          interval={3500}
-          pause="hover"
-          indicators={false}
-          controls={false}
-          touch
-        >
-          {slides.map((group, index) => (
-            <Carousel.Item key={index}>
-              <div className="testimonial-row">
-                {group.map((item, i) => (
-                  <motion.div
-                    className="testimonial-card"
-                    key={i}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: i * 0.1 }}
-                  >
-                    <div className="testimonial-header">
-                      <img src={item.image} alt={item.name} />
-                      <div>
-                        <h6>{item.name}</h6>
-                        <div className="stars">
-                          {[...Array(5)].map((_, j) => (
-                            <FaStar
-                              key={j}
-                              color={j < item.rating ? "#f7b500" : "#ddd"}
-                            />
-                          ))}
+      <section className="testimonial-section">
+        <Container>
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="section-header  lexend"
+          >
+            <h2>Testimonials</h2>
+          </motion.div>
+          <Carousel
+            interval={3500}
+            pause="hover"
+            indicators={false}
+            controls={false}
+            touch
+          >
+            {slides.map((group, index) => (
+              <Carousel.Item key={index}>
+                <div className="testimonial-row">
+                  {group.map((item, i) => (
+                    <motion.div
+                      className="testimonial-card"
+                      key={i}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: i * 0.1 }}
+                    >
+                      <div className="testimonial-header">
+                        <img src={item.image} alt={item.name} />
+                        <div>
+                          <h6>{item.name}</h6>
+                          <div className="stars">
+                            {[...Array(5)].map((_, j) => (
+                              <FaStar
+                                key={j}
+                                color={j < item.rating ? "#f7b500" : "#ddd"}
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <p className="testimonial-text">{item.text}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </Carousel.Item>
-          ))}
-        </Carousel>
-      </Container>
-    </section> 
+                      <p className="testimonial-text">{item.text}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        </Container>
+      </section>
     </div>
-  )
-}
+  );
+};
 
 export default Testimonil;
