@@ -1,0 +1,99 @@
+.featured-categories {
+  padding: 80px 0;
+  background: linear-gradient(135deg, #f9f9f9, #ffffff);
+}
+
+.section-header h2 {
+  font-weight: 700;
+  font-size: 2.4rem;
+  color: #111;
+}
+
+.section-header p {
+  color: #666;
+  font-size: 1rem;
+  margin-top: 8px;
+}
+
+/* CATEGORY CARD */
+.category-card {
+  width: 100%;
+  border: none;
+  border-radius: 18px;
+  padding: 28px 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  color: #fff;
+}
+
+.category-card h6 {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* ICON */
+.icon-wrap {
+  font-size: 2.2rem;
+}
+
+/* BACKGROUND COLORS */
+.cat-fashion {
+  background: linear-gradient(135deg, #ff6a88, #ff99ac);
+}
+
+.cat-electronics {
+  background: linear-gradient(135deg, #36d1dc, #5b86e5);
+}
+
+.cat-home {
+  background: linear-gradient(135deg, #f7971e, #ffd200);
+}
+
+.cat-beauty {
+  background: linear-gradient(135deg, #c471ed, #f64f59);
+}
+
+.cat-accessories {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+}
+
+/* BUTTON */
+.view-all-btn {
+  padding: 12px 35px;
+  border-radius: 30px;
+  font-weight: 600;
+  background: #053262;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.view-all-btn:hover {
+  background: #000;
+  transform: translateY(-2px);
+}
+
+/* MOBILE OPTIMIZATION */
+@media (max-width: 576px) {
+  .section-header h2 {
+    font-size: 1.8rem;
+  }
+
+  .category-card {
+    padding: 22px 10px;
+  }
+
+  .icon-wrap {
+    font-size: 1.8rem;
+  }
+}
+.category-card {
+  cursor: pointer;
+}
+.category-card {
+  cursor: pointer;
+  max-width: 180px;
+  margin: auto;
+}

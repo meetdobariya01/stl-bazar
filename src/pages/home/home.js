@@ -3,11 +3,12 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import "./home.css";
 import Carouselhero from "../../components/carousel/carousel";
-import Mainnavbar from "../../components/navbar/navbar";
 import Bestseller from "../../components/bestseller/bestseller";
 import Ourbrand from "../../components/ourbrand/ourbrand";
 import Shopus from "../../components/shopus/shopus";
 import Newlunch from "../../components/newlunch/newlunch";
+import Testimonil from "../../components/testimonial/testimonil";
+import Category from "../../components/category/category";
 
 const Home = () => {
   return (
@@ -29,6 +30,12 @@ const Home = () => {
 
       {/* new lunch */}
       <Newlunch/>
+
+      {/* category */}
+      <Category/>
+
+      {/* testimonial */}
+      <Testimonil/>
 
       {/* footer */}
       <Footer />
