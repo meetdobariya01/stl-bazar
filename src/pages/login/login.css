@@ -1,0 +1,97 @@
+.login-section {
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+}
+
+.login-card {
+  padding: 35px;
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  background: #fff;
+}
+
+/* Input with icon */
+.input-group-custom {
+  position: relative;
+}
+
+.input-group-custom svg {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.input-group-custom input {
+  padding-left: 42px;
+  height: 48px;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.input-group-custom input:focus {
+  border-color: #000;
+  box-shadow: none;
+}
+
+/* Button */
+.login-btn {
+  height: 48px;
+  border-radius: 14px;
+  font-weight: 600;
+  background: #053262;
+  border: none;
+}
+
+.login-btn:hover {
+  background: #053262;
+}
+
+/* Link */
+.register-link {
+  font-weight: 600;
+  color: #053262;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .login-card {
+    padding: 25px;
+  }
+}
+.divider {
+  text-align: center;
+  margin: 20px 0;
+  color: #999;
+  font-size: 14px;
+  position: relative;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  height: 1px;
+  width: 40%;
+  background: #ddd;
+  position: absolute;
+  top: 50%;
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+.google-btn {
+  display: flex;
+  justify-content: center;
+}
