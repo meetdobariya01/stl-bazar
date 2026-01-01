@@ -106,9 +106,9 @@ const Newlunch = () => {
   };
 
   return (
-    <section className="bestseller-section">
+    <section className="bestseller-section container">
       <Container fluid>
-        <h2 className="section-title">NEW lunch</h2>
+        <h2 className="section-title lexend">New lunch</h2>
 
         <Carousel indicators={false} interval={3000} pause={false} touch>
           {slides.map((group, index) => (
@@ -125,8 +125,8 @@ const Newlunch = () => {
                     <Card>
                       <Card.Img src={item.image} />
 
-                      <Card.Body>
-                        <h6>{item.name}</h6>
+                      <Card.Body className="funnel-sans">
+                        <h5 className="lexend">{item.name}</h5>
 
                         <div className="rating">
                           {[...Array(item.rating)].map((_, i) => (

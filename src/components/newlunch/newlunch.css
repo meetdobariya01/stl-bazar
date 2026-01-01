@@ -25,7 +25,6 @@
 .card img {
   height: 220px;
   object-fit: contain;
-  padding: 15px;
 }
 
 .rating {

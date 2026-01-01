@@ -57,7 +57,7 @@ const Category = () => {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="section-header text-center"
+            className="section-header text-center lexend"
           >
             <h2>Shop by Category</h2>
             <p>Explore our wide range of premium categories</p>
@@ -74,7 +74,7 @@ const Category = () => {
                 className="d-flex justify-content-center"
               >
                 <motion.div
-                  className="w-100"
+                  className="w-100 funnel-sans"
                   initial={{ opacity: 0, scale: 0.8 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
@@ -103,7 +103,7 @@ const Category = () => {
             viewport={{ once: true }}
           >
             <Button
-              className="view-all-btn"
+              className="view-all-btn funnel-sans"
               onClick={() => navigate("/categories")}
             >
               View All Categories

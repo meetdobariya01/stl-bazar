@@ -47,8 +47,8 @@ const Login = () => {
 
   return (
     <section className="login-section">
-        {/* header */}
-        <Header/>
+      {/* header */}
+      <Header />
       <Container>
         <Row className="justify-content-center align-items-center min-vh-100">
           <Col xs={12} sm={10} md={7} lg={5}>
@@ -62,6 +62,16 @@ const Login = () => {
                 <p className="text-center text-muted mb-4 funnel-sans">
                   Login to continue shopping
                 </p>
+                <Button
+                  variant="outline-dark"
+                  className="w-100 mt-3"
+                  onClick={() =>
+                    (window.location.href = "https://accounts.google.com")
+                  }
+                >
+                  <FaGoogle className="me-2 lexend" /> Login with Google
+                </Button>
+                <div className="divider funnel-sans">OR</div>
 
                 <Form onSubmit={handleSubmit}>
                   {/* Email */}
@@ -116,16 +126,6 @@ const Login = () => {
                 </Form>
 
                 {/* Divider */}
-                <div className="divider funnel-sans">OR</div>
-                <Button
-                  variant="outline-dark"
-                  className="w-100 mt-3"
-                  onClick={() =>
-                    (window.location.href = "https://accounts.google.com")
-                  }
-                >
-                  <FaGoogle className="me-2 lexend" /> Login with Google
-                </Button>
 
                 {/* Google Login */}
                 <motion.div
@@ -137,7 +137,9 @@ const Login = () => {
                 </motion.div>
 
                 <div className="text-center mt-4">
-                  <span className="text-muted funnel-sans">Don't have an account?</span>
+                  <span className="text-muted funnel-sans">
+                    Don't have an account?
+                  </span>
                   <a href="/signup" className="ms-1 register-link lexend">
                     Sign Up
                   </a>
@@ -148,7 +150,7 @@ const Login = () => {
         </Row>
       </Container>
       {/* footer */}
-      <Footer/>
+      <Footer />
     </section>
   );
 };

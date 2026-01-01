@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaGoogle,FaUser } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaGoogle, FaUser } from "react-icons/fa";
 import "./signup.css";
 import Footer from "../../components/footer/footer";
 import Header from "../../components/header/header";
@@ -40,7 +40,16 @@ const Signup = () => {
                 <p className="text-center text-muted mb-4 funnel-sans">
                   Join us and start shopping smarter
                 </p>
-
+                <Button
+                  variant="outline-dark"
+                  className="w-100 mt-3"
+                  onClick={() =>
+                    (window.location.href = "https://accounts.google.com")
+                  }
+                >
+                  <FaGoogle className="me-2" /> Login with Google
+                </Button>
+                <div className="divider funnel-sans">OR</div>
                 <Form className="lexend" onSubmit={handleSubmit}>
                   {/* Name */}
                   <motion.div
@@ -110,15 +119,6 @@ const Signup = () => {
                     </Button>
                   </motion.div>
                 </Form>
-                <Button
-                  variant="outline-dark"
-                  className="w-100 mt-3"
-                  onClick={() =>
-                    (window.location.href = "https://accounts.google.com")
-                  }
-                >
-                  <FaGoogle className="me-2" /> Login with Google
-                </Button>
 
                 <div className="text-center mt-4">
                   <span className="text-muted funnel-sans">

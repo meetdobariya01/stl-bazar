@@ -11,7 +11,6 @@ import ContactUs from "./pages/contactus/contactus";
 import Product from "./pages/product/product";
 import Login from "./pages/login/login";
 import Signup from "./pages/signup/signup";
-// import Checkout from "./pages/checkout/checkout";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -21,9 +20,8 @@ root.render(
       <Route path="/aboutus" element={<Aboutus />} />
       <Route path="/contactus" element={<ContactUs />} />
       <Route path="/product" element={<Product />} />
-       <Route path="/login" element={<Login/>} />
-        <Route path="/signup" element={<Signup/>} />
-         {/* <Route path="/checkout" element={<Checkout/>} /> */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
     </Routes>
   </Router>
 );
