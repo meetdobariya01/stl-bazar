@@ -29,23 +29,23 @@ const data = [
     bg: "rose",
   },
   {
-    title: "Dietary Inclusions",
-    text: "Cater to all dietary needs and our goal is for everyone to be able to enjoy and relish our chocolates. It can be made vegan, dairy free, gluten free and nut free without sacrificing on quality and taste.",
-    img: "/images/value-3.jpg",
+    title: "Plantro",
+    text: "Crunchy, flavorful, and irresistibly savory—**Namkeen** is a classic Indian snack made with a perfect blend of spices and textures, ideal for tea-time munching or anytime cravings.",
+    img: "/images/plantro.png",
     bg: "light",
   },
   {
-    title: "Innovation",
-    text: "Highly innovative spirit drives us to continue developing new ingredients and bold chocolate flavors. Value experience we create with our chocolates and creative process of taking risks and making it a reality for our valued guests.",
-    img: "/images/value-4.jpg",
+    title: "Nurasoi",
+    text: "From light munching to festive treats, Namkeen adds a burst of savory goodness to every moment. Perfectly spiced and delightfully crunchy, it's the ultimate snack to satisfy your cravings.",
+    img: "/images/nurasoi.png",
     bg: "dark",
   },
-  {
-    title: "Sustainability",
-    text: "Values doing good in world and ethical practices. We make conscious efforts to minimize usage of plastics in packaging as well as in operations.",
-    img: "/images/value-5.jpg",
-    bg: "light",
-  },
+  // {
+  //   title: "Sustainability",
+  //   text: "Values doing good in world and ethical practices. We make conscious efforts to minimize usage of plastics in packaging as well as in operations.",
+  //   img: "/images/value-5.jpg",
+  //   bg: "light",
+  // },
 ];
 const Product = () => {
   return (
