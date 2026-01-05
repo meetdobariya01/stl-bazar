@@ -1,0 +1,182 @@
+.product-page {
+  font-family: "Poppins", sans-serif;
+}
+
+/* Images */
+.main-img {
+  border-radius: 16px;
+  border: 1px solid #eee;
+}
+
+.thumbs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.thumb {
+  width: 70px;
+  height: 70px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.thumb.active {
+  border-color: #0f5132;
+}
+
+/* Price */
+.price {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.price .old {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.price .new {
+  font-size: 22px;
+  color: #0f5132;
+  font-weight: 600;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.add-cart {
+  background: #0f5132 !important;
+  border: none;
+}
+
+/* Reviews */
+.review-card {
+  border-radius: 14px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.rating svg {
+  color: #ffc107;
+}
+
+/* MOBILE FIX */
+@media (max-width: 768px) {
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+
+  .qty-box {
+    max-width: 100%;
+  }
+
+  .thumb {
+    width: 55px;
+    height: 55px;
+  }
+}
+/* ===============================
+   MOBILE SIDE PADDING FIX
+================================ */
+@media (max-width: 768px) {
+  .product-page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Extra safety for rows */
+  .product-page .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* Tabs content padding fix */
+  .tab-content {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+/* ===============================
+   PRODUCT COUNTER RESPONSIVE SIZE
+================================ */
+
+/* DESKTOP & LARGE SCREENS */
+@media (min-width: 769px) {
+  .qty-box {
+    width: 50%;
+    /* margin-left: auto;
+    margin-right: auto; */
+    display: flex;
+    justify-content: center;
+  }
+
+  .qty-box button {
+    height: 36px;
+    padding: 6px 12px;
+    font-size: 15px;
+  }
+
+  .qty-box .form-control {
+    height: 36px;
+    font-size: 15px;
+    text-align: center;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .qty-box {
+    width: 38%;
+    /* margin-left: auto;
+    margin-right: auto; */
+    display: flex;
+    justify-content: center;
+  }
+
+  .qty-box button {
+    height: 34px;
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+
+  .qty-box .form-control {
+    height: 34px;
+    font-size: 14px;
+  }
+}
+
+
+/* ===============================
+   REMOVE BORDER FROM COUNTER BOX
+================================ */
+.qty-box .form-control,
+.qty-box button {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Optional: subtle background */
+.qty-box .form-control {
+  background: #f8f9fa;
+}
+
+.qty-box button {
+  background: #294629;
+}
+
+/* On focus (remove blue outline) */
+.qty-box .form-control:focus,
+.qty-box button:focus {
+  outline: none;
+  box-shadow: none;
+}

@@ -3,6 +3,7 @@ import { Container, Row, Col } from "react-bootstrap";
 import { motion } from "framer-motion";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import { NavLink } from "react-router-dom";
 import "./product.css";
 
 const fadeLeft = {
@@ -90,13 +91,15 @@ const Product = () => {
                     <p className="funnel-sans">{item.text}</p>
 
                     {/* BUY BUTTON */}
-                    <motion.button
-                      className="buy-btn lexend"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Buy Now
-                    </motion.button>
+                    <NavLink to="/grid" className="nav-link p-0">
+                      <motion.button
+                        className="buy-btn lexend"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Buy Now
+                      </motion.button>
+                    </NavLink>
                   </motion.div>
                 </Col>
               </Row>

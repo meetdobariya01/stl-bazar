@@ -1,7 +1,21 @@
-.product-carousel {
-  padding: 40px 0;
+.product-page {
+  padding: 30px 0;
 }
 
+/* SORT */
+.sort-box {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sort-btn {
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+  min-width: 200px;
+}
+
+/* CARD */
 .product-card {
   border-radius: 14px;
   border: 1px solid #eee;
@@ -10,36 +24,36 @@
 }
 
 .product-card img {
-  padding: 15px;
-  height: 220px;
-  object-fit: contain;
+  height: 240px;
+  object-fit: cover;
 }
 
+/* ICONS */
 .card-icons {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   z-index: 2;
 }
 
 .card-icons span {
   background: #fff;
-  border-radius: 50%;
   padding: 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
   cursor: pointer;
 }
 
+/* TEXT */
 .product-card h6 {
   font-size: 15px;
   margin-bottom: 6px;
 }
 
 .rating {
-  color: #ff9800;
+  color: #ffa000;
   font-size: 14px;
 }
 
@@ -48,11 +62,11 @@
   margin-left: 4px;
 }
 
+/* PRICE */
 .price {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
 }
 
 .price .old {
@@ -61,24 +75,26 @@
 }
 
 .price .new {
-  font-weight: 700;
   color: #e53935;
+  font-weight: 700;
 }
 
 .price .off {
-  border: 1px solid #e53935;
   color: #e53935;
-  padding: 2px 6px;
+  border: 1px solid #e53935;
   border-radius: 6px;
   font-size: 12px;
+  padding: 2px 6px;
 }
 
+/* SHIPPING */
 .ship {
-  font-size: 13px;
   color: #2e7d32;
-  margin-top: 6px;
+  font-size: 13px;
+  margin-top: 5px;
 }
 
+/* QTY */
 .qty-cart {
   display: flex;
   justify-content: space-between;
@@ -99,20 +115,22 @@
   font-size: 18px;
 }
 
+/* CART */
 .cart-btn {
   background: #053262;
   border: none;
   border-radius: 10px;
   padding: 8px 12px;
+  width: 40%;
 }
 
 .cart-btn:hover {
   background: #041f42;
 }
 
-/* Mobile */
+/* MOBILE */
 @media (max-width: 768px) {
   .product-card img {
-    height: 180px;
+    height: 200px;
   }
 }

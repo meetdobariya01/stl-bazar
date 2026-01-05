@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
-import App from "./App";
+// import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import Home from "./pages/home/home";
 import Aboutus from "./pages/aboutus/aboutus";
@@ -14,6 +14,8 @@ import Signup from "./pages/signup/signup";
 import Checkout from "./pages/checkout/checkout";
 import Cart from "./pages/cart/cart";
 import Wishlist from "./pages/wishlist/wishlist";
+import Grid from "./pages/grid/grid";
+import Productdetails from "./pages/productdetails/productdetails";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -27,7 +29,9 @@ root.render(
       <Route path="/signup" element={<Signup />} />
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/cart" element={<Cart />} />
-      <Route path="/checkout" element={<Checkout   />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/grid" element={<Grid />} />
+      <Route path="/productdetails" element={<Productdetails />} />
     </Routes>
   </Router>
 );

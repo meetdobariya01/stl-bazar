@@ -60,3 +60,15 @@
     max-width: 100%;
   }
 }
+.testimonial-row {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .testimonial-card {
+    max-width: 100%;
+  }
+}
