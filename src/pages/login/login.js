@@ -5,20 +5,41 @@ import { FaEnvelope, FaLock, FaGoogle } from "react-icons/fa";
 import "./login.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import axios from "axios";
+import { useNavigate } from "react-router-dom"; // <-- import useNavigate
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate(); // <-- initialize navigate
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/login`,
+        { email, password }
+      );
+
       setLoading(false);
-      alert(`Login successful\nEmail: ${email}`);
-    }, 1500);
+
+      // Store JWT in localStorage
+      localStorage.setItem("token", response.data.token);
+
+      // Redirect user to home page
+      navigate("/"); // <-- redirect to home
+
+    } catch (error) {
+      setLoading(false);
+      if (error.response && error.response.data.message) {
+        alert(error.response.data.message);
+      } else {
+        alert("Something went wrong! Try again.");
+      }
+    }
   };
 
   // GOOGLE LOGIN INIT
@@ -43,11 +64,11 @@ const Login = () => {
   const handleGoogleResponse = (response) => {
     console.log("Google Token:", response.credential);
     alert("Google Login Successful ✅");
+    // You can also send response.credential to backend for JWT
   };
 
   return (
     <section className="login-section">
-      {/* header */}
       <Header />
       <Container>
         <Row className="justify-content-center align-items-center min-vh-100">
@@ -62,6 +83,7 @@ const Login = () => {
                 <p className="text-center text-muted mb-4 funnel-sans">
                   Login to continue shopping
                 </p>
+
                 <Button
                   variant="outline-dark"
                   className="w-100 mt-3"
@@ -71,16 +93,16 @@ const Login = () => {
                 >
                   <FaGoogle className="me-2 lexend" /> Login with Google
                 </Button>
+
                 <div className="divider funnel-sans">OR</div>
 
                 <Form onSubmit={handleSubmit}>
-                  {/* Email */}
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <Form.Group className="mb-3 input-group-custom funnel-sans  underline-input">
+                    <Form.Group className="mb-3 input-group-custom funnel-sans underline-input">
                       <FaEnvelope />
                       <Form.Control
                         type="email"
@@ -92,7 +114,6 @@ const Login = () => {
                     </Form.Group>
                   </motion.div>
 
-                  {/* Password */}
                   <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -110,7 +131,6 @@ const Login = () => {
                     </Form.Group>
                   </motion.div>
 
-                  {/* Login Button */}
                   <motion.div
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.95 }}
@@ -125,9 +145,6 @@ const Login = () => {
                   </motion.div>
                 </Form>
 
-                {/* Divider */}
-
-                {/* Google Login */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -149,7 +166,6 @@ const Login = () => {
           </Col>
         </Row>
       </Container>
-      {/* footer */}
       <Footer />
     </section>
   );
