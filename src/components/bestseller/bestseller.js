@@ -6,62 +6,19 @@ import { Link } from "react-router-dom";
 
 import "./bestseller.css";
 
-const products = [
-  {
-    id: 1,
-    name: "Conscious Food Cashews - 250 Gm",
-    img: "/images/cashew.jpg",
-    price: 475,
-    sale: 404,
-    off: "15% Off",
-    rating: 4,
-    reviews: 7,
-  },
-  {
-    id: 2,
-    name: "Phool Bamboobless Incense Sticks",
-    img: "/images/phool.jpg",
-    price: 265,
-    sale: 252,
-    off: "5% Off",
-    rating: 4,
-    reviews: 4,
-  },
-  {
-    id: 3,
-    name: "Loban Agarbatti Incense Sticks - 85 Gm",
-    img: "/images/loban.jpg",
-    price: 75,
-    sale: 71,
-    off: "5% Off",
-    rating: 4,
-    reviews: 28,
-  },
-  {
-    id: 4,
-    name: "Conscious Food Almonds - 250 Gm",
-    img: "/images/almond.jpg",
-    price: 445,
-    sale: 380,
-    off: "15% Off",
-    rating: 4,
-    reviews: 9,
-  },
-  {
-    id: 5,
-    name: "Cowpathy Smudge incense Sage",
-    img: "/images/sage.jpg",
-    price: 200,
-    sale: 160,
-    off: "20% Off",
-    rating: 4,
-    reviews: 7,
-  },
-];
-
 const Bestseller = () => {
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
 
+  // Fetch BEST SELLERS (1 product per company, first-added order)
+  useEffect(() => {
+    fetch("http://localhost:9000/api/best-sellers")
+      .then((res) => res.json())
+      .then((data) => setProducts(data))
+      .catch((err) => console.error("BEST SELLER ERROR:", err));
+  }, []);
+
+  // Auto-scroll for mobile
   useEffect(() => {
     const interval = setInterval(() => {
       const slider = document.getElementById("auto-scroll");
@@ -105,7 +62,7 @@ const Bestseller = () => {
       <div id="auto-scroll" className="product-slider">
         {products.map((item) => (
           <motion.div
-            key={item.id}
+            key={item._id}
             whileHover={{ scale: 1.03 }}
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -113,59 +70,50 @@ const Bestseller = () => {
             className="product-card-wrapper"
           >
             <Card className="product-card">
-              {/* IMAGE CLICK */}
               <Link
-                to={"/productdetails"}
+                to={`/product/${item._id}`}
                 className="product-link"
               >
-                <Card.Img src={item.img} alt={item.name} />
-              
+                <Card.Img src={item.image} alt={item.name} />
 
-              <Card.Body>
-                {/* TITLE CLICK */}
-                <Link
-                  to={`/productdetails/${item.id}`}
-                  className="product-link"
-                >
+                <Card.Body>
                   <h6 className="product-title">{item.name}</h6>
-                </Link>
 
-                <div className="rating">
-                  {[...Array(5)].map((_, i) => (
-                    <FaStar
-                      key={i}
-                      color={i < item.rating ? "#f5a623" : "#ddd"}
-                    />
-                  ))}
-                  <span>({item.reviews})</span>
-                </div>
+                  <div className="rating">
+                    {[...Array(5)].map((_, i) => (
+                      <FaStar
+                        key={i}
+                        color={i < (item.averageRating || 4) ? "#f5a623" : "#ddd"}
+                      />
+                    ))}
+                    <span>({item.reviews || 0})</span>
+                  </div>
 
-                <div className="price">
-                  <span className="new">₹{item.sale}.00</span>
-                </div>
+                  <div className="price">
+                    <span className="new">₹{item.price}</span>
+                  </div>
 
-                <div className="ship">
-                  <FaTruck /> Ships in 1 Days
-                </div>
-                
+                  {/* <div className="ship">
+                    <FaTruck /> Ships in 1 Day
+                  </div> */}
 
-                <div className="cart-area">
-                  {cart[item.id] ? (
-                    <div className="qty-box">
-                      <button onClick={() => decreaseQty(item.id)}>-</button>
-                      <span>{cart[item.id]}</span>
-                      <button onClick={() => increaseQty(item.id)}>+</button>
-                    </div>
-                  ) : (
-                    <Button
-                      className="cart-btn"
-                      onClick={() => addToCart(item.id)}
-                    >
-                      <FaShoppingCart />
-                    </Button>
-                  )}
-                </div>
-              </Card.Body>
+                  <div className="cart-area">
+                    {cart[item._id] ? (
+                      <div className="qty-box">
+                        <button onClick={() => decreaseQty(item._id)}>-</button>
+                        <span>{cart[item._id]}</span>
+                        <button onClick={() => increaseQty(item._id)}>+</button>
+                      </div>
+                    ) : (
+                      <Button
+                        className="cart-btn"
+                        onClick={() => addToCart(item._id)}
+                      >
+                        <FaShoppingCart />
+                      </Button>
+                    )}
+                  </div>
+                </Card.Body>
               </Link>
             </Card>
           </motion.div>

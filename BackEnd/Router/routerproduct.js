@@ -122,5 +122,25 @@ router.get("/product/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch product" });
   }
 });
+// GET first product of each company (company creation order)
+router.get("/best-sellers", async (req, res) => {
+  try {
+    const companies = await Company.find().sort({ createdAt: 1 });
+
+    const result = [];
+
+    for (const company of companies) {
+      const product = await Product.findOne({ company: company.name })
+        .sort({ createdAt: 1 }); // first product added
+
+      if (product) result.push(product);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch best sellers" });
+  }
+});
 
 module.exports = router;

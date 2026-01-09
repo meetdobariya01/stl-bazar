@@ -1,117 +1,86 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
-import {
-  FaTshirt,
-  FaMobileAlt,
-  FaCouch,
-  FaSpa,
-  FaHeadphones,
-} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { FaBoxOpen } from "react-icons/fa";
 import "./category.css";
 
-const categories = [
-  {
-    title: "Fashion & Clothing",
-    icon: <FaTshirt />,
-    bg: "cat-fashion",
-    slug: "fashion",
-  },
-  {
-    title: "Electronics",
-    icon: <FaMobileAlt />,
-    bg: "cat-electronics",
-    slug: "electronics",
-  },
-  {
-    title: "Home & Living",
-    icon: <FaCouch />,
-    bg: "cat-home",
-    slug: "home-living",
-  },
-  {
-    title: "Beauty & Care",
-    icon: <FaSpa />,
-    bg: "cat-beauty",
-    slug: "beauty",
-  },
-  {
-    title: "Accessories",
-    icon: <FaHeadphones />,
-    bg: "cat-accessories",
-    slug: "accessories",
-  },
-];
+const API_URL = process.env.REACT_APP_API_URL;
 
 const Category = () => {
+  const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/products`);
+        const uniqueCategories = [...new Set(res.data.map(p => p.category))];
+        setCategories(uniqueCategories);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // convert category name → css class
+  const getCategoryClass = (cat) =>
+    `category-card text-center cat-${cat.toLowerCase().replace(/\s+/g, "-")}`;
+
   return (
-    <div>
-      <section className="featured-categories">
-        <Container>
-          {/* Title */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="section-header text-center lexend"
-          >
-            <h2>Shop by Category</h2>
-            <p>Explore our wide range of premium categories</p>
-          </motion.div>
+    <section className="featured-categories">
+      <Container>
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="section-header text-center"
+        >
+          <h2>Shop by Category</h2>
+          <p>Explore our wide range of premium categories</p>
+        </motion.div>
 
-          {/* Categories */}
-          <Row className="g-4 mt-4 justify-content-center">
-            {categories.map((cat, index) => (
-              <Col
-                key={index}
-                xs={6}
-                md={4}
-                lg={2}
-                className="d-flex justify-content-center"
+        <Row className="g-4 mt-4 justify-content-center">
+          {categories.map((cat, index) => (
+            <Col key={index} xs={6} md={4} lg={2} className="d-flex justify-content-center">
+              <motion.div
+                className="w-100"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -10 }}
               >
-                <motion.div
-                  className="w-100 funnel-sans"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  whileHover={{ y: -10 }}
-                  whileTap={{ scale: 0.95 }}
+                <Card
+                  className={getCategoryClass(cat)}
+                  onClick={() => navigate(`/category/${encodeURIComponent(cat)}`)}
                 >
-                  <Card
-                    className={`category-card ${cat.bg}`}
-                    onClick={() => navigate(`/category/${cat.slug}`)}
-                  >
-                    <div className="icon-wrap">{cat.icon}</div>
-                    <h6>{cat.title}</h6>
-                  </Card>
-                </motion.div>
-              </Col>
-            ))}
-          </Row>
+                  <div className="icon-wrap">
+                    <FaBoxOpen size={32} />
+                  </div>
+                  <h6>{cat}</h6>
+                </Card>
+              </motion.div>
+            </Col>
+          ))}
+        </Row>
 
-          {/* Button */}
-          <motion.div
-            className="text-center mt-5"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-          >
-            <Button
-              className="view-all-btn funnel-sans"
-              onClick={() => navigate("/categories")}
-            >
-              View All Categories
-            </Button>
-          </motion.div>
-        </Container>
-      </section>
-    </div>
+        <motion.div
+          className="text-center mt-5"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          viewport={{ once: true }}
+        >
+          <Button className="view-all-btn" onClick={() => navigate("/categories")}>
+            View All Categories
+          </Button>
+        </motion.div>
+      </Container>
+    </section>
   );
 };
 

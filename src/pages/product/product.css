@@ -1,104 +1,71 @@
 .values-section {
-  padding: 80px 0;
-  background: #ffffff;
+  padding: 4rem 0;
+  background-color: #f9f9f9;
 }
 
 .value-row {
-  margin-bottom: 60px;
+  margin: 3rem 0;
 }
 
-/* Images */
+.value-image-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+
+.value-image-wrapper:hover {
+  transform: translateY(-5px);
+}
+
 .value-image {
-  width: 100%;
-  border-radius: 6px;
-  object-fit: cover;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
 }
 
-/* Content box */
 .value-content {
-  padding: 40px;
-  border-radius: 6px;
+  background: #fff;
+  padding: 2rem 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease;
+}
+
+.value-content:hover {
+  transform: translateY(-5px);
 }
 
 .value-content h4 {
-  margin-bottom: 15px;
-  font-size: 22px;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: #222;
 }
 
 .value-content p {
-  font-size: 16px;
-  color: #444;
-  line-height: 1.7;
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
 }
 
-/* Background styles */
-.value-content.light {
-  background: #f4f0e3;
-}
-
-.value-content.rose {
-  background: #d9a091;
-  color: #fff;
-}
-
-.value-content.rose p {
-  color: #fff;
-}
-
-.value-content.dark {
-  background: #d9a091;
-  color: #fff;
-}
-
-.value-content.dark p {
-  color: #fff;
-}
 .buy-btn {
-  margin-top: 20px;
-  padding: 12px 30px;
-  border: none;
-  border-radius: 30px;
-  background: #d9a091;
+  background: radial-gradient(circle, #f45c43 0%, #b03a2e 100%);
   color: #fff;
-  font-size: 15px;
+  border: none;
+  padding: 0.75rem 1.8rem;
+  border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
 }
+
 
 .buy-btn:hover {
-  background: #fff;
-    color: #d9a091;
-}
-
-/* Dark / Rose background support */
-.value-content.dark .buy-btn,
-.value-content.rose .buy-btn {
-  background: #f4f0e3;
-  color: #333;
-}
-
-.value-content.dark .buy-btn:hover,
-.value-content.rose .buy-btn:hover {
-  background: #f1f1f1;
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .buy-btn {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .value-content {
-    margin-top: 20px;
-    padding: 30px;
-  }
-
-  .value-row {
-    margin-bottom: 40px;
-  }
+  background: radial-gradient(circle, #ff7866 0%, #c94733 100%);
 }
