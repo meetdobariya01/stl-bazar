@@ -1,98 +1,36 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Button, Dropdown } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { FaStar, FaShoppingCart, FaTruck } from "react-icons/fa";
-import "./grid.css";
-import Footer from "../../components/footer/footer";
-import Header from "../../components/header/header";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 
-const initialProducts = [
-  {
-    id: 1,
-    name: "Phool Natural Incense Cones Indian Rose - 40 U",
-    image: "/images/p1.jpg",
-    price: 138,
-    oldPrice: 145,
-    rating: 4,
-    reviews: 3,
-    date: "2024-01-01",
-  },
-  {
-    id: 2,
-    name: "Kalla Jasmine Agarbatti 40u - 70 Gm",
-    image: "/images/p2.jpg",
-    price: 133,
-    oldPrice: 140,
-    rating: 4,
-    reviews: 6,
-    date: "2024-01-05",
-  },
-  {
-    id: 3,
-    name: "Phool Natural Incense Cones Nagchampa - 40 U",
-    image: "/images/p3.jpg",
-    price: 138,
-    oldPrice: 145,
-    rating: 4,
-    reviews: 6,
-    date: "2024-01-03",
-  },
-  {
-    id: 4,
-    name: "Kalla Lavender Agarbatti 40u - 70 Gm",
-    image: "/images/p4.jpg",
-    price: 133,
-    oldPrice: 140,
-    rating: 4,
-    reviews: 7,
-    date: "2024-01-10",
-  },
-  {
-    id: 5,
-    name: "Kalla Lavender Agarbatti 40u - 70 Gm",
-    image: "/images/p4.jpg",
-    price: 133,
-    oldPrice: 140,
-    rating: 4,
-    reviews: 7,
-    date: "2024-01-10",
-  },
-  {
-    id: 6,
-    name: "Kalla Lavender Agarbatti 40u - 70 Gm",
-    image: "/images/p4.jpg",
-    price: 133,
-    oldPrice: 140,
-    rating: 4,
-    reviews: 7,
-    date: "2024-01-10",
-  },
-  {
-    id: 7,
-    name: "Kalla Lavender Agarbatti 40u - 70 Gm",
-    image: "/images/p4.jpg",
-    price: 133,
-    oldPrice: 140,
-    rating: 4,
-    reviews: 7,
-    date: "2024-01-10",
-  },
-  {
-    id: 8,
-    name: "Kalla Lavender Agarbatti 40u - 70 Gm",
-    image: "/images/p4.jpg",
-    price: 133,
-    oldPrice: 140,
-    rating: 4,
-    reviews: 7,
-    date: "2024-01-10",
-  },
-];
+import Header from "../../components/header/header";
+import Footer from "../../components/footer/footer";
+import "./grid.css";
+
+const API_URL = process.env.REACT_APP_API_URL;
 
 const Grid = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const { companyName } = useParams();
+  const decodedName = decodeURIComponent(companyName);
+  const navigate = useNavigate();
+
+  const [products, setProducts] = useState([]);
   const [qty, setQty] = useState({});
   const [sort, setSort] = useState("Sort By");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!decodedName) return;
+
+    setLoading(true);
+    axios
+      .get(`${API_URL}/products`, { params: { company: decodedName } })
+      .then((res) => setProducts(res.data))
+      .catch((err) => console.error("Product fetch error", err))
+      .finally(() => setLoading(false));
+  }, [decodedName]);
 
   const changeQty = (id, val) => {
     setQty((prev) => ({
@@ -105,30 +43,23 @@ const Grid = () => {
     let sorted = [...products];
     setSort(type);
 
-    if (type === "Price (Low < High)") sorted.sort((a, b) => a.price - b.price);
-    if (type === "Price (High > Low)") sorted.sort((a, b) => b.price - a.price);
-    if (type === "Name (A - Z)")
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-    if (type === "Name (Z - A)")
-      sorted.sort((a, b) => b.name.localeCompare(a.name));
-    if (type === "Date (Old < New)")
-      sorted.sort((a, b) => new Date(a.date) - new Date(b.date));
-    if (type === "Date (New > Old)")
-      sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (type === "Price (Low < High)") sorted.sort((a, b) => a.ProductPrice - b.ProductPrice);
+    if (type === "Price (High > Low)") sorted.sort((a, b) => b.ProductPrice - a.ProductPrice);
+    if (type === "Name (A - Z)") sorted.sort((a, b) => a.name.localeCompare(b.name));
+    if (type === "Name (Z - A)") sorted.sort((a, b) => b.name.localeCompare(a.name));
+    if (type === "Date (Old < New)") sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (type === "Date (New > Old)") sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     setProducts(sorted);
   };
 
   return (
-    <div>
-      {/* header */}
+    <>
       <Header />
       <Container className="product-page">
-        {/* SORT */}
         <div className="sort-box">
           <Dropdown>
             <Dropdown.Toggle className="sort-btn">{sort}</Dropdown.Toggle>
-
             <Dropdown.Menu>
               {[
                 "Price (Low < High)",
@@ -146,62 +77,71 @@ const Grid = () => {
           </Dropdown>
         </div>
 
-        {/* PRODUCTS */}
-        <Row className="g-4 mt-3">
-          {products.map((item) => (
-            <Col key={item.id} xs={6} sm={6} md={3}>
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ y: -8 }}
-                transition={{ duration: 0.4 }}
-              >
-                <Card className="product-card">
-                  <Card.Img src={item.image} />
+        {loading ? (
+          <p className="text-center mt-5">Loading products...</p>
+        ) : products.length === 0 ? (
+          <p className="text-center mt-5">No products found</p>
+        ) : (
+          <Row className="g-4 mt-3">
+            {products.map((item) => (
+              <Col key={item._id} xs={6} sm={6} md={3}>
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -8 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <Card
+                    className="product-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/product/${item._id}`)}
+                  >
+                    <Card.Img
+                      src={item.image || "/images/default-product.png"}
+                    />
+                    <Card.Body>
+                      <h6>{item.name}</h6>
 
-                  <Card.Body>
-                    <h6>{item.name}</h6>
-
-                    <div className="rating">
-                      {[...Array(item.rating)].map((_, i) => (
-                        <FaStar key={i} />
-                      ))}
-                      <span>({item.reviews})</span>
-                    </div>
-
-                    <div className="price">
-                      {/* <span className="old">₹{item.oldPrice}.00</span> */}
-                      <span className="new">₹{item.price}.00</span>
-                      {/* <span className="off">5% Off</span>  */}
-                    </div>
-
-                    <div className="ship">
-                      <FaTruck /> Ships in 1 Days
-                    </div>
-
-                    <div className="qty-cart">
-                      <div className="qty">
-                        <button onClick={() => changeQty(item.id, -1)}>
-                          −
-                        </button>
-                        <span>{qty[item.id] || 1}</span>
-                        <button onClick={() => changeQty(item.id, 1)}>+</button>
+                      <div className="rating">
+                        {[...Array(Math.round(item.averageRating || 0))].map(
+                          (_, i) => <FaStar key={i} />
+                        )}
+                      </div>
+                        <div className="size">
+                        <span>{item.size}</span>
+                        </div>
+                      <div className="price">
+                        <span className="new">₹{item.price}</span>
                       </div>
 
-                      <Button className="cart-btn">
-                        <FaShoppingCart />
-                      </Button>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </motion.div>
-            </Col>
-          ))}
-        </Row>
+                      {/* <div className="ship">
+                        <FaTruck /> Ships in 1 Day
+                      </div> */}
+
+                      <div className="qty-cart">
+                        <div className="qty">
+                          <button onClick={(e) => { e.stopPropagation(); changeQty(item._id, -1); }}>−</button>
+                          <span>{qty[item._id] || 1}</span>
+                          <button onClick={(e) => { e.stopPropagation(); changeQty(item._id, 1); }}>+</button>
+                        </div>
+
+                        <Button
+                          className="cart-btn"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <FaShoppingCart />
+                        </Button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </motion.div>
+              </Col>
+            ))}
+          </Row>
+        )}
       </Container>
-      {/* footer */}
       <Footer />
-    </div>
+    </>
   );
 };
 

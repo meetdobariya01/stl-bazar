@@ -30,8 +30,8 @@ root.render(
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
-      <Route path="/grid" element={<Grid />} />
-      <Route path="/productdetails" element={<Productdetails />} />
+      <Route path="/company/:companyName" element={<Grid />} />
+      <Route path="/product/:id" element={<Productdetails />} />
     </Routes>
   </Router>
 );

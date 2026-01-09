@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Row,
@@ -10,190 +10,159 @@ import {
   Form,
   InputGroup,
   Badge,
-  Card,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
   FaStar,
   FaHeart,
-  FaTruck,
   FaShoppingCart,
 } from "react-icons/fa";
-import "./productdetails.css";
-import Footer from "../../components/footer/footer";
+import { useParams } from "react-router-dom";
+import axios from "axios";
+
 import Header from "../../components/header/header";
+import Footer from "../../components/footer/footer";
+import "./productdetails.css";
 
-const images = [
-  "/images/dosa-main.jpg",
-  "/images/dosa-1.jpg",
-  "/images/dosa-2.jpg",
-  "/images/dosa-3.jpg",
-];
-
-const reviewsData = [
-  { name: "Amit", rating: 5, comment: "Very tasty and healthy!" },
-  { name: "Sneha", rating: 4, comment: "Easy to make, loved it." },
-  { name: "Rahul", rating: 5, comment: "Best organic dosa mix." },
-];
+const API_URL = process.env.REACT_APP_API_URL;
 
 const Productdetails = () => {
-  const [activeImg, setActiveImg] = useState(images[0]);
+  const { id } = useParams();
+
+  const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
-  const [reviews, setReviews] = useState(reviewsData);
-  const [reviewText, setReviewText] = useState("");
-  const [rating, setRating] = useState(5);
+  const [activeImg, setActiveImg] = useState("");
 
-  const addToCart = () => alert("Product added to cart");
-  const buyNow = () => alert("Redirecting to checkout");
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/product/${id}`)
+      .then((res) => {
+        setProduct(res.data);
+        setActiveImg(res.data.image || "/images/default-product.png");
+      })
+      .catch((err) => console.error("Product fetch error", err));
+  }, [id]);
 
-  const submitReview = () => {
-    if (!reviewText) return;
-    setReviews([
-      ...reviews,
-      { name: "You", rating, comment: reviewText },
-    ]);
-    setReviewText("");
+  const addToCart = async () => {
+    const token = localStorage.getItem("token");
+
+    await axios.post(
+      `${API_URL}/api/add-to-cart`,
+      { productId: product._id, quantity: qty },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    alert("Product added to cart");
   };
+
+  if (!product) return <p className="text-center mt-5">Loading product...</p>;
 
   return (
     <>
       <Header />
 
-      <Container className="product-page my-4">
-        <Row className="g-4">
-          {/* IMAGE SECTION */}
+      <Container className="product-page my-5">
+        <Row>
+          {/* LEFT COLUMN: MAIN IMAGE + THUMBNAILS */}
           <Col lg={6}>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <Image src={activeImg} fluid className="main-img" />
-              <div className="thumbs mt-3">
-                {images.map((img, i) => (
-                  <Image
-                    key={i}
-                    src={img}
-                    onClick={() => setActiveImg(img)}
-                    className={`thumb ${
-                      activeImg === img ? "active" : ""
-                    }`}
-                  />
-                ))}
-              </div>
+              {product.images && product.images.length > 1 && (
+                <div className="thumbs mt-3 d-flex gap-2">
+                  {product.images.map((img, i) => (
+                    <Image
+                      key={i}
+                      src={img}
+                      onClick={() => setActiveImg(img)}
+                      className={`thumb ${activeImg === img ? "active" : ""}`}
+                      style={{ width: 60, cursor: "pointer" }}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           </Col>
 
-          {/* DETAILS */}
+          {/* RIGHT COLUMN: DETAILS */}
           <Col lg={6}>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h4 className="product-title">
-                ORGANIC MULTIGRAIN DOSA READY MIX – 200 GM
-              </h4>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <h3 className="fw-bold">{product.name}</h3>
+              {product.size && <p>Wt. {product.size}</p>}
 
-              <div className="rating">
-                {[...Array(4)].map((_, i) => (
-                  <FaStar key={i} />
+              <div className="rating d-flex align-items-center mb-2">
+                {[...Array(product.averageRating || 0)].map((_, i) => (
+                  <FaStar key={i} color="#FFD700" />
                 ))}
-                <span>(10 Reviews)</span>
+                <span className="ms-2">({product.reviewCount || 0} reviews)</span>
               </div>
 
-              <div className="price">
-                <span className="old">₹60</span>
-                <span className="new">₹54</span>
-                <Badge bg="success">10% OFF</Badge>
+              <div className="price mb-3">
+                <span className="fs-4 fw-bold">₹{product.price}</span>
               </div>
 
-              <div className="ship">
-                <FaTruck /> Ready to ship in 2 days
+              <div className="wishlist mb-3">
+                <FaHeart /> Add to Wish List
               </div>
 
-              <InputGroup className="qty-box">
-                <Button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>
-                  −
-                </Button>
-                <Form.Control value={qty} readOnly />
+              <div className="pincode-check mb-3 d-flex justify-content-between align-items-center">
+                <Form.Control
+                  type="text"
+                  placeholder="Enter Pincode"
+                  maxLength={6}
+                  // style={{ width: "70%" }}
+                />
+                <Button variant="link">CHECK</Button>
+              </div>
+
+              <InputGroup className="qty-box mb-3" style={{ width: 140 }}>
+                <Button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>−</Button>
+                <Form.Control value={qty} readOnly className="text-center" />
                 <Button onClick={() => setQty(qty + 1)}>+</Button>
               </InputGroup>
 
-              <div className="actions">
-                <Button className="add-cart" onClick={addToCart}>
+              <div className="actions d-flex gap-2 mb-4">
+                <Button className="add-cart w-100" onClick={addToCart}>
                   <FaShoppingCart /> Add to Cart
                 </Button>
-                <Button variant="outline-dark" onClick={buyNow}>
-                  Buy Now
-                </Button>
-                <Button variant="outline-danger">
-                  <FaHeart />
-                </Button>
+                
               </div>
+              
             </motion.div>
           </Col>
         </Row>
 
-        {/* TABS */}
-        <Tab.Container defaultActiveKey="about">
-          <Nav variant="tabs" className="mt-5">
-            <Nav.Item><Nav.Link eventKey="about">About</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="ingredients">Ingredients</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="reviews">Reviews</Nav.Link></Nav.Item>
+        {/* TABS: PRODUCT DETAILS / REVIEWS */}
+        <Tab.Container defaultActiveKey="details">
+          <Nav variant="tabs" className="mt-4">
+            <Nav.Item>
+              <Nav.Link eventKey="details">Product Details</Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="reviews">Reviews</Nav.Link>
+            </Nav.Item>
           </Nav>
 
           <Tab.Content className="p-4 border border-top-0">
-            <Tab.Pane eventKey="about">
-              <ul>
-                <li>Zero trans fat</li>
-                <li>Easy to digest</li>
-                <li>Ready in 3 steps</li>
-              </ul>
+            <Tab.Pane eventKey="details">
+              <p>{product.description || "No description available."}</p>
             </Tab.Pane>
 
-            <Tab.Pane eventKey="ingredients">
-              <p>Rice, multigrain flour, natural enzymes.</p>
-            </Tab.Pane>
-
-            {/* ⭐ REVIEWS */}
             <Tab.Pane eventKey="reviews">
-              <Row className="g-3">
-                {reviews.map((r, i) => (
-                  <Col md={6} key={i}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                    >
-                      <Card className="review-card">
-                        <Card.Body>
-                          <h6>{r.name}</h6>
-                          <div className="rating">
-                            {[...Array(r.rating)].map((_, j) => (
-                              <FaStar key={j} />
-                            ))}
-                          </div>
-                          <p>{r.comment}</p>
-                        </Card.Body>
-                      </Card>
-                    </motion.div>
-                  </Col>
-                ))}
-              </Row>
-
-              {/* ADD REVIEW */}
-              <div className="add-review mt-4">
-                <h6>Add Review</h6>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                />
-                <Button className="mt-2 add-cart" onClick={submitReview}>
-                  Submit Review
-                </Button>
-              </div>
+              {product.reviews && product.reviews.length > 0 ? (
+                product.reviews.map((r, i) => (
+                  <div key={i} className="review mb-3">
+                    <strong>{r.name}</strong>
+                    <div className="rating">
+                      {[...Array(r.rating)].map((_, j) => (
+                        <FaStar key={j} color="#FFD700" />
+                      ))}
+                    </div>
+                    <p>{r.comment}</p>
+                  </div>
+                ))
+              ) : (
+                <p>No reviews yet</p>
+              )}
             </Tab.Pane>
           </Tab.Content>
         </Tab.Container>
