@@ -6,49 +6,32 @@ import {
   FaShoppingBag,
   FaSearch,
   FaTimes,
-  FaPlus,
-  FaMinus,
   FaBars,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, NavLink } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
-// import { NavLink } from "react-router-dom";
-
-import "./header.css";
+import { useCart } from "../../context/CartContext";
 import Mainnavbar from "../navbar/navbar";
+import "./header.css";
 
 const Header = () => {
   const navigate = useNavigate();
-
-  const [showCart, setShowCart] = useState(false);
+  const { showCart, setShowCart, cart } = useCart(); // ✅ CONTEXT CART
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [search, setSearch] = useState("");
 
-  const [cart, setCart] = useState([
-    { id: 1, name: "Organic Product", qty: 1 },
-  ]);
-
-  const totalQty = cart.reduce((a, b) => a + b.qty, 0);
+  // ✅ TOTAL QTY FROM CONTEXT
+  const totalQty = cart.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
-      alert(`Searching for: ${search}`);
+      navigate(`/product?search=${search}`);
       setShowMobileMenu(false);
     }
-  };
-
-  const increaseQty = (id) => {
-    setCart(cart.map((i) => (i.id === id ? { ...i, qty: i.qty + 1 } : i)));
-  };
-
-  const decreaseQty = (id) => {
-    setCart(
-      cart
-        .map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i))
-        .filter((i) => i.qty > 0)
-    );
   };
 
   return (
@@ -87,21 +70,21 @@ const Header = () => {
 
           {/* ICONS */}
           <div className="icon-group">
-            {/* <FaSearch
-              className="mobile-only"
-              onClick={() => setShowMobileMenu(true)}
-            /> */}
             <FaHeart onClick={() => navigate("/wishlist")} />
             <FaUser onClick={() => navigate("/login")} />
+
+            {/* CART ICON */}
             <div className="cart-icon" onClick={() => setShowCart(true)}>
               <FaShoppingBag />
-              <span className="cart-count">{totalQty}</span>
+              {totalQty > 0 && (
+                <span className="cart-count">{totalQty}</span>
+              )}
             </div>
           </div>
         </Container>
       </Navbar>
 
-      {/* MOBILE EXPAND MENU */}
+      {/* MOBILE MENU */}
       <AnimatePresence>
         {showMobileMenu && (
           <motion.div
@@ -109,7 +92,6 @@ const Header = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
           >
             <Form className="search-form mobile-search" onSubmit={handleSearch}>
               <FormControl
@@ -126,7 +108,7 @@ const Header = () => {
 
             <div className="mobile-links lexend">
               <span onClick={() => navigate("/aboutus")}>About Us</span>
-              <span onClick={() => navigate("/Product")}>Product</span>
+              <span onClick={() => navigate("/product")}>Product</span>
               <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
           </motion.div>
@@ -157,18 +139,12 @@ const Header = () => {
               </div>
 
               {cart.length === 0 ? (
-                <div className="cart-empty">
-                  <p>Your shopping cart is empty.</p>
-                </div>
+                <p className="text-center mt-4">Your cart is empty</p>
               ) : (
                 cart.map((item) => (
-                  <div key={item.id} className="cart-item">
+                  <div key={item.productId} className="cart-item">
                     <span>{item.name}</span>
-                    <div className="qty-box">
-                      <FaMinus onClick={() => decreaseQty(item.id)} />
-                      <span>{item.qty}</span>
-                      <FaPlus onClick={() => increaseQty(item.id)} />
-                    </div>
+                    <span>x {item.quantity}</span>
                   </div>
                 ))
               )}
@@ -189,7 +165,6 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      {/* OVERLAY */}
       <Mainnavbar />
     </>
   );

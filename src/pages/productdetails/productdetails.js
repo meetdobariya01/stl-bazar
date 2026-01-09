@@ -9,15 +9,10 @@ import {
   Tab,
   Form,
   InputGroup,
-  Badge,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
-import {
-  FaStar,
-  FaHeart,
-  FaShoppingCart,
-} from "react-icons/fa";
-import { useParams } from "react-router-dom";
+import { FaStar, FaHeart, FaShoppingCart } from "react-icons/fa";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import Header from "../../components/header/header";
@@ -28,6 +23,7 @@ const API_URL = process.env.REACT_APP_API_URL;
 
 const Productdetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
@@ -44,15 +40,31 @@ const Productdetails = () => {
   }, [id]);
 
   const addToCart = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      let guestId = localStorage.getItem("guestId");
 
-    await axios.post(
-      `${API_URL}/api/add-to-cart`,
-      { productId: product._id, quantity: qty },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+      if (!guestId) {
+        guestId = Date.now().toString();
+        localStorage.setItem("guestId", guestId);
+      }
 
-    alert("Product added to cart");
+      await axios.post(`${API_URL}/cart/add`, {
+        guestId,
+        product: {
+          productId: product._id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: qty,
+        },
+      });
+
+      // Redirect to cart page after adding
+      navigate("/cart");
+    } catch (err) {
+      console.error("Add to cart error:", err);
+      alert("Failed to add to cart");
+    }
   };
 
   if (!product) return <p className="text-center mt-5">Loading product...</p>;
@@ -63,7 +75,7 @@ const Productdetails = () => {
 
       <Container className="product-page my-5">
         <Row>
-          {/* LEFT COLUMN: MAIN IMAGE + THUMBNAILS */}
+          {/* LEFT COLUMN */}
           <Col lg={6}>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <Image src={activeImg} fluid className="main-img" />
@@ -83,7 +95,7 @@ const Productdetails = () => {
             </motion.div>
           </Col>
 
-          {/* RIGHT COLUMN: DETAILS */}
+          {/* RIGHT COLUMN */}
           <Col lg={6}>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h3 className="fw-bold">{product.name}</h3>
@@ -105,12 +117,7 @@ const Productdetails = () => {
               </div>
 
               <div className="pincode-check mb-3 d-flex justify-content-between align-items-center">
-                <Form.Control
-                  type="text"
-                  placeholder="Enter Pincode"
-                  maxLength={6}
-                  // style={{ width: "70%" }}
-                />
+                <Form.Control type="text" placeholder="Enter Pincode" maxLength={6} />
                 <Button variant="link">CHECK</Button>
               </div>
 
@@ -124,14 +131,12 @@ const Productdetails = () => {
                 <Button className="add-cart w-100" onClick={addToCart}>
                   <FaShoppingCart /> Add to Cart
                 </Button>
-                
               </div>
-              
             </motion.div>
           </Col>
         </Row>
 
-        {/* TABS: PRODUCT DETAILS / REVIEWS */}
+        {/* TABS */}
         <Tab.Container defaultActiveKey="details">
           <Nav variant="tabs" className="mt-4">
             <Nav.Item>

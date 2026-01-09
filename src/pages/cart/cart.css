@@ -1,0 +1,9 @@
+.hover-shadow:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease;
+}
+
+img.rounded-3 {
+  object-fit: cover;
+  height: 80px;
+}

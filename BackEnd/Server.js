@@ -33,7 +33,7 @@ app.use(passport.initialize());
 app.use("/api/auth", require("./Router/authRouter"));
 app.use("/api/cart", require("./Router/cartRouter"));
 app.use("/api", require("./Router/routerproduct")); // ✅ PRODUCTS & COMPANIES
-
+app.use("/api/order", require("./Router/orderRouter"));
 /* ===============================
    ROOT
 ================================ */
