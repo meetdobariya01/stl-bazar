@@ -107,8 +107,8 @@ const Header = () => {
             </Form>
 
             <div className="mobile-links lexend">
+                 <span onClick={() => navigate("/product")}>Product</span>
               <span onClick={() => navigate("/aboutus")}>About Us</span>
-              <span onClick={() => navigate("/product")}>Product</span>
               <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
           </motion.div>
