@@ -15,7 +15,7 @@ const Newlunch = () => {
 
   // Fetch BEST SELLERS (1 product per company, first-added order)
   useEffect(() => {
-    fetch("http://localhost:9000/api/best-sellers")
+    fetch(`${API_URL}/best-sellers`)
       .then((res) => res.json())
       .then((data) => setProducts(data))
       .catch((err) => console.error("BEST SELLER ERROR:", err));

@@ -47,7 +47,7 @@ const Ourbrand = () => {
       <div className="featured-fullwidth full-width-carousel">
         <div className="featured-header container lexend">
           <h2>OUR BRAND</h2>
-          <button className="view-all" onClick={() => navigate("/all-brands")}>
+          <button className="view-all" onClick={() => navigate("/product")}>
             View All
           </button>
         </div>

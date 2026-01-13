@@ -5,14 +5,14 @@ import { FaStar, FaTruck, FaShoppingCart } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 import "./bestseller.css";
-
+const API_URL = process.env.REACT_APP_API_URL;
 const Bestseller = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
 
   // Fetch BEST SELLERS (1 product per company, first-added order)
   useEffect(() => {
-    fetch("http://localhost:9000/api/best-sellers")
+    fetch(`${API_URL}/best-sellers`)
       .then((res) => res.json())
       .then((data) => setProducts(data))
       .catch((err) => console.error("BEST SELLER ERROR:", err));
