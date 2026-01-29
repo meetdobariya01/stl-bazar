@@ -18,6 +18,7 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import "./productdetails.css";
+import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -78,7 +79,7 @@ const Productdetails = () => {
           {/* LEFT COLUMN */}
           <Col lg={6}>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Image src={activeImg} fluid className="main-img" />
+              <Image src={activeImg} fluid className="main-img mb-5" />
               {product.images && product.images.length > 1 && (
                 <div className="thumbs mt-3 d-flex gap-2">
                   {product.images.map((img, i) => (
@@ -105,7 +106,9 @@ const Productdetails = () => {
                 {[...Array(product.averageRating || 0)].map((_, i) => (
                   <FaStar key={i} color="#FFD700" />
                 ))}
-                <span className="ms-2">({product.reviewCount || 0} reviews)</span>
+                <span className="ms-2">
+                  ({product.reviewCount || 0} reviews)
+                </span>
               </div>
 
               <div className="price mb-3">
@@ -117,8 +120,12 @@ const Productdetails = () => {
               </div>
 
               <div className="pincode-check mb-3 d-flex justify-content-between align-items-center">
-                <Form.Control type="text" placeholder="Enter Pincode" maxLength={6} />
-                <Button variant="link">CHECK</Button>
+                <Form.Control
+                  type="text"
+                  placeholder="Enter Pincode"
+                  maxLength={6}
+                />
+                <Button variant="link text-dark">CHECK</Button>
               </div>
 
               <InputGroup className="qty-box mb-3" style={{ width: 140 }}>
@@ -140,16 +147,22 @@ const Productdetails = () => {
         <Tab.Container defaultActiveKey="details">
           <Nav variant="tabs" className="mt-4">
             <Nav.Item>
-              <Nav.Link eventKey="details">Product Details</Nav.Link>
+              <Nav.Link eventKey="details" className="lexend text-dark">
+                Product Details
+              </Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link eventKey="reviews">Reviews</Nav.Link>
+              <Nav.Link eventKey="reviews" className="lexend text-dark">
+                Reviews
+              </Nav.Link>
             </Nav.Item>
           </Nav>
 
           <Tab.Content className="p-4 border border-top-0">
             <Tab.Pane eventKey="details">
-              <p>{product.description || "No description available."}</p>
+              <p className="funnel-sans">
+                {product.description || "No description available."}
+              </p>
             </Tab.Pane>
 
             <Tab.Pane eventKey="reviews">
@@ -171,6 +184,10 @@ const Productdetails = () => {
             </Tab.Pane>
           </Tab.Content>
         </Tab.Container>
+
+        {/* Details Section */}
+        <Details />
+        
       </Container>
 
       <Footer />

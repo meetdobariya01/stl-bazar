@@ -16,14 +16,14 @@
 }
 
 /* CARD */
-.product-card {
+.product-grid-card {
   border-radius: 14px;
   border: 1px solid #eee;
   position: relative;
   overflow: hidden;
 }
 
-.product-card img {
+.product-grid-card img {
   height: 240px;
   object-fit: cover;
 }
@@ -47,7 +47,7 @@
 }
 
 /* TEXT */
-.product-card h6 {
+.product-grid-card h6 {
   font-size: 15px;
   margin-bottom: 6px;
 }
@@ -130,7 +130,7 @@
 
 /* MOBILE */
 @media (max-width: 768px) {
-  .product-card img {
+  .product-grid-card img {
     height: 200px;
   }
 }

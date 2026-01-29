@@ -9,6 +9,7 @@ import Shopus from "../../components/shopus/shopus";
 import Newlunch from "../../components/newlunch/newlunch";
 import Testimonil from "../../components/testimonial/testimonil";
 import Category from "../../components/category/category";
+import Details from "../../components/details/details";
 
 const Home = () => {
   return (
@@ -25,15 +26,18 @@ const Home = () => {
       {/* category */}
       <Category />
 
+      {/* Details */}
+      <Details />
+
       {/* our brand */}
       <Ourbrand />
-
-      {/* shop with us */}
-      <Shopus />
 
       {/* new lunch */}
       <Newlunch />
 
+      {/* shop with us */}
+      <Shopus />
+      
       {/* testimonial */}
       <Testimonil />
 

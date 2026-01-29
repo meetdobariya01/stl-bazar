@@ -8,40 +8,39 @@ const testimonials = [
   {
     name: "Srushti Parate",
     rating: 1,
-    text: "Tried Soulliqo for the first time and I’m hooked. Super smooth, and literally melts in your mouth",
+    text: "Absolutely loved the taste! You can truly feel the homemade touch in every bite. Just like ghar ka khana.",
     image: "https://i.pravatar.cc/100?img=47",
   },
   {
     name: "Yashaswani Agarwal",
     rating: 2,
-    text: "From Ahmedabad to my heart (and tummy) 🍫, half the box gone in a day – that says it all! 💗",
+    text: "Fresh, crispy and perfectly balanced flavors. Much better than factory-made snacks.",
     image: "https://i.pravatar.cc/100?img=12",
   },
   {
-    name: "Maps & Mimosas",
+    name: "Ramesh Patel",
     rating: 3,
-    text: "Loving this colour and flavour bombs!!",
+    text: "The sweets reminded me of my childhood. Pure ingredients and authentic taste",
     image: "https://i.pravatar.cc/100?img=32",
   },
   {
     name: "Aditi Shah",
     rating: 4,
-    text: "Premium packaging and taste is top notch. Will order again!",
+    text: "Every product feels handcrafted with love. The quality, taste, and freshness are outstanding.",
     image: "https://i.pravatar.cc/100?img=22",
   },
   {
-    name: "Aditi Shah",
+    name: "Paresh Parikh",
     rating: 5,
-    text: "Premium packaging and taste is top notch. Will order again!",
+    text: "Finally found a brand that delivers traditional taste with modern hygiene standards. Highly recommended!",
     image: "https://i.pravatar.cc/100?img=22",
   },
   {
-    name: "Aditi Shah",
+    name: "Komal Maheta",
     rating: 6,
-    text: "Premium packaging and taste is top notch. Will order again!",
+    text: "From namkeen to sweets, everything tastes rich and authentic. Perfect for festivals and gifting.",
     image: "https://i.pravatar.cc/100?img=22",
   },
- 
 ];
 
 const chunk = (arr, size) =>
@@ -103,7 +102,7 @@ const Testimonil = () => {
                     <div className="testimonial-header">
                       <img src={item.image} alt={item.name} />
                       <div>
-                        <h6>{item.name}</h6>
+                        <h6 className="lexend">{item.name}</h6>
                         <div className="stars">
                           {[...Array(5)].map((_, j) => (
                             <FaStar
@@ -115,7 +114,7 @@ const Testimonil = () => {
                       </div>
                     </div>
 
-                    <p className="testimonial-text">{item.text}</p>
+                    <p className="testimonial-text funnel-sans">{item.text}</p>
                   </motion.div>
                 ))}
               </div>
