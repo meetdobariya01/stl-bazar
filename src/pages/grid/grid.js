@@ -9,6 +9,7 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import { useCart } from "../../context/CartContext"; // ✅ ADD
 import "./grid.css";
+import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -42,29 +43,31 @@ const Grid = () => {
     }));
   };
 
-const handleAddToCart = async (e, item) => {
-  e.stopPropagation();
+  const handleAddToCart = async (e, item) => {
+    e.stopPropagation();
 
-  const guestId = localStorage.getItem("guestId");
+    const guestId = localStorage.getItem("guestId");
 
-  await axios.post(`${API_URL}/cart/add`, {
-    guestId,
-    product: {
-      productId: item._id,
-      name: item.name,
-      price: item.price,
-      image: item.image,
-      quantity: qty[item._id] || 1,
-    },
-  });
+    await axios.post(`${API_URL}/cart/add`, {
+      guestId,
+      product: {
+        productId: item._id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        quantity: qty[item._id] || 1,
+      },
+    });
 
-  await fetchCart();
-  setShowCart(true);
-};
+    await fetchCart();
+    setShowCart(true);
+  };
 
   return (
     <>
       <Header />
+
+      <Details />
 
       <Container className="product-page">
         {/* TOP BAR */}
@@ -95,17 +98,21 @@ const handleAddToCart = async (e, item) => {
               <Col key={item._id} xs={6} sm={6} md={4} lg={3}>
                 <motion.div whileHover={{ y: -8 }}>
                   <Card
-                    className="product-card"
+                    className="product-grid-card"
                     onClick={() => navigate(`/product/${item._id}`)}
                   >
-                    <Card.Img src={item.image || "/images/default-product.png"} />
+                    <Card.Img
+                      src={item.image || "/images/default-product.png"}
+                    />
 
-                    <Card.Body>
+                    <Card.Body className="lexend">
                       <h6>{item.name}</h6>
 
                       <div className="rating">
                         {[...Array(Math.round(item.averageRating || 0))].map(
-                          (_, i) => <FaStar key={i} />
+                          (_, i) => (
+                            <FaStar key={i} />
+                          ),
                         )}
                       </div>
 
@@ -113,9 +120,23 @@ const handleAddToCart = async (e, item) => {
 
                       <div className="qty-cart">
                         <div className="qty">
-                          <button onClick={(e) => { e.stopPropagation(); changeQty(item._id, -1); }}>−</button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeQty(item._id, -1);
+                            }}
+                          >
+                            −
+                          </button>
                           <span>{qty[item._id] || 1}</span>
-                          <button onClick={(e) => { e.stopPropagation(); changeQty(item._id, 1); }}>+</button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeQty(item._id, 1);
+                            }}
+                          >
+                            +
+                          </button>
                         </div>
 
                         <Button

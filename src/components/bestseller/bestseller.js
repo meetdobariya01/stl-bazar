@@ -54,7 +54,7 @@ const Bestseller = () => {
 
   return (
     <Container className="product-section">
-      <div className="d-flex justify-content-between align-items-center mb-3">
+      <div className="d-flex justify-content-between align-items-center mb-3 lexend">
         <h2 className="title">BEST SELLER</h2>
         <Button className="deal-btn">VIEW DEALS</Button>
       </div>
@@ -99,7 +99,7 @@ const Bestseller = () => {
 
                   <div className="cart-area">
                     {cart[item._id] ? (
-                      <div className="qty-box">
+                      <div className="qty-box-bestseller">
                         <button onClick={() => decreaseQty(item._id)}>-</button>
                         <span>{cart[item._id]}</span>
                         <button onClick={() => increaseQty(item._id)}>+</button>

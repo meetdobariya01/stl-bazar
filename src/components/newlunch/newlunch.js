@@ -57,7 +57,7 @@ const Newlunch = () => {
 
   return (
     <Container className="product-section">
-      <div className="d-flex justify-content-between align-items-center mb-3">
+      <div className="d-flex justify-content-between align-items-center mb-3 lexend">
         <h2 className="title">NEW LUNCH</h2>
         <Button className="deal-btn">VIEW DEALS</Button>
       </div>

@@ -39,8 +39,8 @@ const Category = () => {
           viewport={{ once: true }}
           className="section-header text-center"
         >
-          <h2>Shop by Category</h2>
-          <p>Explore our wide range of premium categories</p>
+          <h2 className="lexend">Shop by Category</h2>
+          <p className="funnel-sans">Explore our wide range of premium categories</p>
         </motion.div>
 
         <Row className="g-4 mt-4 justify-content-center">
@@ -56,7 +56,7 @@ const Category = () => {
               >
                 <Card
                   className={getCategoryClass(cat)}
-                  onClick={() => navigate(`/category/${encodeURIComponent(cat)}`)}
+                  onClick={() => navigate(`/category/${encodeURIComponent(cat)}`)}  
                 >
                   <div className="icon-wrap">
                     <FaBoxOpen size={32} />
@@ -75,7 +75,7 @@ const Category = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <Button className="view-all-btn" onClick={() => navigate("/categories")}>
+          <Button className="view-all-btn funnel-sans" onClick={() => navigate("/categories")}>
             View All Categories
           </Button>
         </motion.div>
