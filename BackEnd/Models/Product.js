@@ -8,6 +8,7 @@ const ProductSchema = new mongoose.Schema(
     category: { type: String, required: true },
      categoryIcon: { type: String, default: "FaBoxOpen" },
     image: String,
+    
     size: { type: String, required: true },
     company: { type: String, required: true },
 
