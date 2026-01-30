@@ -20,7 +20,7 @@ const Form = () => {
               Medora will be in touch shortly.
             </p> */}
 
-            <form className="funnel-sans">
+            <form className="form funnel-sans">
               <div className="row-form">
                 <motion.input
                   whileFocus={{ scale: 1.02 }}
@@ -77,6 +77,7 @@ const Form = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
+                className="button"
               >
                 Submit
               </motion.button>
