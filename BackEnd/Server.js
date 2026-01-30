@@ -14,6 +14,8 @@ connectDB();
 require("./Comfig/passport");
 
 const app = express();
+// This allows the browser to access images stored in the uploads folder
+app.use('/uploads', express.static(path.join("D:\\GourmentBazar\\Vendor\\VendorBackend\\uploads")));
 app.use("/images", express.static(path.join(__dirname, "public/images")));
 /* ===============================
    MIDDLEWARE
@@ -21,7 +23,7 @@ app.use("/images", express.static(path.join(__dirname, "public/images")));
 app.use(express.json());
 
 app.use(cors({
-  origin: "http://localhost:3000", // React frontend
+  origin: "http://localhost:3001", // React frontend
   credentials: true
 }));
 
