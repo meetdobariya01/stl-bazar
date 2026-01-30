@@ -21,7 +21,7 @@
   margin-bottom: 30px;
 }
 
-form {
+.form {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -47,7 +47,7 @@ textarea {
   resize: none;
 }
 
-button {
+.button {
   width: fit-content;
   padding: 14px 28px;
   border-radius: 50px;
