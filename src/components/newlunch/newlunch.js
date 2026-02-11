@@ -1,19 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Container, Card, Button } from "react-bootstrap";
-import { motion } from "framer-motion";
-import { FaStar, FaTruck, FaShoppingCart } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaStar, FaTruck, FaShoppingCart, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import axios from "axios";
 
 import "./newlunch.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-const Newlunch = () => {
-   const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState({});
+const useWindowWidth = () => {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+};
 
-  // Fetch BEST SELLERS (1 product per company, first-added order)
+const Newlunch = () => {
+  const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const width = useWindowWidth();
+
+  // Items visible per slide
+  const itemsPerView = width < 576 ? 1 : width < 768 ? 2 : width < 992 ? 3 : 4;
+  const maxIndex = Math.max(0, products.length - itemsPerView);
+
+  // Fetch BEST SELLERS
   useEffect(() => {
     fetch(`${API_URL}/best-sellers`)
       .then((res) => res.json())
@@ -21,19 +37,19 @@ const Newlunch = () => {
       .catch((err) => console.error("BEST SELLER ERROR:", err));
   }, []);
 
-  // Auto-scroll for mobile
+  // Reset index when items per view changes
   useEffect(() => {
-    const interval = setInterval(() => {
-      const slider = document.getElementById("auto-scroll");
-      if (window.innerWidth < 768 && slider) {
-        slider.scrollLeft += 260;
-        if (slider.scrollLeft + slider.clientWidth >= slider.scrollWidth) {
-          slider.scrollLeft = 0;
-        }
-      }
-    }, 2500);
+    setCurrentIndex((prev) => Math.min(prev, maxIndex));
+  }, [itemsPerView, maxIndex]);
 
-    return () => clearInterval(interval);
+  const goNext = useCallback(() => {
+    setDirection(1);
+    setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
+  }, [maxIndex]);
+
+  const goPrev = useCallback(() => {
+    setDirection(-1);
+    setCurrentIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
   const addToCart = (id) => {
@@ -55,6 +71,8 @@ const Newlunch = () => {
     });
   };
 
+  const visibleProducts = products.slice(currentIndex, currentIndex + itemsPerView);
+
   return (
     <Container className="product-section">
       <div className="d-flex justify-content-between align-items-center mb-3 lexend">
@@ -62,58 +80,102 @@ const Newlunch = () => {
         <Button className="deal-btn">VIEW DEALS</Button>
       </div>
 
-      <div id="auto-scroll" className="product-slider">
-        {products.map((item) => (
-          <motion.div
-            key={item._id}
-            whileHover={{ scale: 1.03 }}
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="product-card-wrapper"
-          >
-            <Card className="product-card">
-              <Link to={`/product/${item._id}`} className="product-link">
-                <Card.Img src={item.image || "/images/default-product.png"} alt={item.name} />
-                <Card.Body>
-                  <h6 className="product-title">{item.name}</h6>
+      <div className="carousel-wrapper">
+        {/* Prev Button */}
+        <button
+          className="carousel-nav-btn carousel-prev"
+          onClick={goPrev}
+          disabled={currentIndex === 0}
+          aria-label="Previous"
+        >
+          <FaChevronLeft />
+        </button>
 
-                  <div className="rating">
-                    {[...Array(5)].map((_, i) => (
-                      <FaStar
-                        key={i}
-                        color={i < (item.averageRating || 4) ? "#f5a623" : "#ddd"}
-                      />
-                    ))}
-                    <span>({item.reviews || 0})</span>
-                  </div>
+        {/* Product Track */}
+        <div className="carousel-track">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={currentIndex}
+              className="carousel-slide"
+              initial={{ x: direction > 0 ? 200 : -200, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: direction > 0 ? -200 : 200, opacity: 0 }}
+              transition={{ duration: 0.35, ease: "easeInOut" }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${itemsPerView}, 1fr)`,
+                gap: "16px",
+              }}
+            >
+              {visibleProducts.map((item) => (
+                <Card className="product-card" key={item._id}>
+                  <Link to={`/product/${item._id}`} className="product-link">
+                    <Card.Img src={item.image || "/images/default-product.png"} alt={item.name} />
+                    <Card.Body>
+                      <h6 className="product-title">{item.name}</h6>
 
-                  <div className="price">
-                    <span className="new">₹{item.price}</span>
-                    {item.sale && <span className="old">₹{item.sale}</span>}
-                  </div>
-
-                  <div className="ship">
-                    <FaTruck /> Ships in 1 Day
-                  </div>
-
-                  <div className="cart-area">
-                    {cart[item._id] ? (
-                      <div className="qty-box">
-                        <button onClick={() => decreaseQty(item._id)}>-</button>
-                        <span>{cart[item._id]}</span>
-                        <button onClick={() => increaseQty(item._id)}>+</button>
+                      <div className="rating">
+                        {[...Array(5)].map((_, i) => (
+                          <FaStar
+                            key={i}
+                            color={i < (item.averageRating || 4) ? "#f5a623" : "#ddd"}
+                          />
+                        ))}
+                        <span>({item.reviews || 0})</span>
                       </div>
-                    ) : (
-                      <Button className="cart-btn" onClick={() => addToCart(item._id)}>
-                        <FaShoppingCart />
-                      </Button>
-                    )}
-                  </div>
-                </Card.Body>
-              </Link>
-            </Card>
-          </motion.div>
+
+                      <div className="price">
+                        <span className="new">₹{item.price}</span>
+                        {item.sale && <span className="old">₹{item.sale}</span>}
+                      </div>
+
+                      <div className="ship">
+                        <FaTruck /> Ships in 1 Day
+                      </div>
+
+                      <div className="cart-area">
+                        {cart[item._id] ? (
+                          <div className="qty-box">
+                            <button onClick={(e) => { e.preventDefault(); decreaseQty(item._id); }}>-</button>
+                            <span>{cart[item._id]}</span>
+                            <button onClick={(e) => { e.preventDefault(); increaseQty(item._id); }}>+</button>
+                          </div>
+                        ) : (
+                          <Button className="cart-btn" onClick={(e) => { e.preventDefault(); addToCart(item._id); }}>
+                            <FaShoppingCart />
+                          </Button>
+                        )}
+                      </div>
+                    </Card.Body>
+                  </Link>
+                </Card>
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Next Button */}
+        <button
+          className="carousel-nav-btn carousel-next"
+          onClick={goNext}
+          disabled={currentIndex >= maxIndex}
+          aria-label="Next"
+        >
+          <FaChevronRight />
+        </button>
+      </div>
+
+      {/* Dot Indicators */}
+      <div className="carousel-dots">
+        {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+          <span
+            key={i}
+            className={`carousel-dot ${i === currentIndex ? "active" : ""}`}
+            onClick={() => {
+              setDirection(i > currentIndex ? 1 : -1);
+              setCurrentIndex(i);
+            }}
+          />
         ))}
       </div>
     </Container>

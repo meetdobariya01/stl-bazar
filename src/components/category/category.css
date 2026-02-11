@@ -82,3 +82,60 @@
     font-size: 1.8rem;
   }
 }
+.category-card-wrapper {
+  width: 140px;
+  cursor: pointer;
+}
+
+.category-card-wrapper .card {
+  text-align: center;
+  padding: 20px 10px;
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.category-card-wrapper .card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.icon-wrap {
+  background: black;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+}
+/* Remove default background image */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-image: none;
+}
+
+/* Style arrows */
+.carousel-control-prev,
+.carousel-control-next {
+  width: 5%;
+  opacity: 1;
+}
+
+/* Create custom black arrows */
+.carousel-control-prev-icon::after {
+  content: "‹";
+  font-size: 40px;
+  color: black;
+}
+
+.carousel-control-next-icon::after {
+  content: "›";
+  font-size: 40px;
+  color: black;
+}
+
+/* Remove any background */
+.carousel-control-prev,
+.carousel-control-next {
+  background: transparent !important;
+}
