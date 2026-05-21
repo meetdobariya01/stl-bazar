@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Container, Carousel, Button } from "react-bootstrap";
+import { useNavigate } from "react-router-dom"; // Add this import
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import axios from "axios";
 import "./arrival.css";
@@ -7,6 +8,7 @@ import "./arrival.css";
 const Arrival = () => {
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // Add navigate hook
 
   useEffect(() => {
     fetchArrivalProducts();
@@ -56,6 +58,7 @@ const Arrival = () => {
             console.log(`Product: ${product.name}, Image URL: ${imageUrl}`);
             
             return {
+              id: product._id, // Make sure to include the product ID
               title: product.name,
               price: `₹${product.price}`,
               image: imageUrl || "https://via.placeholder.com/800/CCCCCC/FFFFFF?text=No+Image",
@@ -70,6 +73,11 @@ const Arrival = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle product click
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
   };
 
   if (loading) {
@@ -116,7 +124,12 @@ const Arrival = () => {
                 <div className="container-fluid">
                   <div className="row g-3">
                     {slide.products.map((item, index) => (
-                      <div className="col-6 col-md-4 col-lg-3" key={index}>
+                      <div 
+                        className="col-6 col-md-4 col-lg-3" 
+                        key={index}
+                        onClick={() => handleProductClick(item.id)}
+                        style={{ cursor: "pointer" }}
+                      >
                         <div className="product-card h-100">
                           <div className="product-img">
                             <img
