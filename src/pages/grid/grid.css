@@ -1,3 +1,7 @@
+.product-background{
+  background: #faf8f4;
+}
+
 .product-page {
   padding: 30px 0;
 }
@@ -127,16 +131,19 @@
 }
 
 /* CART */
-.cart-btn {
-  background: #053262;
+.cart-btn-grid {
+  background: transparent;
   border: none;
+  color: #000;
+  border: 1px solid #ccc;
   border-radius: 10px;
   padding: 8px 12px;
-  width: 40%;
+  width: 30%;
 }
 
-.cart-btn:hover {
-  background: #041f42;
+.cart-btn-grid:hover {
+  background: #9a7745;
+  border: none
 }
 
 /* MOBILE */

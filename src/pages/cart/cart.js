@@ -1,55 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  ProgressBar,
+} from "react-bootstrap";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaTrash, FaMinus, FaPlus, FaShoppingBag } from "react-icons/fa";
+import {
+  FaTrash,
+  FaMinus,
+  FaPlus,
+  FaShoppingBag,
+  FaShieldAlt,
+  FaTag,
+} from "react-icons/fa";
 import axios from "axios";
 import "./cart.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-// 🔹 Add the Backend URL where images are served
-const BACKEND_URL = "http://localhost:9000";
 
 const Cart = () => {
   const [cart, setCart] = useState({ items: [] });
   const guestId = localStorage.getItem("guestId");
 
-  // 🔹 Helper to handle dual URL logic (Admin vs Basic)
-  // ================= IMAGE PATH LOGIC =================
-const formatImagePath = (path) => {
-  // 🔹 Handle array input
-  if (Array.isArray(path)) {
-    path = path[0]; // Take first image if it's an array
-  }
-  
-  if (!path) return "/images/default-product.png";
-
-  // 1. Full External URL (e.g., Cloudinary or S3)
-  if (path.startsWith("http")) return path;
-
-  // 2. Admin/Vendor Uploads (e.g., path starts with /uploads)
-  if (path.startsWith("/uploads")) {
-    return `${BACKEND_URL}${path}`;
-  }
-
-  // 3. Basic/Preset Local Images
-  if (path.startsWith("/images")) {
-    return `${path}`;
-  }
-
-  // Fallback: Default to backend URL + path
-  return `${BACKEND_URL}${path}`;
-};
-
+  // FETCH CART
   const fetchCart = async () => {
     if (!guestId) return;
     try {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
       setCart(res.data || { items: [] });
     } catch (err) {
-      console.error("Cart fetch error:", err.response?.data || err.message);
+      console.error(err.response?.data || err.message);
     }
   };
 
@@ -57,7 +43,11 @@ const formatImagePath = (path) => {
     fetchCart();
   }, [guestId]);
 
-  const updateQty = async (item, type) => {
+  // UPDATE QTY
+  const updateQty = async (productId, type) => {
+    const item = cart.items.find((i) => i.productId === productId);
+    if (!item) return;
+
     try {
       await axios.post(`${API_URL}/cart/add`, {
         guestId,
@@ -72,133 +62,214 @@ const formatImagePath = (path) => {
 
       fetchCart();
     } catch (err) {
-      console.error("Update qty error:", err.response?.data || err.message);
+      console.error(err.response?.data || err.message);
     }
   };
 
-
+  // REMOVE ITEM
   const removeItem = async (productId) => {
     try {
       await axios.delete(`${API_URL}/cart/remove/${guestId}/${productId}`);
+
       fetchCart();
     } catch (err) {
-      console.error("Remove item error:", err.message);
+      console.error(err.response?.data || err.message);
     }
   };
 
-  const subtotal = cart.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = cart.items.reduce(
+    (acc, item) => acc + item.price * item.quantity,
+    0,
+  );
+
+  const shipping = subtotal > 1499 ? 0 : 99;
+  const total = subtotal + shipping;
 
   return (
     <>
       <Header />
-      <Container className="py-5">
-        <motion.h2
-          className="fw-bold text-center mb-5"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          🛒 Your Shopping Cart
-        </motion.h2>
 
-        <Row className="g-4">
-          <Col lg={8}>
-            <AnimatePresence>
-              {cart.items.length === 0 ? (
-                <motion.div className="text-center py-5">
-                  <FaShoppingBag size={80} className="text-muted mb-3" />
-                  <h4 className="fw-bold">Your cart is empty</h4>
-                  <Button as={NavLink} to="/" variant="dark">Continue Shopping</Button>
-                </motion.div>
-              ) : (
-                cart.items.map((item) => (
+      <section className="cart-page lexend">
+        <Container>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="cart-top"
+          >
+            <div>
+              <h2 className="funnel-sans">Your Cart ({cart.items.length})</h2>
+              <p>Review your items and proceed to checkout.</p>
+            </div>
+
+            <NavLink to="/" className="continue-shopping">
+              ← Continue Shopping
+            </NavLink>
+          </motion.div>
+
+          <Row className="g-4">
+            {/* LEFT */}
+            <Col lg={8}>
+              <AnimatePresence>
+                {cart.items.length === 0 ? (
                   <motion.div
-                    key={item.productId}
-                    className="mb-3"
-                    exit={{ opacity: 0, x: -20 }}
+                    className="empty-cart"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                   >
-                    <Card className="shadow-sm rounded-4 border-0 p-2">
-                      <Card.Body>
-                        <Row className="align-items-center">
-                          <Col xs={4} md={3}>
-                            {/* 🔹 FIXED IMAGE SRC HERE */}
-                            <img
-                              src={formatImagePath(item.image)}
-                              alt={item.name}
-                              className="img-fluid rounded shadow-sm"
-                              style={{ height: "100px", width: "100%", objectFit: "cover" }}
-                              onError={(e) => { e.target.src = "/images/placeholder.png"; }}
-                            />
-                          </Col>
+                    <FaShoppingBag size={70} />
+                    <h4>Your Cart is Empty</h4>
 
-                          <Col xs={8} md={9}>
-                            <div className="d-flex justify-content-between align-items-start">
-                              <h6 className="fw-bold mb-1">{item.name}</h6>
-                              <Button
-                                variant="link"
-                                className="text-danger p-0"
-                                onClick={() => removeItem(item.productId)}
-                              >
-                                <FaTrash />
-                              </Button>
-                            </div>
-                            <p className="text-muted mb-2">₹{item.price}</p>
-
-                            <div className="d-flex align-items-center">
-                              <Button
-                                variant="outline-dark"
-                                size="sm"
-                                className="rounded-circle"
-                                onClick={() => updateQty(item, "dec")}
-                              >
-                                <FaMinus size={10} />
-                              </Button>
-
-                              <span className="mx-3 fw-bold">{item.quantity}</span>
-                              <Button
-                                variant="outline-dark"
-                                size="sm"
-                                className="rounded-circle"
-                                onClick={() => updateQty(item, "inc")}
-                              >
-                                <FaPlus size={10} />
-                              </Button>
-                              <span className="ms-auto fw-bold text-dark">
-                                ₹{item.price * item.quantity}
-                              </span>
-                            </div>
-                          </Col>
-                        </Row>
-                      </Card.Body>
-                    </Card>
+                    <Button as={NavLink} to="/" className="shop-btn">
+                      Continue Shopping
+                    </Button>
                   </motion.div>
-                ))
-              )}
-            </AnimatePresence>
-          </Col>
+                ) : (
+                  <>
+                    {cart.items.map((item, index) => (
+                      <motion.div
+                        key={item.productId}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="cart-card"
+                      >
+                        <Card className="border-0">
+                          <Card.Body>
+                            <Row className="align-items-center">
+                              {/* IMAGE */}
+                              <Col md={3} xs={4}>
+                                <div className="cart-img">
+                                  <img src={item.image} alt={item.name} />
+                                </div>
+                              </Col>
 
-          <Col lg={4}>
-            <Card className="p-4 shadow-sm border-0 rounded-4">
-              <h5 className="fw-bold mb-4">Order Summary</h5>
-              <div className="d-flex justify-content-between mb-2">
-                <span>Subtotal</span>
-                <span>₹{subtotal}</span>
-              </div>
-              <div className="d-flex justify-content-between mb-2">
-                <span>Shipping</span>
-                <span className="text-success">Free</span>
-              </div>
-              <hr />
-              <div className="d-flex justify-content-between mb-4">
-                <span className="fw-bold">Total</span>
-                <span className="fw-bold fs-5">₹{subtotal}</span>
-              </div>
-              <Button as={NavLink} to="/checkout" variant="dark" className="w-100 py-2 rounded-3">
-                Proceed to Checkout
-              </Button>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
+                              {/* INFO */}
+                              <Col md={6} xs={8}>
+                                <div className="cart-info">
+                                  <h4>{item.name}</h4>
+
+                                  <h5 className="funnel-sans">₹{item.price}</h5>
+
+                                  <div className="product-meta">
+                                    <span>Qty: {item.quantity}</span>
+                                  </div>
+
+                                  <div className="cart-actions">
+                                    <button
+                                      onClick={() => removeItem(item.productId)}
+                                    >
+                                      <FaTrash /> Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </Col>
+
+                              {/* QTY */}
+                              <Col md={3} xs={12}>
+                                <div className="qty-box">
+                                  <button
+                                    onClick={() =>
+                                      updateQty(item.productId, "dec")
+                                    }
+                                  >
+                                    <FaMinus />
+                                  </button>
+
+                                  <span>{item.quantity}</span>
+
+                                  <button
+                                    onClick={() =>
+                                      updateQty(item.productId, "inc")
+                                    }
+                                  >
+                                    <FaPlus />
+                                  </button>
+                                </div>
+                              </Col>
+                            </Row>
+                          </Card.Body>
+                        </Card>
+                      </motion.div>
+                    ))}
+
+                    {/* SHIPPING BAR */}
+                    <div className="shipping-box">
+                      <div className="shipping-top">
+                        <span>🎉 You are eligible for free shipping!</span>
+
+                        <span>₹{subtotal} / ₹1499</span>
+                      </div>
+
+                      <ProgressBar now={(subtotal / 1499) * 100} />
+                    </div>
+                  </>
+                )}
+              </AnimatePresence>
+            </Col>
+
+            {/* RIGHT */}
+            <Col lg={4}>
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Card className="summary-card border-0">
+                  <Card.Body>
+                    <h3>Order Summary</h3>
+
+                    <div className="summary-row">
+                      <span>Subtotal ({cart.items.length} items)</span>
+
+                      <span>₹{subtotal}</span>
+                    </div>
+
+                    <div className="summary-row">
+                      <span>Shipping</span>
+
+                      <span>{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
+                    </div>
+
+                    <div className="summary-row discount">
+                      <span>Shipping Discount</span>
+
+                      <span>-₹99</span>
+                    </div>
+
+                    <hr />
+
+                    <div className="summary-total">
+                      <div>
+                        <h4>Total</h4>
+                        <p>Inclusive of all taxes</p>
+                      </div>
+
+                      <h2>₹{total}</h2>
+                    </div>
+
+                    <button className="coupon-btn">
+                      <FaTag /> Apply Coupon
+                    </button>
+
+                    <Button
+                      as={NavLink}
+                      to="/checkout"
+                      className="checkout-btn"
+                    >
+                      Proceed to Checkout
+                    </Button>
+
+                    <div className="secure-checkout">
+                      <FaShieldAlt />
+                      <span>Secure Checkout</span>
+                    </div>
+                  </Card.Body>
+                </Card>
+              </motion.div>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+
       <Footer />
     </>
   );
