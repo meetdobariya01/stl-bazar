@@ -300,30 +300,35 @@
   .product-content h1 {
     font-size: 36px;
   }
+
+  .price-box {
+    font-size: 32px;
+  }
+
+  .features-row {
+    gap: 20px;
+    flex-wrap: wrap;
+  }
 }
 
+@media (max-width: 576px) {
 
-/* ===============================
-   REMOVE BORDER FROM COUNTER BOX
-================================ */
-.qty-box .form-control,
-.qty-box button {
-  border: none !important;
-  box-shadow: none !important;
-}
+  .product-content h1 {
+    font-size: 30px;
+  }
 
-/* Optional: subtle background */
-.qty-box .form-control {
-  background: #f8f9fa;
-}
+  .quantity-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-.qty-box button {
-  background: #294629;
-}
+  .review-header {
+    flex-direction: column;
+    gap: 10px;
+  }
 
-/* On focus (remove blue outline) */
-.qty-box .form-control:focus,
-.qty-box button:focus {
-  outline: none;
-  box-shadow: none;
+  .thumb-box {
+    width: 70px;
+    height: 70px;
+  }
 }

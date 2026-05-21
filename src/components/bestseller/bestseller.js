@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { FaArrowRight } from "react-icons/fa";
+import { useNavigate } from "react-router-dom"; // Add this import
 import axios from "axios";
 import "./bestseller.css";
 
 const Bestseller = () => {
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // Add navigate hook
 
   useEffect(() => {
     fetchBestSellers();
@@ -51,6 +53,11 @@ const Bestseller = () => {
     return `http://localhost:9000/uploads/${imagePath}`;
   };
 
+  // Handle product click
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
+  };
+
   if (loading) {
     return (
       <section className="collection-section py-5">
@@ -86,7 +93,11 @@ const Bestseller = () => {
             
             return (
               <Col lg={2} md={4} sm={6} xs={6} key={product._id || index}>
-                <div className="collection-card">
+                <div 
+                  className="collection-card"
+                  onClick={() => handleProductClick(product._id)}
+                  style={{ cursor: "pointer" }} // Add pointer cursor to indicate clickable
+                >
                   <div className="image-wrapper">
                     <img
                       src={imageUrl || "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image"}
