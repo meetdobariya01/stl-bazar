@@ -274,11 +274,11 @@ const Checkout = () => {
                       </Col>
                     </Row>
 
-                    <Form.Check
+                    {/* <Form.Check
                       type="checkbox"
                       label="Save this address for next time."
                       className="mt-3"
-                    />
+                    /> */}
                   </Card.Body>
                 </Card>
               </motion.div>
