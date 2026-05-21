@@ -1,23 +1,49 @@
 import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { motion } from "framer-motion";
+import {
+  FaLeaf,
+  FaCheckCircle,
+  FaFlask,
+  FaSeedling,
+  FaGlobeAsia,
+  FaPagelines,
+  // FaLeaf,
+} from "react-icons/fa";
 import "./details.css";
 
 const promises = [
-  { title: "100% Natural", icon: "🌱" },
-  { title: "Certified Organic", icon: "✔️" },
-  { title: "Chemical Pesticides Free", icon: "🧪" },
-  { title: "Preservatives Free", icon: "⚗️" },
-  { title: "Sustainably Farmed", icon: "🌍" },
-  { title: "Non-GMO Produce", icon: "🍃" },
+  {
+    title: "100% Natural",
+    icon: <FaLeaf />,
+  },
+  {
+    title: "Certified Organic",
+    icon: <FaCheckCircle />,
+  },
+  {
+    title: "Chemical Pesticides Free",
+    icon: <FaFlask />,
+  },
+  {
+    title: "Preservatives Free",
+    icon: <FaSeedling />,
+  },
+  {
+    title: "Sustainably Farmed",
+    icon: <FaGlobeAsia />,
+  },
+  {
+    title: "Non-GMO Produce",
+    icon: <FaPagelines />,
+  },
 ];
-
 const Details = () => {
   return (
     <div>
       <section className="our-promise-section funnel-sans">
         <Container>
-          <h2 className="promise-title text-center lexend mb-5">Our Promise</h2>
+          <h2 className="promise-title lexend mb-5">Our Promise</h2>
 
           <Row className="justify-content-center">
             {promises.map((item, index) => (

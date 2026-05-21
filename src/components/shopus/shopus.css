@@ -1,6 +1,6 @@
 .why-shop-section {
   padding: 80px 0;
-  background: #f9fafb;
+  background: #f8f6f2;
 }
 
 .why-header h2 {
@@ -14,7 +14,7 @@
   font-size: 16px;
 }
 
-.why-card {
+.why-card-shop {
   background: #ffffff;
   border-radius: 16px;
   padding: 35px 25px;
@@ -24,25 +24,25 @@
   transition: all 0.3s ease;
 }
 
-.why-icon {
+.why-icon-landingpage {
   width: 70px;
   height: 70px;
   margin: 0 auto 20px;
   border-radius: 50%;
-  background: #053262;
+  background: #f6fbf3;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  color: #fff;
+  color: #c8a96b;
 }
 
-.why-card h5 {
+.why-card-shop h5 {
   font-weight: 600;
   margin-bottom: 10px;
 }
 
-.why-card p {
+.why-card-shop p {
   font-size: 14px;
   color: #6c757d;
 }
@@ -57,7 +57,7 @@
     font-size: 26px;
   }
 
-  .why-card {
-    padding: 30px 20px;
+  .why-card-shop {
+    padding: 10px 9px;
   }
 }

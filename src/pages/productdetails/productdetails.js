@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   Container, Row, Col, Button, Image, Nav, Tab, Form, InputGroup,
 } from "react-bootstrap";
-import { FaStar, FaShoppingCart, FaHeart } from "react-icons/fa";
+import { motion } from "framer-motion";
+import { FaStar, FaHeart, FaShoppingCart } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -135,157 +136,121 @@ const Productdetails = () => {
   return (
     <>
       <Header />
+
       <Container className="product-page my-5">
         <Row>
+          {/* LEFT COLUMN */}
           <Col lg={6}>
-            <div className="main-img-container mb-3">
-              <Image
-                src={activeImg}
-                fluid
-                className="main-img"
-                style={{ maxHeight: "500px", objectFit: "contain" }}
-              />
-            </div>
-
-            {/* ✅ NEW: MULTIPLE IMAGES */}
-            <div className="d-flex gap-2 flex-wrap">
-              {(Array.isArray(product.image)
-                ? product.image
-                : [product.image]
-              ).map((img, index) => {
-                const formatted = formatImagePath(img);
-
-                return (
-                  <Image
-                    key={index}
-                    src={formatted}
-                    onClick={() => setActiveImg(formatted)}
-                    style={{
-                      width: "70px",
-                      height: "70px",
-                      objectFit: "cover",
-                      cursor: "pointer",
-                      border:
-                        activeImg === formatted
-                          ? "2px solid #000"
-                          : "1px solid #ddd",
-                      borderRadius: "6px",
-                    }}
-                  />
-                );
-              })}
-            </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Image src={activeImg} fluid className="main-img mb-5" />
+              {product.images && product.images.length > 1 && (
+                <div className="thumbs mt-3 d-flex gap-2">
+                  {product.images.map((img, i) => (
+                    <Image
+                      key={i}
+                      src={img}
+                      onClick={() => setActiveImg(img)}
+                      className={`thumb ${activeImg === img ? "active" : ""}`}
+                      style={{ width: 60, cursor: "pointer" }}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
           </Col>
 
+          {/* RIGHT COLUMN */}
           <Col lg={6}>
-            <div className="product-info">
-              <h3 className="fw-bold mb-1">{product.name}</h3>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <h3 className="fw-bold">{product.name}</h3>
+              {product.size && <p>Wt. {product.size}</p>}
 
-              <div className="d-flex align-items-center mb-2">
-                {[...Array(5)].map((_, i) => (
-                  <FaStar key={i} size={16}
-                    color={i < Math.round(product.averageRating || 0) ? "#ffc107" : "#e4e5e9"}
-                    className="me-1" />
+              <div className="rating d-flex align-items-center mb-2">
+                {[...Array(product.averageRating || 0)].map((_, i) => (
+                  <FaStar key={i} color="#FFD700" />
                 ))}
-                <span className="ms-2 text-muted small">
-                  {product.averageRating?.toFixed(1) || "0.0"} ({reviews.length} reviews)
+                <span className="ms-2">
+                  ({product.reviewCount || 0} reviews)
                 </span>
               </div>
 
               <div className="price mb-3">
-                <span className="new">₹{product.price}</span>
+                <span className="fs-4 fw-bold">₹{product.price}</span>
               </div>
 
-              {/* ❤ Wishlist Toggle */}
-              <div
-                className="mb-3 small d-flex align-items-center gap-1"
-                style={{ cursor: wishlistLoading ? "not-allowed" : "pointer", userSelect: "none" }}
-                onClick={!wishlistLoading ? toggleWishlist : undefined}
-              >
-                <FaHeart color={wishlisted ? "#e63946" : "#aaa"} size={16} />
-                <span style={{ color: wishlisted ? "#e63946" : "#555" }}>
-                  {wishlisted ? "Wishlisted" : "Add to Wish List"}
-                </span>
+              <div className="wishlist mb-3">
+                <FaHeart /> Add to Wish List
               </div>
 
-              <div className="mb-3 d-flex gap-2">
-                <Form.Control placeholder="Enter Pincode" style={{ maxWidth: "260px" }} />
-                <Button variant="link" className="p-0">CHECK</Button>
+              <div className="pincode-check mb-3 d-flex justify-content-between align-items-center">
+                <Form.Control
+                  type="text"
+                  placeholder="Enter Pincode"
+                  maxLength={6}
+                />
+                <Button variant="link text-dark">CHECK</Button>
               </div>
 
-              <InputGroup className="qty-box mb-3">
+              <InputGroup className="qty-box mb-3" style={{ width: 140 }}>
                 <Button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>−</Button>
-                <Form.Control value={qty} readOnly />
+                <Form.Control value={qty} readOnly className="text-center" />
                 <Button onClick={() => setQty(qty + 1)}>+</Button>
               </InputGroup>
 
-              <Button className="add-cart w-100 py-2" onClick={addToCart}>
-                <FaShoppingCart className="me-2" />
-                Add to Cart
-              </Button>
-            </div>
+              <div className="actions d-flex gap-2 mb-4">
+                <Button className="add-cart w-100" onClick={addToCart}>
+                  <FaShoppingCart /> Add to Cart
+                </Button>
+              </div>
+            </motion.div>
           </Col>
         </Row>
 
+        {/* TABS */}
         <Tab.Container defaultActiveKey="details">
-          <Nav variant="tabs" className="mt-5">
-            <Nav.Item><Nav.Link eventKey="details">Details</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="reviews">Reviews</Nav.Link></Nav.Item>
+          <Nav variant="tabs" className="mt-4">
+            <Nav.Item>
+              <Nav.Link eventKey="details" className="lexend text-dark">
+                Product Details
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="reviews" className="lexend text-dark">
+                Reviews
+              </Nav.Link>
+            </Nav.Item>
           </Nav>
 
           <Tab.Content className="p-4 border border-top-0">
             <Tab.Pane eventKey="details">
-              <p>{product.description}</p>
+              <p className="funnel-sans">
+                {product.description || "No description available."}
+              </p>
             </Tab.Pane>
 
             <Tab.Pane eventKey="reviews">
-              <div className="mb-4">
-                <div className="d-flex align-items-center mb-1">
-                  {[...Array(5)].map((_, i) => (
-                    <FaStar key={i} size={20}
-                      color={i < Math.round(product.averageRating || 0) ? "#ffc107" : "#e4e5e9"} />
-                  ))}
-                  <span className="ms-2 fw-semibold fs-5">
-                    {product.averageRating?.toFixed(1) || "0.0"} / 5
-                  </span>
-                </div>
-                <small className="text-muted">{reviews.length} Customer Reviews</small>
-              </div>
-
-              <Form onSubmit={submitReview} className="mb-4">
-                <Form.Control placeholder="Your Name" className="mb-2"
-                  value={userName} onChange={(e) => setUserName(e.target.value)} />
-                <Form.Select className="mb-2" value={rating}
-                  onChange={(e) => setRating(Number(e.target.value))}>
-                  {[5, 4, 3, 2, 1].map((num) => (
-                    <option key={num} value={num}>{num} Stars</option>
-                  ))}
-                </Form.Select>
-                <Form.Control as="textarea" rows={3} placeholder="Write your review..."
-                  className="mb-2" value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)} required />
-                <Button type="submit" variant="dark">Submit Review</Button>
-              </Form>
-
-              {reviews.map((r, index) => (
-                <div key={index} className="review-card p-3 mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <strong>{r.userName}</strong>
-                    <div>
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar key={i} size={15} color={i < r.rating ? "#ffc107" : "#e4e5e9"} />
+              {product.reviews && product.reviews.length > 0 ? (
+                product.reviews.map((r, i) => (
+                  <div key={i} className="review mb-3">
+                    <strong>{r.name}</strong>
+                    <div className="rating">
+                      {[...Array(r.rating)].map((_, j) => (
+                        <FaStar key={j} color="#FFD700" />
                       ))}
                     </div>
+                    <p>{r.comment}</p>
                   </div>
-                  <p className="mb-0 text-muted">{r.review}</p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p>No reviews yet</p>
+              )}
             </Tab.Pane>
           </Tab.Content>
         </Tab.Container>
 
-        <RelatedProducts currentProduct={product} />
+        {/* Details Section */}
         <Details />
+        
       </Container>
 
       <Footer />
