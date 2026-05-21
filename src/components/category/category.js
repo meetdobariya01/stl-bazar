@@ -67,7 +67,7 @@ const Category = () => {
                     key={index}
                     className="category-card-wrapper"
                     initial={{ opacity: 0, scale: 0.8 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
+                    whileInView={{ opacity: 1, scale: 1 }} 
                     transition={{ delay: index * 0.1 }}
                     viewport={{ once: true }}
                     whileHover={{ y: -10 }}

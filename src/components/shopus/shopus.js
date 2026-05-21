@@ -34,7 +34,7 @@ const Shopus = () => {
         <Container>
           {/* Heading */}
           <motion.div
-            className="why-header text-center"
+            className="why-header "
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -47,16 +47,16 @@ const Shopus = () => {
           {/* Cards */}
           <Row className="gy-4 mt-4">
             {features.map((item, index) => (
-              <Col lg={3} md={6} sm={6} xs={12} key={index}>
+              <Col lg={3} md={6} sm={6} xs={6} key={index}>
                 <motion.div
-                  className="why-card"
+                  className="why-card-shop"
                   initial={{ opacity: 0, y: 50 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   whileHover={{ y: -8, scale: 1.03 }}
                   viewport={{ once: true }}
                 >
-                  <div className="why-icon">{item.icon}</div>
+                  <div className="why-icon-landingpage">{item.icon}</div>
                   <h5 className="lexend">{item.title}</h5>
                   <p>{item.desc}</p>
                 </motion.div>

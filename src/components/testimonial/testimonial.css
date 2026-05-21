@@ -1,6 +1,6 @@
 .testimonial-section {
   padding: 80px 0;
-  background: #ffffff;
+  background: #f8f6f2;
 }
 
 .testimonial-row {
@@ -16,7 +16,7 @@
   padding: 24px;
   width: 100%;
   max-width: 360px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  /* box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); */
 }
 
 .testimonial-header {

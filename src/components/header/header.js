@@ -21,10 +21,7 @@ const Header = () => {
   const [search, setSearch] = useState("");
 
   // ✅ TOTAL QTY FROM CONTEXT
-  const totalQty = cart.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  const totalQty = cart.reduce((total, item) => total + item.quantity, 0);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -49,7 +46,7 @@ const Header = () => {
 
           {/* LOGO */}
           <div className="logo-box" onClick={() => navigate("/")}>
-            <img src="/images/logo.png" alt="logo" />
+            <img src="/images/brandel.png" alt="logo" />
           </div>
 
           {/* DESKTOP SEARCH */}
@@ -76,9 +73,7 @@ const Header = () => {
             {/* CART ICON */}
             <div className="cart-icon" onClick={() => setShowCart(true)}>
               <FaShoppingBag />
-              {totalQty > 0 && (
-                <span className="cart-count">{totalQty}</span>
-              )}
+              {totalQty > 0 && <span className="cart-count">{totalQty}</span>}
             </div>
           </div>
         </Container>
@@ -107,7 +102,8 @@ const Header = () => {
             </Form>
 
             <div className="mobile-links lexend">
-                 <span onClick={() => navigate("/product")}>Product</span>
+              <span onClick={() => navigate("/sell")}>Sell With Us</span>
+              <span onClick={() => navigate("/product")}>Brands</span>
               <span onClick={() => navigate("/aboutus")}>About Us</span>
               <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
