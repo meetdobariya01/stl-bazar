@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Navbar, Container, Form, FormControl } from "react-bootstrap";
 import {
   FaHeart,
@@ -8,70 +8,32 @@ import {
   FaTimes,
   FaBars,
 } from "react-icons/fa";
-
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, NavLink } from "react-router-dom";
-import axios from "axios";
-
 import { useCart } from "../../context/CartContext";
 import Mainnavbar from "../navbar/navbar";
-
 import "./header.css";
 
 const Header = () => {
   const navigate = useNavigate();
-  const { showCart, setShowCart, cart } = useCart();
-
+  const { showCart, setShowCart, cart } = useCart(); // ✅ CONTEXT CART
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-
   const [search, setSearch] = useState("");
-  const [searchResult, setSearchResult] = useState([]);
 
   // ✅ TOTAL QTY FROM CONTEXT
-  const totalQty = cart.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  const totalQty = cart.reduce((total, item) => total + item.quantity, 0);
 
-  // SEARCH API
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        if (search.trim() === "") {
-          setSearchResult([]);
-          return;
-        }
-
-        const res = await axios.get(
-          `http://localhost:9000/api/search?keyword=${search}`
-        );
-
-        setSearchResult(res.data.products);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-    const delayDebounce = setTimeout(() => {
-      fetchProducts();
-    }, 400);
-
-    return () => clearTimeout(delayDebounce);
-  }, [search]);
-
-  // SEARCH SUBMIT
   const handleSearch = (e) => {
     e.preventDefault();
-
     if (search.trim()) {
       navigate(`/product?search=${search}`);
       setShowMobileMenu(false);
-      setSearchResult([]);
     }
   };
 
   return (
     <>
+      {/* HEADER */}
       <Navbar className="main-header">
         <Container fluid className="header-wrapper">
           {/* MOBILE TOGGLE */}
@@ -87,58 +49,31 @@ const Header = () => {
             <img src="/images/brandel.png" alt="logo" />
           </div>
 
-          {/* SEARCH */}
+          {/* DESKTOP SEARCH */}
           <div className="search-wrapper desktop-only">
             <Form className="search-form" onSubmit={handleSearch}>
               <FormControl
                 type="search"
-                placeholder="Search Product"
+                placeholder="Search"
                 className="search-input lexend"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-
               <button className="search-btn" type="submit">
                 <FaSearch />
               </button>
             </Form>
-
-            {/* SEARCH DROPDOWN */}
-            {searchResult.length > 0 && (
-              <div className="search-dropdown">
-                {searchResult.map((item) => (
-                  <div
-                    key={item._id}
-                    className="search-item"
-                    onClick={() => {
-                      navigate(`/product/${item._id}`);
-                      setSearch("");
-                      setSearchResult([]);
-                    }}
-                  >
-                    <img src={item.image} alt={item.name} />
-
-                    <div>
-                      <h6>{item.name}</h6>
-                      <p>₹{item.price}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* ICONS */}
           <div className="icon-group">
             <FaHeart onClick={() => navigate("/wishlist")} />
-
             <FaUser onClick={() => navigate("/login")} />
 
+            {/* CART ICON */}
             <div className="cart-icon" onClick={() => setShowCart(true)}>
               <FaShoppingBag />
-              {totalQty > 0 && (
-                <span className="cart-count">{totalQty}</span>
-              )}
+              {totalQty > 0 && <span className="cart-count">{totalQty}</span>}
             </div>
           </div>
         </Container>
@@ -167,7 +102,8 @@ const Header = () => {
             </Form>
 
             <div className="mobile-links lexend">
-                 <span onClick={() => navigate("/product")}>Product</span>
+              <span onClick={() => navigate("/sell")}>Sell With Us</span>
+              <span onClick={() => navigate("/product")}>Brands</span>
               <span onClick={() => navigate("/aboutus")}>About Us</span>
               <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>

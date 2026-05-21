@@ -112,7 +112,6 @@ const ContactUs = () => {
 
                   <div>
                     <h5 className="funnel-sans">Phone</h5>
-
                     <a href="tel:+9199854XXXXX" className="email-link">
                       +91 99854 XXXXX
                     </a>
@@ -126,10 +125,10 @@ const ContactUs = () => {
                     <h5>Email</h5>
 
                     <a
-                      href="mailto:support@yourstore.com"
+                      href="mailto:care@brandel.shop"
                       className="email-link"
                     >
-                      support@yourstore.com
+                      care@brandel.shop
                     </a>
                   </div>
                 </div>

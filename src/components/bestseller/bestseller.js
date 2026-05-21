@@ -1,179 +1,115 @@
-import { useState, useEffect, useCallback } from "react";
-import { Container, Card, Button } from "react-bootstrap";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaStar, FaTruck, FaShoppingCart, FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import { Link } from "react-router-dom";
-
+import React, { useEffect, useState } from "react";
+import { Container, Row, Col } from "react-bootstrap";
+import { FaArrowRight } from "react-icons/fa";
+import axios from "axios";
 import "./bestseller.css";
 
-const API_URL = process.env.REACT_APP_API_URL;
-
-const useWindowWidth = () => {
-  const [width, setWidth] = useState(window.innerWidth);
-  useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return width;
-};
-
 const Bestseller = () => {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState({});
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const width = useWindowWidth();
+  const [bestSellers, setBestSellers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Items visible per slide
-  const itemsPerView = width < 576 ? 1 : width < 768 ? 2 : width < 992 ? 3 : 4;
-  const maxIndex = Math.max(0, products.length - itemsPerView);
-
-  // Fetch BEST SELLERS (1 product per company, first-added order)
   useEffect(() => {
-    fetch(`${API_URL}/best-sellers`)
-      .then((res) => res.json())
-      .then((data) => setProducts(data))
-      .catch((err) => console.error("BEST SELLER ERROR:", err));
+    fetchBestSellers();
   }, []);
 
-  // Reset index when items per view changes
-  useEffect(() => {
-    setCurrentIndex((prev) => Math.min(prev, maxIndex));
-  }, [itemsPerView, maxIndex]);
-
-  const goNext = useCallback(() => {
-    setDirection(1);
-    setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
-  }, [maxIndex]);
-
-  const goPrev = useCallback(() => {
-    setDirection(-1);
-    setCurrentIndex((prev) => Math.max(prev - 1, 0));
-  }, []);
-
-  const addToCart = (id) => {
-    setCart((prev) => ({ ...prev, [id]: 1 }));
+  const fetchBestSellers = async () => {
+    try {
+      const { data } = await axios.get(
+        "http://localhost:9000/api/best-sellers"
+      );
+      
+      console.log("Best Sellers data:", data);
+      // Only show first 6 products
+      setBestSellers(data.slice(0, 6));
+    } catch (error) {
+      console.error("Error fetching best sellers:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const increaseQty = (id) => {
-    setCart((prev) => ({ ...prev, [id]: prev[id] + 1 }));
+  // Helper function to get image URL safely
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // If it's an array, get the first item
+    let imagePath = Array.isArray(image) ? image[0] : image;
+    
+    if (!imagePath) return null;
+    
+    // If it's a full URL, return as is
+    if (imagePath.startsWith("http")) {
+      return imagePath;
+    }
+    
+    // If it starts with /images, serve from backend
+    if (imagePath.startsWith("/images")) {
+      return `${imagePath}`;
+    }
+    
+    // Default: serve from uploads folder
+    return `http://localhost:9000/uploads/${imagePath}`;
   };
 
-  const decreaseQty = (id) => {
-    setCart((prev) => {
-      if (prev[id] === 1) {
-        const updated = { ...prev };
-        delete updated[id];
-        return updated;
-      }
-      return { ...prev, [id]: prev[id] - 1 };
-    });
-  };
-
-  const visibleProducts = products.slice(currentIndex, currentIndex + itemsPerView);
+  if (loading) {
+    return (
+      <section className="collection-section py-5">
+        <Container>
+          <div className="text-center">
+            <h3>Loading best sellers...</h3>
+          </div>
+        </Container>
+      </section>
+    );
+  }
 
   return (
-    <Container className="product-section">
-      <div className="d-flex justify-content-between align-items-center mb-3 lexend">
-        <h2 className="title">BEST SELLER</h2>
-        <Button className="deal-btn">VIEW DEALS</Button>
-      </div>
+    <section className="collection-section py-5">
+      <Container>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+          <h2 className="section-title">
+            Best Sellers
+          </h2>
 
-      <div className="bs-carousel-wrapper">
-        {/* Prev Button */}
-        <button
-          className="bs-carousel-nav-btn bs-carousel-prev"
-          onClick={goPrev}
-          disabled={currentIndex === 0}
-          aria-label="Previous"
-        >
-          <FaChevronLeft />
-        </button>
-
-        {/* Product Track */}
-        <div className="bs-carousel-track">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={currentIndex}
-              className="bs-carousel-slide"
-              initial={{ x: direction > 0 ? 200 : -200, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: direction > 0 ? -200 : 200, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeInOut" }}
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${itemsPerView}, 1fr)`,
-                gap: "16px",
-              }}
-            >
-              {visibleProducts.map((item) => (
-                <Card className="product-card" key={item._id}>
-                  <Link to={`/product/${item._id}`} className="product-link">
-                    <Card.Img src={item.image} alt={item.name} />
-                    <Card.Body>
-                      <h6 className="product-title">{item.name}</h6>
-
-                      <div className="rating">
-                        {[...Array(5)].map((_, i) => (
-                          <FaStar
-                            key={i}
-                            color={i < (item.averageRating || 4) ? "#f5a623" : "#ddd"}
-                          />
-                        ))}
-                        <span>({item.reviews || 0})</span>
-                      </div>
-
-                      <div className="price">
-                        <span className="new">₹{item.price}</span>
-                      </div>
-
-                      <div className="cart-area">
-                        {cart[item._id] ? (
-                          <div className="qty-box-bestseller">
-                            <button onClick={(e) => { e.preventDefault(); decreaseQty(item._id); }}>-</button>
-                            <span>{cart[item._id]}</span>
-                            <button onClick={(e) => { e.preventDefault(); increaseQty(item._id); }}>+</button>
-                          </div>
-                        ) : (
-                          <Button className="cart-btn" onClick={(e) => { e.preventDefault(); addToCart(item._id); }}>
-                            <FaShoppingCart />
-                          </Button>
-                        )}
-                      </div>
-                    </Card.Body>
-                  </Link>
-                </Card>
-              ))}
-            </motion.div>
-          </AnimatePresence>
+          <a
+            href="/products"
+            className="view-all-link d-flex align-items-center"
+          >
+            View all products
+            <FaArrowRight className="ms-2" />
+          </a>
         </div>
 
-        {/* Next Button */}
-        <button
-          className="bs-carousel-nav-btn bs-carousel-next"
-          onClick={goNext}
-          disabled={currentIndex >= maxIndex}
-          aria-label="Next"
-        >
-          <FaChevronRight />
-        </button>
-      </div>
+        <Row className="g-4">
+          {bestSellers.map((product, index) => {
+            const imageUrl = getImageUrl(product.image);
+            
+            return (
+              <Col lg={2} md={4} sm={6} xs={6} key={product._id || index}>
+                <div className="collection-card">
+                  <div className="image-wrapper">
+                    <img
+                      src={imageUrl || "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image"}
+                      alt={product.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image";
+                      }}
+                    />
+                  </div>
 
-      {/* Dot Indicators */}
-      <div className="bs-carousel-dots">
-        {Array.from({ length: maxIndex + 1 }).map((_, i) => (
-          <span
-            key={i}
-            className={`bs-carousel-dot ${i === currentIndex ? "active" : ""}`}
-            onClick={() => {
-              setDirection(i > currentIndex ? 1 : -1);
-              setCurrentIndex(i);
-            }}
-          />
-        ))}
-      </div>
-    </Container>
+                  <div className="card-content">
+                    <h5>{product.name}</h5>
+                    <p className="product-price">₹{product.price}</p>
+                    {/* <p className="product-company">{product.company}</p> */}
+                  </div>
+                </div>
+              </Col>
+            );
+          })}
+        </Row>
+      </Container>
+    </section>
   );
 };
 

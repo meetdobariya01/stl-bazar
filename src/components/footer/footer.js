@@ -49,7 +49,7 @@ const Footer = () => {
               <ul>
                 <li>Our Story</li>
                 <li>Contact Us</li>
-                <li> <a href="/order-confirmation">Track Order</a></li>
+                <li>Track Order</li>
                 <li>FAQ</li>
                 <li>Naturopedia</li>
                 <li>Shop All</li>
