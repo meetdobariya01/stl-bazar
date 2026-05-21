@@ -104,108 +104,100 @@ const Grid = () => {
     <>
       <Header />
       <div className="hero-banner">
-        <img src="/images/product-banner.png" alt="Banner" className="banner-img" />
+        <img
+          src="/images/product-banner.png"
+          alt="Banner"
+          className="banner-img"
+        />
       </div>
       <Details />
+      <div className="product-background">
+        <Container className="product-page">
+          {/* TOP BAR */}
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h5 className="mb-0">Products ({products.length})</h5>
 
-      <Container className="product-page">
-        {/* TOP BAR */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h5 className="mb-0">Products ({products.length})</h5>
+            <Dropdown>
+              <Dropdown.Toggle className="sort-btn">{sort}</Dropdown.Toggle>
+              <Dropdown.Menu>
+                {[
+                  "Price (Low → High)",
+                  "Price (High → Low)",
+                  "Name (A → Z)",
+                  "Name (Z → A)",
+                ].map((s) => (
+                  <Dropdown.Item key={s}>{s}</Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
 
-          <Dropdown>
-            <Dropdown.Toggle className="sort-btn">{sort}</Dropdown.Toggle>
-            <Dropdown.Menu>
-              {[
-                "Price (Low → High)",
-                "Price (High → Low)",
-                "Name (A → Z)",
-                "Name (Z → A)",
-              ].map((s) => (
-                <Dropdown.Item key={s}>{s}</Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </Dropdown>
-        </div>
+          {/* PRODUCTS */}
+          {loading ? (
+            <p className="text-center mt-5">Loading products...</p>
+          ) : (
+            <Row className="g-4">
+              {products.map((item) => (
+                <Col key={item._id} xs={6} sm={6} md={4} lg={3}>
+                  <motion.div whileHover={{ y: -8 }}>
+                    <Card
+                      className="product-grid-card"
+                      onClick={() => navigate(`/product/${item._id}`)}
+                    >
+                      <Card.Img
+                        src={item.image || "/images/default-product.png"}
+                      />
 
-        {/* PRODUCTS */}
-        {loading ? (
-          <p className="text-center mt-5">Loading products...</p>
-        ) : (
-          <Row className="g-4">
-            {products.map((item) => (
-              <Col key={item._id} xs={6} sm={6} md={4} lg={3}>
-                <motion.div whileHover={{ y: -8 }}>
-                  <Card
-                    className="product-grid-card"
-                    onClick={() => navigate(`/product/${item._id}`)}
-                  >
-                    <Card.Img
-                      variant="top"
-                      src={getImageUrl(item.image)}
-                      alt={item.name}
-                      style={{ height: "240px", objectFit: "cover" }}
-                      onError={(e) => {
-                        console.log("Image failed to load:", getImageUrl(item.image));
-                        e.target.src = "/images/placeholder.png";
-                      }}
-                    />
+                      <Card.Body className="lexend">
+                        <h6>{item.name}</h6>
 
-                    <Card.Body className="lexend">
-                      <h6>{item.name}</h6>
-
-                      <div className="rating">
-                        {[...Array(5)].map((_, i) => (
-                          <FaStar
-                            key={i}
-                            color={
-                              i < Math.round(item.averageRating || 0)
-                                ? "#f5a623"
-                                : "#ddd"
-                            }
-                            size={14}
-                          />
-                        ))}
-                      </div>
-
-                      <div className="price">₹{item.price}</div>
-
-                      <div className="qty-cart">
-                        <div className="qty">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              changeQty(item._id, -1);
-                            }}
-                          >
-                            −
-                          </button>
-                          <span>{qty[item._id] || 1}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              changeQty(item._id, 1);
-                            }}
-                          >
-                            +
-                          </button>
+                        <div className="rating">
+                          {[...Array(Math.round(item.averageRating || 0))].map(
+                            (_, i) => (
+                              <FaStar key={i} />
+                            ),
+                          )}
                         </div>
 
-                        <Button
-                          className="cart-btn"
-                          onClick={(e) => handleAddToCart(e, item)}
-                        >
-                          <FaShoppingCart />
-                        </Button>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </motion.div>
-              </Col>
-            ))}
-          </Row>
-        )}
-      </Container>
+                        <div className="price">₹{item.price}</div>
+
+                        <div className="qty-cart">
+                          <div className="qty">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                changeQty(item._id, -1);
+                              }}
+                            >
+                              −
+                            </button>
+                            <span>{qty[item._id] || 1}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                changeQty(item._id, 1);
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <Button
+                            className="cart-btn-grid"
+                            onClick={(e) => handleAddToCart(e, item)} // ✅ FIX
+                          >
+                            <FaShoppingCart />
+                          </Button>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </motion.div>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Container>
+      </div>
 
       <Footer />
     </>
