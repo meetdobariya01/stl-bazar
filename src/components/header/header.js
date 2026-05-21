@@ -27,7 +27,7 @@ const Header = () => {
   const [search, setSearch] = useState("");
   const [searchResult, setSearchResult] = useState([]);
 
-  // TOTAL QTY
+  // ✅ TOTAL QTY FROM CONTEXT
   const totalQty = cart.reduce(
     (total, item) => total + item.quantity,
     0
@@ -84,7 +84,7 @@ const Header = () => {
 
           {/* LOGO */}
           <div className="logo-box" onClick={() => navigate("/")}>
-            <img src="/images/logo.png" alt="logo" />
+            <img src="/images/brandel.png" alt="logo" />
           </div>
 
           {/* SEARCH */}
@@ -136,7 +136,6 @@ const Header = () => {
 
             <div className="cart-icon" onClick={() => setShowCart(true)}>
               <FaShoppingBag />
-
               {totalQty > 0 && (
                 <span className="cart-count">{totalQty}</span>
               )}
@@ -144,6 +143,87 @@ const Header = () => {
           </div>
         </Container>
       </Navbar>
+
+      {/* MOBILE MENU */}
+      <AnimatePresence>
+        {showMobileMenu && (
+          <motion.div
+            className="mobile-menu"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+          >
+            <Form className="search-form mobile-search" onSubmit={handleSearch}>
+              <FormControl
+                type="search"
+                placeholder="Search"
+                className="search-input lexend"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <button className="search-btn">
+                <FaSearch />
+              </button>
+            </Form>
+
+            <div className="mobile-links lexend">
+                 <span onClick={() => navigate("/product")}>Product</span>
+              <span onClick={() => navigate("/aboutus")}>About Us</span>
+              <span onClick={() => navigate("/contactus")}>Contact Us</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CART DRAWER */}
+      <AnimatePresence>
+        {showCart && (
+          <motion.div
+            className="cart-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCart(false)}
+          >
+            <motion.div
+              className="cart-drawer"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.4 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="cart-header">
+                <h5>Your Shopping Cart</h5>
+                <FaTimes onClick={() => setShowCart(false)} />
+              </div>
+
+              {cart.length === 0 ? (
+                <p className="text-center mt-4">Your cart is empty</p>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.productId} className="cart-item">
+                    <span>{item.name}</span>
+                    <span>x {item.quantity}</span>
+                  </div>
+                ))
+              )}
+
+              <NavLink to="/checkout" className="checkout-btn">
+                Checkout
+              </NavLink>
+
+              <NavLink to="/cart" className="outline-btn">
+                View Cart
+              </NavLink>
+
+              <NavLink to="/" className="outline-btn">
+                Continue Shopping
+              </NavLink>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Mainnavbar />
     </>

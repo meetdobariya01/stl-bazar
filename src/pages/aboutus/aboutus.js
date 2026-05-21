@@ -56,10 +56,10 @@ const Aboutus = () => {
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
           >
-              <h2 className="lexend">Fast, Fresh & Designed for Modern Living</h2>
+            <h2 className="lexend">Fast, Fresh & Designed for Modern Living</h2>
             <p>
               We are building a new-age quick commerce platform inspired by
-              today’s fast-paced lifestyle. Our mission is simple — to deliver
+              today’s fast-paced lifestyle. Our mission is simple - to deliver
               daily essentials, groceries, and household needs faster than ever,
               without compromising on quality.
             </p>
@@ -89,7 +89,7 @@ const Aboutus = () => {
                 <h3 className="lexend">Our Story</h3>
                 <p>
                   The idea behind our platform was born from a simple
-                  observation — people want convenience, speed, and trust in one
+                  observation - people want convenience, speed, and trust in one
                   place. Traditional shopping takes time, and modern consumers
                   demand better solutions.
                 </p>
@@ -118,7 +118,7 @@ const Aboutus = () => {
                 </p>
                 <p>
                   We work closely with trusted sellers and local stores to
-                  maintain freshness, quality, and fair pricing — creating a
+                  maintain freshness, quality, and fair pricing - creating a
                   win-win ecosystem for customers and partners.
                 </p>
               </motion.div>
@@ -216,7 +216,7 @@ const Aboutus = () => {
       </section>
 
       {/* Footer Component */}
-      <Footer />  
+      <Footer />
     </div>
   );
 };

@@ -33,9 +33,9 @@ const Footer = () => {
                 transition={{ duration: 0.6 }}
               >
                 <img
-                  src="/images/logo.png"
+                  src="/images/brandel.png"
                   alt="Refresh"
-                  className="footer-logo"
+                  className="footer-logo w-50"
                   onClick={refreshPage}
                 />
                 <p className="footer-text">
@@ -104,9 +104,9 @@ const Footer = () => {
             <Col>
               {/* LOGO */}
               <img
-                src="/images/logo.png"
+                src="/images/brandel.png"
                 alt="Refresh"
-                className="footer-logo mb-3"
+                className="footer-logo mb-3 w-75"
                 onClick={refreshPage}
               />
 
