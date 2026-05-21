@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema({
       name: String,
       price: Number,
       quantity: Number,
-      image: String,
+      image: [String], // ✅ Changed from String to [String] to accept array
     },
   ],
   shippingAddress: {

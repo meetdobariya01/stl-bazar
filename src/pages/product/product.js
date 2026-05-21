@@ -9,11 +9,38 @@ import "./product.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-const fadeLeft = { hidden: { opacity: 0, x: -50 }, visible: { opacity: 1, x: 0 } };
-const fadeRight = { hidden: { opacity: 0, x: 50 }, visible: { opacity: 1, x: 0 } };
+const fadeLeft = {
+  hidden: { opacity: 0, x: -50 },
+  visible: { opacity: 1, x: 0 },
+};
+
+const fadeRight = {
+  hidden: { opacity: 0, x: 50 },
+  visible: { opacity: 1, x: 0 },
+};
 
 const Product = () => {
   const [companies, setCompanies] = useState([]);
+
+  // ---------------- IMAGE HELPER ----------------
+  const getImageUrl = (logo) => {
+    if (!logo) return "/images/default-company.png";
+
+    const image = Array.isArray(logo) ? logo[0] : logo;
+
+    // already full URL
+    if (image.startsWith("http")) {
+      return image;
+    }
+
+    // uploaded backend images
+    if (image.includes("Screenshot") || image.includes("-")) {
+      return `http://localhost:7000${image}`;
+    }
+
+    // old frontend/public images
+    return image;
+  };
 
   useEffect(() => {
     axios
@@ -46,7 +73,7 @@ const Product = () => {
                   viewport={{ once: true }}
                 >
                   <img
-                    src={item.logo || "/images/default-company.png"}
+                    src={getImageUrl(item.logo)}
                     alt={item.name}
                     className="value-image"
                   />
@@ -64,7 +91,10 @@ const Product = () => {
                   viewport={{ once: true }}
                 >
                   <h4 className="lexend">{item.name}</h4>
-                  <p className="funnel-sans">{item.description}</p>
+
+                  <p className="funnel-sans">
+                    {item.description}
+                  </p>
 
                   {/* BUY BUTTON */}
                   <NavLink

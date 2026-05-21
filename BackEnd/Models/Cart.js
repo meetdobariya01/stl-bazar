@@ -20,7 +20,7 @@ const CartSchema = new mongoose.Schema(
           type: Number,
           default: 1
         },
-        image: String
+        image: [String]  // Changed to array
       }
     ]
   },

@@ -6,11 +6,14 @@ const ProductSchema = new mongoose.Schema(
     description: String,
     price: { type: Number, required: true },
     category: { type: String, required: true },
-     categoryIcon: { type: String, default: "FaBoxOpen" },
-    image: String,
-    
-    size: { type: String, required: true },
+    categoryIcon: { type: String, default: "FaBoxOpen" },
+
+    // ✅ FIX: support multiple images
+    image: [{ type: String }],
+
+    size: { type: String },
     company: { type: String, required: true },
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     ratings: [
       {
@@ -21,7 +24,7 @@ const ProductSchema = new mongoose.Schema(
       }
     ],
 
-    averageRating: { type: Number, default: 0 }
+    averageRating: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

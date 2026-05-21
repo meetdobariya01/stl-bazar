@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
-
+const asyncHandler = require("../Comfig/authMiddleware/asyncHandler");
 const Company = require("../Models/Company");
 const Product = require("../Models/Product");
 
@@ -62,18 +62,20 @@ router.get("/companies/:companyName/categories", async (req, res) => {
 // GET products by company + category + search
 router.get("/products", async (req, res) => {
   try {
-    const { company, category, search } = req.query; // company is NAME string
+    const { company, category, search } = req.query;
+
     let filter = {};
 
-    if (company) filter.company = company; // exact match
+    if (company) filter.company = company;
     if (category) filter.category = category;
     if (search) filter.name = { $regex: search, $options: "i" };
 
     const products = await Product.find(filter).sort({ createdAt: -1 });
+
     res.json(products);
   } catch (err) {
-    console.error("PRODUCT FETCH ERROR:", err);
-    res.status(500).json({ message: "Failed to fetch products", error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch products" });
   }
 });
 
@@ -142,5 +144,42 @@ router.get("/best-sellers", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch best sellers" });
   }
 });
+router.get("/search", async (req, res) => {
+  try {
+    const keyword = req.query.keyword;
+
+    const products = await Product.find({
+      name: {
+        $regex: keyword,
+        $options: "i",
+      },
+    }).limit(8);
+
+    res.status(200).json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Search failed",
+    });
+  }
+});
+router.get("/", asyncHandler(async (req, res) => {
+  const { category, company } = req.query;
+
+  let filter = {};
+
+  if (category) filter.category = category;
+  if (company) filter.company = company;
+
+  const products = await Product.find(filter);
+
+  res.json(products);
+}));
+
 
 module.exports = router;

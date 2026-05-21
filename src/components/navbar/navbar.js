@@ -9,12 +9,13 @@ const Mainnavbar = () => {
         <Container fluid>
           <Nav className="mx-auto nav-links">
             {/* Added Pages */}
+              <Nav.Link href="/product" className="nav-link">
+              Products
+            </Nav.Link>
             <Nav.Link href="/aboutus" className="nav-link">
               About Us
             </Nav.Link>
-            <Nav.Link href="/product" className="nav-link">
-              Products
-            </Nav.Link>
+          
             <Nav.Link href="/contactus" className="nav-link">
               Contact Us
             </Nav.Link>

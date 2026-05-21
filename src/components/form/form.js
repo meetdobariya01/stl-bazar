@@ -1,8 +1,60 @@
-import React from "react";
+import React, { useState } from "react";
 import "./form.css";
 import { motion } from "framer-motion";
+import axios from "axios";
 
 const Form = () => {
+  const [loading, setLoading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    company: "",
+    message: "",
+  });
+
+  // HANDLE CHANGE
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // HANDLE SUBMIT
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const res = await axios.post(
+        "http://localhost:9000/api/contact/TouchwithUs",
+        formData
+      );
+
+      alert(res.data.message);
+
+      // RESET FORM
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        company: "",
+        message: "",
+      });
+    } catch (error) {
+      console.log(error);
+
+      alert("Failed to send mail");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <div className="">
@@ -15,23 +67,26 @@ const Form = () => {
             transition={{ duration: 0.8 }}
           >
             <h1 className="title lexend">Get In Touch with Us</h1>
-            {/* <p className="subtitle">
-              Interested in working together? Fill out some info and Delnaz
-              Medora will be in touch shortly.
-            </p> */}
 
-            <form className="form funnel-sans">
+            <form className="form funnel-sans" onSubmit={handleSubmit}>
               <div className="row-form">
                 <motion.input
                   whileFocus={{ scale: 1.02 }}
                   type="text"
+                  name="firstName"
                   placeholder="First Name *"
+                  value={formData.firstName}
+                  onChange={handleChange}
                   required
                 />
+
                 <motion.input
                   whileFocus={{ scale: 1.02 }}
                   type="text"
+                  name="lastName"
                   placeholder="Last Name *"
+                  value={formData.lastName}
+                  onChange={handleChange}
                   required
                 />
               </div>
@@ -39,38 +94,41 @@ const Form = () => {
               <motion.input
                 whileFocus={{ scale: 1.02 }}
                 type="email"
+                name="email"
                 placeholder="Email *"
+                value={formData.email}
+                onChange={handleChange}
                 required
               />
 
               <motion.input
                 whileFocus={{ scale: 1.02 }}
                 type="tel"
+                name="phone"
                 placeholder="Phone *"
+                value={formData.phone}
+                onChange={handleChange}
                 required
               />
-               <motion.input
-                  whileFocus={{ scale: 1.02 }}
-                  type="text"
-                  placeholder="Company Name *"
-                  required
-                />
 
-              {/* DROPDOWN */}
-              {/* <motion.select whileFocus={{ scale: 1.02 }} required>
-                <option value="">Select Service *</option>
-                <option>Anxiety Therapy</option>
-                <option>Depression Therapy</option>
-                <option>Couple Therapy</option>
-                <option>Child Therapy</option>
-                <option>Stress Management</option>
-                <option>Trauma Therapy</option>
-              </motion.select> */}
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
+                type="text"
+                name="company"
+                placeholder="Company Name *"
+                value={formData.company}
+                onChange={handleChange}
+                required
+              />
 
               <motion.textarea
                 whileFocus={{ scale: 1.02 }}
+                name="message"
                 placeholder="Product Information *"
                 rows="3"
+                value={formData.message}
+                onChange={handleChange}
+                required
               />
 
               <motion.button
@@ -79,7 +137,7 @@ const Form = () => {
                 type="submit"
                 className="button"
               >
-                Submit
+                {loading ? "Sending..." : "Submit"}
               </motion.button>
             </form>
           </motion.div>
@@ -91,7 +149,7 @@ const Form = () => {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <img src="./images/contact.jpg" alt="Doctor Illustration" />
+            <img src="./images/contact.jpg" alt="Contact" />
           </motion.div>
         </section>
       </div>
