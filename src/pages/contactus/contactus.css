@@ -1,6 +1,6 @@
 .contact-section {
   padding: 90px 0;
-  background: linear-gradient(135deg, #f8f9fa, #ffffff);
+  background: #faf8f4;
 }
 
 /* Header */
@@ -44,7 +44,7 @@
 
 .contact-info svg {
   font-size: 24px;
-  color: #053262;
+  color: #b08d57;
   margin-right: 15px;
   margin-top: 5px;
 }
@@ -64,7 +64,7 @@
 }
 
 .send-btn {
-  background: #053262;
+  background: #b08d57;
   border: none;
   padding: 12px 35px;
   border-radius: 30px;
@@ -73,7 +73,7 @@
 }
 
 .send-btn:hover {
-  background: blue;
+  background: #9a7745;
   transform: translateY(-2px);
 }
 .underline-input {
@@ -85,7 +85,7 @@
   padding-left: 0 !important;
 }
 .email-link {
-  color: #053262;
+  color: black;
   text-decoration: none;
   font-weight: 500;
 }

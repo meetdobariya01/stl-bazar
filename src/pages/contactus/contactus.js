@@ -58,8 +58,8 @@ const ContactUs = () => {
                   <FaPhoneAlt />
                   <div>
                     <h5 className="funnel-sans">Phone</h5>
-                    <a href="tel:+9199854XXXXX" className="email-link">
-                      +91 99854 XXXXX
+                    <a href="tel:+919824018555" className="email-link">
+                      +91 98240 18555
                     </a>
                   </div>
                 </div>
@@ -69,10 +69,10 @@ const ContactUs = () => {
                   <div>
                     <h5>Email</h5>
                     <a
-                      href="mailto:support@yourstore.com"
+                      href="mailto:care@brandel.shop"
                       className="email-link"
                     >
-                      support@yourstore.com
+                      care@brandel.shop
                     </a>
                   </div>
                 </div>

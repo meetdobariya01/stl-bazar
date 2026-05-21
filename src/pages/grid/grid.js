@@ -66,7 +66,9 @@ const Grid = () => {
   return (
     <>
       <Header />
-
+      <div className="hero-banner">
+        <img src="/images/product-banner.png" alt="Banner" className="banner-img" />
+      </div>
       <Details />
 
       <Container className="product-page">
