@@ -7,6 +7,18 @@ import { Link } from "react-router-dom";
 import "./newlunch.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
+const BACKEND_URL = "http://localhost:9000";
+
+// ✅ Image Format Fix - Handles non-string values
+const formatImagePath = (path) => {
+  if (!path) return "/images/default-product.png";
+  // Convert to string if it's not already
+  const pathStr = String(path);
+  if (pathStr.startsWith("http")) return pathStr;
+  if (pathStr.startsWith("/uploads")) return `${BACKEND_URL}${pathStr}`;
+  if (pathStr.startsWith("/images")) return pathStr;
+  return `${BACKEND_URL}${pathStr}`;
+};
 
 const useWindowWidth = () => {
   const [width, setWidth] = useState(window.innerWidth);
@@ -25,11 +37,11 @@ const Newlunch = () => {
   const [direction, setDirection] = useState(0);
   const width = useWindowWidth();
 
-  // Items visible per slide
-  const itemsPerView = width < 576 ? 1 : width < 768 ? 2 : width < 992 ? 3 : 4;
+  const itemsPerView =
+    width < 576 ? 1 : width < 768 ? 2 : width < 992 ? 3 : 4;
+
   const maxIndex = Math.max(0, products.length - itemsPerView);
 
-  // Fetch BEST SELLERS
   useEffect(() => {
     fetch(`${API_URL}/best-sellers`)
       .then((res) => res.json())
@@ -37,7 +49,6 @@ const Newlunch = () => {
       .catch((err) => console.error("BEST SELLER ERROR:", err));
   }, []);
 
-  // Reset index when items per view changes
   useEffect(() => {
     setCurrentIndex((prev) => Math.min(prev, maxIndex));
   }, [itemsPerView, maxIndex]);
@@ -52,55 +63,36 @@ const Newlunch = () => {
     setCurrentIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
-  const addToCart = (id) => {
-    setCart((prev) => ({ ...prev, [id]: 1 }));
-  };
-
-  const increaseQty = (id) => {
-    setCart((prev) => ({ ...prev, [id]: prev[id] + 1 }));
-  };
-
-  const decreaseQty = (id) => {
-    setCart((prev) => {
-      if (prev[id] === 1) {
-        const updated = { ...prev };
-        delete updated[id];
-        return updated;
-      }
-      return { ...prev, [id]: prev[id] - 1 };
-    });
-  };
-
-  const visibleProducts = products.slice(currentIndex, currentIndex + itemsPerView);
+  const visibleProducts = products.slice(
+    currentIndex,
+    currentIndex + itemsPerView
+  );
 
   return (
     <Container className="product-section">
       <div className="d-flex justify-content-between align-items-center mb-3 lexend">
-        <h2 className="title">NEW LUNCH</h2>
+        <h2 className="title">BEST SELLER</h2>
         <Button className="deal-btn">VIEW DEALS</Button>
       </div>
 
-      <div className="carousel-wrapper">
-        {/* Prev Button */}
+      <div className="bs-carousel-wrapper">
         <button
-          className="carousel-nav-btn carousel-prev"
+          className="bs-carousel-nav-btn bs-carousel-prev"
           onClick={goPrev}
           disabled={currentIndex === 0}
-          aria-label="Previous"
         >
           <FaChevronLeft />
         </button>
 
-        {/* Product Track */}
-        <div className="carousel-track">
+        <div className="bs-carousel-track">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={currentIndex}
-              className="carousel-slide"
+              className="bs-carousel-slide"
               initial={{ x: direction > 0 ? 200 : -200, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: direction > 0 ? -200 : 200, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeInOut" }}
+              transition={{ duration: 0.35 }}
               style={{
                 display: "grid",
                 gridTemplateColumns: `repeat(${itemsPerView}, 1fr)`,
@@ -109,43 +101,52 @@ const Newlunch = () => {
             >
               {visibleProducts.map((item) => (
                 <Card className="product-card" key={item._id}>
-                  <Link to={`/product/${item._id}`} className="product-link">
-                    <Card.Img src={item.image || "/images/default-product.png"} alt={item.name} />
-                    <Card.Body>
-                      <h6 className="product-title">{item.name}</h6>
+                  <Link
+                    to={`/product/${item._id}`}
+                    className="product-link"
+                  >
+                    {/* ✅ IMAGE FIX - Now handles any data type */}
+                    <Card.Img
+                      src={formatImagePath(item.image)}
+                      alt={item.name}
+                      onError={(e) => {
+                        e.target.src = "/images/default-product.png";
+                      }}
+                    />
 
-                      <div className="rating">
+                    <Card.Body>
+                      <h6 className="product-title">
+                        {item.name}
+                      </h6>
+
+                      {/* ✅ RATING FIX */}
+                      <div className="rating d-flex align-items-center gap-1">
                         {[...Array(5)].map((_, i) => (
                           <FaStar
                             key={i}
-                            color={i < (item.averageRating || 4) ? "#f5a623" : "#ddd"}
+                            size={14}
+                            color={
+                              i <
+                              Math.round(item.averageRating || 0)
+                                ? "#f5a623"
+                                : "#ddd"
+                            }
                           />
                         ))}
-                        <span>({item.reviews || 0})</span>
+                        <span className="text-muted">
+                          ({item.ratings?.length || 0})
+                        </span>
                       </div>
 
                       <div className="price">
-                        <span className="new">₹{item.price}</span>
-                        {item.sale && <span className="old">₹{item.sale}</span>}
+                        <span className="new">
+                          ₹{item.price}
+                        </span>
                       </div>
 
-                      <div className="ship">
-                        <FaTruck /> Ships in 1 Day
-                      </div>
-
-                      <div className="cart-area">
-                        {cart[item._id] ? (
-                          <div className="qty-box">
-                            <button onClick={(e) => { e.preventDefault(); decreaseQty(item._id); }}>-</button>
-                            <span>{cart[item._id]}</span>
-                            <button onClick={(e) => { e.preventDefault(); increaseQty(item._id); }}>+</button>
-                          </div>
-                        ) : (
-                          <Button className="cart-btn" onClick={(e) => { e.preventDefault(); addToCart(item._id); }}>
-                            <FaShoppingCart />
-                          </Button>
-                        )}
-                      </div>
+                      <Button className="cart-btn">
+                        <FaShoppingCart />
+                      </Button>
                     </Card.Body>
                   </Link>
                 </Card>
@@ -154,29 +155,13 @@ const Newlunch = () => {
           </AnimatePresence>
         </div>
 
-        {/* Next Button */}
         <button
-          className="carousel-nav-btn carousel-next"
+          className="bs-carousel-nav-btn bs-carousel-next"
           onClick={goNext}
           disabled={currentIndex >= maxIndex}
-          aria-label="Next"
         >
           <FaChevronRight />
         </button>
-      </div>
-
-      {/* Dot Indicators */}
-      <div className="carousel-dots">
-        {Array.from({ length: maxIndex + 1 }).map((_, i) => (
-          <span
-            key={i}
-            className={`carousel-dot ${i === currentIndex ? "active" : ""}`}
-            onClick={() => {
-              setDirection(i > currentIndex ? 1 : -1);
-              setCurrentIndex(i);
-            }}
-          />
-        ))}
       </div>
     </Container>
   );

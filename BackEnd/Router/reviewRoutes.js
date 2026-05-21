@@ -1,5 +1,5 @@
 const express = require("express");
-const asyncHandler = require("../Middleware/asyncHandler");
+const asyncHandler = require("../Comfig/authMiddleware/asyncHandler");
 const Product = require("../Models/Product");
 
 const router = express.Router();
@@ -63,5 +63,14 @@ router.get(
     });
   })
 );
+router.get("/", asyncHandler(async (req, res) => {
+  const { category } = req.query;
+
+  const filter = category ? { category } : {};
+
+  const products = await Product.find(filter);
+
+  res.json(products);
+}));
 
 module.exports = router;

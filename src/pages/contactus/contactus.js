@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from "react-icons/fa";
+import axios from "axios";
+
 import "./contactus.css";
 import Footer from "../../components/footer/footer";
 import Header from "../../components/header/header";
@@ -12,13 +14,60 @@ const fadeUp = {
 };
 
 const ContactUs = () => {
+  const [loading, setLoading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+
+  // HANDLE CHANGE
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // SEND MAIL
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const res = await axios.post(
+        "http://localhost:9000/api/contact/send-mail",
+        formData
+      );
+
+      alert(res.data.message);
+
+      // RESET FORM
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error) {
+      console.log(error);
+
+      alert("Failed to send message");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
-      {/* Header Component */}
       <Header />
+
       <section className="contact-section lexend">
         <Container>
-          {/* Header */}
+          {/* HEADER */}
           <motion.div
             className="contact-header"
             variants={fadeUp}
@@ -28,7 +77,9 @@ const ContactUs = () => {
             viewport={{ once: true }}
           >
             <h6 className="funnel-sans">CONTACT US</h6>
+
             <h2>We’d Love to Hear From You</h2>
+
             <p>
               Whether you have a question, feedback, or partnership inquiry —
               we’re always ready to connect.
@@ -36,7 +87,7 @@ const ContactUs = () => {
           </motion.div>
 
           <Row className="contact-wrapper">
-            {/* Contact Info */}
+            {/* LEFT INFO */}
             <Col md={5}>
               <motion.div
                 className="contact-info"
@@ -48,16 +99,20 @@ const ContactUs = () => {
               >
                 <div className="info-box">
                   <FaMapMarkerAlt />
+
                   <div>
                     <h5 className="funnel-sans">Our Location</h5>
+
                     <p>Ahmedabad, Gujarat, India</p>
                   </div>
                 </div>
 
                 <div className="info-box">
                   <FaPhoneAlt />
+
                   <div>
                     <h5 className="funnel-sans">Phone</h5>
+
                     <a href="tel:+9199854XXXXX" className="email-link">
                       +91 99854 XXXXX
                     </a>
@@ -66,8 +121,10 @@ const ContactUs = () => {
 
                 <div className="info-box">
                   <FaEnvelope />
+
                   <div>
                     <h5>Email</h5>
+
                     <a
                       href="mailto:support@yourstore.com"
                       className="email-link"
@@ -79,7 +136,7 @@ const ContactUs = () => {
               </motion.div>
             </Col>
 
-            {/* Contact Form */}
+            {/* FORM */}
             <Col md={7}>
               <motion.div
                 className="contact-form"
@@ -89,23 +146,32 @@ const ContactUs = () => {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 viewport={{ once: true }}
               >
-                <Form>
+                <Form onSubmit={handleSubmit}>
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Control
                           type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
                           className="underline-input"
                           placeholder="Your Name"
+                          required
                         />
                       </Form.Group>
                     </Col>
+
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Control
                           type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
                           className="underline-input"
                           placeholder="Your Email"
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -114,22 +180,30 @@ const ContactUs = () => {
                   <Form.Group className="mb-3">
                     <Form.Control
                       type="text"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleChange}
                       className="underline-input"
                       placeholder="Subject"
+                      required
                     />
                   </Form.Group>
 
                   <Form.Group className="mb-4">
                     <Form.Control
                       as="textarea"
-                      className="underline-input"
                       rows={5}
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      className="underline-input"
                       placeholder="Your Message"
+                      required
                     />
                   </Form.Group>
 
                   <Button className="send-btn" type="submit">
-                    Send Message
+                    {loading ? "Sending..." : "Send Message"}
                   </Button>
                 </Form>
               </motion.div>
@@ -138,7 +212,6 @@ const ContactUs = () => {
         </Container>
       </section>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
