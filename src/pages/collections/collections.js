@@ -1,7 +1,7 @@
 import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { FaArrowRight } from "react-icons/fa";
-import "./bestseller.css";
+import "./collections.css";
 
 const collections = [
   {
@@ -30,16 +30,16 @@ const collections = [
   },
 ];
 
-const Bestseller = () => {
+const Collections = () => {
   return (
     <div>
-      <section className="best-seller-collection-section py-5">
+      <section className="collection-section py-5">
         <Container>
           {/* Heading */}
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap lexend">
-            <h2 className="best-seller-section-title ">Best Sellers</h2>
+            <h2 className="section-title ">Shop by Collection</h2>
 
-            <a href="/" className="best-seller-view-all-link d-flex align-items-center">
+            <a href="/" className="view-all-link d-flex align-items-center">
               View all collections <FaArrowRight className="ms-2" />
             </a>
           </div>
@@ -48,12 +48,12 @@ const Bestseller = () => {
           <Row className="g-4">
             {collections.map((item, index) => (
               <Col lg={2} md={4} sm={6} xs={6} key={index}>
-                <div className="best-seller-collection-card funnel-sans">
-                  <div className="best-seller-image-wrapper">
+                <div className="collection-card funnel-sans">
+                  <div className="image-wrapper">
                     <img src={item.image} alt={item.title} />
                   </div>
 
-                  <div className="best-seller-card-content">
+                  <div className="card-content">
                     <h5>{item.title}</h5>
                   </div>
                 </div>
@@ -66,4 +66,4 @@ const Bestseller = () => {
   );
 };
 
-export default Bestseller;
+export default Collections;

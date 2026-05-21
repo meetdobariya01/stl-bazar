@@ -30,6 +30,24 @@ const Carouselhero = () => {
             alt="Banner 2"
           />
         </Carousel.Item>
+
+        {/* Slide 3 */}
+         <Carousel.Item>
+          <img
+            className="d-block w-100 carousel-img"
+            src="/images/carousel-3.webp"
+            alt="Banner 3"
+          />
+        </Carousel.Item>
+
+        {/* Slide 4 */}
+         <Carousel.Item>
+          <img
+            className="d-block w-100 carousel-img"
+            src="/images/carousel-4.webp"
+            alt="Banner 4"
+          />
+        </Carousel.Item>
       </Carousel>
     </div>
   );

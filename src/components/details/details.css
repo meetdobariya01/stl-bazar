@@ -1,12 +1,11 @@
 .our-promise-section {
   padding: 80px 0;
-  background: #ffffff;
+  background: #f8f6f2;
 }
 
 .promise-title {
   font-size: 2.2rem;
   font-weight: 600;
-  color: #2f4f2f;
 }
 
 .promise-card {
@@ -18,17 +17,18 @@
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  border: 4px solid #6fa84f;
+  border: 2px solid #c8a96b;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 14px;
   background: #f6fbf3;
   transition: all 0.3s ease;
+  color: #c8a96b;
 }
 
 .promise-card:hover .promise-circle {
-  background: #6fa84f;
+  background: #c8a96b;
 }
 
 .promise-icon {
@@ -57,5 +57,14 @@
 
   .promise-icon {
     font-size: 30px;
+  }
+  .our-promise-section {
+    padding: 0;
+  }
+  .promise-circle{
+    height: 70px;
+    width: 70px;
+    margin: auto;
+    margin-bottom: 10px;
   }
 }

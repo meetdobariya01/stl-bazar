@@ -3,14 +3,18 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import "./home.css";
 import Carouselhero from "../../components/carousel/carousel";
-import Bestseller from "../../components/bestseller/bestseller";
 import Ourbrand from "../../components/ourbrand/ourbrand";
 import Shopus from "../../components/shopus/shopus";
-import Newlunch from "../../components/newlunch/newlunch";
 import Testimonil from "../../components/testimonial/testimonil";
 import Category from "../../components/category/category";
 import Details from "../../components/details/details";
-import Form from "../../components/form/form";
+import Explore from "../../components/explore/explore";
+import Features from "../../components/features/features";
+import Collections from "../collections/collections";
+import Arrival from "../../components/new-arrival/arrival";
+import Boxes from "../../components/boxes/boxes";
+import Bestseller from "../../components/bestseller/bestseller";
+import Email from "../../components/email/email";
 
 const Home = () => {
   return (
@@ -21,29 +25,38 @@ const Home = () => {
       {/* carousel */}
       <Carouselhero />
 
-      {/* best seller */}
-      <Bestseller />
+      {/* features */}
+      <Features />
+
+      {/* collection */}
+      <Collections />
+
+      {/* New Arrivals */}
+      <Arrival />
+
+      {/* boxes */}
+      <Boxes />
+
+      {/* explore */}
+      {/* <Explore /> */}
 
       {/* category */}
-      <Category />
+      {/* <Category /> */}
 
       {/* Details */}
       <Details />
 
-      {/* our brand */}
-      <Ourbrand />
-
-      {/* new lunch */}
-      <Newlunch />
+      {/* best seller */}
+      <Bestseller />
 
       {/* shop with us */}
       <Shopus />
 
-      {/* form */}
-      <Form />
-
       {/* testimonial */}
       <Testimonil />
+
+      {/* Email subscription */}
+      <Email />
 
       {/* footer */}
       <Footer />

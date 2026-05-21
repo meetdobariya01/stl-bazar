@@ -1,69 +1,69 @@
-.best-seller-collection-section {
+.collection-section {
   background: #faf8f4;
 }
 
-.best-seller-section-title {
+.section-title {
   font-size: 42px;
   font-weight: 600;
   color: #222;
   margin: 0;
 }
 
-.best-seller-view-all-link {
+.view-all-link {
   color: #b38b59;
   font-weight: 500;
   text-decoration: none;
   transition: 0.3s ease;
 }
 
-.best-seller-view-all-link:hover {
+.view-all-link:hover {
   color: #8b6a42;
   transform: translateX(5px);
 }
 
-.best-seller-collection-card {
+.collection-card {
   background: #fff;
   border-radius: 18px;
   overflow: hidden;
   transition: all 0.4s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-  animation: bestSellerFadeUp 0.8s ease;
+  animation: fadeUp 0.8s ease;
   height: 100%;
 }
 
-.best-seller-collection-card:hover {
+.collection-card:hover {
   transform: translateY(-10px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
 }
 
-.best-seller-image-wrapper {
+.image-wrapper {
   overflow: hidden;
 }
 
-.best-seller-image-wrapper img {
+.image-wrapper img {
   width: 100%;
   height: 260px;
   object-fit: cover;
   transition: transform 0.5s ease;
 }
 
-.best-seller-collection-card:hover img {
+.collection-card:hover img {
   transform: scale(1.08);
 }
 
-.best-seller-card-content {
+.card-content {
   padding: 18px;
   text-align: center;
 }
 
-.best-seller-card-content h5 {
+.card-content h5 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: #222;
 }
 
-@keyframes bestSellerFadeUp {
+@keyframes fadeUp {
   from {
     opacity: 0;
     transform: translateY(40px);
@@ -76,29 +76,29 @@
 
 /* Responsive */
 @media (max-width: 991px) {
-  .best-seller-section-title {
+  .section-title {
     font-size: 32px;
   }
 
-  .best-seller-image-wrapper img {
+  .image-wrapper img {
     height: 220px;
   }
 }
 
 @media (max-width: 767px) {
-  .best-seller-section-title {
+  .section-title {
     font-size: 26px;
   }
 
-  .best-seller-view-all-link {
+  .view-all {
     margin-top: 10px;
   }
 
-  .best-seller-image-wrapper img {
+  .image-wrapper img {
     height: 200px;
   }
 
-  .best-seller-card-content h5 {
+  .card-content h5 {
     font-size: 16px;
   }
 }

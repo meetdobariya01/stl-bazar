@@ -17,6 +17,7 @@ import Wishlist from "./pages/wishlist/wishlist";
 import Grid from "./pages/grid/grid";
 import Productdetails from "./pages/productdetails/productdetails";
 import CategoryProducts from "./pages/Categorygrid/Categorygrid";
+import Sell from "./pages/sell/sell";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -35,7 +36,8 @@ root.render(
         <Route path="/company/:companyName" element={<Grid />} />
         <Route path="/product/:id" element={<Productdetails />} />
         <Route path="/category/:categoryName" element={<CategoryProducts />} />
+        <Route path="/sell" element={<Sell />} />
       </Routes>
     </Router>
-  </CartProvider>
+  </CartProvider>,
 );
