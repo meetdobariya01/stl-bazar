@@ -142,12 +142,12 @@ const categories = [
     image: "./images/Category/sweets.png",
   },
   {
-    title: "Snacks",
-    image: "./images/Category/snacks.png  ",
+    title: "Personal Care",
+    image: "./images/Category/personal-care.png  ",
   },
   {
-    title: "Sweets",
-    image: "./images/Category/sweets.png",
+    title: "Vegetables",
+    image: "./images/Category/vegetable.png",
   },
 ];
 
