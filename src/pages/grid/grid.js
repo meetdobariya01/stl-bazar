@@ -12,7 +12,7 @@ import "./grid.css";
 import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
-const BACKEND_URL = "http://localhost:9000"; // ✅ Changed from 5000 to 9000
+const BACKEND_URL = "http://localhost:9000";
 
 const Grid = () => {
   const { companyName } = useParams();
@@ -32,13 +32,16 @@ const Grid = () => {
     setLoading(true);
     axios
       .get(`${API_URL}/products`, { params: { company: decodedName } })
-      .then((res) => setProducts(res.data))
+      .then((res) => {
+        console.log("Products loaded:", res.data); // Debug log
+        setProducts(res.data);
+      })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [decodedName]);
 
-  // ✅ FIXED: Handle string, array, and all image path types
-  const getImageUrl = (image) => {
+  // ✅ IMPROVED: Get primary image for card display
+  const getPrimaryImageUrl = (image) => {
     if (!image) return "/images/placeholder.png";
 
     let img = image;
@@ -54,7 +57,7 @@ const Grid = () => {
     // Convert to string if needed
     const imgStr = String(img);
 
-    // Already full URL (Cloudinary, etc.)
+    // Already full URL
     if (imgStr.startsWith("http")) {
       return imgStr;
     }
@@ -66,6 +69,7 @@ const Grid = () => {
 
     // Local images from public folder
     if (imgStr.startsWith("/images")) {
+      // For local public folder images
       return imgStr;
     }
 
@@ -91,7 +95,7 @@ const Grid = () => {
         productId: item._id,
         name: item.name,
         price: item.price,
-        image: Array.isArray(item.image) ? item.image[0] : item.image,
+        image: Array.isArray(item.image) ? item.image[0] : item.image, // Send first image for cart
         quantity: qty[item._id] || 1,
       },
     });
@@ -99,6 +103,26 @@ const Grid = () => {
     await fetchCart();
     setShowCart(true);
   };
+
+  // Sorting logic
+  const getSortedProducts = () => {
+    let sorted = [...products];
+    
+    switch(sort) {
+      case "Price (Low → High)":
+        return sorted.sort((a, b) => a.price - b.price);
+      case "Price (High → Low)":
+        return sorted.sort((a, b) => b.price - a.price);
+      case "Name (A → Z)":
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case "Name (Z → A)":
+        return sorted.sort((a, b) => b.name.localeCompare(a.name));
+      default:
+        return sorted;
+    }
+  };
+
+  const sortedProducts = getSortedProducts();
 
   return (
     <>
@@ -126,7 +150,9 @@ const Grid = () => {
                   "Name (A → Z)",
                   "Name (Z → A)",
                 ].map((s) => (
-                  <Dropdown.Item key={s}>{s}</Dropdown.Item>
+                  <Dropdown.Item key={s} onClick={() => setSort(s)}>
+                    {s}
+                  </Dropdown.Item>
                 ))}
               </Dropdown.Menu>
             </Dropdown>
@@ -137,7 +163,7 @@ const Grid = () => {
             <p className="text-center mt-5">Loading products...</p>
           ) : (
             <Row className="g-4">
-              {products.map((item) => (
+              {sortedProducts.map((item) => (
                 <Col key={item._id} xs={6} sm={6} md={4} lg={3}>
                   <motion.div whileHover={{ y: -8 }}>
                     <Card
@@ -145,8 +171,20 @@ const Grid = () => {
                       onClick={() => navigate(`/product/${item._id}`)}
                     >
                       <Card.Img
-                        src={item.image || "/images/default-product.png"}
+                        variant="top"
+                        src={getPrimaryImageUrl(item.image)}
+                        onError={(e) => {
+                          e.target.src = "/images/placeholder.png";
+                        }}
+                        style={{ height: "200px", objectFit: "cover" }}
                       />
+                      
+                      {/* Show multiple image indicator */}
+                      {/* {Array.isArray(item.image) && item.image.length > 1 && (
+                        <div className="multi-image-badge">
+                          {item.image.length} images
+                        </div>
+                      )} */}
 
                       <Card.Body className="lexend">
                         <h6>{item.name}</h6>
@@ -154,7 +192,7 @@ const Grid = () => {
                         <div className="rating">
                           {[...Array(Math.round(item.averageRating || 0))].map(
                             (_, i) => (
-                              <FaStar key={i} />
+                              <FaStar key={i} color="#ffc107" />
                             ),
                           )}
                         </div>
@@ -184,7 +222,7 @@ const Grid = () => {
 
                           <Button
                             className="cart-btn-grid"
-                            onClick={(e) => handleAddToCart(e, item)} // ✅ FIX
+                            onClick={(e) => handleAddToCart(e, item)}
                           >
                             <FaShoppingCart />
                           </Button>
