@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./collections.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const API_URL = process.env.REACT_APP_API_URL ;
 const BACKEND_URL = "http://localhost:9000";
 
 const Collections = ({ limit = 6 }) => {
