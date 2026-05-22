@@ -7,18 +7,19 @@ import axios from "axios";
 
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
-import { useCart } from "../../context/CartContext"; // ✅ ADD
+import { useCart } from "../../context/CartContext";
 import "./grid.css";
 import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
+const BACKEND_URL = "http://localhost:9000"; // ✅ Changed from 5000 to 9000
 
 const Grid = () => {
   const { companyName } = useParams();
   const decodedName = decodeURIComponent(companyName || "");
   const navigate = useNavigate();
 
-  const { setShowCart, fetchCart } = useCart(); // ✅ ADD
+  const { setShowCart, fetchCart } = useCart();
 
   const [products, setProducts] = useState([]);
   const [qty, setQty] = useState({});
@@ -35,6 +36,42 @@ const Grid = () => {
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [decodedName]);
+
+  // ✅ FIXED: Handle string, array, and all image path types
+  const getImageUrl = (image) => {
+    if (!image) return "/images/placeholder.png";
+
+    let img = image;
+
+    // If array → take first image
+    if (Array.isArray(image)) {
+      if (image.length === 0) return "/images/placeholder.png";
+      img = image[0];
+    }
+
+    if (!img) return "/images/placeholder.png";
+
+    // Convert to string if needed
+    const imgStr = String(img);
+
+    // Already full URL (Cloudinary, etc.)
+    if (imgStr.startsWith("http")) {
+      return imgStr;
+    }
+
+    // Backend uploaded image (starts with /uploads)
+    if (imgStr.startsWith("/uploads")) {
+      return `${BACKEND_URL}${imgStr}`;
+    }
+
+    // Local images from public folder
+    if (imgStr.startsWith("/images")) {
+      return imgStr;
+    }
+
+    // Fallback: try with backend URL
+    return `${BACKEND_URL}${imgStr}`;
+  };
 
   const changeQty = (id, val) => {
     setQty((prev) => ({
@@ -54,7 +91,7 @@ const Grid = () => {
         productId: item._id,
         name: item.name,
         price: item.price,
-        image: item.image,
+        image: Array.isArray(item.image) ? item.image[0] : item.image,
         quantity: qty[item._id] || 1,
       },
     });
