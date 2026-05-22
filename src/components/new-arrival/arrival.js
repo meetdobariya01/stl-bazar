@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"; // Add this import
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import axios from "axios";
 import "./arrival.css";
-
+const API_URL = process.env.REACT_APP_API_URL ;
 const Arrival = () => {
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ const Arrival = () => {
 
   const fetchArrivalProducts = async () => {
     try {
-      const response = await axios.get("http://localhost:9000/api/arrival-best-sellers");
+      const response = await axios.get(`${API_URL}/arrival-best-sellers`);
       
       console.log("API Response:", response.data);
       
