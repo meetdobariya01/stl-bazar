@@ -22,7 +22,7 @@ import "./cart.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api"; // Changed to 9000 to match your backend
 
 const Cart = () => {
   const [cart, setCart] = useState({ items: [] });
@@ -36,7 +36,7 @@ const Cart = () => {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
       setCart(res.data || { items: [] });
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error("Fetch cart error:", err.response?.data || err.message);
     }
   };
 
@@ -44,21 +44,34 @@ const Cart = () => {
     fetchCart();
   }, [guestId]);
 
-  // UPDATE QTY
+  // UPDATE QTY - Fixed to match your backend format
   const updateQty = async (productId, type) => {
     const item = cart.items.find((i) => i.productId === productId);
     if (!item) return;
 
+    const newQuantity = type === "inc" ? item.quantity + 1 : item.quantity - 1;
+    
+    if (newQuantity < 1) {
+      removeItem(productId);
+      return;
+    }
+
     try {
+      // Match the format from Productdetails component
       await axios.post(`${API_URL}/cart/add`, {
         guestId,
-        productId,
-        quantity: type === "inc" ? 1 : -1,
+        product: {
+          productId: item.productId,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: type === "inc" ? 1 : -1,
+        },
       });
 
       fetchCart();
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error("Update quantity error:", err.response?.data || err.message);
     }
   };
 
@@ -66,10 +79,9 @@ const Cart = () => {
   const removeItem = async (productId) => {
     try {
       await axios.delete(`${API_URL}/cart/remove/${guestId}/${productId}`);
-
       fetchCart();
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error("Remove item error:", err.response?.data || err.message);
     }
   };
 
@@ -135,7 +147,10 @@ const Cart = () => {
                               {/* IMAGE */}
                               <Col md={3} xs={4}>
                                 <div className="cart-img">
-                                  <img src={item.image} alt={item.name} />
+                                  <img 
+                                    src={item.image || "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image"} 
+                                    alt={item.name} 
+                                  />
                                 </div>
                               </Col>
 
@@ -191,12 +206,12 @@ const Cart = () => {
                     {/* SHIPPING BAR */}
                     <div className="shipping-box">
                       <div className="shipping-top">
-                        <span>🎉 You are eligible for free shipping!</span>
+                        <span>🎉 Add more items to reach free shipping!</span>
 
                         <span>₹{subtotal} / ₹1499</span>
                       </div>
 
-                      <ProgressBar now={(subtotal / 1499) * 100} />
+                      <ProgressBar now={Math.min((subtotal / 1499) * 100, 100)} />
                     </div>
                   </>
                 )}
@@ -225,11 +240,12 @@ const Cart = () => {
                       <span>{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
                     </div>
 
-                    <div className="summary-row discount">
-                      <span>Shipping Discount</span>
-
-                      <span>-₹99</span>
-                    </div>
+                    {shipping > 0 && (
+                      <div className="summary-row discount">
+                        <span>Add ₹{1499 - subtotal} more for free shipping</span>
+                        <span>-</span>
+                      </div>
+                    )}
 
                     <hr />
 

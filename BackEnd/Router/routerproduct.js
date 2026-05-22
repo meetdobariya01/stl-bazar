@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
-
+const asyncHandler = require("../Comfig/authMiddleware/asyncHandler");
 const Company = require("../Models/Company");
 const Product = require("../Models/Product");
 
@@ -62,18 +62,20 @@ router.get("/companies/:companyName/categories", async (req, res) => {
 // GET products by company + category + search
 router.get("/products", async (req, res) => {
   try {
-    const { company, category, search } = req.query; // company is NAME string
+    const { company, category, search } = req.query;
+
     let filter = {};
 
-    if (company) filter.company = company; // exact match
+    if (company) filter.company = company;
     if (category) filter.category = category;
     if (search) filter.name = { $regex: search, $options: "i" };
 
     const products = await Product.find(filter).sort({ createdAt: -1 });
+
     res.json(products);
   } catch (err) {
-    console.error("PRODUCT FETCH ERROR:", err);
-    res.status(500).json({ message: "Failed to fetch products", error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch products" });
   }
 });
 
@@ -123,15 +125,16 @@ router.get("/product/:id", async (req, res) => {
   }
 });
 // GET first product of each company (company creation order)
+// In routerproduct.js - Update the best-sellers endpoint
 router.get("/best-sellers", async (req, res) => {
   try {
-    const companies = await Company.find().sort({ createdAt: 1 });
+    const companies = await Company.find().sort({ createdAt: 1 }).limit(6);
 
     const result = [];
 
     for (const company of companies) {
       const product = await Product.findOne({ company: company.name })
-        .sort({ createdAt: 1 }); // first product added
+        .sort({ createdAt: 1 });
 
       if (product) result.push(product);
     }
@@ -140,6 +143,130 @@ router.get("/best-sellers", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch best sellers" });
+  }
+});
+// NEW API: Get best sellers for arrival section (8 products - 2 slides of 4 each)
+router.get("/arrival-best-sellers", async (req, res) => {
+  try {
+    // Get 8 companies (for 8 products)
+    const companies = await Company.find().sort({ createdAt: 1 }).limit(8);
+
+    const products = [];
+
+    for (const company of companies) {
+      const product = await Product.findOne({ company: company.name })
+        .sort({ createdAt: 1 });
+
+      if (product) {
+        // Format the product data
+        products.push({
+          _id: product._id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          company: product.company,
+          category: product.category,
+          averageRating: product.averageRating
+        });
+      }
+    }
+
+    // Split into slides (4 products per slide)
+    const slides = [];
+    for (let i = 0; i < products.length; i += 4) {
+      slides.push({
+        slideNumber: Math.floor(i / 4) + 1,
+        products: products.slice(i, i + 4)
+      });
+    }
+
+    res.json({
+      success: true,
+      totalProducts: products.length,
+      totalSlides: slides.length,
+      slides: slides,
+      products: products
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch arrival best sellers" 
+    });
+  }
+});
+router.get("/search", async (req, res) => {
+  try {
+    const keyword = req.query.keyword;
+
+    const products = await Product.find({
+      name: {
+        $regex: keyword,
+        $options: "i",
+      },
+    }).limit(8);
+
+    res.status(200).json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Search failed",
+    });
+  }
+});
+router.get("/", asyncHandler(async (req, res) => {
+  const { category, company } = req.query;
+
+  let filter = {};
+
+  if (category) filter.category = category;
+  if (company) filter.company = company;
+
+  const products = await Product.find(filter);
+
+  res.json(products);
+}));
+// In routerproduct.js - UPDATE this endpoint
+router.get("/categories", async (req, res) => {
+  try {
+    const categories = await Product.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          companies: { $addToSet: "$company" },
+          productCount: { $sum: 1 },
+          // Get the FIRST image from the array of the first product
+          sampleImage: { $first: "$image" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id",
+          companies: 1,
+          productCount: 1,
+          // Handle both string and array cases
+          image: {
+            $cond: {
+              if: { $isArray: "$sampleImage" },
+              then: { $arrayElemAt: ["$sampleImage", 0] },  // Get first element if array
+              else: "$sampleImage"  // Use as is if string
+            }
+          }
+        }
+      },
+      { $sort: { name: 1 } }
+    ]);
+    
+    res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch categories" });
   }
 });
 
