@@ -34,7 +34,7 @@ const BACKEND_URL = "http://localhost:9000";
 // Helper function to format price
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
-  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  const numPrice = typeof price === "string" ? parseFloat(price) : price;
   if (isNaN(numPrice)) return "0.00";
   return numPrice.toFixed(2);
 };
@@ -75,20 +75,23 @@ const Productdetails = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       console.log("Fetching product from:", `${API_URL}/product/${id}`);
-      
+
       const response = await axios.get(`${API_URL}/product/${id}`);
       console.log("Product data received:", response.data);
-      
+
       setProduct(response.data);
-      
+
       // Set active image - handle both array and string
       if (response.data.image) {
-        if (Array.isArray(response.data.image) && response.data.image.length > 0) {
+        if (
+          Array.isArray(response.data.image) &&
+          response.data.image.length > 0
+        ) {
           const firstImageUrl = getImageUrl(response.data.image[0]);
           setActiveImg(firstImageUrl);
-        } else if (typeof response.data.image === 'string') {
+        } else if (typeof response.data.image === "string") {
           setActiveImg(getImageUrl(response.data.image));
         }
       } else {
@@ -96,7 +99,10 @@ const Productdetails = () => {
       }
     } catch (err) {
       console.error("Product fetch error details:", err);
-      setError(err.response?.data?.message || "Failed to load product. Please try again later.");
+      setError(
+        err.response?.data?.message ||
+          "Failed to load product. Please try again later.",
+      );
     } finally {
       setLoading(false);
     }
@@ -117,17 +123,17 @@ const Productdetails = () => {
   // Handle review input changes
   const handleReviewChange = (e) => {
     const { name, value } = e.target;
-    setReviewData(prev => ({
+    setReviewData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   // Handle rating change
   const handleRatingChange = (newRating) => {
-    setReviewData(prev => ({
+    setReviewData((prev) => ({
       ...prev,
-      rating: newRating
+      rating: newRating,
     }));
   };
 
@@ -148,12 +154,12 @@ const Productdetails = () => {
 
     setSubmitting(true);
     setReviewError("");
-    
+
     try {
       const response = await axios.post(`${API_URL}/products/${id}/review`, {
         rating: reviewData.rating,
         review: reviewData.review,
-        userName: reviewData.userName
+        userName: reviewData.userName,
       });
 
       if (response.data.message) {
@@ -163,10 +169,10 @@ const Productdetails = () => {
           rating: 0,
           review: "",
         });
-        
+
         // Refresh reviews
         await fetchReviews();
-        
+
         // Close modal after 2 seconds
         setTimeout(() => {
           setShowReviewModal(false);
@@ -175,7 +181,10 @@ const Productdetails = () => {
       }
     } catch (err) {
       console.error("Error submitting review:", err);
-      setReviewError(err.response?.data?.message || "Failed to submit review. Please try again.");
+      setReviewError(
+        err.response?.data?.message ||
+          "Failed to submit review. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -222,18 +231,18 @@ const Productdetails = () => {
   // Get all images as array with full URLs
   const getAllImages = () => {
     if (!product) return [];
-    
+
     if (product.image) {
       if (Array.isArray(product.image)) {
-        const validImages = product.image.filter(img => img && img.trim());
+        const validImages = product.image.filter((img) => img && img.trim());
         if (validImages.length > 0) {
-          return validImages.map(img => getImageUrl(img));
+          return validImages.map((img) => getImageUrl(img));
         }
-      } else if (typeof product.image === 'string' && product.image.trim()) {
+      } else if (typeof product.image === "string" && product.image.trim()) {
         return [getImageUrl(product.image)];
       }
     }
-    
+
     return ["/images/placeholder.png"];
   };
 
@@ -262,9 +271,10 @@ const Productdetails = () => {
         localStorage.setItem("guestId", guestId);
       }
 
-      const primaryImage = Array.isArray(product.image) && product.image.length > 0 
-        ? product.image[0] 
-        : product.image;
+      const primaryImage =
+        Array.isArray(product.image) && product.image.length > 0
+          ? product.image[0]
+          : product.image;
 
       await axios.post(`${API_URL}/cart/add`, {
         guestId,
@@ -320,13 +330,20 @@ const Productdetails = () => {
       <>
         <Header />
         <div className="text-center py-5">
-          <div className="alert alert-danger mx-auto" style={{ maxWidth: "500px" }}>
+          <div
+            className="alert alert-danger mx-auto"
+            style={{ maxWidth: "500px" }}
+          >
             <h4>Error Loading Product</h4>
             <p>{error || "Product not found"}</p>
             <Button variant="primary" onClick={() => navigate(-1)}>
               Go Back
             </Button>
-            <Button variant="outline-secondary" onClick={fetchProduct} className="ms-2">
+            <Button
+              variant="outline-secondary"
+              onClick={fetchProduct}
+              className="ms-2"
+            >
               Try Again
             </Button>
           </div>
@@ -362,8 +379,8 @@ const Productdetails = () => {
                           setCurrentImageIndex(i);
                         }}
                       >
-                        <img 
-                          src={img} 
+                        <img
+                          src={img}
                           alt={`${product.name} - view ${i + 1}`}
                           onError={(e) => {
                             e.target.src = "/images/placeholder.png";
@@ -375,7 +392,10 @@ const Productdetails = () => {
                 )}
 
                 {/* Main Image with Navigation Arrows */}
-                <div className="main-image-container" style={{ position: "relative" }}>
+                <div
+                  className="main-image-container"
+                  style={{ position: "relative" }}
+                >
                   <motion.div
                     className="main-image-box"
                     key={activeImg}
@@ -459,14 +479,12 @@ const Productdetails = () => {
 
                 {/* Ratings */}
                 <div className="rating-row">
-                  <div className="stars">
-                    {renderStars(averageRating)}
-                  </div>
+                  <div className="stars">{renderStars(averageRating)}</div>
                   <span className="ms-2">
                     {averageRating.toFixed(1)} ({totalReviews} reviews)
                   </span>
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     className="write-review-btn"
                     onClick={() => setShowReviewModal(true)}
                   >
@@ -475,7 +493,9 @@ const Productdetails = () => {
                 </div>
 
                 {/* Price */}
-                <div className="price-box funnel-sans">₹{formatPrice(product.price)}</div>
+                <div className="price-box funnel-sans">
+                  ₹{formatPrice(product.price)}
+                </div>
 
                 <p className="tax-text">
                   Inclusive of all taxes | Free shipping on orders above ₹1499
@@ -490,7 +510,9 @@ const Productdetails = () => {
                 <div className="quantity-section">
                   <span>Quantity</span>
                   <div className="qty-box">
-                    <button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>−</button>
+                    <button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>
+                      −
+                    </button>
                     <input value={qty} readOnly />
                     <button onClick={() => setQty(qty + 1)}>+</button>
                   </div>
@@ -505,7 +527,7 @@ const Productdetails = () => {
                 </div>
 
                 {/* Features */}
-                <div className="features-row">
+                <div className="features-row-product-details">
                   <div className="feature-item">
                     <FaHeart /> <span>Handmade with love</span>
                   </div>
@@ -525,58 +547,6 @@ const Productdetails = () => {
             </Col>
           </Row>
 
-          {/* REVIEWS SECTION */}
-          <div className="reviews-section mt-5">
-            <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
-              <h3 className="funnel-sans">Customer Reviews</h3>
-              <Button 
-                variant="outline-primary" 
-                onClick={() => setShowReviewModal(true)}
-              >
-                Write a Review
-              </Button>
-            </div>
-
-            {reviews.length === 0 ? (
-              <div className="text-center py-5 bg-light rounded">
-                <p className="mb-3">No reviews yet. Be the first to review this product!</p>
-                <Button 
-                  variant="primary" 
-                  onClick={() => setShowReviewModal(true)}
-                >
-                  Write a Review
-                </Button>
-              </div>
-            ) : (
-              <Row className="g-4">
-                {reviews.slice().reverse().map((review, index) => (
-                  <Col md={6} lg={4} key={index}>
-                    <div className="review-card p-3 border rounded h-100">
-                      <div className="review-stars mb-2">
-                        {renderStars(review.rating)}
-                      </div>
-                      <p className="review-text mt-3">{review.review}</p>
-                      <div className="review-meta mt-3">
-                        <div className="reviewer-info d-flex align-items-center">
-                          <FaUser className="me-2 text-muted" />
-                          <strong>{review.userName || "Anonymous"}</strong>
-                        </div>
-                        {review.createdAt && (
-                          <div className="review-date mt-1">
-                            <FaCalendarAlt className="me-1 text-muted" size={12} />
-                            <small className="text-muted">
-                              {new Date(review.createdAt).toLocaleDateString()}
-                            </small>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Col>
-                ))}
-              </Row>
-            )}
-          </div>
-
           {/* ACCORDION SECTION */}
           <div className="product-accordion mt-5">
             <details open>
@@ -585,7 +555,10 @@ const Productdetails = () => {
             </details>
             <details>
               <summary className="funnel-sans">Materials & Care</summary>
-              <p>Clean gently using a dry cloth. Avoid direct sunlight and moisture.</p>
+              <p>
+                Clean gently using a dry cloth. Avoid direct sunlight and
+                moisture.
+              </p>
             </details>
             <details>
               <summary className="funnel-sans">Shipping & Returns</summary>
@@ -593,15 +566,79 @@ const Productdetails = () => {
             </details>
             <details>
               <summary className="funnel-sans">About the Brand</summary>
-              <p>Brandel focuses on timeless handcrafted products made with love.</p>
+              <p>
+                Brandel focuses on timeless handcrafted products made with love.
+              </p>
             </details>
+          </div>
+
+          {/* REVIEWS SECTION */}
+          <div className="reviews-section mt-5">
+            <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
+              <h3 className="funnel-sans">Customer Reviews</h3>
+              <Button
+                variant="outline-success"
+                onClick={() => setShowReviewModal(true)}
+              >
+                Write a Review
+              </Button>
+            </div>
+
+            {reviews.length === 0 ? (
+              <div className="text-center py-5 bg-light rounded">
+                <p className="mb-3">
+                  No reviews yet. Be the first to review this product!
+                </p>
+                <Button
+                  variant="success"
+                  onClick={() => setShowReviewModal(true)}
+                >
+                  Write a Review
+                </Button>
+              </div>
+            ) : (
+              <Row className="g-4">
+                {reviews
+                  .slice()
+                  .reverse()
+                  .map((review, index) => (
+                    <Col md={4} lg={3} key={index}>
+                      <div className="review-card p-3 border rounded h-100">
+                        <div className="review-stars mb-2">
+                          {renderStars(review.rating)}
+                        </div>
+                        <p className="review-text mt-3">{review.review}</p>
+                        <div className="review-meta mt-3">
+                          <div className="reviewer-info d-flex align-items-center">
+                            <FaUser className="me-2 text-muted" />
+                            <strong>{review.userName || "Anonymous"}</strong>
+                          </div>
+                          {review.createdAt && (
+                            <div className="review-date mt-1">
+                              <FaCalendarAlt
+                                className="me-1 text-muted"
+                                size={12}
+                              />
+                              <small className="text-muted">
+                                {new Date(
+                                  review.createdAt,
+                                ).toLocaleDateString()}
+                              </small>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Col>
+                  ))}
+              </Row>
+            )}
           </div>
         </Container>
       </div>
 
       {/* REVIEW MODAL */}
-      <Modal 
-        show={showReviewModal} 
+      <Modal
+        show={showReviewModal}
         onHide={() => {
           setShowReviewModal(false);
           setReviewError("");
@@ -615,17 +652,25 @@ const Productdetails = () => {
         </Modal.Header>
         <Modal.Body>
           {reviewSuccess && (
-            <Alert variant="success" onClose={() => setReviewSuccess("")} dismissible>
+            <Alert
+              variant="success"
+              onClose={() => setReviewSuccess("")}
+              dismissible
+            >
               {reviewSuccess}
             </Alert>
           )}
           {reviewError && (
-            <Alert variant="danger" onClose={() => setReviewError("")} dismissible>
+            <Alert
+              variant="danger"
+              onClose={() => setReviewError("")}
+              dismissible
+            >
               {reviewError}
             </Alert>
           )}
-          
-          <Form>
+
+          <Form className="lexendHandmade with loveHandmade with love">
             <Form.Group className="mb-3">
               <Form.Label>Your Name *</Form.Label>
               <Form.Control
@@ -669,8 +714,8 @@ const Productdetails = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => {
               setShowReviewModal(false);
               setReviewError("");
@@ -680,8 +725,8 @@ const Productdetails = () => {
           >
             Cancel
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="success"
             onClick={handleSubmitReview}
             disabled={submitting}
           >
