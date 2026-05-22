@@ -92,7 +92,7 @@ const Header = () => {
               <FormControl
                 type="search"
                 placeholder="Search"
-                className="search-input lexend"
+                className="s lexend"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

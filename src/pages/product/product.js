@@ -9,15 +9,8 @@ import "./product.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-const fadeLeft = {
-  hidden: { opacity: 0, x: -50 },
-  visible: { opacity: 1, x: 0 },
-};
-
-const fadeRight = {
-  hidden: { opacity: 0, x: 50 },
-  visible: { opacity: 1, x: 0 },
-};
+const fadeLeft = { hidden: { opacity: 0, x: -50 }, visible: { opacity: 1, x: 0 } };
+const fadeRight = { hidden: { opacity: 0, x: 50 }, visible: { opacity: 1, x: 0 } };
 
 const Product = () => {
   const [companies, setCompanies] = useState([]);
@@ -52,8 +45,6 @@ const Product = () => {
   return (
     <div>
       <Header />
-
-      
 
       <section className="values-section">
         <Container>

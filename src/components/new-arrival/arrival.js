@@ -115,7 +115,7 @@ const Arrival = () => {
                     Fresh Finds,
                     <br />
                     <span>Handpicked</span>
-                    <br />
+                    {/* <br /> */}
                     For You
                   </h2>
                   <Button className="explore-btn">Explore New In</Button>

@@ -179,7 +179,7 @@
 }
 /* FEATURES */
 
-.features-row {
+.features-row-product-details {
   display: flex;
   justify-content: space-between;
   margin-top: 35px;
@@ -272,7 +272,7 @@
 .review-card p {
   color: #555;
   line-height: 1.8;
-  min-height: 80px;
+  /* min-height: 80px; */
 }
 
 .review-card h6 {
@@ -305,7 +305,7 @@
     font-size: 32px;
   }
 
-  .features-row {
+  .features-row-product-details {
     gap: 20px;
     flex-wrap: wrap;
   }
@@ -330,6 +330,10 @@
   .thumb-box {
     width: 70px;
     height: 70px;
+  }
+  .features-row-product-details {
+    gap: 0px;
+    flex-wrap: wrap;
   }
 }
 
