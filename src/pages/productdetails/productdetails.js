@@ -4,6 +4,10 @@ import {
   Row,
   Col,
   Button,
+  Form,
+  Modal,
+  Rating,
+  Alert,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
@@ -14,6 +18,8 @@ import {
   FaShieldAlt,
   FaChevronLeft,
   FaChevronRight,
+  FaUser,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -24,6 +30,14 @@ import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const BACKEND_URL = "http://localhost:9000";
+
+// Helper function to format price
+const formatPrice = (price) => {
+  if (!price && price !== 0) return "0.00";
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return "0.00";
+  return numPrice.toFixed(2);
+};
 
 const Productdetails = () => {
   const { id } = useParams();
@@ -36,9 +50,24 @@ const Productdetails = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [error, setError] = useState(null);
 
+  // Review states
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewData, setReviewData] = useState({
+    userName: "",
+    rating: 0,
+    review: "",
+  });
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
     if (id) {
       fetchProduct();
+      fetchReviews();
     }
   }, [id]);
 
@@ -47,7 +76,6 @@ const Productdetails = () => {
       setLoading(true);
       setError(null);
       
-      // ✅ FIXED: Using '/product/' (singular) instead of '/products/' (plural)
       console.log("Fetching product from:", `${API_URL}/product/${id}`);
       
       const response = await axios.get(`${API_URL}/product/${id}`);
@@ -68,13 +96,88 @@ const Productdetails = () => {
       }
     } catch (err) {
       console.error("Product fetch error details:", err);
-      console.error("Error response:", err.response);
-      console.error("Error status:", err.response?.status);
-      console.error("Error data:", err.response?.data);
-      
       setError(err.response?.data?.message || "Failed to load product. Please try again later.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch reviews
+  const fetchReviews = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/products/${id}/reviews`);
+      setReviews(response.data.reviews || []);
+      setAverageRating(response.data.averageRating || 0);
+      setTotalReviews(response.data.totalReviews || 0);
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+    }
+  };
+
+  // Handle review input changes
+  const handleReviewChange = (e) => {
+    const { name, value } = e.target;
+    setReviewData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle rating change
+  const handleRatingChange = (newRating) => {
+    setReviewData(prev => ({
+      ...prev,
+      rating: newRating
+    }));
+  };
+
+  // Submit review
+  const handleSubmitReview = async () => {
+    if (!reviewData.rating || reviewData.rating === 0) {
+      setReviewError("Please select a rating");
+      return;
+    }
+    if (!reviewData.review.trim()) {
+      setReviewError("Please write your review");
+      return;
+    }
+    if (!reviewData.userName.trim()) {
+      setReviewError("Please enter your name");
+      return;
+    }
+
+    setSubmitting(true);
+    setReviewError("");
+    
+    try {
+      const response = await axios.post(`${API_URL}/products/${id}/review`, {
+        rating: reviewData.rating,
+        review: reviewData.review,
+        userName: reviewData.userName
+      });
+
+      if (response.data.message) {
+        setReviewSuccess("Thank you for your review!");
+        setReviewData({
+          userName: "",
+          rating: 0,
+          review: "",
+        });
+        
+        // Refresh reviews
+        await fetchReviews();
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowReviewModal(false);
+          setReviewSuccess("");
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      setReviewError(err.response?.data?.message || "Failed to submit review. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -122,7 +225,6 @@ const Productdetails = () => {
     
     if (product.image) {
       if (Array.isArray(product.image)) {
-        // Filter out null/undefined and get URLs
         const validImages = product.image.filter(img => img && img.trim());
         if (validImages.length > 0) {
           return validImages.map(img => getImageUrl(img));
@@ -160,7 +262,6 @@ const Productdetails = () => {
         localStorage.setItem("guestId", guestId);
       }
 
-      // Get primary image for cart
       const primaryImage = Array.isArray(product.image) && product.image.length > 0 
         ? product.image[0] 
         : product.image;
@@ -181,6 +282,22 @@ const Productdetails = () => {
       console.error("Add to cart error:", err);
       alert("Failed to add to cart");
     }
+  };
+
+  // Render stars for rating
+  const renderStars = (rating) => {
+    return (
+      <div className="stars-display">
+        {[...Array(5)].map((_, i) => (
+          <FaStar
+            key={i}
+            color={i < Math.floor(rating) ? "#ffc107" : "#e4e5e9"}
+            size={16}
+          />
+        ))}
+        <span className="ms-2 text-muted">{rating.toFixed(1)}</span>
+      </div>
+    );
   };
 
   if (loading) {
@@ -328,15 +445,6 @@ const Productdetails = () => {
                     </>
                   )}
                 </div>
-
-                {/* Image Counter */}
-                {hasMultipleImages && (
-                  <div className="image-counter text-center mt-2">
-                    <small className="text-muted">
-                      {currentImageIndex + 1} / {images.length} images
-                    </small>
-                  </div>
-                )}
               </div>
             </Col>
 
@@ -352,15 +460,22 @@ const Productdetails = () => {
                 {/* Ratings */}
                 <div className="rating-row">
                   <div className="stars">
-                    {[...Array(5)].map((_, i) => (
-                      <FaStar key={i} />
-                    ))}
+                    {renderStars(averageRating)}
                   </div>
-                  <span>4.8 ({product.reviewCount || 126} reviews)</span>
+                  <span className="ms-2">
+                    {averageRating.toFixed(1)} ({totalReviews} reviews)
+                  </span>
+                  <Button 
+                    variant="link" 
+                    className="write-review-btn"
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    Write a Review
+                  </Button>
                 </div>
 
                 {/* Price */}
-                <div className="price-box funnel-sans">₹{product.price}</div>
+                <div className="price-box funnel-sans">₹{formatPrice(product.price)}</div>
 
                 <p className="tax-text">
                   Inclusive of all taxes | Free shipping on orders above ₹1499
@@ -410,8 +525,60 @@ const Productdetails = () => {
             </Col>
           </Row>
 
+          {/* REVIEWS SECTION */}
+          <div className="reviews-section mt-5">
+            <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
+              <h3 className="funnel-sans">Customer Reviews</h3>
+              <Button 
+                variant="outline-primary" 
+                onClick={() => setShowReviewModal(true)}
+              >
+                Write a Review
+              </Button>
+            </div>
+
+            {reviews.length === 0 ? (
+              <div className="text-center py-5 bg-light rounded">
+                <p className="mb-3">No reviews yet. Be the first to review this product!</p>
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowReviewModal(true)}
+                >
+                  Write a Review
+                </Button>
+              </div>
+            ) : (
+              <Row className="g-4">
+                {reviews.slice().reverse().map((review, index) => (
+                  <Col md={6} lg={4} key={index}>
+                    <div className="review-card p-3 border rounded h-100">
+                      <div className="review-stars mb-2">
+                        {renderStars(review.rating)}
+                      </div>
+                      <p className="review-text mt-3">{review.review}</p>
+                      <div className="review-meta mt-3">
+                        <div className="reviewer-info d-flex align-items-center">
+                          <FaUser className="me-2 text-muted" />
+                          <strong>{review.userName || "Anonymous"}</strong>
+                        </div>
+                        {review.createdAt && (
+                          <div className="review-date mt-1">
+                            <FaCalendarAlt className="me-1 text-muted" size={12} />
+                            <small className="text-muted">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </small>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </div>
+
           {/* ACCORDION SECTION */}
-          <div className="product-accordion">
+          <div className="product-accordion mt-5">
             <details open>
               <summary className="funnel-sans">Product Details</summary>
               <p>{product.description}</p>
@@ -431,6 +598,98 @@ const Productdetails = () => {
           </div>
         </Container>
       </div>
+
+      {/* REVIEW MODAL */}
+      <Modal 
+        show={showReviewModal} 
+        onHide={() => {
+          setShowReviewModal(false);
+          setReviewError("");
+          setReviewSuccess("");
+        }}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Write a Review</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {reviewSuccess && (
+            <Alert variant="success" onClose={() => setReviewSuccess("")} dismissible>
+              {reviewSuccess}
+            </Alert>
+          )}
+          {reviewError && (
+            <Alert variant="danger" onClose={() => setReviewError("")} dismissible>
+              {reviewError}
+            </Alert>
+          )}
+          
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Your Name *</Form.Label>
+              <Form.Control
+                type="text"
+                name="userName"
+                value={reviewData.userName}
+                onChange={handleReviewChange}
+                placeholder="Enter your name"
+                disabled={submitting}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Rating *</Form.Label>
+              <div className="rating-input">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FaStar
+                    key={star}
+                    size={30}
+                    className="cursor-pointer me-2"
+                    color={star <= reviewData.rating ? "#ffc107" : "#e4e5e9"}
+                    onClick={() => !submitting && handleRatingChange(star)}
+                    style={{ cursor: "pointer", transition: "all 0.2s" }}
+                  />
+                ))}
+              </div>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Your Review *</Form.Label>
+              <Form.Control
+                as="textarea"
+                name="review"
+                rows={5}
+                value={reviewData.review}
+                onChange={handleReviewChange}
+                placeholder="Share your experience with this product..."
+                disabled={submitting}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="secondary" 
+            onClick={() => {
+              setShowReviewModal(false);
+              setReviewError("");
+              setReviewSuccess("");
+            }}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSubmitReview}
+            disabled={submitting}
+          >
+            {submitting ? "Submitting..." : "Submit Review"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       <Footer />
     </>
   );

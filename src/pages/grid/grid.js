@@ -180,11 +180,11 @@ const Grid = () => {
                       />
                       
                       {/* Show multiple image indicator */}
-                      {Array.isArray(item.image) && item.image.length > 1 && (
+                      {/* {Array.isArray(item.image) && item.image.length > 1 && (
                         <div className="multi-image-badge">
                           {item.image.length} images
                         </div>
-                      )}
+                      )} */}
 
                       <Card.Body className="lexend">
                         <h6>{item.name}</h6>

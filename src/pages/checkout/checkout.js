@@ -27,6 +27,14 @@ import "./checkout.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
+// ✅ Helper function to format prices
+const formatPrice = (price) => {
+  if (!price && price !== 0) return "0.00";
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return "0.00";
+  return numPrice.toFixed(2);
+};
+
 const Checkout = () => {
   const [payment, setPayment] = useState("upi");
 
@@ -69,9 +77,9 @@ const Checkout = () => {
     });
   };
 
-  // TOTALS
+  // TOTALS with proper calculation
   const subtotal = cart.items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
+    (acc, item) => acc + (item.price * item.quantity),
     0,
   );
 
@@ -113,6 +121,7 @@ const Checkout = () => {
       alert("Failed to place order");
     }
   };
+  
   const [shippingMethod, setShippingMethod] = useState("standard");
 
   return (
@@ -128,16 +137,6 @@ const Checkout = () => {
             animate={{ opacity: 1, y: 0 }}
           >
             <h2 className="funnel-sans">Checkout</h2>
-
-            {/* <div className="checkout-steps">
-              <span>Cart</span>
-              <span>›</span>
-              <span className="active">Information</span>
-              <span>›</span>
-              <span>Shipping</span>
-              <span>›</span>
-              <span>Payment</span>
-            </div> */}
           </motion.div>
 
           <Row className="g-4">
@@ -426,7 +425,6 @@ const Checkout = () => {
                   <Card.Body>
                     <div className="summary-head">
                       <h3>Order Summary</h3>
-
                       <span>Edit Cart</span>
                     </div>
 
@@ -439,7 +437,8 @@ const Checkout = () => {
 
                         <div className="summary-info">
                           <h5>{item.name}</h5>
-                          <p>₹{item.price}</p>
+                          {/* ✅ Fixed price format */}
+                          <p>₹{formatPrice(item.price)}</p>
                         </div>
                       </div>
                     ))}
@@ -448,23 +447,23 @@ const Checkout = () => {
 
                     <div className="summary-row">
                       <span>Subtotal ({cart.items.length} items)</span>
-
-                      <span>₹{subtotal}</span>
+                      {/* ✅ Fixed subtotal */}
+                      <span>₹{formatPrice(subtotal)}</span>
                     </div>
 
                     <div className="summary-row">
                       <span>Shipping</span>
-
                       <span className="free">
-                        {shippingCost === 0 ? "FREE" : `₹${shippingCost}`}
+                        {shippingCost === 0 ? "FREE" : `₹${formatPrice(shippingCost)}`}
                       </span>
                     </div>
 
-                    <div className="summary-row">
-                      <span>Shipping Discount</span>
-
-                      <span className="discount">-₹99</span>
-                    </div>
+                    {shippingCost > 0 && (
+                      <div className="summary-row">
+                        <span>Shipping Discount</span>
+                        <span className="discount">-₹99</span>
+                      </div>
+                    )}
 
                     <div className="summary-total">
                       <div>
@@ -472,12 +471,15 @@ const Checkout = () => {
                         <p>Inclusive of all taxes</p>
                       </div>
 
-                      <h2>₹{total}</h2>
+                      {/* ✅ Fixed total */}
+                      <h2>₹{formatPrice(total)}</h2>
                     </div>
 
-                    <div className="shipping-save">
-                      🎉 You saved ₹99 on shipping!
-                    </div>
+                    {shippingCost > 0 && (
+                      <div className="shipping-save">
+                        🎉 You saved ₹99 on shipping!
+                      </div>
+                    )}
 
                     <div className="features-row">
                       <div>

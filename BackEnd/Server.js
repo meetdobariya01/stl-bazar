@@ -51,6 +51,7 @@ app.use("/api/products", require("./Router/reviewRoutes"));
 app.use("/api/addresses", require("./Router/addressRouter"));
 app.use("/api/wishlist", require("./Router/wishlist"));
 app.use("/api/contact", require("./Router/contactRoutes"));
+app.use("/api/sellers", require("./Router/sellerRoutes"));
 /* ===============================
    ROOT
 ================================ */

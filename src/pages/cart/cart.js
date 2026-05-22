@@ -22,7 +22,15 @@ import "./cart.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api"; // Changed to 9000 to match your backend
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+
+// ✅ Helper function to format prices
+const formatPrice = (price) => {
+  if (!price && price !== 0) return "0.00";
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(numPrice)) return "0.00";
+  return numPrice.toFixed(2);
+};
 
 const Cart = () => {
   const [cart, setCart] = useState({ items: [] });
@@ -44,7 +52,7 @@ const Cart = () => {
     fetchCart();
   }, [guestId]);
 
-  // UPDATE QTY - Fixed to match your backend format
+  // UPDATE QTY
   const updateQty = async (productId, type) => {
     const item = cart.items.find((i) => i.productId === productId);
     if (!item) return;
@@ -57,7 +65,6 @@ const Cart = () => {
     }
 
     try {
-      // Match the format from Productdetails component
       await axios.post(`${API_URL}/cart/add`, {
         guestId,
         product: {
@@ -159,10 +166,16 @@ const Cart = () => {
                                 <div className="cart-info">
                                   <h4>{item.name}</h4>
 
-                                  <h5 className="funnel-sans">₹{item.price}</h5>
+                                  {/* ✅ Fixed price format */}
+                                  <h5 className="funnel-sans">₹{formatPrice(item.price)}</h5>
 
                                   <div className="product-meta">
                                     <span>Qty: {item.quantity}</span>
+                                  </div>
+
+                                  {/* ✅ Fixed item total */}
+                                  <div className="item-total">
+                                    <small>Item Total: ₹{formatPrice(item.price * item.quantity)}</small>
                                   </div>
 
                                   <div className="cart-actions">
@@ -208,7 +221,8 @@ const Cart = () => {
                       <div className="shipping-top">
                         <span>🎉 Add more items to reach free shipping!</span>
 
-                        <span>₹{subtotal} / ₹1499</span>
+                        {/* ✅ Fixed price format */}
+                        <span>₹{formatPrice(subtotal)} / ₹1499</span>
                       </div>
 
                       <ProgressBar now={Math.min((subtotal / 1499) * 100, 100)} />
@@ -230,19 +244,18 @@ const Cart = () => {
 
                     <div className="summary-row">
                       <span>Subtotal ({cart.items.length} items)</span>
-
-                      <span>₹{subtotal}</span>
+                      {/* ✅ Fixed price format */}
+                      <span>₹{formatPrice(subtotal)}</span>
                     </div>
 
                     <div className="summary-row">
                       <span>Shipping</span>
-
-                      <span>{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
+                      <span>{shipping === 0 ? "FREE" : `₹${formatPrice(shipping)}`}</span>
                     </div>
 
                     {shipping > 0 && (
                       <div className="summary-row discount">
-                        <span>Add ₹{1499 - subtotal} more for free shipping</span>
+                        <span>Add ₹{formatPrice(1499 - subtotal)} more for free shipping</span>
                         <span>-</span>
                       </div>
                     )}
@@ -255,7 +268,8 @@ const Cart = () => {
                         <p>Inclusive of all taxes</p>
                       </div>
 
-                      <h2>₹{total}</h2>
+                      {/* ✅ Fixed total price */}
+                      <h2>₹{formatPrice(total)}</h2>
                     </div>
 
                     <button className="coupon-btn">
