@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col } from "react-bootstrap";
-import { FaArrowRight } from "react-icons/fa";
+import { Container, Row, Col, Spinner } from "react-bootstrap";
+import { FaArrowRight, FaStar } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./collections.css";
 
-const Collections = ({ limit = 6 }) => {  // Add limit prop with default 6
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const BACKEND_URL = "http://localhost:9000";
+
+const Collections = ({ limit = 6 }) => {
   const [collections, setCollections] = useState([]);
-  const [allCollections, setAllCollections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCollections();
@@ -14,80 +20,202 @@ const Collections = ({ limit = 6 }) => {  // Add limit prop with default 6
 
   const fetchCollections = async () => {
     try {
-      const { data } = await axios.get(
-        "http://localhost:9000/api/categories"
-      );
-
-      console.log("Categories data:", data);
-      setAllCollections(data);
-      // Only show first 'limit' items on homepage
-      setCollections(data.slice(0, limit));
+      setLoading(true);
+      
+      // First, get all companies
+      const companiesResponse = await axios.get(`${API_URL}/companies`);
+      const companies = companiesResponse.data;
+      
+      console.log("Companies:", companies);
+      
+      // For each company, get one product
+      const productsData = [];
+      
+      for (const company of companies) {
+        try {
+          // Get products for this company
+          const productsResponse = await axios.get(`${API_URL}/products`, {
+            params: { company: company.name }
+          });
+          
+          const products = productsResponse.data;
+          
+          // If company has products, take the first one
+          if (products && products.length > 0) {
+            productsData.push({
+              ...products[0],
+              companyName: company.name
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching products for ${company.name}:`, err);
+        }
+      }
+      
+      console.log("Collection products (one per company):", productsData);
+      
+      // Limit the number of items shown
+      setCollections(productsData.slice(0, limit));
+      setError(null);
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching collections:", error);
+      setError("Failed to load collections");
+    } finally {
+      setLoading(false);
     }
   };
 
   // Helper function to get image URL safely
   const getImageUrl = (image) => {
     if (!image) return null;
-
-    // If it's an array, get the first item
+    
     let imagePath = Array.isArray(image) ? image[0] : image;
-
+    
     if (!imagePath) return null;
-
-    // If it's a full URL, return as is
+    
     if (imagePath.startsWith("http")) {
       return imagePath;
     }
-
-    // If it starts with /images, serve from backend
+    
     if (imagePath.startsWith("/images")) {
-      return `${imagePath}`;
+      return imagePath;
     }
-
-    // Default: serve from uploads folder
-    return `http://localhost:9000/uploads/${imagePath}`;
+    
+    if (imagePath.startsWith("/uploads")) {
+      return `${BACKEND_URL}${imagePath}`;
+    }
+    
+    return `${BACKEND_URL}/uploads/${imagePath}`;
   };
+
+  // Format price to 2 decimal places
+  const formatPrice = (price) => {
+    if (!price && price !== 0) return "0";
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numPrice)) return "0";
+    return numPrice.toFixed(2);
+  };
+
+  // Handle product click
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
+  };
+
+  // Handle company click
+  const handleCompanyClick = (companyName) => {
+    navigate(`/company/${encodeURIComponent(companyName)}`);
+  };
+
+  // Render stars for rating
+  const renderStars = (rating) => {
+    const starRating = rating || 0;
+    return (
+      <div className="product-stars">
+        {[...Array(5)].map((_, i) => (
+          <FaStar
+            key={i}
+            size={12}
+            color={i < Math.floor(starRating) ? "#ffc107" : "#e4e5e9"}
+          />
+        ))}
+        <span className="ms-1 rating-value">{starRating.toFixed(1)}</span>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <section className="collection-section py-5">
+        <Container>
+          <div className="text-center py-5">
+            <Spinner animation="border" variant="primary" />
+            <p className="mt-3">Loading collections...</p>
+          </div>
+        </Container>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="collection-section py-5">
+        <Container>
+          <div className="text-center py-5 text-danger">
+            <p>{error}</p>
+          </div>
+        </Container>
+      </section>
+    );
+  }
+
+  if (collections.length === 0) {
+    return (
+      <section className="collection-section py-5">
+        <Container>
+          <div className="text-center py-5">
+            <p>No collections available</p>
+          </div>
+        </Container>
+      </section>
+    );
+  }
 
   return (
     <section className="collection-section py-5">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title">
-            Shop by Collection
-          </h2>
+          <h2 className="section-title">Shop by Collection</h2>
 
           <a
-            href="/collections"  // Link to all collections page
+            href="/product"
             className="view-all-link d-flex align-items-center"
           >
-            View all collections
+            View all companies
             <FaArrowRight className="ms-2" />
           </a>
         </div>
 
         <Row className="g-4">
-          {collections.map((item, index) => {
-            const imageUrl = getImageUrl(item.image);
-
+          {collections.map((product, index) => {
+            const imageUrl = getImageUrl(product.image);
+            
             return (
-              <Col lg={2} md={4} sm={6} xs={6} key={index}>
-                <div className="collection-card">
+              <Col lg={2} md={4} sm={6} xs={6} key={product._id || index}>
+                <div 
+                  className="collection-card"
+                  onClick={() => handleProductClick(product._id)}
+                  style={{ cursor: "pointer" }}
+                >
                   <div className="image-wrapper">
                     <img
-                      src={imageUrl || "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image"}
-                      alt={item.name}
+                      src={imageUrl || "/images/placeholder-product.jpg"}
+                      alt={product.name}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image";
+                        e.target.src = "/images/placeholder-product.jpg";
                       }}
                     />
+                    <div className="company-badge">
+                      {product.companyName || product.company}
+                    </div>
                   </div>
 
                   <div className="card-content">
-                    <h5>{item.name}</h5>
-                    {/* <p className="product-count">{item.productCount} products</p> */}
+                    <h5 className="product-name">{product.name}</h5>
+                    <p className="company-name" 
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         handleCompanyClick(product.companyName || product.company);
+                       }}
+                    >
+                      {product.companyName || product.company}
+                    </p>
+                    {product.averageRating > 0 && (
+                      <div className="product-rating">
+                        {renderStars(product.averageRating)}
+                      </div>
+                    )}
+                    <p className="product-price">₹{formatPrice(product.price)}</p>
                   </div>
                 </div>
               </Col>
@@ -100,85 +228,3 @@ const Collections = ({ limit = 6 }) => {  // Add limit prop with default 6
 };
 
 export default Collections;
-
-// import React from "react";
-// import { Container, Row, Col, Card } from "react-bootstrap";
-// import { motion } from "framer-motion";
-// import "./collections.css";
-
-// const categories = [
-//   {
-//     title: "Fashion",
-//     image: "./images/Category/dairy-product.png",
-//   },
-//   {
-//     title: "Electronics",
-//     image: "./images/Category/cold-drinks.png",
-//   },
-//   {
-//     title: "Furniture",
-//     image: "./images/Category/breakfast.png",
-//   },
-//   {
-//     title: "Shoes",
-//     image: "./images/Category/biscuits.png",
-//   },
-//   {
-//     title: "Beauty",
-//     image: "./images/Category/snacks.png  ",
-//   },
-//   {
-//     title: "Bags",
-//     image: "./images/Category/sweets.png",
-//   },
-//   {
-//     title: "Beauty",
-//     image: "./images/Category/snacks.png  ",
-//   },
-//   {
-//     title: "Bags",
-//     image: "./images/Category/sweets.png",
-//   },
-// ];
-
-// const CategoriesSection = () => {
-//   return (
-//     <section className="categories-section">
-//       <Container>
-//         {/* Heading */}
-//         <div className="section-heading text-center">
-//           <span>Popular Categories</span>
-//           <h2>Shop By Category</h2>
-//           <p>Explore premium collections for your modern lifestyle.</p>
-//         </div>
-
-//         {/* Categories */}
-//         <Row className="g-4">
-//           {categories.map((category, index) => (
-//             <Col lg={2} md={6} sm={6} xs={4} key={index}>
-//               <motion.div
-//                 initial={{ opacity: 0, y: 60 }}
-//                 whileInView={{ opacity: 1, y: 0 }}
-//                 transition={{ duration: 0.5, delay: index * 0.1 }}
-//                 viewport={{ once: true }}
-//                 whileHover={{ y: -10 }}
-//               >
-//                 <Card className="category-card-collection border-0">
-//                   <div className="category-img">
-//                     <img src={category.image} alt={category.title} />
-//                   </div>
-
-//                   <div className="category-content">
-//                     <h4>{category.title}</h4>
-//                   </div>
-//                 </Card>
-//               </motion.div>
-//             </Col>
-//           ))}
-//         </Row>
-//       </Container>
-//     </section>
-//   );
-// };
-
-// export default CategoriesSection;
