@@ -215,3 +215,165 @@
   text-decoration: none;
   cursor: pointer;
 }
+/* Search Suggestions Styles */
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 500px;
+  margin: 0 20px;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 5px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestion-item:hover {
+  background: #f8f9fa;
+}
+
+.suggestion-image {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.suggestion-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.suggestion-info {
+  flex: 1;
+}
+
+.suggestion-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.suggestion-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f5132;
+  margin-bottom: 2px;
+}
+
+.suggestion-company {
+  font-size: 11px;
+  color: #666;
+}
+
+.view-all-results {
+  padding: 12px;
+  text-align: center;
+  background: #f8f9fa;
+  color: #0f5132;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  border-top: 1px solid #eee;
+}
+
+.view-all-results:hover {
+  background: #e9ecef;
+}
+
+.no-suggestions {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.suggestion-loading {
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #666;
+}
+
+/* Mobile Search Results */
+.mobile-search-results {
+  margin: 10px 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.mobile-suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  gap: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+
+.mobile-suggestion-item:hover {
+  background: #f8f9fa;
+}
+
+.mobile-suggestion-item img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.mobile-suggestion-item .name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.mobile-suggestion-item .price {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f5132;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .search-suggestions {
+    max-height: 300px;
+  }
+  
+  .suggestion-image {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .suggestion-name {
+    font-size: 12px;
+  }
+}

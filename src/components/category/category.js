@@ -3,10 +3,8 @@ import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import "./category.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
@@ -21,75 +19,30 @@ const CategoriesSection = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      // Fetch categories from backend
-      const response = await axios.get(`${API_URL}/all-categories`);
-      console.log("Fetched categories:", response.data);
-      
-      if (response.data && response.data.length > 0) {
-        setCategories(response.data);
-      } else {
-        // Fallback to default categories if none in database
-        setCategories(defaultCategories);
-      }
+      const response = await axios.get(`${API_URL}/categories`);
+      console.log("Database mathi aavel categories:", response.data);
+      setCategories(response.data || []);
       setError(null);
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      setError("Failed to load categories");
-      // Use default categories if API fails
-      setCategories(defaultCategories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setError("Categories load karva ma error aavi");
+      setCategories([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Default categories (fallback if no data in database)
-  const defaultCategories = [
-    { name: "Dairy Products", image: "/images/Category/dairy-product.png", icon: "FaCheese", productCount: 0 },
-    { name: "Cold Drinks", image: "/images/Category/cold-drinks.png", icon: "FaBeer", productCount: 0 },
-    { name: "Breakfast", image: "/images/Category/breakfast.png", icon: "FaBreadSlice", productCount: 0 },
-    { name: "Bakery & Biscuits", image: "/images/Category/biscuits.png", icon: "FaCookie", productCount: 0 },
-    { name: "Snacks", image: "/images/Category/snacks.png", icon: "FaCandyCane", productCount: 0 },
-    { name: "Sweets", image: "/images/Category/sweets.png", icon: "FaIceCream", productCount: 0 },
-    { name: "Personal Care", image: "/images/Category/personal-care.png", icon: "FaHandSparkles", productCount: 0 },
-    { name: "Vegetables", image: "/images/Category/vegetable.png", icon: "FaCarrot", productCount: 0 },
-  ];
-
-  // Helper function to get image URL
-  const getImageUrl = (image) => {
-    if (!image) return "/images/placeholder-category.jpg";
-    
-    // If it's a full URL
-    if (image.startsWith("http")) {
-      return image;
-    }
-    
-    // If it starts with /images (local public folder)
-    if (image.startsWith("/images")) {
-      return image;
-    }
-    
-    // If it starts with /uploads (backend uploads)
-    if (image.startsWith("/uploads")) {
-      return `${BACKEND_URL}${image}`;
-    }
-    
-    // Default for local images
-    return image;
-  };
-
-  // Handle category click
   const handleCategoryClick = (categoryName) => {
     navigate(`/products?category=${encodeURIComponent(categoryName)}`);
   };
 
   if (loading) {
     return (
-      <section className="categories-section lexend">
+      <section className="categories-section py-5">
         <Container>
-          <div className="section-heading text-start mb-5">
-            <span>Popular Categories</span>
-            <h2 className="funnel-sans">Shop By Category</h2>
-            <p>Explore premium collections for your modern lifestyle.</p>
+          <div className="text-center mb-5">
+            <h2>Shop By Category</h2>
+            <p>Explore our premium collections</p>
           </div>
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
@@ -102,15 +55,17 @@ const CategoriesSection = () => {
 
   if (error) {
     return (
-      <section className="categories-section lexend">
+      <section className="categories-section py-5">
         <Container>
-          <div className="section-heading text-start mb-5">
-            <span>Popular Categories</span>
-            <h2 className="funnel-sans">Shop By Category</h2>
-            <p>Explore premium collections for your modern lifestyle.</p>
+          <div className="text-center mb-5">
+            <h2>Shop By Category</h2>
+            <p>Explore our premium collections</p>
           </div>
           <div className="text-center py-5 text-danger">
             <p>{error}</p>
+            <button className="btn btn-primary" onClick={fetchCategories}>
+              Try Again
+            </button>
           </div>
         </Container>
       </section>
@@ -118,243 +73,85 @@ const CategoriesSection = () => {
   }
 
   return (
-    <section className="categories-section lexend">
+    <section className="categories-section py-5">
       <Container>
-        {/* Heading */}
-        <div className="section-heading text-start mb-5">
-          <span>Popular Categories</span>
-          <h2 className="funnel-sans">Shop By Category</h2>
-          <p>Explore premium collections for your modern lifestyle.</p>
+        <div className="text-center mb-5">
+          <h2>Shop By Category</h2>
+          <p>Explore our premium collections</p>
         </div>
 
-        {/* Categories Grid */}
-        <Row className="g-4 justify-content-center">
-          {categories.map((category, index) => (
-            <Col lg={2} md={4} sm={4} xs={3} key={category._id || index} className="d-flex">
-              <motion.div
-                className="w-100"
-                initial={{ opacity: 0, y: 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -10 }}
-              >
-                <Card 
-                  className="category-card-collection border-0"
-                  onClick={() => handleCategoryClick(category.name)}
-                  style={{ cursor: "pointer" }}
+        {categories.length === 0 ? (
+          <div className="text-center py-5">
+            <p>No categories found</p>
+          </div>
+        ) : (
+          <Row className="g-4">
+            {categories.map((category, index) => (
+              <Col lg={2} md={3} sm={4} xs={6} key={category._id || index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -10 }}
                 >
-                  <div className="category-img">
-                    <img 
-                      src={getImageUrl(category.image)} 
-                      alt={category.name} 
-                      onError={(e) => {
-                        e.target.src = "/images/placeholder-category.jpg";
-                      }}
-                    />
-                    {category.productCount > 0 && (
-                      <span className="product-count-badge">
-                        {category.productCount} items
-                      </span>
-                    )}
-                  </div>
-                </Card>
-
-                {/* Title Outside Image */}
-                <div className="category-title text-center">
-                  <h4>{category.name}</h4>
-                  {category.description && (
-                    <p className="category-description">{category.description}</p>
-                  )}
-                </div>
-              </motion.div>
-            </Col>
-          ))}
-        </Row>
+                  <Card 
+                    className="category-card h-100 text-center border-0 shadow-sm"
+                    onClick={() => handleCategoryClick(category.name)}
+                    style={{ cursor: "pointer", borderRadius: "12px", overflow: "hidden" }}
+                  >
+                    {/* Database mathi image show thashe */}
+                    <div className="category-image-container p-3">
+                      {category.image ? (
+                        <img 
+                          src={category.image}
+                          alt={category.name}
+                          style={{
+                            width: "100%",
+                            height: "150px",
+                            objectFit: "contain",
+                            borderRadius: "10px"
+                          }}
+                          onError={(e) => {
+                            console.error(`Image load failed: ${category.image}`);
+                            e.target.onerror = null;
+                            e.target.src = "https://via.placeholder.com/150x150?text=No+Image";
+                          }}
+                        />
+                      ) : (
+                        <div 
+                          style={{
+                            width: "100%",
+                            height: "150px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "#f8f9fa",
+                            fontSize: "48px",
+                            fontWeight: "bold",
+                            color: "#6c757d",
+                            borderRadius: "10px"
+                          }}
+                        >
+                          {category.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Card.Body>
+                      <Card.Title className="h6 mb-2">{category.name}</Card.Title>
+                      {category.productCount > 0 && (
+                        <small className="text-muted">{category.productCount} Products</small>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </motion.div>
+              </Col>
+            ))}
+          </Row>
+        )}
       </Container>
     </section>
   );
 };
 
 export default CategoriesSection;
-
-
-
-
-// import React, { useEffect, useState } from "react";
-// import { Container, Row, Col, Card, Spinner, Button } from "react-bootstrap"; // Add Button here
-// import { motion } from "framer-motion";
-// import { useNavigate } from "react-router-dom";
-// import axios from "axios";
-// import "./category.css";
-
-// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// const BACKEND_URL = "http://localhost:9000";
-
-// const CategoriesSection = () => {
-//   const [categories, setCategories] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     fetchCategories();
-//   }, []);
-
-//   const fetchCategories = async () => {
-//     try {
-//       setLoading(true);
-//       const response = await axios.get(`${API_URL}/all-categories`);
-//       console.log("Fetched categories from database:", response.data);
-      
-//       setCategories(response.data || []);
-//       setError(null);
-//     } catch (err) {
-//       console.error("Error fetching categories:", err);
-//       setError("Failed to load categories from database");
-//       setCategories([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const getImageUrl = (image) => {
-//     if (!image) return null;
-    
-//     if (image.startsWith("http")) {
-//       return image;
-//     }
-    
-//     if (image.startsWith("/images")) {
-//       return image;
-//     }
-    
-//     if (image.startsWith("/uploads")) {
-//       return `${BACKEND_URL}${image}`;
-//     }
-    
-//     return image;
-//   };
-
-//   const handleCategoryClick = (categoryName) => {
-//     navigate(`/products?category=${encodeURIComponent(categoryName)}`);
-//   };
-
-//   if (loading) {
-//     return (
-//       <section className="categories-section lexend">
-//         <Container>
-//           <div className="section-heading text-start mb-5">
-//             <span>Popular Categories</span>
-//             <h2 className="funnel-sans">Shop By Category</h2>
-//             <p>Explore premium collections for your modern lifestyle.</p>
-//           </div>
-//           <div className="text-center py-5">
-//             <Spinner animation="border" variant="primary" />
-//             <p className="mt-3">Loading categories...</p>
-//           </div>
-//         </Container>
-//       </section>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <section className="categories-section lexend">
-//         <Container>
-//           <div className="section-heading text-start mb-5">
-//             <span>Popular Categories</span>
-//             <h2 className="funnel-sans">Shop By Category</h2>
-//             <p>Explore premium collections for your modern lifestyle.</p>
-//           </div>
-//           <div className="text-center py-5 text-danger">
-//             <p>{error}</p>
-//             <Button variant="primary" onClick={fetchCategories} className="mt-3">
-//               Try Again
-//             </Button>
-//           </div>
-//         </Container>
-//       </section>
-//     );
-//   }
-
-//   if (categories.length === 0) {
-//     return (
-//       <section className="categories-section lexend">
-//         <Container>
-//           <div className="section-heading text-start mb-5">
-//             <span>Popular Categories</span>
-//             <h2 className="funnel-sans">Shop By Category</h2>
-//             <p>Explore premium collections for your modern lifestyle.</p>
-//           </div>
-//           <div className="text-center py-5">
-//             <p>No categories available. Please add categories in the admin panel.</p>
-//           </div>
-//         </Container>
-//       </section>
-//     );
-//   }
-
-//   return (
-//     <section className="categories-section lexend">
-//       <Container>
-//         <div className="section-heading text-start mb-5">
-//           <span>Popular Categories</span>
-//           <h2 className="funnel-sans">Shop By Category</h2>
-//           <p>Explore premium collections for your modern lifestyle.</p>
-//         </div>
-
-//         <Row className="g-4 justify-content-center">
-//           {categories.map((category, index) => (
-//             <Col lg={2} md={4} sm={4} xs={3} key={category._id || index} className="d-flex">
-//               <motion.div
-//                 className="w-100"
-//                 initial={{ opacity: 0, y: 60 }}
-//                 whileInView={{ opacity: 1, y: 0 }}
-//                 transition={{ duration: 0.5, delay: index * 0.1 }}
-//                 viewport={{ once: true }}
-//                 whileHover={{ y: -10 }}
-//               >
-//                 <Card 
-//                   className="category-card-collection border-0"
-//                   onClick={() => handleCategoryClick(category.name)}
-//                   style={{ cursor: "pointer" }}
-//                 >
-//                   <div className="category-img">
-//                     {category.image ? (
-//                       <img 
-//                         src={getImageUrl(category.image)} 
-//                         alt={category.name} 
-//                         onError={(e) => {
-//                           e.target.src = "/images/placeholder-category.jpg";
-//                         }}
-//                       />
-//                     ) : (
-//                       <div className="no-image-placeholder">
-//                         <span>No Image</span>
-//                       </div>
-//                     )}
-//                     {category.productCount > 0 && (
-//                       <span className="product-count-badge">
-//                         {category.productCount} items
-//                       </span>
-//                     )}
-//                   </div>
-//                 </Card>
-
-//                 <div className="category-title text-center">
-//                   <h4>{category.name}</h4>
-//                   {category.description && (
-//                     <p className="category-description">{category.description.substring(0, 30)}</p>
-//                   )}
-//                 </div>
-//               </motion.div>
-//             </Col>
-//           ))}
-//         </Row>
-//       </Container>
-//     </section>
-//   );
-// };
-
-// export default CategoriesSection;

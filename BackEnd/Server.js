@@ -52,6 +52,7 @@ app.use("/api/addresses", require("./Router/addressRouter"));
 app.use("/api/wishlist", require("./Router/wishlist"));
 app.use("/api/contact", require("./Router/contactRoutes"));
 app.use("/api/sellers", require("./Router/sellerRoutes"));
+app.use("/api/categories", require("./Router/categoryRoutes"));
 /* ===============================
    ROOT
 ================================ */
