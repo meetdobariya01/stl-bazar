@@ -49,6 +49,7 @@ const Productdetails = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [error, setError] = useState(null);
+  const [wishlist, setWishlist] = useState(false);
 
   // Review states
   const [reviews, setReviews] = useState([]);
@@ -68,6 +69,7 @@ const Productdetails = () => {
     if (id) {
       fetchProduct();
       fetchReviews();
+      checkWishlistStatus();
     }
   }, [id]);
 
@@ -117,6 +119,59 @@ const Productdetails = () => {
       setTotalReviews(response.data.totalReviews || 0);
     } catch (err) {
       console.error("Error fetching reviews:", err);
+    }
+  };
+
+  // Check if product is in wishlist
+  const checkWishlistStatus = async () => {
+    try {
+      const guestId = localStorage.getItem("guestId");
+      if (!guestId) return;
+
+      const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
+      const items = res.data.items || [];
+      const exists = items.some((item) => item.productId === id);
+      setWishlist(exists);
+    } catch (err) {
+      console.error("Error checking wishlist:", err);
+    }
+  };
+
+  // Toggle wishlist
+  const toggleWishlist = async () => {
+    try {
+      let guestId = localStorage.getItem("guestId");
+
+      if (!guestId) {
+        guestId = Date.now().toString();
+        localStorage.setItem("guestId", guestId);
+      }
+
+      if (wishlist) {
+        // Remove from wishlist
+        await axios.delete(`${API_URL}/wishlist/remove`, {
+          data: { guestId, productId: product._id },
+        });
+        setWishlist(false);
+        alert("Removed from wishlist");
+      } else {
+        // Add to wishlist
+        await axios.post(`${API_URL}/wishlist/add`, {
+          guestId,
+          product: {
+            productId: product._id,
+            name: product.name,
+            price: product.price,
+            image: Array.isArray(product.image) ? product.image[0] : product.image,
+          },
+        });
+        setWishlist(true);
+        // Navigate to wishlist page after adding
+        navigate("/wishlist");
+      }
+    } catch (err) {
+      console.error("Error toggling wishlist:", err);
+      alert("Something went wrong");
     }
   };
 
@@ -309,7 +364,7 @@ const Productdetails = () => {
       </div>
     );
   };
-  const [wishlist, setWishlist] = useState(false);
+
   if (loading) {
     return (
       <>
@@ -475,8 +530,6 @@ const Productdetails = () => {
 
                 <h1 className="funnel-sans">{product.name}</h1>
 
-                {/* <p className="brand-name">Studio Earth</p> */}
-
                 {/* Ratings */}
                 <div className="rating-row">
                   <div className="stars">{renderStars(averageRating)}</div>
@@ -497,12 +550,13 @@ const Productdetails = () => {
                   ₹{formatPrice(product.price)}
                 </div>
 
+                {/* Wishlist Button - Updated */}
                 <p
                   className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
-                  onClick={() => setWishlist(!wishlist)}
+                  onClick={toggleWishlist}
                 >
                   <FaHeart className="wishlist-icon" />
-                  {wishlist ? "Added to Wishlist" : "Add to Wishlist"}
+                  {wishlist ? "Go to Wishlist" : "Add to Wishlist"}
                 </p>
 
                 <p className="tax-text">
@@ -679,7 +733,7 @@ const Productdetails = () => {
             </Alert>
           )}
 
-          <Form className="lexendHandmade with loveHandmade with love">
+          <Form>
             <Form.Group className="mb-3">
               <Form.Label>Your Name *</Form.Label>
               <Form.Control
