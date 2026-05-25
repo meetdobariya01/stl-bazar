@@ -20,7 +20,7 @@ const Footer = () => {
     window.location.reload();
   };
 
-  return (
+  return (  
     <>
       <footer className="footer-section funnel-sans">
         <Container fluid>
@@ -39,7 +39,9 @@ const Footer = () => {
                   onClick={refreshPage}
                 />
                 <p className="footer-text">
-                 Gourmet Bazar brings you handpicked, high-quality foods, crafted for taste lovers who value freshness, authenticity, and exceptional culinary experiences.
+                  Gourmet Bazar brings you handpicked, high-quality foods,
+                  crafted for taste lovers who value freshness, authenticity,
+                  and exceptional culinary experiences.
                 </p>
               </motion.div>
             </Col>
@@ -112,7 +114,9 @@ const Footer = () => {
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
-               Gourmet Bazar brings you handpicked, high-quality foods, crafted for taste lovers who value freshness, authenticity, and exceptional culinary experiences.
+                Gourmet Bazar brings you handpicked, high-quality foods, crafted
+                for taste lovers who value freshness, authenticity, and
+                exceptional culinary experiences.
               </p>
 
               {/* MOBILE MENU */}
@@ -168,7 +172,7 @@ const Footer = () => {
 
       {/* WHATSAPP BUTTON */}
       <a
-        href="https://wa.me/919999999999"
+        href="https://wa.me/919824018555?text=Hello%20Brandel,%20I%20have%20a%20query%20about%20your%20products."
         target="_blank"
         className="whatsapp-btn"
       >

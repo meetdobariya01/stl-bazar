@@ -18,6 +18,7 @@ import Grid from "./pages/grid/grid";
 import Productdetails from "./pages/productdetails/productdetails";
 import CategoryProducts from "./pages/Categorygrid/Categorygrid";
 import Sell from "./pages/sell/sell";
+import Ordercomplate from "./pages/thankyou/ordercomplate";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -37,6 +38,7 @@ root.render(
         <Route path="/product/:id" element={<Productdetails />} />
         <Route path="/category/:categoryName" element={<CategoryProducts />} />
         <Route path="/sell" element={<Sell />} />
+        <Route path="/Order-Complete" element={<Ordercomplate />} />
       </Routes>
     </Router>
   </CartProvider>,

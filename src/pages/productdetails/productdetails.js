@@ -309,7 +309,7 @@ const Productdetails = () => {
       </div>
     );
   };
-
+  const [wishlist, setWishlist] = useState(false);
   if (loading) {
     return (
       <>
@@ -475,7 +475,7 @@ const Productdetails = () => {
 
                 <h1 className="funnel-sans">{product.name}</h1>
 
-                <p className="brand-name">Studio Earth</p>
+                {/* <p className="brand-name">Studio Earth</p> */}
 
                 {/* Ratings */}
                 <div className="rating-row">
@@ -497,6 +497,14 @@ const Productdetails = () => {
                   ₹{formatPrice(product.price)}
                 </div>
 
+                <p
+                  className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
+                  onClick={() => setWishlist(!wishlist)}
+                >
+                  <FaHeart className="wishlist-icon" />
+                  {wishlist ? "Added to Wishlist" : "Add to Wishlist"}
+                </p>
+
                 <p className="tax-text">
                   Inclusive of all taxes | Free shipping on orders above ₹1499
                 </p>
@@ -509,7 +517,7 @@ const Productdetails = () => {
                 {/* Quantity */}
                 <div className="quantity-section">
                   <span>Quantity</span>
-                  <div className="qty-box">
+                  <div className="qty-box-product-details">
                     <button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>
                       −
                     </button>
@@ -523,6 +531,7 @@ const Productdetails = () => {
                   <Button className="cart-btn" onClick={addToCart}>
                     <FaShoppingCart /> Add to Cart
                   </Button>
+
                   <Button className="buy-btn-product-details">Buy Now</Button>
                 </div>
 

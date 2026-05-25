@@ -35,7 +35,7 @@ const Aboutus = () => {
         </Container>
 
         <motion.img
-          src="/images/aboutus.webp"
+          src="./images/product-banner.png"
           alt="Nature"
           className="simple-image"
           initial={{ opacity: 0 }}
