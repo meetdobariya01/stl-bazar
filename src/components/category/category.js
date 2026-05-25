@@ -91,7 +91,7 @@ const CategoriesSection = () => {
         ) : (
           <Row className="g-4">
             {categories.map((category, index) => (
-              <Col lg={2} md={3} sm={4} xs={6} key={category._id || index}>
+              <Col lg={1} md={3} sm={4} xs={3} key={category._id || index}>
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
