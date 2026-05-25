@@ -4,7 +4,9 @@ import { FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom"; // Add this import
 import axios from "axios";
 import "./bestseller.css";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
+const BACKEND_URL = "http://localhost:9000";
 const Bestseller = () => {
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ const Bestseller = () => {
   const fetchBestSellers = async () => {
     try {
       const { data } = await axios.get(
-        "http://localhost:9000/api/best-sellers"
+        `${API_URL}/best-sellers`
       );
       
       console.log("Best Sellers data:", data);
@@ -50,7 +52,7 @@ const Bestseller = () => {
     }
     
     // Default: serve from uploads folder
-    return `http://localhost:9000/uploads/${imagePath}`;
+    return `${BACKEND_URL}/uploads/${imagePath}`;
   };
 
   // Handle product click
