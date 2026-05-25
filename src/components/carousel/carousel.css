@@ -1,7 +1,7 @@
 .carousel-img {
   height: 700px;
   object-fit: cover;
-  border-radius: 16px;
+  /* border-radius: 16px; */
   animation: zoomIn 6s ease-in-out;
 }
 
@@ -19,6 +19,6 @@
 @media (max-width: 768px) {
   .carousel-img {
     height: auto  ;
-    border-radius: 12px;
+    /* border-radius: 12px; */
   }
 }
