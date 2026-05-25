@@ -26,7 +26,7 @@ const Collections = ({ limit = 6 }) => {
       const companiesResponse = await axios.get(`${API_URL}/companies`);
       const companies = companiesResponse.data;
       
-      console.log("Companies:", companies);
+      // console.log("Companies:", companies);
       
       // For each company, get one product
       const productsData = [];
@@ -52,7 +52,7 @@ const Collections = ({ limit = 6 }) => {
         }
       }
       
-      console.log("Collection products (one per company):", productsData);
+      // console.log("Collection products (one per company):", productsData);
       
       // Limit the number of items shown
       setCollections(productsData.slice(0, limit));
