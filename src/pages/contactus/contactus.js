@@ -81,7 +81,7 @@ const ContactUs = () => {
             <h2>We’d Love to Hear From You</h2>
 
             <p>
-              Whether you have a question, feedback, or partnership inquiry —
+              Whether you have a question, feedback, or partnership inquiry -
               we’re always ready to connect.
             </p>
           </motion.div>
@@ -112,8 +112,8 @@ const ContactUs = () => {
 
                   <div>
                     <h5 className="funnel-sans">Phone</h5>
-                    <a href="tel:+9199854XXXXX" className="email-link">
-                      +91 99854 XXXXX
+                    <a href="tel:+919824018555" className="email-link">
+                      +91 98240 18555
                     </a>
                   </div>
                 </div>

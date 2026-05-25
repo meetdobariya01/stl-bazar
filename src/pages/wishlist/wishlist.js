@@ -28,7 +28,10 @@ const Wishlist = () => {
 
   // Fetch wishlist from backend
   const fetchWishlist = async () => {
-    if (!guestId) { setLoading(false); return; }
+    if (!guestId) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
       setWishlist(res.data.items || []);
@@ -49,7 +52,9 @@ const Wishlist = () => {
       await axios.delete(`${API_URL}/wishlist/remove`, {
         data: { guestId, productId },
       });
-      setWishlist((prev) => prev.filter((item) => item.productId !== productId));
+      setWishlist((prev) =>
+        prev.filter((item) => item.productId !== productId),
+      );
     } catch (err) {
       console.error("Failed to remove item", err);
     }
@@ -101,61 +106,165 @@ const Wishlist = () => {
               >
                 <FaHeartBroken size={60} className="text-danger mb-3" />
                 <h4 className="funnel-sans">Your wishlist is empty</h4>
-                <p className="funnel-sans">Add items you love to see them here.</p>
+                <p className="funnel-sans">
+                  Add items you love to see them here.
+                </p>
                 {/* <Button variant="dark" className="mt-2" onClick={() => navigate("/")}>
                   Browse Products
                 </Button> */}
               </motion.div>
             ) : (
-              <Row className="g-4 funnel-sans">
-                {wishlist.map((item) => (
-                  <Col lg={4} md={6} sm={12} key={item.productId}>
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <Card
-                        className="border-0 shadow-lg rounded-4 overflow-hidden"
-                        style={{ cursor: "pointer" }}
-                        onClick={() => navigate(`/product/${item.productId}`)}
+              <div className="wishlist-wrapper">
+                <div className="wishlist-top">
+                  <div>
+                    <h1 className="wishlist-main-title funnel-sans">
+                      My Wishlist <span>({wishlist.length})</span>
+                    </h1>
+
+                    <p className="wishlist-subtitle funnel-sans">
+                      Items you love, all in one place.
+                    </p>
+                  </div>
+                </div>
+
+                <Row className="g-4">
+                  {/* Left Side */}
+                  <Col lg={8}>
+                    {wishlist.map((item) => (
+                      <motion.div
+                        key={item.productId}
+                        layout
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="wishlist-item-card"
                       >
-                        <Card.Img
-                          variant="top"
-                          src={formatImage(item.image)}
-                          style={{ height: "220px", objectFit: "cover" }}
-                          onError={(e) => { e.target.src = "/images/placeholder.png"; }}
-                        />
-                        <Card.Body>
-                          <h5 className="fw-semibold">{item.name}</h5>
-                          <p className="text-muted mb-3">₹{item.price}</p>
-
-                          <div className="d-flex gap-2">
-                            <Button
-                              variant="dark"
-                              className="w-100 rounded-pill"
-                              onClick={(e) => { e.stopPropagation(); addToCart(item); }}
+                        <Row className="align-items-center">
+                          {/* Image */}
+                          <Col md={3}>
+                            <div
+                              className="wishlist-product-image"
+                              onClick={() =>
+                                navigate(`/product/${item.productId}`)
+                              }
                             >
-                              <FaShoppingCart className="me-2" />
-                              Add to Cart
-                            </Button>
+                              <img
+                                src={formatImage(item.image)}
+                                alt={item.name}
+                                onError={(e) => {
+                                  e.target.src = "/images/placeholder.png";
+                                }}
+                              />
+                            </div>
+                          </Col>
 
-                            <Button
-                              variant="outline-danger"
-                              className="rounded-pill"
-                              onClick={(e) => { e.stopPropagation(); removeItem(item.productId); }}
-                            >
-                              <FaTrash />
-                            </Button>
+                          {/* Content */}
+                          <Col md={5}>
+                            <div className="wishlist-product-content">
+                              <h3
+                                onClick={() =>
+                                  navigate(`/product/${item.productId}`)
+                                }
+                              >
+                                {item.name}
+                              </h3>
+
+                              <p className="wishlist-brand">
+                                Premium Home Decor
+                              </p>
+
+                              <h4>₹{item.price}</h4>
+
+                              <div className="wishlist-meta">
+                                <span>Handcrafted</span>
+                                <span>Premium Quality</span>
+                              </div>
+
+                              <div className="wishlist-stock">
+                                <span className="stock-dot"></span>
+                                In stock
+                              </div>
+                            </div>
+                          </Col>
+
+                          {/* Actions */}
+                          <Col md={4}>
+                            <div className="wishlist-action-area">
+                              <button
+                                className="wishlist-remove-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeItem(item.productId);
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+
+                              <Button
+                                className="wishlist-cart-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addToCart(item);
+                                }}
+                              >
+                                <FaShoppingCart className="me-2" />
+                                Add to Cart
+                              </Button>
+
+                              <Button
+                                className="wishlist-view-btn"
+                                onClick={() =>
+                                  navigate(`/product/${item.productId}`)
+                                }
+                              >
+                                View Product
+                              </Button>
+                            </div>
+                          </Col>
+                        </Row>
+                      </motion.div>
+                    ))}
+                  </Col>
+
+                  {/* Right Sidebar */}
+                  <Col lg={4}>
+                    <motion.div
+                      className="wishlist-sidebar"
+                      initial={{ opacity: 0, x: 40 }}
+                      animate={{ opacity: 1, x: 0 }}
+                    >
+                      <div className="wishlist-summary-card">
+                        <h4>Wishlist Summary</h4>
+
+                        <div className="summary-highlight">
+                          <div className="summary-heart">❤</div>
+
+                          <div>
+                            <h5>{wishlist.length} Items</h5>
+                            <p>All your favorite picks in one place.</p>
                           </div>
-                        </Card.Body>
-                      </Card>
+                        </div>
+
+                        <div className="wishlist-feature">
+                          <h6>Easy Access</h6>
+                          <p>View and manage your saved products anytime.</p>
+                        </div>
+
+                        <div className="wishlist-feature">
+                          <h6>Quick Shopping</h6>
+                          <p>Add your favorite products directly to cart.</p>
+                        </div>
+
+                        <div className="wishlist-feature">
+                          <h6>Premium Collection</h6>
+                          <p>Save luxury handcrafted products you love.</p>
+                        </div>
+                      </div>
                     </motion.div>
                   </Col>
-                ))}
-              </Row>
+                </Row>
+              </div>
             )}
           </AnimatePresence>
         )}
