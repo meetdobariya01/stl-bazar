@@ -49,13 +49,13 @@ const Arrival = () => {
     try {
       const response = await axios.get(`${API_URL}/arrival-best-sellers`);
       
-      console.log("API Response:", response.data);
+      // console.log("API Response:", response.data);
       
       if (response.data.success && response.data.slides) {
         const transformedSlides = response.data.slides.map(slide => ({
           products: slide.products.map(product => {
             const imageUrl = getImageUrl(product.image);
-            console.log(`Product: ${product.name}, Image URL: ${imageUrl}`);
+            // console.log(`Product: ${product.name}, Image URL: ${imageUrl}`);
             
             return {
               id: product._id, // Make sure to include the product ID
