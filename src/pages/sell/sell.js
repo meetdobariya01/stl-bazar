@@ -281,7 +281,7 @@ const Sell = () => {
                     </Button>
 
                     <div className="signin-text text-center mt-3">
-                      Already have an account? <span style={{ color: "#007bff", cursor: "pointer" }}>Sign in</span>
+                      Already have an account? <span style={{  cursor: "pointer" }}>Sign in</span>
                     </div>
                   </Form>
                 </div>
@@ -290,13 +290,13 @@ const Sell = () => {
               <Col lg={5}>
                 <div className="seller-info-box p-4">
                   <div className="top-icon mb-3">
-                    <FaStore size={40} color="#007bff" />
+                    <FaStore size={40} />
                   </div>
 
                   <h2 className="mb-4">Why sell on Brandel?</h2>
 
                   <div className="info-item d-flex gap-3 mb-4">
-                    <div className="icon-box">
+                    <div className="icon-box-ordercomplate">
                       <FaUsers size={24} />
                     </div>
                     <div>
@@ -306,7 +306,7 @@ const Sell = () => {
                   </div>
 
                   <div className="info-item d-flex gap-3 mb-4">
-                    <div className="icon-box">
+                    <div className="icon-box-ordercomplate">
                       <FaLeaf size={24} />
                     </div>
                     <div>
@@ -316,7 +316,7 @@ const Sell = () => {
                   </div>
 
                   <div className="info-item d-flex gap-3 mb-4">
-                    <div className="icon-box">
+                    <div className="icon-box-ordercomplate">
                       <FaShoppingBag size={24} />
                     </div>
                     <div>
@@ -326,7 +326,7 @@ const Sell = () => {
                   </div>
 
                   <div className="info-item d-flex gap-3 mb-4">
-                    <div className="icon-box">
+                    <div className="icon-box-ordercomplate">
                       <FaShieldAlt size={24} />
                     </div>
                     <div>

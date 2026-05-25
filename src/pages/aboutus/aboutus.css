@@ -102,3 +102,28 @@
   }
 }
   
+@media (max-width: 576px) {
+ .about-section {
+    padding: 0 0 40px  0;
+  }
+
+  .about-intro h2 {
+    font-size: 28px;
+  }
+
+  .about-row h3 {
+    font-size: 20px;
+  }
+
+  .about-row p {
+    font-size: 16px;
+  }
+
+  .about-image {
+    margin: 30px 0;
+  }
+
+  .about-end p {
+    font-size: 16px;
+  }
+}
