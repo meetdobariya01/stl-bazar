@@ -41,7 +41,7 @@ const Home = () => {
       {/* <Explore /> */}
 
       {/* category */}
-      <Category />
+      {/* <Category /> */}
 
       {/* Details */}
       <Details />
