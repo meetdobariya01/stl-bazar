@@ -9,8 +9,14 @@ import "./product.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-const fadeLeft = { hidden: { opacity: 0, x: -50 }, visible: { opacity: 1, x: 0 } };
-const fadeRight = { hidden: { opacity: 0, x: 50 }, visible: { opacity: 1, x: 0 } };
+const fadeLeft = {
+  hidden: { opacity: 0, x: -50 },
+  visible: { opacity: 1, x: 0 },
+};
+const fadeRight = {
+  hidden: { opacity: 0, x: 50 },
+  visible: { opacity: 1, x: 0 },
+};
 
 const Product = () => {
   const [companies, setCompanies] = useState([]);
@@ -47,7 +53,17 @@ const Product = () => {
       <Header />
 
       <section className="values-section">
+        <motion.img
+          src="./images/product-banner.png"
+          alt="Nature"
+          className="simple-image"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        />
         <Container>
+          <h2 className="text-center lexend my-5">Our Brands</h2>
           {companies.map((item, index) => (
             <Row
               key={item._id}
@@ -76,7 +92,7 @@ const Product = () => {
               {/* CONTENT */}
               <Col md={8}>
                 <motion.div
-                  className="value-content light"
+                  className="value-content light mt-2 mt-md-0"
                   variants={index % 2 === 0 ? fadeRight : fadeLeft}
                   initial="hidden"
                   whileInView="visible"
@@ -85,9 +101,7 @@ const Product = () => {
                 >
                   <h4 className="lexend">{item.name}</h4>
 
-                  <p className="funnel-sans">
-                    {item.description}
-                  </p>
+                  <p className="funnel-sans">{item.description}</p>
 
                   {/* BUY BUTTON */}
                   <NavLink

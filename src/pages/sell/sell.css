@@ -214,7 +214,7 @@
   transform: translateX(8px);
 }
 
-.icon-box {
+.icon-box-ordercomplate {
   min-width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -329,7 +329,7 @@
   }
 
   .phone-input {
-    flex-direction: column;
+    /* flex-direction: column; */
   }
 
   .phone-input .form-select {
