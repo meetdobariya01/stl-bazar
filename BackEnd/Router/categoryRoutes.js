@@ -1,89 +1,166 @@
-// Routes/categoryRoutes.js
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Category = require("../Models/Category");
 const Product = require("../Models/Product");
 
-// GET all categories
-router.get("/categories", async (req, res) => {
+console.log("✅ categoryRoutes.js loaded successfully!");
+
+// TEST ROUTE - સૌથી પહેલા આ ચેક કરો
+router.get("/test", (req, res) => {
+  console.log("🔵 TEST ROUTE HIT!");
+  res.json({ message: "Test route is working!", time: new Date() });
+});
+
+// GET all categories - SIMPLIFIED VERSION
+router.get("/", async (req, res) => {
+  console.log("🔵 MAIN CATEGORIES ROUTE HIT!");
+  
   try {
-    const categories = await Category.find({ isActive: true })
-      .sort({ order: 1, name: 1 });
+    // Direct MongoDB query
+    const db = mongoose.connection.db;
+    if (!db) {
+      console.error("❌ Database not connected!");
+      return res.status(500).json({ error: "Database not connected" });
+    }
     
-    // Get product count for each category
-    const categoriesWithCount = await Promise.all(
-      categories.map(async (category) => {
-        const productCount = await Product.countDocuments({ 
-          category: category.name 
-        });
-        
-        const sampleProduct = await Product.findOne({ 
-          category: category.name 
-        }).select("image price name");
-        
-        return {
-          _id: category._id,
-          name: category.name,
-          description: category.description,
-          icon: category.icon,
-          image: category.image,
-          productCount,
-          sampleImage: sampleProduct?.image || category.image
-        };
-      })
-    );
+    const collection = db.collection("categories");
+    const categories = await collection.find({}).toArray();
     
-    res.json(categoriesWithCount);
+    console.log(`✅ Found ${categories.length} categories`);
+    
+    if (categories.length === 0) {
+      return res.json([]);
+    }
+    
+    // Format categories
+    const formatted = categories.map(cat => ({
+      _id: cat._id,
+      name: cat.name,
+      image: cat.image && !cat.image.startsWith("http") ? `http://localhost:9000${cat.image}` : cat.image,
+      description: cat.description || "",
+      productCount: 0
+    }));
+    
+    res.json(formatted);
+    
   } catch (error) {
-    console.error("Error fetching categories:", error);
-    res.status(500).json({ message: "Failed to fetch categories" });
+    console.error("❌ Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET single category
+router.get("/:categoryName", async (req, res) => {
+  try {
+    const category = await Category.findOne({ name: req.params.categoryName });
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+    
+    let imageUrl = category.image;
+    if (imageUrl && !imageUrl.startsWith("http")) {
+      imageUrl = `http://localhost:9000${imageUrl}`;
+    }
+    
+    const products = await Product.find({ category: category.name });
+    
+    res.json({
+      _id: category._id,
+      name: category.name,
+      description: category.description,
+      image: imageUrl,
+      icon: category.icon,
+      products: products,
+      productCount: products.length
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 // GET products by category
-router.get("/categories/:categoryName/products", async (req, res) => {
+router.get("/:categoryName/products", async (req, res) => {
   try {
-    const { categoryName } = req.params;
-    
     const products = await Product.find({ 
-      category: categoryName 
+      category: req.params.categoryName 
     }).sort({ createdAt: -1 });
     
     res.json({
-      category: categoryName,
+      category: req.params.categoryName,
       products: products,
       total: products.length
     });
-  } catch (error) {
-    console.error("Error fetching products by category:", error);
-    res.status(500).json({ message: "Failed to fetch products" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// GET single category details
-router.get("/categories/:categoryName", async (req, res) => {
+// POST - Create category
+router.post("/", async (req, res) => {
   try {
-    const { categoryName } = req.params;
+    const { name, description, icon, image, order } = req.body;
     
-    const category = await Category.findOne({ 
-      name: categoryName,
-      isActive: true 
+    if (!name) {
+      return res.status(400).json({ message: "Name required" });
+    }
+    
+    const exists = await Category.findOne({ name });
+    if (exists) {
+      return res.status(400).json({ message: "Category already exists" });
+    }
+    
+    const category = new Category({
+      name,
+      description: description || "",
+      icon: icon || "FaBoxOpen",
+      image: image || null,
+      order: order || 0
     });
+    
+    await category.save();
+    res.status(201).json(category);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT - Update category
+router.put("/:id", async (req, res) => {
+  try {
+    const { name, description, icon, image, isActive, order } = req.body;
+    
+    const category = await Category.findByIdAndUpdate(
+      req.params.id,
+      { name, description, icon, image, isActive, order },
+      { new: true }
+    );
     
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
     
-    const products = await Product.find({ category: categoryName });
-    
-    res.json({
-      ...category.toObject(),
-      products,
-      productCount: products.length
-    });
-  } catch (error) {
-    console.error("Error fetching category:", error);
-    res.status(500).json({ message: "Failed to fetch category" });
+    res.json(category);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// DELETE - Remove category
+router.delete("/:id", async (req, res) => {
+  try {
+    const category = await Category.findByIdAndDelete(req.params.id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+    res.json({ message: "Category deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

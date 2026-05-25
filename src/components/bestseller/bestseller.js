@@ -22,7 +22,7 @@ const Bestseller = () => {
         `${API_URL}/best-sellers`
       );
       
-      console.log("Best Sellers data:", data);
+      // console.log("Best Sellers data:", data);
       // Only show first 6 products
       setBestSellers(data.slice(0, 6));
     } catch (error) {
@@ -92,7 +92,7 @@ const Bestseller = () => {
         <Row className="g-4">
           {bestSellers.map((product, index) => {
             const imageUrl = getImageUrl(product.image);
-            
+            // console.log(`Product: ${product.name}, Image URL: ${imageUrl}`);
             return (
               <Col lg={2} md={4} sm={6} xs={6} key={product._id || index}>
                 <div 
