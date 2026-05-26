@@ -8,7 +8,7 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import Details from "../../components/details/details";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const BACKEND_URL = "http://localhost:9000";
 
 const CategoryProducts = () => {
@@ -19,12 +19,25 @@ const CategoryProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const formatImagePath = (path) => {
-    if (!path) return "/images/default-product.png";
-    if (path.startsWith("http")) return path;
-    if (path.startsWith("/uploads")) return `${BACKEND_URL}${path}`;
-    if (path.startsWith("/images")) return path;
-    return `${BACKEND_URL}${path}`;
+  // FIXED: Handle both string and array images
+  const formatImagePath = (image) => {
+    if (!image) return "/images/default-product.png";
+    
+    // If image is an array, take the first item
+    let imgPath = image;
+    if (Array.isArray(image)) {
+      if (image.length === 0) return "/images/default-product.png";
+      imgPath = image[0];
+    }
+    
+    // If it's not a string after array check
+    if (typeof imgPath !== "string") return "/images/default-product.png";
+    
+    if (imgPath.startsWith("http")) return imgPath;
+    if (imgPath.startsWith("/uploads")) return `${BACKEND_URL}${imgPath}`;
+    if (imgPath.startsWith("/images")) return imgPath;
+    
+    return `${BACKEND_URL}${imgPath}`;
   };
 
   useEffect(() => {
@@ -35,16 +48,44 @@ const CategoryProducts = () => {
       .get(`${API_URL}/products`, {
         params: { category: decodedCategory },
       })
-      .then((res) => setProducts(res.data))
-      .catch((err) => console.error(err))
+      .then((res) => {
+        console.log("Products received:", res.data);
+        setProducts(res.data);
+      })
+      .catch((err) => console.error("Error fetching products:", err))
       .finally(() => setLoading(false));
   }, [decodedCategory]);
 
   if (loading)
-    return <p className="text-center mt-5">Loading products...</p>;
+    return (
+      <>
+        <Header />
+        <div className="text-center mt-5 py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading products...</p>
+        </div>
+        <Footer />
+      </>
+    );
 
   if (!products.length)
-    return <p className="text-center mt-5">No products found</p>;
+    return (
+      <>
+        <Header />
+        <div className="text-center mt-5 py-5">
+          <h4>No products found in {decodedCategory}</h4>
+          <button 
+            className="btn btn-primary mt-3"
+            onClick={() => navigate("/")}
+          >
+            Continue Shopping
+          </button>
+        </div>
+        <Footer />
+      </>
+    );
 
   return (
     <>
@@ -96,7 +137,7 @@ const CategoryProducts = () => {
                   <Card.Body className="d-flex flex-column">
                     <h6 className="text-truncate">{item.name}</h6>
 
-                    {/* ⭐ UPDATED RATING SECTION */}
+                    {/* Rating Section */}
                     <div className="rating mb-2 d-flex align-items-center gap-1">
                       {[...Array(5)].map((_, i) => (
                         <FaStar
@@ -115,7 +156,7 @@ const CategoryProducts = () => {
                     </div>
 
                     <div className="price fw-bold">
-                      ₹{item.price}
+                      ₹{typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
                     </div>
                   </Card.Body>
                 </Card>

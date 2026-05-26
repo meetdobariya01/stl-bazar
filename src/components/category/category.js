@@ -33,8 +33,9 @@ const CategoriesSection = () => {
     }
   };
 
+  // FIXED: Navigate to category page properly
   const handleCategoryClick = (categoryName) => {
-    navigate(`/products?category=${encodeURIComponent(categoryName)}`);
+    navigate(`/category/${encodeURIComponent(categoryName)}`);
   };
 
   if (loading) {
