@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaStar, FaHeart, FaRegHeart, FaFilter, FaChevronRight } from "react-icons/fa";
+import {
+  FaStar,
+  FaHeart,
+  FaRegHeart,
+  FaFilter,
+  FaChevronRight,
+} from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../../components/header/header";
@@ -18,36 +24,36 @@ const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
   }
-  
+
   let imgPath = image;
-  
+
   if (Array.isArray(image)) {
     if (image.length === 0) {
       return "/images/placeholder.png";
     }
     imgPath = image[0];
   }
-  
+
   if (typeof imgPath !== "string") {
     return "/images/placeholder.png";
   }
-  
+
   if (imgPath.trim() === "") {
     return "/images/placeholder.png";
   }
-  
+
   if (imgPath.startsWith("http")) {
     return imgPath;
   }
-  
+
   if (imgPath.startsWith("/uploads")) {
     return `${BACKEND_URL}${imgPath}`;
   }
-  
+
   if (imgPath.startsWith("/images")) {
     return imgPath;
   }
-  
+
   return `${BACKEND_URL}${imgPath}`;
 };
 
@@ -62,7 +68,7 @@ const CategoryProducts = () => {
   const [loading, setLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
@@ -78,7 +84,9 @@ const CategoryProducts = () => {
     setLoading(true);
     axios
       .get(`${API_URL}/products`, {
-        params: { category: decodedCategory !== "All" ? decodedCategory : undefined },
+        params: {
+          category: decodedCategory !== "All" ? decodedCategory : undefined,
+        },
       })
       .then((res) => {
         console.log("Products loaded:", res.data.length);
@@ -109,59 +117,74 @@ const CategoryProducts = () => {
 
     // Category filter
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter(p => selectedCategories.includes(p.category));
+      filtered = filtered.filter((p) =>
+        selectedCategories.includes(p.category),
+      );
     }
 
     // Price range filter
     if (selectedPriceRange) {
-      switch(selectedPriceRange) {
+      switch (selectedPriceRange) {
         case "under-500":
-          filtered = filtered.filter(p => p.price < 500);
+          filtered = filtered.filter((p) => p.price < 500);
           break;
         case "500-1000":
-          filtered = filtered.filter(p => p.price >= 500 && p.price <= 1000);
+          filtered = filtered.filter((p) => p.price >= 500 && p.price <= 1000);
           break;
         case "1000-2000":
-          filtered = filtered.filter(p => p.price >= 1000 && p.price <= 2000);
+          filtered = filtered.filter((p) => p.price >= 1000 && p.price <= 2000);
           break;
         case "2000-5000":
-          filtered = filtered.filter(p => p.price >= 2000 && p.price <= 5000);
+          filtered = filtered.filter((p) => p.price >= 2000 && p.price <= 5000);
           break;
         case "above-5000":
-          filtered = filtered.filter(p => p.price > 5000);
+          filtered = filtered.filter((p) => p.price > 5000);
           break;
         default:
           break;
       }
     } else {
       if (priceMin && !isNaN(priceMin)) {
-        filtered = filtered.filter(p => p.price >= Number(priceMin));
+        filtered = filtered.filter((p) => p.price >= Number(priceMin));
       }
       if (priceMax && !isNaN(priceMax)) {
-        filtered = filtered.filter(p => p.price <= Number(priceMax));
+        filtered = filtered.filter((p) => p.price <= Number(priceMax));
       }
     }
 
     // Rating filter
     if (selectedRating > 0) {
-      filtered = filtered.filter(p => (p.averageRating || 0) >= selectedRating);
+      filtered = filtered.filter(
+        (p) => (p.averageRating || 0) >= selectedRating,
+      );
     }
 
     setFilteredProducts(filtered);
-  }, [selectedCategories, selectedPriceRange, priceMin, priceMax, selectedRating, products]);
+  }, [
+    selectedCategories,
+    selectedPriceRange,
+    priceMin,
+    priceMax,
+    selectedRating,
+    products,
+  ]);
 
   // Sort products
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
-    switch(sortBy) {
+    switch (sortBy) {
       case "price-low-high":
         return sorted.sort((a, b) => a.price - b.price);
       case "price-high-low":
         return sorted.sort((a, b) => b.price - a.price);
       case "newest":
-        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return sorted.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        );
       case "rating":
-        return sorted.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        return sorted.sort(
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
+        );
       default:
         return sorted;
     }
@@ -170,7 +193,7 @@ const CategoryProducts = () => {
   const toggleWishlist = (e, productId) => {
     e.stopPropagation();
     if (wishlist.includes(productId)) {
-      setWishlist(wishlist.filter(id => id !== productId));
+      setWishlist(wishlist.filter((id) => id !== productId));
     } else {
       setWishlist([...wishlist, productId]);
     }
@@ -213,29 +236,28 @@ const CategoryProducts = () => {
   return (
     <>
       <Header />
-      
-      {/* Hero Section */}
-      <div className="category-hero">
-        <Container>
-          <div className="hero-content text-center">
-            <h1 className="hero-title">{decodedCategory}</h1>
-            <p className="hero-subtitle">
-              Beautiful pieces to style your space and make it truly yours.
-            </p>
-            <p className="product-count">{filteredProducts.length} Products</p>
-          </div>
-        </Container>
-      </div>
 
-      <Details />
-      
-      <div className="category-background">
+      <div className="category-background lexend px-2">
         <Container className="category-page">
+          {/* Hero Section */}
+          <div className="category-hero-section">
+            <Container>
+              <div className="hero-content text-center">
+                <h1 className="hero-title funnel-sans">{decodedCategory}</h1>
+                <p className="hero-subtitle">
+                  Beautiful pieces to style your space and make it truly yours.
+                </p>
+                <p className="product-count">
+                  {filteredProducts.length} Products
+                </p>
+              </div>
+            </Container>
+          </div>
           {/* Top Bar */}
           <div className="top-bar">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-              <Button 
-                variant="outline-secondary" 
+              <Button
+                variant="outline-secondary"
                 className="mobile-filter-btn d-lg-none"
                 onClick={() => setShowMobileFilters(true)}
               >
@@ -244,7 +266,11 @@ const CategoryProducts = () => {
 
               <div className="d-flex align-items-center gap-3 ms-auto">
                 <span className="sort-label">Sort by:</span>
-                <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select
+                  className="sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
                   <option value="featured">Featured</option>
                   <option value="newest">Newest</option>
                   <option value="price-low-high">Price: Low to High</option>
@@ -261,7 +287,11 @@ const CategoryProducts = () => {
               <div className="filters-sidebar">
                 <div className="filter-header">
                   <h5>Filters</h5>
-                  <Button variant="link" onClick={clearFilters} className="clear-all-btn">
+                  <Button
+                    variant="link"
+                    onClick={clearFilters}
+                    className="clear-all-btn"
+                  >
                     Clear All
                   </Button>
                 </div>
@@ -270,15 +300,15 @@ const CategoryProducts = () => {
                 <div className="filter-group">
                   <h6>Categories</h6>
                   <div className="category-list">
-                    <div 
+                    <div
                       className={`category-item ${decodedCategory === "All" ? "active" : ""}`}
                       onClick={() => handleCategorySelect("All")}
                     >
                       <span>All Categories</span>
                       <FaChevronRight size={12} />
                     </div>
-                    {allCategories.map(cat => (
-                      <div 
+                    {allCategories.map((cat) => (
+                      <div
                         key={cat._id}
                         className={`category-item ${decodedCategory === cat.name ? "active" : ""}`}
                         onClick={() => handleCategorySelect(cat.name)}
@@ -359,7 +389,7 @@ const CategoryProducts = () => {
                 <div className="filter-group">
                   <h6>Rating</h6>
                   <div className="rating-options">
-                    {[4, 3, 2, 1].map(rating => (
+                    {[4, 3, 2, 1].map((rating) => (
                       <Form.Check
                         key={rating}
                         type="radio"
@@ -367,13 +397,21 @@ const CategoryProducts = () => {
                         label={
                           <span className="rating-label">
                             {[...Array(5)].map((_, i) => (
-                              <FaStar key={i} color={i < rating ? "#ffc107" : "#e4e5e9"} size={14} />
+                              <FaStar
+                                key={i}
+                                color={i < rating ? "#ffc107" : "#e4e5e9"}
+                                size={14}
+                              />
                             ))}
                             <span>& up</span>
                           </span>
                         }
                         checked={selectedRating === rating}
-                        onChange={() => setSelectedRating(rating === selectedRating ? 0 : rating)}
+                        onChange={() =>
+                          setSelectedRating(
+                            rating === selectedRating ? 0 : rating,
+                          )
+                        }
                       />
                     ))}
                   </div>
@@ -383,24 +421,35 @@ const CategoryProducts = () => {
 
             {/* Mobile Filters Modal */}
             {showMobileFilters && (
-              <div className="mobile-filters-overlay" onClick={() => setShowMobileFilters(false)}>
-                <div className="mobile-filters-drawer" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="mobile-filters-overlay"
+                onClick={() => setShowMobileFilters(false)}
+              >
+                <div
+                  className="mobile-filters-drawer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="drawer-header">
                     <h5>Filters</h5>
-                    <Button variant="link" onClick={() => setShowMobileFilters(false)}>✕</Button>
+                    <Button
+                      variant="link"
+                      onClick={() => setShowMobileFilters(false)}
+                    >
+                      ✕
+                    </Button>
                   </div>
                   <div className="drawer-body">
                     <div className="filter-group">
                       <h6>Categories</h6>
                       <div className="category-list">
-                        <div 
+                        <div
                           className="category-item"
                           onClick={() => handleCategorySelect("All")}
                         >
                           <span>All Categories</span>
                         </div>
-                        {allCategories.map(cat => (
-                          <div 
+                        {allCategories.map((cat) => (
+                          <div
                             key={cat._id}
                             className="category-item"
                             onClick={() => handleCategorySelect(cat.name)}
@@ -450,8 +499,15 @@ const CategoryProducts = () => {
                     </div>
                   </div>
                   <div className="drawer-footer">
-                    <Button variant="outline" onClick={clearFilters}>Clear All</Button>
-                    <Button variant="primary" onClick={() => setShowMobileFilters(false)}>Apply</Button>
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear All
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={() => setShowMobileFilters(false)}
+                    >
+                      Apply
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -463,50 +519,75 @@ const CategoryProducts = () => {
                 <div className="text-center py-5">
                   <h5>No products found</h5>
                   <p className="text-muted">Try adjusting your filters</p>
-                  <Button variant="primary" onClick={clearFilters}>Clear Filters</Button>
+                  <Button variant="primary" onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
                 </div>
               ) : (
                 <Row className="g-4">
                   {sortedProducts.map((item) => {
                     const isInWishlist = wishlist.includes(item._id);
                     const imageUrl = formatImagePath(item.image);
-                    
+
                     return (
-                      <Col key={item._id} xs={6} md={4}>
-                        <motion.div 
+                      <Col key={item._id} xs={6} md={4} className="text-center">
+                        <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           whileHover={{ y: -4 }}
                           transition={{ duration: 0.3 }}
                         >
-                          <Card className="product-card" onClick={() => navigate(`/product/${item._id}`)}>
+                          <Card
+                            className=""
+                            onClick={() => navigate(`/product/${item._id}`)}
+                          >
                             <div className="product-image-wrapper">
                               <Card.Img
+                              className="product-card"
                                 src={imageUrl}
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.src = "/images/placeholder.png";
                                 }}
                               />
-                              <div className="wishlist-btn" onClick={(e) => toggleWishlist(e, item._id)}>
-                                {isInWishlist ? <FaHeart color="#e74c3c" /> : <FaRegHeart />}
+                              <div
+                                className="wishlist-btn"
+                                onClick={(e) => toggleWishlist(e, item._id)}
+                              >
+                                {isInWishlist ? (
+                                  <FaHeart color="#e74c3c" />
+                                ) : (
+                                  <FaRegHeart />
+                                )}
                               </div>
                             </div>
                             <Card.Body>
-                              <div className="product-brand">{item.brand || "Artisan Craft"}</div>
+                              <div className="product-brand">
+                                {item.brand || "Artisan Craft"}
+                              </div>
                               <h6 className="product-name">{item.name}</h6>
                               <div className="product-rating">
                                 {[...Array(5)].map((_, i) => (
-                                  <FaStar 
-                                    key={i} 
-                                    color={i < Math.round(item.averageRating || 0) ? "#ffc107" : "#e4e5e9"} 
-                                    size={12} 
+                                  <FaStar
+                                    key={i}
+                                    color={
+                                      i < Math.round(item.averageRating || 0)
+                                        ? "#ffc107"
+                                        : "#e4e5e9"
+                                    }
+                                    size={12}
                                   />
                                 ))}
-                                <span className="rating-count">({item.ratings?.length || 0})</span>
+                                <span className="rating-count">
+                                  ({item.ratings?.length || 0})
+                                </span>
                               </div>
-                              <div className="product-price">₹{item.price?.toLocaleString() || item.price}</div>
-                              <Button className="view-details-btn">View Details</Button>
+                              <div className="product-price">
+                                ₹{item.price?.toLocaleString() || item.price}
+                              </div>
+                              <Button className="view-details-btn">
+                                View Details
+                              </Button>
                             </Card.Body>
                           </Card>
                         </motion.div>
@@ -519,6 +600,8 @@ const CategoryProducts = () => {
           </Row>
         </Container>
       </div>
+
+      <Details /> 
 
       <Footer />
     </>
