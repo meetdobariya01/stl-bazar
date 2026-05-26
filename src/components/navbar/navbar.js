@@ -15,7 +15,7 @@ const Mainnavbar = () => {
             <Nav.Link href="#" className="nav-link">
               New In
             </Nav.Link>
-            <Nav.Link href="#" className="nav-link">
+            <Nav.Link href="/product" className="nav-link">
               Brands
             </Nav.Link>
             <Nav.Link href="#" className="nav-link">
