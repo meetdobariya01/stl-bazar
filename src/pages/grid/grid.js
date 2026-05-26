@@ -213,19 +213,19 @@ const Grid = () => {
       {/* Hero Section */}
       <div className="category-hero">
         <Container>
-          <div className="hero-content text-center">
+          {/* <div className="hero-content text-center">
             <h1 className="hero-title">Home Decor</h1>
             <p className="hero-subtitle">
               Thoughtfully crafted pieces to style your space and make it truly yours.
             </p>
             <p className="product-count">{filteredProducts.length} Products</p>
-          </div>
+          </div> */}
         </Container>
       </div>
 
       <Details />
       
-      <div className="product-background">
+      <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
           {/* Top Bar */}
           <div className="top-bar">
@@ -408,7 +408,7 @@ const Grid = () => {
                   </div>
                   <div className="drawer-footer">
                     <Button variant="outline" onClick={clearFilters}>Clear All</Button>
-                    <Button variant="primary" onClick={() => setShowMobileFilters(false)}>Apply</Button>
+                    <Button variant="outline-dark" onClick={() => setShowMobileFilters(false)}>Apply</Button>
                   </div>
                 </div>
               </div>
@@ -433,9 +433,10 @@ const Grid = () => {
                     return (
                       <Col key={item._id} xs={6} md={4}>
                         <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-                          <Card className="product-card" onClick={() => navigate(`/product/${item._id}`)}>
+                          <Card className="" onClick={() => navigate(`/product/${item._id}`)}>
                             <div className="product-image-wrapper">
                               <Card.Img
+                              className="product-card"
                                 src={getPrimaryImageUrl(item.image)}
                                 onError={(e) => e.target.src = "/images/placeholder.png"}
                               />
