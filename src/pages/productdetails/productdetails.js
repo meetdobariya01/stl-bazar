@@ -349,6 +349,42 @@ const Productdetails = () => {
     }
   };
 
+  // ========== NEW BUY NOW FUNCTION ==========
+  const buyNow = async () => {
+    try {
+      let guestId = localStorage.getItem("guestId");
+
+      if (!guestId) {
+        guestId = Date.now().toString();
+        localStorage.setItem("guestId", guestId);
+      }
+
+      const primaryImage =
+        Array.isArray(product.image) && product.image.length > 0
+          ? product.image[0]
+          : product.image;
+
+      // Add product to cart
+      await axios.post(`${API_URL}/cart/add`, {
+        guestId,
+        product: {
+          productId: product._id,
+          name: product.name,
+          price: product.price,
+          image: primaryImage,
+          quantity: qty,
+        },
+      });
+
+      // Navigate directly to checkout page
+      navigate("/checkout");
+    } catch (err) {
+      console.error("Buy Now error:", err);
+      alert("Failed to proceed. Please try again.");
+    }
+  };
+  // ========== END BUY NOW FUNCTION ==========
+
   // Render stars for rating
   const renderStars = (rating) => {
     return (
@@ -580,13 +616,15 @@ const Productdetails = () => {
                   </div>
                 </div>
 
-                {/* Buttons */}
+                {/* Buttons - UPDATED Buy Now button with onClick */}
                 <div className="action-buttons">
                   <Button className="cart-btn" onClick={addToCart}>
                     <FaShoppingCart /> Add to Cart
                   </Button>
 
-                  <Button className="buy-btn-product-details">Buy Now</Button>
+                  <Button className="buy-btn-product-details" onClick={buyNow}>
+                    Buy Now
+                  </Button>
                 </div>
 
                 {/* Features */}
