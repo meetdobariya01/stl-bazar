@@ -28,6 +28,9 @@ const Home = () => {
       {/* features */}
       <Features />
 
+      {/* category */}
+      <Category />
+
       {/* collection */}
       <Collections />
 
@@ -39,9 +42,6 @@ const Home = () => {
 
       {/* explore */}
       {/* <Explore /> */}
-
-      {/* category */}
-      <Category />
 
       {/* Details */}
       <Details />
