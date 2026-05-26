@@ -100,8 +100,6 @@ const sendAdminNotification = async (sellerData) => {
 // Register seller
 router.post("/register", async (req, res) => {
   try {
-    console.log("Received registration request:", req.body);
-    
     const { fullName, email, phoneNumber, businessName, category } = req.body;
 
     // Validate required fields
@@ -131,7 +129,6 @@ router.post("/register", async (req, res) => {
     });
 
     await seller.save();
-    console.log("Seller saved successfully:", seller._id);
 
     // Send confirmation email to seller (don't wait for it)
     sendSellerConfirmationEmail(seller).catch(err => {
