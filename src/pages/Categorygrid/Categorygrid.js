@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
@@ -58,6 +59,16 @@ const formatImagePath = (image) => {
 };
 
 const CategoryProducts = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
+
   const { categoryName } = useParams();
   const decodedCategory = decodeURIComponent(categoryName || "All");
   const navigate = useNavigate();
@@ -543,7 +554,7 @@ const CategoryProducts = () => {
                           >
                             <div className="product-image-wrapper">
                               <Card.Img
-                              className="product-card"
+                                className="product-card"
                                 src={imageUrl}
                                 onError={(e) => {
                                   e.target.onerror = null;
@@ -601,7 +612,7 @@ const CategoryProducts = () => {
         </Container>
       </div>
 
-      <Details /> 
+      <Details />
 
       <Footer />
     </>

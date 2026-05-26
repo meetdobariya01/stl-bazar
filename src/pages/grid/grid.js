@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Button, Dropdown, Form } from "react-bootstrap";
+import { useLocation } from "react-router-dom";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  Dropdown,
+  Form,
+} from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaStar, FaShoppingCart, FaHeart, FaRegHeart, FaSlidersH } from "react-icons/fa";
+import {
+  FaStar,
+  FaShoppingCart,
+  FaHeart,
+  FaRegHeart,
+  FaSlidersH,
+} from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -15,6 +30,16 @@ const API_URL = process.env.REACT_APP_API_URL;
 const BACKEND_URL = "http://localhost:9000";
 
 const Grid = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
+
   const { companyName } = useParams();
   const decodedName = decodeURIComponent(companyName || "");
   const navigate = useNavigate();
@@ -28,7 +53,7 @@ const Grid = () => {
   const [loading, setLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -36,7 +61,7 @@ const Grid = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
-  
+
   // Data for filters
   const [categories, setCategories] = useState([]);
   const [materials, setMaterials] = useState([]);
@@ -51,12 +76,18 @@ const Grid = () => {
       .then((res) => {
         setProducts(res.data);
         setFilteredProducts(res.data);
-        
+
         // Extract filter options
-        const uniqueCategories = [...new Set(res.data.map(p => p.category).filter(Boolean))];
-        const uniqueMaterials = [...new Set(res.data.map(p => p.material).filter(Boolean))];
-        const uniqueBrands = [...new Set(res.data.map(p => p.brand).filter(Boolean))];
-        
+        const uniqueCategories = [
+          ...new Set(res.data.map((p) => p.category).filter(Boolean)),
+        ];
+        const uniqueMaterials = [
+          ...new Set(res.data.map((p) => p.material).filter(Boolean)),
+        ];
+        const uniqueBrands = [
+          ...new Set(res.data.map((p) => p.brand).filter(Boolean)),
+        ];
+
         setCategories(uniqueCategories);
         setMaterials(uniqueMaterials);
         setBrands(uniqueBrands);
@@ -71,34 +102,46 @@ const Grid = () => {
 
     // Category filter
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter(p => selectedCategories.includes(p.category));
+      filtered = filtered.filter((p) =>
+        selectedCategories.includes(p.category),
+      );
     }
 
     // Material filter
     if (selectedMaterials.length > 0) {
-      filtered = filtered.filter(p => selectedMaterials.includes(p.material));
+      filtered = filtered.filter((p) => selectedMaterials.includes(p.material));
     }
 
     // Brand filter
     if (selectedBrands.length > 0) {
-      filtered = filtered.filter(p => selectedBrands.includes(p.brand));
+      filtered = filtered.filter((p) => selectedBrands.includes(p.brand));
     }
 
     // Price filter
     if (priceMin) {
-      filtered = filtered.filter(p => p.price >= Number(priceMin));
+      filtered = filtered.filter((p) => p.price >= Number(priceMin));
     }
     if (priceMax) {
-      filtered = filtered.filter(p => p.price <= Number(priceMax));
+      filtered = filtered.filter((p) => p.price <= Number(priceMax));
     }
 
     // Rating filter
     if (selectedRating > 0) {
-      filtered = filtered.filter(p => (p.averageRating || 0) >= selectedRating);
+      filtered = filtered.filter(
+        (p) => (p.averageRating || 0) >= selectedRating,
+      );
     }
 
     setFilteredProducts(filtered);
-  }, [selectedCategories, selectedMaterials, selectedBrands, priceMin, priceMax, selectedRating, products]);
+  }, [
+    selectedCategories,
+    selectedMaterials,
+    selectedBrands,
+    priceMin,
+    priceMax,
+    selectedRating,
+    products,
+  ]);
 
   const getPrimaryImageUrl = (image) => {
     if (!image) return "/images/placeholder.png";
@@ -138,7 +181,7 @@ const Grid = () => {
   const toggleWishlist = (e, productId) => {
     e.stopPropagation();
     if (wishlist.includes(productId)) {
-      setWishlist(wishlist.filter(id => id !== productId));
+      setWishlist(wishlist.filter((id) => id !== productId));
     } else {
       setWishlist([...wishlist, productId]);
     }
@@ -154,40 +197,42 @@ const Grid = () => {
   };
 
   const handleCategoryChange = (category) => {
-    setSelectedCategories(prev =>
+    setSelectedCategories((prev) =>
       prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
     );
   };
 
   const handleMaterialChange = (material) => {
-    setSelectedMaterials(prev =>
+    setSelectedMaterials((prev) =>
       prev.includes(material)
-        ? prev.filter(m => m !== material)
-        : [...prev, material]
+        ? prev.filter((m) => m !== material)
+        : [...prev, material],
     );
   };
 
   const handleBrandChange = (brand) => {
-    setSelectedBrands(prev =>
-      prev.includes(brand)
-        ? prev.filter(b => b !== brand)
-        : [...prev, brand]
+    setSelectedBrands((prev) =>
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand],
     );
   };
 
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
-    switch(sort) {
+    switch (sort) {
       case "price-low-high":
         return sorted.sort((a, b) => a.price - b.price);
       case "price-high-low":
         return sorted.sort((a, b) => b.price - a.price);
       case "newest":
-        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return sorted.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        );
       case "rating":
-        return sorted.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        return sorted.sort(
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
+        );
       default:
         return sorted;
     }
@@ -201,7 +246,7 @@ const Grid = () => {
       newest: "Newest",
       "price-low-high": "Price: Low to High",
       "price-high-low": "Price: High to Low",
-      rating: "Customer Rating"
+      rating: "Customer Rating",
     };
     return labels[sort] || "Popular";
   };
@@ -209,7 +254,7 @@ const Grid = () => {
   return (
     <>
       <Header />
-      
+
       {/* Hero Section */}
       <div className="category-hero">
         <Container>
@@ -223,16 +268,14 @@ const Grid = () => {
         </Container>
       </div>
 
-      <Details />
-      
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
           {/* Top Bar */}
           <div className="top-bar">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div className="d-flex align-items-center gap-3">
-                <Button 
-                  variant="outline-secondary" 
+                <Button
+                  variant="outline-secondary"
                   className="mobile-filter-btn d-lg-none"
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                 >
@@ -247,11 +290,21 @@ const Grid = () => {
                     {getSortLabel()}
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
-                    <Dropdown.Item onClick={() => setSort("popular")}>Popular</Dropdown.Item>
-                    <Dropdown.Item onClick={() => setSort("newest")}>Newest</Dropdown.Item>
-                    <Dropdown.Item onClick={() => setSort("price-low-high")}>Price: Low to High</Dropdown.Item>
-                    <Dropdown.Item onClick={() => setSort("price-high-low")}>Price: High to Low</Dropdown.Item>
-                    <Dropdown.Item onClick={() => setSort("rating")}>Customer Rating</Dropdown.Item>
+                    <Dropdown.Item onClick={() => setSort("popular")}>
+                      Popular
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => setSort("newest")}>
+                      Newest
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => setSort("price-low-high")}>
+                      Price: Low to High
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => setSort("price-high-low")}>
+                      Price: High to Low
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => setSort("rating")}>
+                      Customer Rating
+                    </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown>
               </div>
@@ -264,7 +317,11 @@ const Grid = () => {
               <div className="filters-sidebar">
                 <div className="filter-header">
                   <h5>Filter By</h5>
-                  <Button variant="link" onClick={clearFilters} className="clear-all-btn">
+                  <Button
+                    variant="link"
+                    onClick={clearFilters}
+                    className="clear-all-btn"
+                  >
                     Clear All
                   </Button>
                 </div>
@@ -274,11 +331,11 @@ const Grid = () => {
                   <div className="filter-group">
                     <h6>Categories</h6>
                     <div className="filter-options">
-                      {categories.map(cat => (
+                      {categories.map((cat) => (
                         <Form.Check
                           key={cat}
                           type="checkbox"
-                          label={`${cat} (${products.filter(p => p.category === cat).length})`}
+                          label={`${cat} (${products.filter((p) => p.category === cat).length})`}
                           checked={selectedCategories.includes(cat)}
                           onChange={() => handleCategoryChange(cat)}
                         />
@@ -312,17 +369,19 @@ const Grid = () => {
                   <div className="filter-group">
                     <h6>Material</h6>
                     <div className="filter-options">
-                      {materials.slice(0, 5).map(mat => (
+                      {materials.slice(0, 5).map((mat) => (
                         <Form.Check
                           key={mat}
                           type="checkbox"
-                          label={`${mat} (${products.filter(p => p.material === mat).length})`}
+                          label={`${mat} (${products.filter((p) => p.material === mat).length})`}
                           checked={selectedMaterials.includes(mat)}
                           onChange={() => handleMaterialChange(mat)}
                         />
                       ))}
                       {materials.length > 5 && (
-                        <Button variant="link" size="sm" className="view-more">+ View more</Button>
+                        <Button variant="link" size="sm" className="view-more">
+                          + View more
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -333,17 +392,19 @@ const Grid = () => {
                   <div className="filter-group">
                     <h6>Brand</h6>
                     <div className="filter-options">
-                      {brands.slice(0, 5).map(brand => (
+                      {brands.slice(0, 5).map((brand) => (
                         <Form.Check
                           key={brand}
                           type="checkbox"
-                          label={`${brand} (${products.filter(p => p.brand === brand).length})`}
+                          label={`${brand} (${products.filter((p) => p.brand === brand).length})`}
                           checked={selectedBrands.includes(brand)}
                           onChange={() => handleBrandChange(brand)}
                         />
                       ))}
                       {brands.length > 5 && (
-                        <Button variant="link" size="sm" className="view-more">+ View more</Button>
+                        <Button variant="link" size="sm" className="view-more">
+                          + View more
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -353,7 +414,7 @@ const Grid = () => {
                 <div className="filter-group">
                   <h6>Rating</h6>
                   <div className="rating-options">
-                    {[4, 3, 2, 1].map(rating => (
+                    {[4, 3, 2, 1].map((rating) => (
                       <Form.Check
                         key={rating}
                         type="radio"
@@ -361,13 +422,21 @@ const Grid = () => {
                         label={
                           <span className="rating-label">
                             {[...Array(5)].map((_, i) => (
-                              <FaStar key={i} color={i < rating ? "#ffc107" : "#e4e5e9"} size={14} />
+                              <FaStar
+                                key={i}
+                                color={i < rating ? "#ffc107" : "#e4e5e9"}
+                                size={14}
+                              />
                             ))}
                             <span>& up</span>
                           </span>
                         }
                         checked={selectedRating === rating}
-                        onChange={() => setSelectedRating(rating === selectedRating ? 0 : rating)}
+                        onChange={() =>
+                          setSelectedRating(
+                            rating === selectedRating ? 0 : rating,
+                          )
+                        }
                       />
                     ))}
                   </div>
@@ -377,17 +446,28 @@ const Grid = () => {
 
             {/* Mobile Filters Modal-like drawer */}
             {showMobileFilters && (
-              <div className="mobile-filters-overlay" onClick={() => setShowMobileFilters(false)}>
-                <div className="mobile-filters-drawer" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="mobile-filters-overlay"
+                onClick={() => setShowMobileFilters(false)}
+              >
+                <div
+                  className="mobile-filters-drawer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="drawer-header">
                     <h5>Filters</h5>
-                    <Button variant="link" onClick={() => setShowMobileFilters(false)}>✕</Button>
+                    <Button
+                      variant="link"
+                      onClick={() => setShowMobileFilters(false)}
+                    >
+                      ✕
+                    </Button>
                   </div>
                   <div className="drawer-body">
                     {/* Same filter content as desktop */}
                     <div className="filter-group">
                       <h6>Categories</h6>
-                      {categories.map(cat => (
+                      {categories.map((cat) => (
                         <Form.Check
                           key={cat}
                           type="checkbox"
@@ -400,15 +480,32 @@ const Grid = () => {
                     <div className="filter-group">
                       <h6>Price</h6>
                       <div className="price-inputs">
-                        <Form.Control type="number" placeholder="Min" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
+                        <Form.Control
+                          type="number"
+                          placeholder="Min"
+                          value={priceMin}
+                          onChange={(e) => setPriceMin(e.target.value)}
+                        />
                         <span>to</span>
-                        <Form.Control type="number" placeholder="Max" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+                        <Form.Control
+                          type="number"
+                          placeholder="Max"
+                          value={priceMax}
+                          onChange={(e) => setPriceMax(e.target.value)}
+                        />
                       </div>
                     </div>
                   </div>
                   <div className="drawer-footer">
-                    <Button variant="outline" onClick={clearFilters}>Clear All</Button>
-                    <Button variant="outline-dark" onClick={() => setShowMobileFilters(false)}>Apply</Button>
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear All
+                    </Button>
+                    <Button
+                      variant="outline-dark"
+                      onClick={() => setShowMobileFilters(false)}
+                    >
+                      Apply
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -424,7 +521,9 @@ const Grid = () => {
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
                   <h5>No products found</h5>
-                  <Button variant="primary" onClick={clearFilters}>Clear Filters</Button>
+                  <Button variant="primary" onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
                 </div>
               ) : (
                 <Row className="g-4 text-center">
@@ -432,28 +531,58 @@ const Grid = () => {
                     const isInWishlist = wishlist.includes(item._id);
                     return (
                       <Col key={item._id} xs={6} md={4}>
-                        <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-                          <Card className="" onClick={() => navigate(`/product/${item._id}`)}>
+                        <motion.div
+                          whileHover={{ y: -4 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Card
+                            className=""
+                            onClick={() => navigate(`/product/${item._id}`)}
+                          >
                             <div className="product-image-wrapper">
                               <Card.Img
-                              className="product-card"
+                                className="product-card"
                                 src={getPrimaryImageUrl(item.image)}
-                                onError={(e) => e.target.src = "/images/placeholder.png"}
+                                onError={(e) =>
+                                  (e.target.src = "/images/placeholder.png")
+                                }
                               />
-                              <div className="wishlist-btn" onClick={(e) => toggleWishlist(e, item._id)}>
-                                {isInWishlist ? <FaHeart color="#e74c3c" /> : <FaRegHeart />}
+                              <div
+                                className="wishlist-btn"
+                                onClick={(e) => toggleWishlist(e, item._id)}
+                              >
+                                {isInWishlist ? (
+                                  <FaHeart color="#e74c3c" />
+                                ) : (
+                                  <FaRegHeart />
+                                )}
                               </div>
                             </div>
                             <Card.Body>
-                              <div className="product-brand">{item.brand || "Artisan Craft"}</div>
+                              <div className="product-brand">
+                                {item.brand || "Artisan Craft"}
+                              </div>
                               <h6 className="product-name">{item.name}</h6>
                               <div className="product-rating">
                                 {[...Array(5)].map((_, i) => (
-                                  <FaStar key={i} color={i < Math.round(item.averageRating || 0) ? "#ffc107" : "#e4e5e9"} size={12} />
+                                  <FaStar
+                                    key={i}
+                                    color={
+                                      i < Math.round(item.averageRating || 0)
+                                        ? "#ffc107"
+                                        : "#e4e5e9"
+                                    }
+                                    size={12}
+                                  />
                                 ))}
                               </div>
-                              <div className="product-price">₹{item.price.toLocaleString()}</div>
-                              <Button className="add-to-cart-btn" onClick={(e) => handleAddToCart(e, item)}>
+                              <div className="product-price">
+                                ₹{item.price.toLocaleString()}
+                              </div>
+                              <Button
+                                className="add-to-cart-btn"
+                                onClick={(e) => handleAddToCart(e, item)}
+                              >
                                 <FaShoppingCart /> Add to Cart
                               </Button>
                             </Card.Body>
@@ -468,6 +597,7 @@ const Grid = () => {
           </Row>
         </Container>
       </div>
+      <Details />
 
       <Footer />
     </>
