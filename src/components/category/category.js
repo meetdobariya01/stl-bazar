@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Spinner } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -33,20 +33,20 @@ const CategoriesSection = () => {
     }
   };
 
-  // FIXED: Navigate to category page properly
   const handleCategoryClick = (categoryName) => {
     navigate(`/category/${encodeURIComponent(categoryName)}`);
   };
 
   if (loading) {
     return (
-      <section className="categories-section">
+      <section className="category-section">
         <Container>
-          <div className="section-heading text-start mb-5">
+          <div className="category-heading text-start mb-5">
             <span>POPULAR CATEGORIES</span>
             <h2>Shop By Category</h2>
             <p>Explore premium collections for your modern lifestyle.</p>
           </div>
+
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
             <p className="mt-3">Loading categories...</p>
@@ -58,16 +58,20 @@ const CategoriesSection = () => {
 
   if (error) {
     return (
-      <section className="categories-section">
+      <section className="category-section">
         <Container>
-          <div className="section-heading text-start mb-5">
+          <div className="category-heading text-start mb-5">
             <span>POPULAR CATEGORIES</span>
             <h2>Shop By Category</h2>
             <p>Explore premium collections for your modern lifestyle.</p>
           </div>
+
           <div className="text-center py-5 text-danger">
             <p>{error}</p>
-            <button className="btn btn-primary" onClick={fetchCategories}>
+            <button
+              className="btn btn-primary"
+              onClick={fetchCategories}
+            >
               Try Again
             </button>
           </div>
@@ -77,9 +81,9 @@ const CategoriesSection = () => {
   }
 
   return (
-    <section className="categories-section">
+    <section className="category-section">
       <Container>
-        <div className="section-heading text-start mb-5">
+        <div className="category-heading text-start mb-5">
           <span>POPULAR CATEGORIES</span>
           <h2>Shop By Category</h2>
           <p>Explore premium collections for your modern lifestyle.</p>
@@ -99,19 +103,24 @@ const CategoriesSection = () => {
                   transition={{ delay: index * 0.1 }}
                   whileHover={{ y: -5 }}
                 >
-                  <div 
+                  <div
                     className="category-item"
                     onClick={() => handleCategoryClick(category.name)}
                   >
                     <div className="category-image-wrapper">
                       {category.image ? (
-                        <img 
-                          src={category.image} 
+                        <img
+                          src={`http://localhost:3000${category.image}`}
                           alt={category.name}
                           className="category-image"
+                          style={{
+                            width: "80px",
+                            height: "80px",
+                            border: "1px solid red"
+                          }}
                           onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/200x200?text=No+Image";
+                            console.log("FAILED:", e.target.src);
+                            e.target.src = "/images/Category/default.png";
                           }}
                         />
                       ) : (
@@ -120,7 +129,10 @@ const CategoriesSection = () => {
                         </div>
                       )}
                     </div>
-                    <h4 className="category-name">{category.name}</h4>
+
+                    <h4 className="category-name">
+                      {category.name}
+                    </h4>
                   </div>
                 </motion.div>
               </Col>

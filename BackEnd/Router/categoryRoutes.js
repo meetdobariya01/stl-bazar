@@ -13,73 +13,83 @@ router.get("/test", (req, res) => {
 });
 
 // GET all categories - SIMPLIFIED VERSION
+// GET all categories
 router.get("/", async (req, res) => {
   console.log("🔵 MAIN CATEGORIES ROUTE HIT!");
-  
+
   try {
-    // Direct MongoDB query
     const db = mongoose.connection.db;
+
     if (!db) {
       console.error("❌ Database not connected!");
-      return res.status(500).json({ error: "Database not connected" });
+      return res.status(500).json({
+        error: "Database not connected"
+      });
     }
-    
+
     const collection = db.collection("categories");
     const categories = await collection.find({}).toArray();
-    
+
     console.log(`✅ Found ${categories.length} categories`);
-    
+
     if (categories.length === 0) {
       return res.json([]);
     }
-    
-    // Format categories
-    const formatted = categories.map(cat => ({
+
+    // FIXED
+    const formatted = categories.map((cat) => ({
       _id: cat._id,
       name: cat.name,
-      image: cat.image && !cat.image.startsWith("http") ? `http://localhost:9000${cat.image}` : cat.image,
+      image: cat.image || "",
       description: cat.description || "",
       productCount: 0
     }));
-    
+
     res.json(formatted);
-    
+
   } catch (error) {
     console.error("❌ Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: error.message
+    });
   }
 });
 
 // GET single category
+// GET single category
 router.get("/:categoryName", async (req, res) => {
   try {
-    const category = await Category.findOne({ name: req.params.categoryName });
+    const category = await Category.findOne({
+      name: req.params.categoryName
+    });
+
     if (!category) {
-      return res.status(404).json({ message: "Category not found" });
+      return res.status(404).json({
+        message: "Category not found"
+      });
     }
-    
-    let imageUrl = category.image;
-    if (imageUrl && !imageUrl.startsWith("http")) {
-      imageUrl = `http://localhost:9000${imageUrl}`;
-    }
-    
-    const products = await Product.find({ category: category.name });
-    
+
+    const products = await Product.find({
+      category: category.name
+    });
+
     res.json({
       _id: category._id,
       name: category.name,
       description: category.description,
-      image: imageUrl,
+      image: category.image,
       icon: category.icon,
-      products: products,
+      products,
       productCount: products.length
     });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      message: "Server error"
+    });
   }
 });
-
 // GET products by category
 router.get("/:categoryName/products", async (req, res) => {
   try {
