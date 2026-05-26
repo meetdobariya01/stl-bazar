@@ -4,18 +4,11 @@ const router = express.Router();
 const Category = require("../Models/Category");
 const Product = require("../Models/Product");
 
-console.log("✅ categoryRoutes.js loaded successfully!");
 
-// TEST ROUTE - સૌથી પહેલા આ ચેક કરો
-router.get("/test", (req, res) => {
-  console.log("🔵 TEST ROUTE HIT!");
-  res.json({ message: "Test route is working!", time: new Date() });
-});
 
-// GET all categories - SIMPLIFIED VERSION
-// GET all categories
+
 router.get("/", async (req, res) => {
-  console.log("🔵 MAIN CATEGORIES ROUTE HIT!");
+
 
   try {
     const db = mongoose.connection.db;
@@ -29,9 +22,6 @@ router.get("/", async (req, res) => {
 
     const collection = db.collection("categories");
     const categories = await collection.find({}).toArray();
-
-    console.log(`✅ Found ${categories.length} categories`);
-
     if (categories.length === 0) {
       return res.json([]);
     }
@@ -55,7 +45,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET single category
 // GET single category
 router.get("/:categoryName", async (req, res) => {
   try {
