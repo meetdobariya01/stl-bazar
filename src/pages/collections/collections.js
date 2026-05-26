@@ -125,7 +125,7 @@ const Collections = ({ limit = 6 }) => {
 
   if (loading) {
     return (
-      <section className="collection-section py-5">
+      <section className="collection-section py-5 lexend">
         <Container>
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
@@ -138,7 +138,7 @@ const Collections = ({ limit = 6 }) => {
 
   if (error) {
     return (
-      <section className="collection-section py-5">
+      <section className="collection-section py-5 lexend">
         <Container>
           <div className="text-center py-5 text-danger">
             <p>{error}</p>
@@ -150,7 +150,7 @@ const Collections = ({ limit = 6 }) => {
 
   if (collections.length === 0) {
     return (
-      <section className="collection-section py-5">
+      <section className="collection-section py-5 lexend">
         <Container>
           <div className="text-center py-5">
             <p>No collections available</p>
@@ -161,10 +161,10 @@ const Collections = ({ limit = 6 }) => {
   }
 
   return (
-    <section className="collection-section py-5">
+    <section className="collection-section py-5 lexend">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title">Shop by Collection</h2>
+          <h2 className="section-title funnel-sans">Shop by Collection</h2>
 
           <a
             href="/product"

@@ -104,7 +104,7 @@ const CategoriesSection = () => {
                   whileHover={{ y: -5 }}
                 >
                   <div
-                    className="category-item"
+                    className="category-item-home"
                     onClick={() => handleCategoryClick(category.name)}
                   >
                     <div className="category-image-wrapper">
@@ -114,9 +114,9 @@ const CategoriesSection = () => {
                           alt={category.name}
                           className="category-image"
                           style={{
-                            width: "80px",
-                            height: "80px",
-                            border: "1px solid red"
+                            // width: "80px",
+                            // height: "80px",
+                            // border: "1px solid red"
                           }}
                           onError={(e) => {
                             console.log("FAILED:", e.target.src);
