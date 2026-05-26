@@ -427,7 +427,7 @@ const Grid = () => {
                   <Button variant="primary" onClick={clearFilters}>Clear Filters</Button>
                 </div>
               ) : (
-                <Row className="g-4">
+                <Row className="g-4 text-center">
                   {sortedProducts.map((item) => {
                     const isInWishlist = wishlist.includes(item._id);
                     return (

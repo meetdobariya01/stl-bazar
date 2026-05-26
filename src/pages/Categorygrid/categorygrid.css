@@ -9,8 +9,8 @@
   --text: #2c3e50;
   --text-light: #7f8c8d;
   --white: #ffffff;
-  --shadow: 0 2px 12px rgba(0,0,0,0.05);
-  --shadow-hover: 0 8px 24px rgba(0,0,0,0.1);
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 /* Loading State */
@@ -24,9 +24,9 @@
 }
 
 /* Hero Section */
-.category-hero {
-  background: linear-gradient(135deg, #f5f0e8 0%, #faf8f4 100%);
-  padding: 60px 0 40px;
+.category-hero-section {
+  /* background: linear-gradient(135deg, #f5f0e8 0%, #faf8f4 100%); */
+  /* padding: 60px 0 40px; */
   text-align: center;
 }
 
@@ -47,13 +47,13 @@
 }
 
 .product-count {
-  color: var(--accent);
+  color: #c8a96b;
   font-size: 0.9rem;
   font-weight: 500;
 }
 
 .category-background {
-  background: var(--white);
+  /* background: var(--white); */
   min-height: 100vh;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .sort-select:focus {
-  border-color: var(--accent);
+  border-color: #c8a96b;
 }
 
 .mobile-filter-btn {
@@ -121,7 +121,7 @@
 }
 
 .clear-all-btn {
-  color: var(--accent);
+  color: #c8a96b;
   font-size: 0.8rem;
   text-decoration: none;
   padding: 0;
@@ -159,11 +159,11 @@
 }
 
 .category-item:hover {
-  color: var(--accent);
+  color: #c8a96b;
 }
 
 .category-item.active {
-  color: var(--accent);
+  color: #c8a96b;
   font-weight: 500;
 }
 
@@ -316,14 +316,14 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--accent);
+  color: #c8a96b;
   margin-bottom: 8px;
 }
 
 .product-name {
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--text);
+  color: #000;
   margin-bottom: 8px;
   line-height: 1.4;
   display: -webkit-box;
@@ -350,14 +350,15 @@
 .product-price {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--primary);
+  color: #000;
   margin-bottom: 12px;
 }
 
 .view-details-btn {
   width: 100%;
-  background: var(--primary);
-  border: none;
+  background: transparent;
+  border: 1px solid #c8a96b;
+  color: #c8a96b;
   border-radius: 8px;
   padding: 8px;
   font-size: 0.85rem;
@@ -365,7 +366,8 @@
 }
 
 .view-details-btn:hover {
-  background: var(--primary-light);
+  background: #c8a96b;
+  border: none;
   transform: translateY(-2px);
 }
 
@@ -376,7 +378,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
@@ -446,24 +448,24 @@
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .hero-subtitle {
     font-size: 0.9rem;
     padding: 0 20px;
   }
-  
+
   .category-page {
     padding: 20px 0 40px;
   }
-  
+
   .product-name {
     font-size: 0.8rem;
   }
-  
+
   .product-price {
     font-size: 0.9rem;
   }
-  
+
   .view-details-btn {
     font-size: 0.75rem;
     padding: 6px;

@@ -2,7 +2,7 @@
   height: 700px;
   object-fit: cover;
   /* border-radius: 16px; */
-  animation: zoomIn 6s ease-in-out;
+  /* animation: zoomIn 6s ease-in-out; */
 }
 
 /* Smooth zoom animation */

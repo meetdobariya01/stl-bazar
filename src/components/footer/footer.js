@@ -20,7 +20,7 @@ const Footer = () => {
     window.location.reload();
   };
 
-  return (  
+  return (
     <>
       <footer className="footer-section funnel-sans">
         <Container fluid>
@@ -38,11 +38,26 @@ const Footer = () => {
                   className="footer-logo w-50"
                   onClick={refreshPage}
                 />
+
                 <p className="footer-text">
                   Gourmet Bazar brings you handpicked, high-quality foods,
                   crafted for taste lovers who value freshness, authenticity,
                   and exceptional culinary experiences.
                 </p>
+                <div className="d-flex align-items-center gap-2">
+                  <img
+                    src="/images/india.png"
+                    alt="Refresh"
+                    className="footer-logo w-50"
+                    onClick={refreshPage}
+                  />{" "}
+                  {/* <img
+                    src="/images/brandel.png"
+                    alt="Refresh"
+                    className="footer-logo w-50"
+                    onClick={refreshPage}
+                  /> */}
+                </div>
               </motion.div>
             </Col>
 
