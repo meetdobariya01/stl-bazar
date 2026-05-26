@@ -84,7 +84,7 @@ const Wishlist = () => {
     <div>
       <Header />
 
-      <Container className="py-5">
+      <Container className="py-5 lexend">
         <motion.h2
           className="text-center fw-bold mb-4 lexend"
           initial={{ opacity: 0, y: -20 }}
