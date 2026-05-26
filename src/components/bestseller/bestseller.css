@@ -19,18 +19,18 @@
   left: 0;
   width: 60px;
   height: 3px;
-  background: #e67e22;
+  background: #c8a96b;
 }
 
 .view-all-link {
-  color: #e67e22;
+  color: #c8a96b;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
 }
 
 .view-all-link:hover {
-  color: #d35400;
+  color: #a67e22;
   text-decoration: underline;
 }
 

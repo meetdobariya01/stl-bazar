@@ -32,7 +32,7 @@
   max-width: 550px;
 }
 
-.category-item {
+.category-item-home {
   cursor: pointer;
   text-align: center;
   transition: all 0.3s ease;
@@ -49,7 +49,7 @@
   transition: all 0.3s ease;
 }
 
-.category-item:hover .category-image-wrapper {
+.category-item-home:hover .category-image-wrapper {
   transform: translateY(-5px);
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
@@ -61,7 +61,7 @@
   transition: transform .3s ease;
 }
 
-.category-item:hover .category-image {
+.category-item-home:hover .category-image {
   transform: scale(1.05);
 }
 
@@ -90,7 +90,7 @@
   font-family:'Lexend',sans-serif;
 }
 
-.category-item:hover .category-name {
+.category-item-home:hover .category-name {
   color:#c59d5f;
 }
 
