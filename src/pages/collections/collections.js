@@ -164,7 +164,7 @@ const Collections = ({ limit = 6 }) => {
     <section className="collection-section py-5 lexend">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title funnel-sans">Shop by Collection</h2>
+          <h2 className="section-title funnel-sans">Shop by Brands</h2>
 
           <a
             href="/product"
