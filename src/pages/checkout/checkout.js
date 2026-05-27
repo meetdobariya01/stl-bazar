@@ -13,8 +13,6 @@ import {
 } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
-  FaCreditCard,
-  FaMoneyBillWave,
   FaShieldAlt,
   FaTruck,
   FaUndo,
@@ -22,6 +20,7 @@ import {
   FaCheckCircle,
   FaAddressCard,
   FaPlus,
+  FaTrash,
 } from "react-icons/fa";
 import axios from "axios";
 
@@ -32,12 +31,20 @@ import "./checkout.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
-// ✅ Helper function to format prices
+// Helper function to format prices
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
   if (isNaN(numPrice)) return "0.00";
   return numPrice.toFixed(2);
+};
+
+// Helper to get image URL
+const getImageUrl = (image) => {
+  if (!image) return "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image";
+  if (Array.isArray(image) && image.length > 0) return image[0];
+  if (typeof image === 'string') return image;
+  return "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image";
 };
 
 const Checkout = () => {
@@ -48,6 +55,9 @@ const Checkout = () => {
   const [showSavedAddresses, setShowSavedAddresses] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  
+  // Shipping Method State
+  const [shippingMethod, setShippingMethod] = useState("standard");
   
   // Alert states
   const [addressSaveSuccess, setAddressSaveSuccess] = useState("");
@@ -66,9 +76,17 @@ const Checkout = () => {
   });
 
   const [cart, setCart] = useState({ items: [] });
-  const [userId, setUserId] = useState(null);
-
+  
+  // Get or create guestId
   const guestId = localStorage.getItem("guestId");
+  
+  // Ensure guestId exists
+  useEffect(() => {
+    if (!localStorage.getItem("guestId")) {
+      const newGuestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem("guestId", newGuestId);
+    }
+  }, []);
 
   // Clear alerts after 5 seconds
   useEffect(() => {
@@ -92,20 +110,12 @@ const Checkout = () => {
     }
   }, [emailStatus]);
 
-  // Check if user is logged in
+  // Fetch saved addresses when component loads
   useEffect(() => {
-    const loggedInUserId = localStorage.getItem("userId");
-    if (loggedInUserId) {
-      setUserId(loggedInUserId);
-    }
-  }, []);
-
-  // Fetch saved addresses when userId changes
-  useEffect(() => {
-    if (userId) {
+    if (guestId) {
       fetchSavedAddresses();
     }
-  }, [userId]);
+  }, [guestId]);
 
   // FETCH CART
   const fetchCart = async () => {
@@ -123,13 +133,13 @@ const Checkout = () => {
     fetchCart();
   }, [guestId]);
 
-  // FETCH SAVED ADDRESSES
+  // FETCH SAVED ADDRESSES using guestId
   const fetchSavedAddresses = async () => {
-    if (!userId) return;
+    if (!guestId) return;
     
     setLoadingAddresses(true);
     try {
-      const res = await axios.get(`${API_URL}/addresses/${userId}`);
+      const res = await axios.get(`${API_URL}/addresses/${guestId}`);
       if (res.data.success) {
         setSavedAddresses(res.data.addresses);
       }
@@ -165,19 +175,56 @@ const Checkout = () => {
     setTimeout(() => setAddressSaveSuccess(""), 3000);
   };
 
-  // TOTALS with proper calculation
+  // DELETE SAVED ADDRESS
+  const deleteSavedAddress = async (addressId, e) => {
+    e.stopPropagation();
+    if (!guestId) return;
+    
+    if (window.confirm("Are you sure you want to delete this address?")) {
+      try {
+        await axios.delete(`${API_URL}/addresses/${guestId}/${addressId}`);
+        setAddressSaveSuccess("Address deleted successfully!");
+        fetchSavedAddresses();
+        setTimeout(() => setAddressSaveSuccess(""), 3000);
+      } catch (err) {
+        console.error("Delete address error:", err);
+        setAddressSaveError("Failed to delete address");
+        setTimeout(() => setAddressSaveError(""), 3000);
+      }
+    }
+  };
+
+  // Calculate shipping cost based on method
+  // Express shipping is ALWAYS ₹199, never free
+  // Standard shipping is free only for orders above ₹1500
+  const getShippingCost = (subtotal, method) => {
+    const FREE_SHIPPING_THRESHOLD = 1500;
+    
+    // Express shipping always costs ₹199
+    if (method === "express") {
+      return 199;
+    }
+    
+    // Standard shipping: free above ₹1500, else ₹99
+    if (subtotal >= FREE_SHIPPING_THRESHOLD) {
+      return 0;
+    }
+    return 99;
+  };
+
+  // TOTALS
   const subtotal = cart.items.reduce(
     (acc, item) => acc + (item.price * item.quantity),
     0,
   );
 
-  const shippingCost = subtotal > 1499 ? 0 : 99;
+  const shippingCost = getShippingCost(subtotal, shippingMethod);
   const total = subtotal + shippingCost;
 
   // SAVE ADDRESS FUNCTION
   const saveAddressToDB = async () => {
-    if (!userId) {
-      setAddressSaveError("Please login to save address");
+    if (!guestId) {
+      setAddressSaveError("Unable to save address. Please refresh the page.");
       return;
     }
 
@@ -191,7 +238,7 @@ const Checkout = () => {
 
     try {
       const response = await axios.post(`${API_URL}/addresses`, {
-        userId,
+        guestId,
         name: shipping.name,
         address: {
           name: shipping.name,
@@ -207,10 +254,8 @@ const Checkout = () => {
       
       if (response.data.success) {
         setAddressSaveSuccess("✅ Address saved successfully!");
-        // Refresh saved addresses
         await fetchSavedAddresses();
       }
-      console.log("Address saved successfully");
     } catch (err) {
       console.error("Save address error:", err);
       setAddressSaveError("❌ Failed to save address. Please try again.");
@@ -218,7 +263,7 @@ const Checkout = () => {
   };
 
   // Send order confirmation email
-  const sendOrderEmail = async (orderId, orderDetails) => {
+  const sendOrderEmail = async (orderId) => {
     try {
       setEmailStatus("sending");
       
@@ -228,16 +273,18 @@ const Checkout = () => {
         orderId: orderId,
         customerName: shipping.name,
         items: cart.items,
+        subtotal: subtotal,
+        shippingCost: shippingCost,
         total: total,
         shippingAddress: shipping,
         paymentMethod: payment,
+        shippingMethod: shippingMethod,
         orderDate: new Date().toLocaleString()
       };
 
       await axios.post(`${API_URL}/order/send-confirmation`, emailData);
       
       setEmailStatus("success");
-      console.log("Order confirmation email sent successfully");
     } catch (err) {
       console.error("Email sending error:", err);
       setEmailStatus("error");
@@ -267,7 +314,8 @@ const Checkout = () => {
 
       setIsProcessing(true);
 
-      if (saveAddressChecked && userId) {
+      // Save address if checkbox is checked
+      if (saveAddressChecked) {
         await saveAddressToDB();
       }
 
@@ -275,14 +323,13 @@ const Checkout = () => {
         guestId,
         shippingAddress: shipping,
         paymentMethod: payment,
+        shippingMethod: shippingMethod,
+        subtotal: subtotal,
+        shippingCost: shippingCost,
+        total: total,
       });
 
-      await sendOrderEmail(res.data.orderId, {
-        items: cart.items,
-        total: total,
-        shipping: shipping,
-        paymentMethod: payment
-      });
+      await sendOrderEmail(res.data.orderId);
 
       localStorage.removeItem("guestId");
       
@@ -291,9 +338,12 @@ const Checkout = () => {
           orderId: res.data.orderId,
           orderDetails: {
             items: cart.items,
+            subtotal: subtotal,
+            shippingCost: shippingCost,
             total: total,
             shipping: shipping,
-            paymentMethod: payment
+            paymentMethod: payment,
+            shippingMethod: shippingMethod
           }
         } 
       });
@@ -304,8 +354,6 @@ const Checkout = () => {
       setIsProcessing(false);
     }
   };
-  
-  const [shippingMethod, setShippingMethod] = useState("standard");
 
   return (
     <>
@@ -350,6 +398,7 @@ const Checkout = () => {
                       onChange={handleChange}
                       placeholder="Enter your email address"
                       className="custom-input"
+                      required
                     />
 
                     <Form.Check
@@ -375,8 +424,7 @@ const Checkout = () => {
                       </h4>
                       
                       <div className="d-flex gap-2">
-                        {/* Show Saved Addresses Button */}
-                        {userId && savedAddresses.length > 0 && (
+                        {savedAddresses.length > 0 && (
                           <Button 
                             variant="outline-primary" 
                             size="sm"
@@ -388,18 +436,15 @@ const Checkout = () => {
                           </Button>
                         )}
                         
-                        {/* Save Address Button */}
-                        {userId && (
-                          <Button 
-                            variant="outline-success" 
-                            size="sm"
-                            onClick={saveAddressToDB}
-                            className="d-flex align-items-center gap-2"
-                          >
-                            <FaPlus size={12} />
-                            Save Current
-                          </Button>
-                        )}
+                        <Button 
+                          variant="outline-success" 
+                          size="sm"
+                          onClick={saveAddressToDB}
+                          className="d-flex align-items-center gap-2"
+                        >
+                          <FaPlus size={12} />
+                          Save Address
+                        </Button>
                       </div>
                     </div>
 
@@ -418,25 +463,33 @@ const Checkout = () => {
                               <Col md={6} key={addr._id || idx}>
                                 <div 
                                   className="saved-address-card p-3 border rounded"
-                                  onClick={() => selectSavedAddress(addr)}
-                                  style={{ cursor: "pointer", transition: "all 0.2s" }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                  style={{ cursor: "pointer", transition: "all 0.2s", position: "relative" }}
                                 >
-                                  <div className="d-flex justify-content-between">
-                                    <strong>{addr.address.name || addr.name}</strong>
-                                    {addr.isDefault && (
-                                      <span className="badge bg-success">Default</span>
-                                    )}
+                                  <div onClick={() => selectSavedAddress(addr)}>
+                                    <div className="d-flex justify-content-between">
+                                      <strong>{addr.address.name || addr.name}</strong>
+                                      {addr.isDefault && (
+                                        <span className="badge bg-success">Default</span>
+                                      )}
+                                    </div>
+                                    <p className="mb-1 small mt-2">
+                                      {addr.address.address}<br/>
+                                      {addr.address.city}, {addr.address.state} - {addr.address.pincode}<br/>
+                                      📞 {addr.address.phone}
+                                    </p>
+                                    <small className="text-muted">
+                                      Click to use this address
+                                    </small>
                                   </div>
-                                  <p className="mb-1 small mt-2">
-                                    {addr.address.address}<br/>
-                                    {addr.address.city}, {addr.address.state} - {addr.address.pincode}<br/>
-                                    📞 {addr.address.phone}
-                                  </p>
-                                  <small className="text-muted">
-                                    Click to use this address
-                                  </small>
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="delete-address-btn"
+                                    onClick={(e) => deleteSavedAddress(addr._id, e)}
+                                    style={{ position: "absolute", top: "5px", right: "5px", color: "#dc3545" }}
+                                  >
+                                    <FaTrash size={12} />
+                                  </Button>
                                 </div>
                               </Col>
                             ))}
@@ -463,43 +516,42 @@ const Checkout = () => {
                     <Row className="g-3">
                       <Col md={12}>
                         <Form.Label>Full Name *</Form.Label>
-
                         <Form.Control
                           name="name"
                           value={shipping.name}
                           onChange={handleChange}
                           placeholder="Enter your full name"
                           className="custom-input"
+                          required
                         />
                       </Col>
 
                       <Col md={6}>
                         <Form.Label>Phone Number *</Form.Label>
-
                         <Form.Control
                           name="phone"
                           value={shipping.phone}
                           onChange={handleChange}
                           placeholder="Enter your phone number"
                           className="custom-input"
+                          required
                         />
                       </Col>
 
                       <Col md={6}>
                         <Form.Label>Address *</Form.Label>
-
                         <Form.Control
                           name="address"
                           value={shipping.address}
                           onChange={handleChange}
                           placeholder="House no, Building, Street"
                           className="custom-input"
+                          required
                         />
                       </Col>
 
                       <Col md={12}>
                         <Form.Label>Address Line 2</Form.Label>
-
                         <Form.Control
                           placeholder="Apartment, suite, unit, etc."
                           className="custom-input"
@@ -508,59 +560,53 @@ const Checkout = () => {
 
                       <Col md={4}>
                         <Form.Label>City *</Form.Label>
-
                         <Form.Control
                           name="city"
                           value={shipping.city}
                           onChange={handleChange}
                           placeholder="Enter your city"
                           className="custom-input"
+                          required
                         />
                       </Col>
 
                       <Col md={4}>
                         <Form.Label>State *</Form.Label>
-
                         <Form.Control
                           name="state"
                           value={shipping.state}
                           onChange={handleChange}
                           placeholder="Enter your state"
                           className="custom-input"
+                          required
                         />
                       </Col>
 
                       <Col md={4}>
                         <Form.Label>Pin Code *</Form.Label>
-
                         <Form.Control
                           name="pincode"
                           value={shipping.pincode}
                           onChange={handleChange}
                           placeholder="Enter pin code"
                           className="custom-input"
+                          required
                         />
                       </Col>
                     </Row>
 
-                    {/* <Form.Check
+                    <Form.Check
                       type="checkbox"
                       label="Save this address for next time."
                       className="mt-3"
                       checked={saveAddressChecked}
                       onChange={(e) => setSaveAddressChecked(e.target.checked)}
-                    /> */}
-
-                    {!userId && (
-                      <Alert variant="info" className="mt-3 py-2">
-                        <small>🔐 Login to save your address for future orders</small>
-                      </Alert>
-                    )}
+                    />
                   </Card.Body>
                 </Card>
               </motion.div>
 
-              {/* SHIPPING METHOD */}
+              {/* SHIPPING METHOD - Express always ₹199 */}
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -572,6 +618,12 @@ const Checkout = () => {
                       3. Shipping Method
                     </h4>
 
+                    {subtotal >= 1500 && shippingMethod === "standard" && (
+                      <Alert variant="success" className="mb-3">
+                        🎉 Free shipping applied on orders above ₹1500!
+                      </Alert>
+                    )}
+
                     <div
                       className={`method-box ${
                         shippingMethod === "standard" ? "active-method" : ""
@@ -582,8 +634,9 @@ const Checkout = () => {
                         <h6>Standard Shipping</h6>
                         <p>Delivery in 3 - 5 business days</p>
                       </div>
-
-                      <strong>FREE</strong>
+                      <strong>
+                        {subtotal >= 1500 ? "FREE" : "₹99"}
+                      </strong>
                     </div>
 
                     <div
@@ -596,9 +649,24 @@ const Checkout = () => {
                         <h6>Express Shipping</h6>
                         <p>Delivery in 1 - 2 business days</p>
                       </div>
-
                       <strong>₹199</strong>
                     </div>
+
+                    {subtotal < 1500 && shippingMethod === "standard" && (
+                      <div className="shipping-note mt-3">
+                        <small className="text-muted">
+                          🚚 Add ₹{formatPrice(1500 - subtotal)} more to get free standard shipping
+                        </small>
+                      </div>
+                    )}
+
+                    {shippingMethod === "express" && (
+                      <div className="shipping-note mt-3">
+                        <small className="text-muted">
+                          ⚡ Express shipping always costs ₹199 (delivery in 1-2 days)
+                        </small>
+                      </div>
+                    )}
                   </Card.Body>
                 </Card>
               </motion.div>
@@ -653,7 +721,6 @@ const Checkout = () => {
                           label="UPI / Net Banking / Wallets"
                         />
                       </div>
-
                       <div className="payment-icons">
                         <span>UPI</span>
                         <span>Paytm</span>
@@ -675,7 +742,6 @@ const Checkout = () => {
                           label="Credit / Debit Card"
                         />
                       </div>
-
                       <div className="payment-icons">
                         <span>VISA</span>
                         <span>Master</span>
@@ -716,7 +782,7 @@ const Checkout = () => {
                           Processing...
                         </>
                       ) : (
-                        "Continue to Payment"
+                        `Pay ₹${formatPrice(total)}`
                       )}
                     </Button>
 
@@ -729,7 +795,7 @@ const Checkout = () => {
               </motion.div>
             </Col>
 
-            {/* RIGHT */}
+            {/* RIGHT - Order Summary */}
             <Col lg={5}>
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
@@ -750,10 +816,9 @@ const Checkout = () => {
                     {cart.items.map((item) => (
                       <div key={item.productId} className="summary-item">
                         <div className="summary-img">
-                          <Image src={item.image} />
+                          <Image src={getImageUrl(item.image)} />
                           <span>{item.quantity}</span>
                         </div>
-
                         <div className="summary-info">
                           <h5>{item.name}</h5>
                           <p>₹{formatPrice(item.price)}</p>
@@ -769,31 +834,29 @@ const Checkout = () => {
                     </div>
 
                     <div className="summary-row">
-                      <span>Shipping</span>
-                      <span className="free">
+                      <span>Shipping ({shippingMethod === "express" ? "Express" : "Standard"})</span>
+                      <span className={shippingCost === 0 ? "free" : ""}>
                         {shippingCost === 0 ? "FREE" : `₹${formatPrice(shippingCost)}`}
                       </span>
                     </div>
-
-                    {shippingCost > 0 && (
-                      <div className="summary-row">
-                        <span>Shipping Discount</span>
-                        <span className="discount">-₹99</span>
-                      </div>
-                    )}
 
                     <div className="summary-total">
                       <div>
                         <h4>Total</h4>
                         <p>Inclusive of all taxes</p>
                       </div>
-
                       <h2>₹{formatPrice(total)}</h2>
                     </div>
 
-                    {shippingCost > 0 && (
+                    {shippingCost === 0 && subtotal >= 1500 && (
                       <div className="shipping-save">
-                        🎉 You saved ₹99 on shipping!
+                        🎉 Free standard shipping applied!
+                      </div>
+                    )}
+
+                    {shippingMethod === "express" && (
+                      <div className="shipping-save express-note">
+                        ⚡ Express shipping - Delivery in 1-2 days
                       </div>
                     )}
 
@@ -802,12 +865,10 @@ const Checkout = () => {
                         <FaShieldAlt />
                         <span>Secure Payments</span>
                       </div>
-
                       <div>
                         <FaUndo />
                         <span>Easy Returns</span>
                       </div>
-
                       <div>
                         <FaTruck />
                         <span>Fast Delivery</span>
@@ -820,18 +881,6 @@ const Checkout = () => {
           </Row>
         </Container>
       </section>
-
-      {/* Add this CSS to your checkout.css */}
-      <style jsx>{`
-        .saved-address-card {
-          transition: all 0.2s ease;
-          background: white;
-        }
-        .saved-address-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-      `}</style>
 
       <Footer />
     </>
