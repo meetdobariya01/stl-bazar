@@ -8,7 +8,7 @@ import {
   FaTimes,
   FaBars,
 } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";  
 import { useNavigate, NavLink } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import Mainnavbar from "../navbar/navbar";
@@ -18,7 +18,7 @@ import "./header.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const BACKEND_URL = "http://localhost:9000";
 
-const Header = () => {
+const Header = () => {  
   const navigate = useNavigate();
   const { showCart, setShowCart, cart } = useCart();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -86,7 +86,7 @@ const Header = () => {
   };
 
   const handleSuggestionClick = (productId) => {
-    console.log("Suggestion clicked, navigating to product:", productId);
+    console.log("Suggestion clicked, navigating to product:", productId); 
     navigate(`/product/${productId}`);
     setSearch("");
     setShowSuggestions(false);
