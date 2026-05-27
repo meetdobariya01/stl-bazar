@@ -25,8 +25,12 @@ const app = express();
 
 // This allows the browser to access images stored in the uploads folder
 app.use('/uploads', express.static(path.join("D:\\GourmentBazar\\Vendor\\VendorBackend\\uploads")));
-app.use("/images", express.static(path.join(__dirname, "public/images")));
 
+app.use("/images", express.static(path.join(__dirname, "public/images")));
+app.use("/images/categories", express.static("D:/GourmentBazar/SuperAdmin/AdminBackEnd/public/images/categories"));
+
+// ✅ Serve existing frontend images (જૂની images માટે)
+app.use("/images/Category", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/public/images/Category"));
 /* ===============================
    MIDDLEWARE
 ================================ */
