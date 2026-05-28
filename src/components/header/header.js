@@ -8,7 +8,7 @@ import {
   FaTimes,
   FaBars,
 } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";  
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, NavLink } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import Mainnavbar from "../navbar/navbar";
@@ -18,7 +18,7 @@ import "./header.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const BACKEND_URL = "http://localhost:9000";
 
-const Header = () => {  
+const Header = () => {
   const navigate = useNavigate();
   const { showCart, setShowCart, cart } = useCart();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -63,7 +63,9 @@ const Header = () => {
     try {
       setLoading(true);
       // console.log("Calling API:", `${API_URL}/search-suggestions?q=${query}`);
-      const response = await axios.get(`${API_URL}/search-suggestions?q=${query}`);
+      const response = await axios.get(
+        `${API_URL}/search-suggestions?q=${query}`,
+      );
       // console.log("API Response:", response.data);
       setSuggestions(response.data.products || []);
       setShowSuggestions(true);
@@ -86,7 +88,7 @@ const Header = () => {
   };
 
   const handleSuggestionClick = (productId) => {
-    console.log("Suggestion clicked, navigating to product:", productId); 
+    console.log("Suggestion clicked, navigating to product:", productId);
     navigate(`/product/${productId}`);
     setSearch("");
     setShowSuggestions(false);
@@ -149,7 +151,10 @@ const Header = () => {
               <div className="search-suggestions">
                 {loading ? (
                   <div className="suggestion-loading">
-                    <div className="spinner-border spinner-border-sm" role="status">
+                    <div
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                    >
                       <span className="visually-hidden">Loading...</span>
                     </div>
                     <span>Searching...</span>
@@ -164,7 +169,10 @@ const Header = () => {
                       >
                         <div className="suggestion-image">
                           <img
-                            src={getImageUrl(product.image) || "/images/placeholder-product.jpg"}
+                            src={
+                              getImageUrl(product.image) ||
+                              "/images/placeholder-product.jpg"
+                            }
                             alt={product.name}
                             onError={(e) => {
                               e.target.src = "/images/placeholder-product.jpg";
@@ -173,8 +181,12 @@ const Header = () => {
                         </div>
                         <div className="suggestion-info">
                           <div className="suggestion-name">{product.name}</div>
-                          <div className="suggestion-price">₹{formatPrice(product.price)}</div>
-                          <div className="suggestion-company">{product.company}</div>
+                          <div className="suggestion-price">
+                            ₹{formatPrice(product.price)}
+                          </div>
+                          <div className="suggestion-company">
+                            {product.company}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -237,7 +249,10 @@ const Header = () => {
                     onClick={() => handleSuggestionClick(product._id)}
                   >
                     <img
-                      src={getImageUrl(product.image) || "/images/placeholder-product.jpg"}
+                      src={
+                        getImageUrl(product.image) ||
+                        "/images/placeholder-product.jpg"
+                      }
                       alt={product.name}
                     />
                     <div>
@@ -250,8 +265,13 @@ const Header = () => {
             )}
 
             <div className="mobile-links lexend">
-              <span onClick={() => navigate("/sell")}>Sell With Us</span>
-              <span onClick={() => navigate("/product")}>Brands</span>
+              <span onClick={() => navigate("#")}>Shop by Category</span>
+              <span onClick={() => navigate("/product")}>New In</span>
+              <span onClick={() => navigate("/aboutus")}>Brands</span>
+              <span onClick={() => navigate("/contactus")}>Gifting Guides</span>
+              <span onClick={() => navigate("/sell")}>Editorial</span>
+              <span onClick={() => navigate("/product")}>Sale</span>
+              <span onClick={() => navigate("/aboutus")}>Sell With Us</span>
               <span onClick={() => navigate("/aboutus")}>About Us</span>
               <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
