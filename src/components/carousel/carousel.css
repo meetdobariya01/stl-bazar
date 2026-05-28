@@ -1,11 +1,76 @@
+.hero-carousel {
+  position: relative;
+}
+
+.carousel-wrapper {
+  position: relative;
+}
+
 .carousel-img {
   height: 700px;
   object-fit: cover;
-  /* border-radius: 16px; */
-  /* animation: zoomIn 6s ease-in-out; */
+  animation: zoomIn 6s ease-in-out infinite alternate;
 }
 
-/* Smooth zoom animation */
+/* Premium Glass Box */
+.carousel-content {
+  position: absolute;
+  top: 50%;
+  left: 7%;
+  transform: translateY(-50%);
+  max-width: 500px;
+
+  padding: 40px;
+
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.18);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border: 1px solid rgba(255, 255, 255, 0.3);
+
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+
+  z-index: 2;
+}
+
+.carousel-content h1 {
+  /* font-size: 54px; */
+  font-weight: 500;
+  line-height: 1.1;
+  color: #2d2218;
+  margin-bottom: 24px;
+}
+
+.carousel-content p {
+  font-size: 24px;
+  line-height: 1.5;
+  color: #3d342c;
+  margin-bottom: 30px;
+}
+
+.shop-btn-carousel {
+  padding: 16px 38px;
+  border: none;
+  border-radius: 14px;
+  background: #0f5132;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 500;
+
+  transition: 0.4s ease;
+}
+
+.shop-btn-carousel:hover {
+  background: transparent;
+  border: 2px solid #0f5132;
+  color: #0f5132;
+  transform: translateY(-3px);
+}
+
+/* Zoom Animation */
 @keyframes zoomIn {
   from {
     transform: scale(1);
@@ -15,10 +80,48 @@
   }
 }
 
-/* Mobile view */
+/* Tablet */
+@media (max-width: 992px) {
+  .carousel-content {
+    max-width: 420px;
+    padding: 30px;
+  }
+
+  .carousel-content h1 {
+    font-size: 48px;
+  }
+
+  .carousel-content p {
+    font-size: 20px;
+  }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
   .carousel-img {
-    height: auto  ;
-    /* border-radius: 12px; */
+    height: 550px;
+  }
+
+  .carousel-content {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 100%;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .carousel-content h1 {
+    font-size: 36px;
+  }
+
+  .carousel-content p {
+    font-size: 17px;
+  }
+
+  .shop-btn {
+    width: 100%;
+    font-size: 18px;
   }
 }

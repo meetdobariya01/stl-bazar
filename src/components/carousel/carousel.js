@@ -1,10 +1,42 @@
 import React from "react";
 import Carousel from "react-bootstrap/Carousel";
+import { NavLink } from "react-router-dom";
 import "./carousel.css";
+
+const slides = [
+  {
+    image: "/images/carousel-1.webp",
+    title: "Thoughtful Gifts. \nMade to Delight.",
+    desc: "Handpicked treasures for every occasion and every celebration.",
+    btn: "Shop Collections",
+    link: "/category",
+  },
+  {
+    image: "/images/carousel-2.webp",
+    title: "Clean Beauty.\nNaturally You.",
+    desc: "Gentle, effective skincare made with nature's finest ingredients.",
+    btn: "Shop Collections",
+    link: "/category",
+  },
+  {
+    image: "/images/carousel-3.webp",
+    title: "Pure. Natural.\nOrganic Food.",
+    desc: "Wholesome ingredients, ethically sourced for a healthier you and a better planet.",
+    btn: "Shop Collections",
+    link: "/category",
+  },
+  {
+    image: "/images/carousel-4.webp",
+    title: "Snack Smart.\nStay Organic.",
+    desc: "Delicious, nutritious & responsibly made for your everyday cravings.",
+    btn: "Shop Collections",
+    link: "/category",
+  },
+];
 
 const Carouselhero = () => {
   return (
-    <div>
+    <div className="hero-carousel lexend">
       <Carousel
         controls={false}
         indicators={true}
@@ -13,41 +45,35 @@ const Carouselhero = () => {
         touch={true}
         fade
       >
-        {/* Slide 1 */}
-        <Carousel.Item>
-          <img
-            className="d-block w-100 carousel-img"
-            src="/images/carousel-1.webp"
-            alt="Banner 1"
-          />
-        </Carousel.Item>
+        {slides.map((slide, index) => (
+          <Carousel.Item key={index}>
+            <div className="carousel-wrapper">
+              <img
+                className="d-block w-100 carousel-img"
+                src={slide.image}
+                alt={`Banner ${index + 1}`}
+              />
 
-        {/* Slide 2 */}
-        <Carousel.Item>
-          <img
-            className="d-block w-100 carousel-img"
-            src="/images/home.png"
-            alt="Banner 2"
-          />
-        </Carousel.Item>
+              {/* Content Box */}
+              <div className="carousel-content">
+                <h1>
+                  {slide.title.split("\n").map((line, i) => (
+                    <span key={i}>
+                      {line}
+                      <br />
+                    </span>
+                  ))}
+                </h1>
 
-        {/* Slide 3 */}
-         <Carousel.Item>
-          <img
-            className="d-block w-100 carousel-img"
-            src="/images/carousel-3.webp"
-            alt="Banner 3"
-          />
-        </Carousel.Item>
+                <p>{slide.desc}</p>
 
-        {/* Slide 4 */}
-         <Carousel.Item>
-          <img
-            className="d-block w-100 carousel-img"
-            src="/images/carousel-4.webp"
-            alt="Banner 4"
-          />
-        </Carousel.Item>
+                <NavLink to={slide.link}>
+                  <button className="shop-btn-carousel">{slide.btn}</button>
+                </NavLink>
+              </div>
+            </div>
+          </Carousel.Item>
+        ))}
       </Carousel>
     </div>
   );
