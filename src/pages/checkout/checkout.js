@@ -21,6 +21,7 @@ import {
   FaAddressCard,
   FaPlus,
   FaTrash,
+  FaTag,
 } from "react-icons/fa";
 import axios from "axios";
 
@@ -30,6 +31,7 @@ import Header from "../../components/header/header";
 import "./checkout.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const BACKEND_URL = "http://localhost:9000";
 
 // Helper function to format prices
 const formatPrice = (price) => {
@@ -39,12 +41,42 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
-// Helper to get image URL
-const getImageUrl = (image) => {
-  if (!image) return "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image";
-  if (Array.isArray(image) && image.length > 0) return image[0];
-  if (typeof image === 'string') return image;
-  return "https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image";
+// SAME IMAGE FORMATTING LOGIC AS CATEGORY PRODUCTS
+const formatImagePath = (image) => {
+  if (!image) {
+    return "/images/placeholder.png";
+  }
+
+  let imgPath = image;
+
+  if (Array.isArray(image)) {
+    if (image.length === 0) {
+      return "/images/placeholder.png";
+    }
+    imgPath = image[0];
+  }
+
+  if (typeof imgPath !== "string") {
+    return "/images/placeholder.png";
+  }
+
+  if (imgPath.trim() === "") {
+    return "/images/placeholder.png";
+  }
+
+  if (imgPath.startsWith("http")) {
+    return imgPath;
+  }
+
+  if (imgPath.startsWith("/uploads")) {
+    return `${BACKEND_URL}${imgPath}`;
+  }
+
+  if (imgPath.startsWith("/images")) {
+    return imgPath;
+  }
+
+  return `${BACKEND_URL}${imgPath}`;
 };
 
 const Checkout = () => {
@@ -75,7 +107,7 @@ const Checkout = () => {
     country: "India",
   });
 
-  const [cart, setCart] = useState({ items: [] });
+  const [cart, setCart] = useState({ items: [], appliedCoupon: null });
   
   // Get or create guestId
   const guestId = localStorage.getItem("guestId");
@@ -195,9 +227,7 @@ const Checkout = () => {
   };
 
   // Calculate shipping cost based on method
-  // Express shipping is ALWAYS ₹199, never free
-  // Standard shipping is free only for orders above ₹1500
-  const getShippingCost = (subtotal, method) => {
+  const getShippingCost = (subtotalAfterDiscount, method) => {
     const FREE_SHIPPING_THRESHOLD = 1500;
     
     // Express shipping always costs ₹199
@@ -205,21 +235,26 @@ const Checkout = () => {
       return 199;
     }
     
-    // Standard shipping: free above ₹1500, else ₹99
-    if (subtotal >= FREE_SHIPPING_THRESHOLD) {
+    // Standard shipping: free above ₹1500 (based on discounted subtotal), else ₹99
+    if (subtotalAfterDiscount >= FREE_SHIPPING_THRESHOLD) {
       return 0;
     }
     return 99;
   };
 
-  // TOTALS
+  // Calculate totals with coupon discount
   const subtotal = cart.items.reduce(
     (acc, item) => acc + (item.price * item.quantity),
     0,
   );
 
-  const shippingCost = getShippingCost(subtotal, shippingMethod);
-  const total = subtotal + shippingCost;
+  // Apply coupon discount if exists
+  const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
+  const discountedSubtotal = subtotal - couponDiscount;
+  
+  // Calculate shipping based on discounted subtotal
+  const shippingCost = getShippingCost(discountedSubtotal, shippingMethod);
+  const total = discountedSubtotal + shippingCost;
 
   // SAVE ADDRESS FUNCTION
   const saveAddressToDB = async () => {
@@ -274,6 +309,7 @@ const Checkout = () => {
         customerName: shipping.name,
         items: cart.items,
         subtotal: subtotal,
+        couponDiscount: couponDiscount,
         shippingCost: shippingCost,
         total: total,
         shippingAddress: shipping,
@@ -325,12 +361,15 @@ const Checkout = () => {
         paymentMethod: payment,
         shippingMethod: shippingMethod,
         subtotal: subtotal,
+        couponDiscount: couponDiscount,
+        appliedCoupon: cart.appliedCoupon,
         shippingCost: shippingCost,
         total: total,
       });
 
       await sendOrderEmail(res.data.orderId);
 
+      // Clear cart and guestId after order is placed
       localStorage.removeItem("guestId");
       
       navigate("/order-complete", { 
@@ -339,6 +378,8 @@ const Checkout = () => {
           orderDetails: {
             items: cart.items,
             subtotal: subtotal,
+            couponDiscount: couponDiscount,
+            appliedCoupon: cart.appliedCoupon,
             shippingCost: shippingCost,
             total: total,
             shipping: shipping,
@@ -606,7 +647,7 @@ const Checkout = () => {
                 </Card>
               </motion.div>
 
-              {/* SHIPPING METHOD - Express always ₹199 */}
+              {/* SHIPPING METHOD */}
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -618,7 +659,7 @@ const Checkout = () => {
                       3. Shipping Method
                     </h4>
 
-                    {subtotal >= 1500 && shippingMethod === "standard" && (
+                    {discountedSubtotal >= 1500 && shippingMethod === "standard" && (
                       <Alert variant="success" className="mb-3">
                         🎉 Free shipping applied on orders above ₹1500!
                       </Alert>
@@ -635,7 +676,7 @@ const Checkout = () => {
                         <p>Delivery in 3 - 5 business days</p>
                       </div>
                       <strong>
-                        {subtotal >= 1500 ? "FREE" : "₹99"}
+                        {discountedSubtotal >= 1500 ? "FREE" : "₹99"}
                       </strong>
                     </div>
 
@@ -652,10 +693,10 @@ const Checkout = () => {
                       <strong>₹199</strong>
                     </div>
 
-                    {subtotal < 1500 && shippingMethod === "standard" && (
+                    {discountedSubtotal < 1500 && shippingMethod === "standard" && (
                       <div className="shipping-note mt-3">
                         <small className="text-muted">
-                          🚚 Add ₹{formatPrice(1500 - subtotal)} more to get free standard shipping
+                          🚚 Add ₹{formatPrice(1500 - discountedSubtotal)} more to get free standard shipping
                         </small>
                       </div>
                     )}
@@ -816,7 +857,13 @@ const Checkout = () => {
                     {cart.items.map((item) => (
                       <div key={item.productId} className="summary-item">
                         <div className="summary-img">
-                          <Image src={getImageUrl(item.image)} />
+                          <Image 
+                            src={formatImagePath(item.image)} 
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "/images/placeholder.png";
+                            }}
+                          />
                           <span>{item.quantity}</span>
                         </div>
                         <div className="summary-info">
@@ -833,12 +880,33 @@ const Checkout = () => {
                       <span>₹{formatPrice(subtotal)}</span>
                     </div>
 
+                    {/* Show Coupon Discount if applied */}
+                    {cart.appliedCoupon && couponDiscount > 0 && (
+                      <div className="summary-row coupon-discount">
+                        <span>
+                          <FaTag className="me-1" style={{ fontSize: "12px" }} />
+                          Coupon ({cart.appliedCoupon.code})
+                        </span>
+                        <span className="discount">
+                          -₹{formatPrice(couponDiscount)}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="summary-row">
                       <span>Shipping ({shippingMethod === "express" ? "Express" : "Standard"})</span>
                       <span className={shippingCost === 0 ? "free" : ""}>
                         {shippingCost === 0 ? "FREE" : `₹${formatPrice(shippingCost)}`}
                       </span>
                     </div>
+
+                    {/* Show discounted subtotal if coupon applied */}
+                    {couponDiscount > 0 && (
+                      <div className="summary-row subtotal-after-discount">
+                        <span>Subtotal after discount</span>
+                        <span>₹{formatPrice(discountedSubtotal)}</span>
+                      </div>
+                    )}
 
                     <div className="summary-total">
                       <div>
@@ -848,7 +916,7 @@ const Checkout = () => {
                       <h2>₹{formatPrice(total)}</h2>
                     </div>
 
-                    {shippingCost === 0 && subtotal >= 1500 && (
+                    {shippingCost === 0 && discountedSubtotal >= 1500 && (
                       <div className="shipping-save">
                         🎉 Free standard shipping applied!
                       </div>
@@ -857,6 +925,12 @@ const Checkout = () => {
                     {shippingMethod === "express" && (
                       <div className="shipping-save express-note">
                         ⚡ Express shipping - Delivery in 1-2 days
+                      </div>
+                    )}
+
+                    {cart.appliedCoupon && (
+                      <div className="coupon-save-note">
+                        🎟️ Coupon saved: ₹{formatPrice(couponDiscount)} off!
                       </div>
                     )}
 
