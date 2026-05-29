@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./collections.css";
 
-const API_URL = process.env.REACT_APP_API_URL ;
+const API_URL = process.env.REACT_APP_API_URL;
 const BACKEND_URL = "http://localhost:9000";
 
 const Collections = ({ limit = 6 }) => {
@@ -21,39 +21,39 @@ const Collections = ({ limit = 6 }) => {
   const fetchCollections = async () => {
     try {
       setLoading(true);
-      
+
       // First, get all companies
       const companiesResponse = await axios.get(`${API_URL}/companies`);
       const companies = companiesResponse.data;
-      
+
       // console.log("Companies:", companies);
-      
+
       // For each company, get one product
       const productsData = [];
-      
+
       for (const company of companies) {
         try {
           // Get products for this company
           const productsResponse = await axios.get(`${API_URL}/products`, {
-            params: { company: company.name }
+            params: { company: company.name },
           });
-          
+
           const products = productsResponse.data;
-          
+
           // If company has products, take the first one
           if (products && products.length > 0) {
             productsData.push({
               ...products[0],
-              companyName: company.name
+              companyName: company.name,
             });
           }
         } catch (err) {
           console.error(`Error fetching products for ${company.name}:`, err);
         }
       }
-      
+
       // console.log("Collection products (one per company):", productsData);
-      
+
       // Limit the number of items shown
       setCollections(productsData.slice(0, limit));
       setError(null);
@@ -68,30 +68,30 @@ const Collections = ({ limit = 6 }) => {
   // Helper function to get image URL safely
   const getImageUrl = (image) => {
     if (!image) return null;
-    
+
     let imagePath = Array.isArray(image) ? image[0] : image;
-    
+
     if (!imagePath) return null;
-    
+
     if (imagePath.startsWith("http")) {
       return imagePath;
     }
-    
+
     if (imagePath.startsWith("/images")) {
       return imagePath;
     }
-    
+
     if (imagePath.startsWith("/uploads")) {
       return `${BACKEND_URL}${imagePath}`;
     }
-    
+
     return `${BACKEND_URL}/uploads/${imagePath}`;
   };
 
   // Format price to 2 decimal places
   const formatPrice = (price) => {
     if (!price && price !== 0) return "0";
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
     if (isNaN(numPrice)) return "0";
     return numPrice.toFixed(2);
   };
@@ -161,10 +161,10 @@ const Collections = ({ limit = 6 }) => {
   }
 
   return (
-    <section className="collection-section py-5 lexend">
+    <section className="collection-section-bg py-5 lexend">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title funnel-sans">Shop by Brands</h2>
+          <h2 className="section-title funnel-sans">Curated Collections</h2>
 
           <a
             href="/product"
@@ -175,18 +175,25 @@ const Collections = ({ limit = 6 }) => {
           </a>
         </div>
 
-        <Row className="g-4">
+        <Row className="g-4 collection-row">
           {collections.map((product, index) => {
             const imageUrl = getImageUrl(product.image);
-            
+
             return (
-              <Col lg={2} md={4} sm={6} xs={6} key={product._id || index}>
-                <div 
-                  className="collection-card"
+              <Col
+                xl={3}
+                lg={3}
+                md={4}
+                sm={6}
+                xs={6}
+                key={product._id || index}
+              >
+                <div
+                  className="collection-card-main"
                   onClick={() => handleProductClick(product._id)}
-                  style={{ cursor: "pointer" }}
                 >
-                  <div className="image-wrapper">
+                  {/* Product Image */}
+                  <div className="image-wrapper-main mb-3">
                     <img
                       src={imageUrl || "/images/placeholder-product.jpg"}
                       alt={product.name}
@@ -195,27 +202,38 @@ const Collections = ({ limit = 6 }) => {
                         e.target.src = "/images/placeholder-product.jpg";
                       }}
                     />
-                    <div className="company-badge">
-                      {product.companyName || product.company}
-                    </div>
+
+                    {/* NEW Badge */}
+                    {product.isNew && <span className="new-badge">NEW</span>}
+
+                    {/* Wishlist */}
+                    <button
+                      className="wishlist-btn"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      ♡
+                    </button>
                   </div>
 
-                  <div className="card-content">
-                    <h5 className="product-name">{product.name}</h5>
-                    <p className="company-name" 
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         handleCompanyClick(product.companyName || product.company);
-                       }}
+                  {/* Content */}
+                  <div className="card-content-main">
+                    <p
+                      className="company-name"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompanyClick(
+                          product.companyName || product.company,
+                        );
+                      }}
                     >
                       {product.companyName || product.company}
                     </p>
-                    {product.averageRating > 0 && (
-                      <div className="product-rating">
-                        {renderStars(product.averageRating)}
-                      </div>
-                    )}
-                    <p className="product-price">₹{formatPrice(product.price)}</p>
+
+                    <h5 className="product-name-main">{product.name}</h5>
+
+                    <p className="product-price">
+                      ₹{formatPrice(product.price)}
+                    </p>
                   </div>
                 </div>
               </Col>

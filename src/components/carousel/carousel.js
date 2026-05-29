@@ -25,7 +25,7 @@ const slides = [
     btn: "Shop Collections",
     link: "/category",
   },
-  {
+  { 
     image: "/images/carousel-4.webp",
     title: "Snack Smart.\nStay Organic.",
     desc: "Delicious, nutritious & responsibly made for your everyday cravings.",
@@ -36,7 +36,7 @@ const slides = [
 
 const Carouselhero = () => {
   return (
-    <div className="hero-carousel lexend">
+    <div className="hero-carousel lexend container mt-4">
       <Carousel
         controls={false}
         indicators={true}
