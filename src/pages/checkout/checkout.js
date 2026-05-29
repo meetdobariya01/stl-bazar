@@ -33,7 +33,6 @@ import "./checkout.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const BACKEND_URL = "http://localhost:9000";
 
-// Helper function to format prices
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -41,7 +40,6 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
-// SAME IMAGE FORMATTING LOGIC AS CATEGORY PRODUCTS
 const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
@@ -88,10 +86,8 @@ const Checkout = () => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   
-  // Shipping Method State
   const [shippingMethod, setShippingMethod] = useState("standard");
   
-  // Alert states
   const [addressSaveSuccess, setAddressSaveSuccess] = useState("");
   const [addressSaveError, setAddressSaveError] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
@@ -109,10 +105,8 @@ const Checkout = () => {
 
   const [cart, setCart] = useState({ items: [], appliedCoupon: null });
   
-  // Get or create guestId
   const guestId = localStorage.getItem("guestId");
   
-  // Ensure guestId exists
   useEffect(() => {
     if (!localStorage.getItem("guestId")) {
       const newGuestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
@@ -120,7 +114,6 @@ const Checkout = () => {
     }
   }, []);
 
-  // Clear alerts after 5 seconds
   useEffect(() => {
     if (addressSaveSuccess) {
       const timer = setTimeout(() => setAddressSaveSuccess(""), 5000);
@@ -142,20 +135,19 @@ const Checkout = () => {
     }
   }, [emailStatus]);
 
-  // Fetch saved addresses when component loads
   useEffect(() => {
     if (guestId) {
       fetchSavedAddresses();
     }
   }, [guestId]);
 
-  // FETCH CART
   const fetchCart = async () => {
     if (!guestId) return;
 
     try {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
-      setCart(res.data);
+      console.log("Fetched cart in checkout:", res.data);
+      setCart(res.data || { items: [], appliedCoupon: null });
     } catch (err) {
       console.error("Cart fetch error:", err);
     }
@@ -165,7 +157,6 @@ const Checkout = () => {
     fetchCart();
   }, [guestId]);
 
-  // FETCH SAVED ADDRESSES using guestId
   const fetchSavedAddresses = async () => {
     if (!guestId) return;
     
@@ -182,7 +173,6 @@ const Checkout = () => {
     }
   };
 
-  // HANDLE INPUT
   const handleChange = (e) => {
     setShipping({
       ...shipping,
@@ -190,7 +180,6 @@ const Checkout = () => {
     });
   };
 
-  // SELECT SAVED ADDRESS
   const selectSavedAddress = (address) => {
     setShipping({
       name: address.address.name || address.name,
@@ -207,7 +196,6 @@ const Checkout = () => {
     setTimeout(() => setAddressSaveSuccess(""), 3000);
   };
 
-  // DELETE SAVED ADDRESS
   const deleteSavedAddress = async (addressId, e) => {
     e.stopPropagation();
     if (!guestId) return;
@@ -226,37 +214,29 @@ const Checkout = () => {
     }
   };
 
-  // Calculate shipping cost based on method
   const getShippingCost = (subtotalAfterDiscount, method) => {
     const FREE_SHIPPING_THRESHOLD = 1500;
     
-    // Express shipping always costs ₹199
     if (method === "express") {
       return 199;
     }
     
-    // Standard shipping: free above ₹1500 (based on discounted subtotal), else ₹99
     if (subtotalAfterDiscount >= FREE_SHIPPING_THRESHOLD) {
       return 0;
     }
     return 99;
   };
 
-  // Calculate totals with coupon discount
   const subtotal = cart.items.reduce(
     (acc, item) => acc + (item.price * item.quantity),
     0,
   );
 
-  // Apply coupon discount if exists
   const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
   const discountedSubtotal = subtotal - couponDiscount;
-  
-  // Calculate shipping based on discounted subtotal
   const shippingCost = getShippingCost(discountedSubtotal, shippingMethod);
   const total = discountedSubtotal + shippingCost;
 
-  // SAVE ADDRESS FUNCTION
   const saveAddressToDB = async () => {
     if (!guestId) {
       setAddressSaveError("Unable to save address. Please refresh the page.");
@@ -297,7 +277,6 @@ const Checkout = () => {
     }
   };
 
-  // Send order confirmation email
   const sendOrderEmail = async (orderId) => {
     try {
       setEmailStatus("sending");
@@ -327,7 +306,6 @@ const Checkout = () => {
     }
   };
 
-  // PLACE ORDER
   const placeOrder = async () => {
     if (isProcessing) return;
     
@@ -350,12 +328,11 @@ const Checkout = () => {
 
       setIsProcessing(true);
 
-      // Save address if checkbox is checked
       if (saveAddressChecked) {
         await saveAddressToDB();
       }
 
-      const res = await axios.post(`${API_URL}/order/place`, {
+      const orderData = {
         guestId,
         shippingAddress: shipping,
         paymentMethod: payment,
@@ -365,33 +342,40 @@ const Checkout = () => {
         appliedCoupon: cart.appliedCoupon,
         shippingCost: shippingCost,
         total: total,
-      });
+      };
 
-      await sendOrderEmail(res.data.orderId);
+      console.log("Placing order with data:", orderData);
 
-      // Clear cart and guestId after order is placed
-      localStorage.removeItem("guestId");
-      
-      navigate("/order-complete", { 
-        state: { 
-          orderId: res.data.orderId,
-          orderDetails: {
-            items: cart.items,
-            subtotal: subtotal,
-            couponDiscount: couponDiscount,
-            appliedCoupon: cart.appliedCoupon,
-            shippingCost: shippingCost,
-            total: total,
-            shipping: shipping,
-            paymentMethod: payment,
-            shippingMethod: shippingMethod
-          }
-        } 
-      });
+      const res = await axios.post(`${API_URL}/order/place`, orderData);
+
+      if (res.data.success) {
+        await sendOrderEmail(res.data.orderId);
+        
+        localStorage.removeItem("guestId");
+        
+        navigate("/order-complete", { 
+          state: { 
+            orderId: res.data.orderId,
+            orderDetails: {
+              items: cart.items,
+              subtotal: subtotal,
+              couponDiscount: couponDiscount,
+              appliedCoupon: cart.appliedCoupon,
+              shippingCost: shippingCost,
+              total: total,
+              shipping: shipping,
+              paymentMethod: payment,
+              shippingMethod: shippingMethod
+            }
+          } 
+        });
+      } else {
+        throw new Error(res.data.message || "Failed to place order");
+      }
       
     } catch (err) {
-      console.error(err);
-      alert("Failed to place order. Please try again.");
+      console.error("Order placement error:", err);
+      alert(err.response?.data?.message || "Failed to place order. Please try again.");
       setIsProcessing(false);
     }
   };
@@ -402,7 +386,6 @@ const Checkout = () => {
 
       <section className="checkout-page lexend">
         <Container>
-          {/* TOP */}
           <motion.div
             className="checkout-top"
             initial={{ opacity: 0, y: -20 }}
@@ -412,9 +395,7 @@ const Checkout = () => {
           </motion.div>
 
           <Row className="g-4">
-            {/* LEFT */}
             <Col lg={7}>
-              {/* CONTACT */}
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -451,7 +432,6 @@ const Checkout = () => {
                 </Card>
               </motion.div>
 
-              {/* SHIPPING */}
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -489,7 +469,6 @@ const Checkout = () => {
                       </div>
                     </div>
 
-                    {/* Saved Addresses List */}
                     {showSavedAddresses && (
                       <div className="saved-addresses-list mb-4">
                         <h6 className="mb-3">Select a saved address:</h6>
@@ -539,7 +518,6 @@ const Checkout = () => {
                       </div>
                     )}
 
-                    {/* Address Save Success Alert */}
                     {addressSaveSuccess && (
                       <Alert variant="success" className="py-2 mb-3" style={{ fontSize: "14px" }}>
                         <FaCheckCircle className="me-2" />
@@ -547,7 +525,6 @@ const Checkout = () => {
                       </Alert>
                     )}
 
-                    {/* Address Save Error Alert */}
                     {addressSaveError && (
                       <Alert variant="danger" className="py-2 mb-3" style={{ fontSize: "14px" }}>
                         {addressSaveError}
@@ -647,7 +624,6 @@ const Checkout = () => {
                 </Card>
               </motion.div>
 
-              {/* SHIPPING METHOD */}
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -712,7 +688,6 @@ const Checkout = () => {
                 </Card>
               </motion.div>
 
-              {/* PAYMENT */}
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -836,7 +811,6 @@ const Checkout = () => {
               </motion.div>
             </Col>
 
-            {/* RIGHT - Order Summary */}
             <Col lg={5}>
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
@@ -880,7 +854,6 @@ const Checkout = () => {
                       <span>₹{formatPrice(subtotal)}</span>
                     </div>
 
-                    {/* Show Coupon Discount if applied */}
                     {cart.appliedCoupon && couponDiscount > 0 && (
                       <div className="summary-row coupon-discount">
                         <span>
@@ -900,7 +873,6 @@ const Checkout = () => {
                       </span>
                     </div>
 
-                    {/* Show discounted subtotal if coupon applied */}
                     {couponDiscount > 0 && (
                       <div className="summary-row subtotal-after-discount">
                         <span>Subtotal after discount</span>
