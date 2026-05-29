@@ -53,7 +53,7 @@ const CategoriesSection = () => {
     // 🆕 New images uploaded by admin (stored in /images/categories/)
     if (imagePath.startsWith("/images/categories/")) {
       // Try to get from admin backend first, then user backend
-      return `${ADMIN_BACKEND_URL}${imagePath}`;
+      return `${imagePath}`;
     }
     
     // 🟢 Old images (stored in /images/Category/)
