@@ -40,7 +40,6 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
-// SAME IMAGE FORMATTING LOGIC AS CATEGORY PRODUCTS
 const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
@@ -87,7 +86,6 @@ const Cart = () => {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const guestId = localStorage.getItem("guestId");
 
-  // FETCH CART
   const fetchCart = async () => {
     if (!guestId) return;
     try {
@@ -102,7 +100,6 @@ const Cart = () => {
     fetchCart();
   }, [guestId]);
 
-  // UPDATE QUANTITY
   const updateQty = async (productId, type) => {
     const item = cart.items.find((i) => i.productId === productId);
     if (!item) return;
@@ -131,7 +128,6 @@ const Cart = () => {
     }
   };
 
-  // REMOVE ITEM
   const removeItem = async (productId) => {
     try {
       await axios.delete(`${API_URL}/cart/remove/${guestId}/${productId}`);
@@ -141,7 +137,6 @@ const Cart = () => {
     }
   };
 
-  // Calculate totals
   const subtotal = cart.items.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
@@ -150,13 +145,11 @@ const Cart = () => {
   const FREE_SHIPPING_THRESHOLD = 1500;
   const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 99;
   
-  // Apply coupon discount if exists
   const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
   const discountedSubtotal = subtotal - couponDiscount;
   const finalShippingCost = discountedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : shippingCost;
   const total = discountedSubtotal + finalShippingCost;
 
-  // APPLY COUPON
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
       setCouponMessage({ type: "error", text: "Please enter a coupon code" });
@@ -167,69 +160,71 @@ const Cart = () => {
     setCouponMessage({ type: "", text: "" });
 
     try {
-      console.log("Applying coupon with data:", {
-        code: couponCode,
-        guestId,
-        subtotal: subtotal
-      });
-
       const validateRes = await axios.post(`${API_URL}/coupon/user/validate`, {
         code: couponCode,
         guestId,
         subtotal: subtotal
       });
 
-      console.log("Validation response:", validateRes.data);
-
       if (validateRes.data.success) {
-        await axios.post(`${API_URL}/coupon/user/apply`, {
+        const applyRes = await axios.post(`${API_URL}/coupon/user/apply`, {
           code: couponCode,
           guestId,
           subtotal: subtotal
         });
 
-        setCouponMessage({ 
-          type: "success", 
-          text: `✅ Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}` 
-        });
-        
-        fetchCart();
-        setTimeout(() => {
-          setShowCouponModal(false);
-          setCouponCode("");
-          setCouponMessage({ type: "", text: "" });
-        }, 2000);
+        if (applyRes.data.success) {
+          setCouponMessage({ 
+            type: "success", 
+            text: `✅ Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}` 
+          });
+          
+          await fetchCart();
+          
+          setTimeout(() => {
+            setShowCouponModal(false);
+            setCouponCode("");
+            setCouponMessage({ type: "", text: "" });
+          }, 2000);
+        }
       }
     } catch (err) {
-      console.error("Apply coupon error details:", {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message
-      });
+      console.error("Apply coupon error:", err);
       
-      setCouponMessage({ 
-        type: "error", 
-        text: err.response?.data?.message || "Invalid coupon code" 
-      });
+      let errorMessage = "Failed to apply coupon";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 404) {
+        errorMessage = "Coupon not found";
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response.data.message || "Invalid coupon code";
+      }
+      
+      setCouponMessage({ type: "error", text: errorMessage });
     } finally {
       setApplyingCoupon(false);
     }
   };
 
-  // REMOVE COUPON
   const removeCoupon = async () => {
     try {
-      await axios.delete(`${API_URL}/coupon/user/remove/${guestId}`);
-      setCouponMessage({ type: "success", text: "Coupon removed successfully" });
-      fetchCart();
-      setTimeout(() => setCouponMessage({ type: "", text: "" }), 3000);
+      const response = await axios.delete(`${API_URL}/coupon/user/remove/${guestId}`);
+      
+      if (response.data.success) {
+        setCouponMessage({ type: "success", text: "Coupon removed successfully" });
+        await fetchCart();
+        setTimeout(() => setCouponMessage({ type: "", text: "" }), 3000);
+      }
     } catch (err) {
       console.error("Remove coupon error:", err);
-      setCouponMessage({ type: "error", text: "Failed to remove coupon" });
+      setCouponMessage({ 
+        type: "error", 
+        text: err.response?.data?.message || "Failed to remove coupon" 
+      });
+      setTimeout(() => setCouponMessage({ type: "", text: "" }), 3000);
     }
   };
 
-  // FETCH AVAILABLE COUPONS
   const fetchAvailableCoupons = async () => {
     if (!guestId) return;
     
@@ -349,7 +344,6 @@ const Cart = () => {
                       </motion.div>
                     ))}
 
-                    {/* SHIPPING BAR */}
                     <div className="shipping-box">
                       <div className="shipping-top">
                         <span>
@@ -364,7 +358,6 @@ const Cart = () => {
                       <ProgressBar now={shippingProgress} />
                     </div>
 
-                    {/* Coupon Message Alert */}
                     {couponMessage.text && (
                       <Alert 
                         variant={couponMessage.type === "success" ? "success" : "danger"} 
@@ -394,7 +387,6 @@ const Cart = () => {
                       <span>₹{formatPrice(subtotal)}</span>
                     </div>
 
-                    {/* Applied Coupon Section */}
                     {cart.appliedCoupon && (
                       <div className="summary-row coupon-applied">
                         <span>
@@ -434,7 +426,6 @@ const Cart = () => {
                       <h2>₹{formatPrice(total)}</h2>
                     </div>
 
-                    {/* Coupon Button */}
                     {!cart.appliedCoupon ? (
                       <button 
                         className="coupon-btn" 
@@ -464,7 +455,6 @@ const Cart = () => {
         </Container>
       </section>
 
-      {/* Coupon Modal */}
       <Modal 
         show={showCouponModal} 
         onHide={() => {
@@ -482,7 +472,6 @@ const Cart = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {/* Enter Coupon Code */}
           <div className="mb-4">
             <Form.Label className="fw-bold">Enter Coupon Code</Form.Label>
             <div className="d-flex gap-2">
@@ -510,7 +499,6 @@ const Cart = () => {
             )}
           </div>
 
-          {/* Available Coupons Section */}
           {availableCoupons.length > 0 && (
             <>
               <hr />
