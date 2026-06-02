@@ -6,6 +6,8 @@ import axios from "axios";
 import "./category.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const USER_BACKEND_URL = "http://localhost:9000";
+const ADMIN_BACKEND_URL = "http://localhost:7000";
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
@@ -20,9 +22,27 @@ const CategoriesSection = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/categories`);
-      console.log("Database mathi aavel categories:", response.data);
-      setCategories(response.data || []);
+      // Add cache-busting timestamp to prevent caching
+      const response = await axios.get(`${API_URL}/categories`, {
+        params: {
+          _t: Date.now() // This ensures fresh data every time
+        }
+      });
+      console.log("Categories from API:", response.data);
+      
+      // Handle both response formats
+      let categoriesData = [];
+      if (response.data.success && Array.isArray(response.data.categories)) {
+        categoriesData = response.data.categories;
+      } else if (Array.isArray(response.data)) {
+        categoriesData = response.data;
+      } else if (response.data.categories && Array.isArray(response.data.categories)) {
+        categoriesData = response.data.categories;
+      } else {
+        categoriesData = response.data || [];
+      }
+      
+      setCategories(categoriesData);
       setError(null);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -37,6 +57,25 @@ const CategoriesSection = () => {
     navigate(`/category/${encodeURIComponent(categoryName)}`);
   };
 
+  // ✅ Fix: Get correct image URL based on path
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+
+    if (imagePath.startsWith("http")) {
+      return imagePath;
+    }
+
+    if (imagePath.startsWith("/images/categories/")) {
+      return `${ADMIN_BACKEND_URL}${imagePath}`;
+    }
+
+    if (imagePath.startsWith("/images/Category/")) {
+      return `${USER_BACKEND_URL}${imagePath}`;
+    }
+
+    return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
+  };
+
   if (loading) {
     return (
       <section className="category-section">
@@ -46,7 +85,6 @@ const CategoriesSection = () => {
             <h2>Shop By Category</h2>
             <p>Explore premium collections for your modern lifestyle.</p>
           </div>
-
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
             <p className="mt-3">Loading categories...</p>
@@ -65,13 +103,9 @@ const CategoriesSection = () => {
             <h2>Shop By Category</h2>
             <p>Explore premium collections for your modern lifestyle.</p>
           </div>
-
           <div className="text-center py-5 text-danger">
             <p>{error}</p>
-            <button
-              className="btn btn-primary"
-              onClick={fetchCategories}
-            >
+            <button className="btn btn-primary" onClick={fetchCategories}>
               Try Again
             </button>
           </div>
@@ -95,48 +129,47 @@ const CategoriesSection = () => {
           </div>
         ) : (
           <Row className="g-4">
-            {categories.map((category, index) => (
-              <Col lg={1} md={3} sm={4} xs={3} key={category._id || index}>
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <div
-                    className="category-item-home"
-                    onClick={() => handleCategoryClick(category.name)}
+            {categories.map((category, index) => {
+              const imageUrl = getImageUrl(category.image);
+              console.log(`Category: ${category.name}, Status: ${category.status}, Final URL: ${imageUrl}`);
+              
+              return (
+                <Col lg={1} md={3} sm={4} xs={3} key={category._id || index}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ y: -5 }}
                   >
-                    <div className="category-image-wrapper">
-                      {category.image ? (
-                        <img
-                          src={`http://localhost:3000${category.image}`}
-                          alt={category.name}
-                          className="category-image"
-                          style={{
-                            // width: "80px",
-                            // height: "80px",
-                            // border: "1px solid red"
-                          }}
-                          onError={(e) => {
-                            console.log("FAILED:", e.target.src);
-                            e.target.src = "/images/Category/default.png";
-                          }}
-                        />
-                      ) : (
-                        <div className="category-placeholder">
-                          {category.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                    <div
+                      className="category-item-home"
+                      onClick={() => handleCategoryClick(category.name)}
+                    >
+                      <div className="category-image-wrapper">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={category.name}
+                            className="category-image"
+                            style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "50%" }}
+                            onError={(e) => {
+                              console.log(`Failed to load: ${imageUrl}`);
+                              e.target.style.display = "none";
+                              e.target.parentElement.innerHTML = `<div class="category-placeholder">${category.name.charAt(0).toUpperCase()}</div>`;
+                            }}
+                          />
+                        ) : (
+                          <div className="category-placeholder">
+                            {category.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="category-name">{category.name}</h4>
                     </div>
-
-                    <h4 className="category-name">
-                      {category.name}
-                    </h4>
-                  </div>
-                </motion.div>
-              </Col>
-            ))}
+                  </motion.div>
+                </Col>
+              );
+            })}
           </Row>
         )}
       </Container>

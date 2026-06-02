@@ -25,8 +25,12 @@ const app = express();
 
 // This allows the browser to access images stored in the uploads folder
 app.use('/uploads', express.static(path.join("D:\\GourmentBazar\\Vendor\\VendorBackend\\uploads")));
-app.use("/images", express.static(path.join(__dirname, "public/images")));
 
+app.use("/images", express.static(path.join(__dirname, "public/images")));
+app.use("/images", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/public/images"));
+
+
+// app.use("/images/Category", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/public/images/Category"));
 /* ===============================
    MIDDLEWARE
 ================================ */
@@ -53,6 +57,7 @@ app.use("/api/wishlist", require("./Router/wishlist"));
 app.use("/api/contact", require("./Router/contactRoutes"));
 app.use("/api/sellers", require("./Router/sellerRoutes"));
 app.use("/api/categories", require("./Router/categoryRoutes"));
+app.use('/api/coupon', require('./Router/couponRoutes'));
 /* ===============================
    ROOT
 ================================ */
