@@ -40,7 +40,7 @@ const Shopus = () => {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="lexend">Why Shop With Us?</h2>
+            <h2 className="lexend">The Experience We Deliver</h2>
             <p>Trusted by thousands of happy customers</p>
           </motion.div>
 

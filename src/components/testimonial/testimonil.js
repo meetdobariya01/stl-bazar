@@ -78,7 +78,7 @@ const Testimonil = () => {
           viewport={{ once: true }}
           className="section-header lexend"
         >
-          <h2>Testimonials</h2>
+          <h2>Stories From Our Customerscc</h2>
         </motion.div>
 
         <Carousel

@@ -23,7 +23,7 @@ const Collections = ({ limit = 6 }) => {
       setLoading(true);
 
       // First, get all companies
-      const companiesResponse = await axios.get(`${API_URL}/companies`);
+      const companiesResponse = await axios.get(`${API_URL}/companies`); 
       const companies = companiesResponse.data;
 
       // console.log("Companies:", companies);
@@ -164,13 +164,13 @@ const Collections = ({ limit = 6 }) => {
     <section className="collection-section-bg py-5 lexend">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title funnel-sans">Curated Collections</h2>
+          <h2 className="section-title funnel-sans">Handpicked Selections</h2>
 
           <a
             href="/product"
             className="view-all-link d-flex align-items-center"
           >
-            View all companies
+            View all 
             <FaArrowRight className="ms-2" />
           </a>
         </div>
