@@ -22,8 +22,15 @@ const CartSchema = new mongoose.Schema(
         },
         image: [String]  // Changed to array
       }
-    ]
+    ],
+    appliedCoupon: {
+      code: String,
+      discountType: String,
+      discountValue: Number,
+      discountAmount: Number
+    }
   },
+  
   { timestamps: true }
 );
 

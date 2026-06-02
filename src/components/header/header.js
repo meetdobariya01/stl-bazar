@@ -265,7 +265,9 @@ const Header = () => {
             )}
 
             <div className="mobile-links lexend">
-              <span onClick={() => navigate("#")}>Shop by Category</span>
+             <span onClick={() => navigate("/category/All")}>
+  Shop by Category
+</span>
               <span onClick={() => navigate("/product")}>New In</span>
               <span onClick={() => navigate("/aboutus")}>Brands</span>
               <span onClick={() => navigate("/contactus")}>Gifting Guides</span>
