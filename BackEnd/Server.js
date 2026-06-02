@@ -27,10 +27,10 @@ const app = express();
 app.use('/uploads', express.static(path.join("D:\\GourmentBazar\\Vendor\\VendorBackend\\uploads")));
 
 app.use("/images", express.static(path.join(__dirname, "public/images")));
-app.use("/images/Categories", express.static("D:/GourmentBazar/SuperAdmin/AdminBackEnd/public/images/Categories"));
+app.use("/images", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/public/images"));
 
 
-app.use("/images/Category", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/public/images/Category"));
+// app.use("/images/Category", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/public/images/Category"));
 /* ===============================
    MIDDLEWARE
 ================================ */

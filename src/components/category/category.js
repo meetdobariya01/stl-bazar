@@ -22,9 +22,27 @@ const CategoriesSection = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/categories`);
+      // Add cache-busting timestamp to prevent caching
+      const response = await axios.get(`${API_URL}/categories`, {
+        params: {
+          _t: Date.now() // This ensures fresh data every time
+        }
+      });
       console.log("Categories from API:", response.data);
-      setCategories(response.data || []);
+      
+      // Handle both response formats
+      let categoriesData = [];
+      if (response.data.success && Array.isArray(response.data.categories)) {
+        categoriesData = response.data.categories;
+      } else if (Array.isArray(response.data)) {
+        categoriesData = response.data;
+      } else if (response.data.categories && Array.isArray(response.data.categories)) {
+        categoriesData = response.data.categories;
+      } else {
+        categoriesData = response.data || [];
+      }
+      
+      setCategories(categoriesData);
       setError(null);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -42,27 +60,20 @@ const CategoriesSection = () => {
   // ✅ Fix: Get correct image URL based on path
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
-    
-    console.log("Original image path:", imagePath);
-    
-    // If already full URL
+
     if (imagePath.startsWith("http")) {
       return imagePath;
     }
-    
-    // 🆕 New images uploaded by admin (stored in /images/categories/)
+
     if (imagePath.startsWith("/images/categories/")) {
-      // Try to get from admin backend first, then user backend
-      return `${imagePath}`;
+      return `${ADMIN_BACKEND_URL}${imagePath}`;
     }
-    
-    // 🟢 Old images (stored in /images/Category/)
+
     if (imagePath.startsWith("/images/Category/")) {
       return `${USER_BACKEND_URL}${imagePath}`;
     }
-    
-    // Default fallback
-    return `${USER_BACKEND_URL}/images/categories/${imagePath}`;
+
+    return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
   };
 
   if (loading) {
@@ -120,7 +131,7 @@ const CategoriesSection = () => {
           <Row className="g-4">
             {categories.map((category, index) => {
               const imageUrl = getImageUrl(category.image);
-              console.log(`Category: ${category.name}, Final URL: ${imageUrl}`);
+              console.log(`Category: ${category.name}, Status: ${category.status}, Final URL: ${imageUrl}`);
               
               return (
                 <Col lg={1} md={3} sm={4} xs={3} key={category._id || index}>
