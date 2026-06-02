@@ -43,7 +43,7 @@ const Details = () => {
     <div>
       <section className="our-promise-section funnel-sans">
         <Container>
-          <h2 className="promise-title lexend mb-5">Our Promise</h2>
+          <h2 className="promise-title lexend mb-5">Our Commitment to Excellence</h2>
 
           <Row className="justify-content-center">
             {promises.map((item, index) => (

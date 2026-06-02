@@ -85,7 +85,7 @@ const CategoriesSection = () => {
       <Container>
         <div className="category-heading text-start mb-5">
           <span>POPULAR CATEGORIES</span>
-          <h2>Shop By Category</h2>
+          <h2>Explore Our World</h2>
           <p>Explore premium collections for your modern lifestyle.</p>
         </div>
 

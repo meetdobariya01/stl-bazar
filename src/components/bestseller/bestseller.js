@@ -77,7 +77,7 @@ const Bestseller = () => {
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
           <h2 className="section-title">
-            Best Sellers
+            Most Loved Picks
           </h2>
 
           <a
