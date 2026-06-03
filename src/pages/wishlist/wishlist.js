@@ -85,13 +85,13 @@ const Wishlist = () => {
       <Header />
 
       <Container className="py-5 lexend">
-        <motion.h2
+        {/* <motion.h2
           className="text-center fw-bold mb-4 lexend"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          ❤️ My Wishlist
-        </motion.h2>
+          My Wishlist
+        </motion.h2> */}
 
         {loading ? (
           <p className="text-center mt-5">Loading wishlist...</p>
@@ -104,6 +104,7 @@ const Wishlist = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
               >
+                
                 <FaHeartBroken size={60} className="text-danger mb-3" />
                 <h4 className="funnel-sans">Your wishlist is empty</h4>
                 <p className="funnel-sans">

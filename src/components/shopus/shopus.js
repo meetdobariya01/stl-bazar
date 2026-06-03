@@ -40,12 +40,12 @@ const Shopus = () => {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="lexend">The Experience We Deliver</h2>
+            <h2 className="funnel-sans">The Experience We Deliver</h2>
             <p>Trusted by thousands of happy customers</p>
           </motion.div>
 
           {/* Cards */}
-          <Row className="gy-4 mt-4">
+          <Row className="gy-4 mt-4 lexend">
             {features.map((item, index) => (
               <Col lg={3} md={6} sm={6} xs={6} key={index}>
                 <motion.div
@@ -57,7 +57,7 @@ const Shopus = () => {
                   viewport={{ once: true }}
                 >
                   <div className="why-icon-landingpage">{item.icon}</div>
-                  <h5 className="lexend">{item.title}</h5>
+                  <h5 className="">{item.title}</h5>
                   <p>{item.desc}</p>
                 </motion.div>
               </Col>
