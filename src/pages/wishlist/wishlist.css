@@ -120,8 +120,8 @@
 }
 
 .wishlist-remove-btn:hover {
-  background: #dc3545;
-  color: #fff;
+  border: 1px solid #dc3545;
+  color: #dc3545;
   transform: scale(1.08);
 }
 

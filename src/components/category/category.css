@@ -18,11 +18,11 @@
 }
 
 .category-heading h2 {
-  font-size: 42px;
+  font-size: 26px;
   font-weight: 700;
   color: #1a1a1a;
   margin-bottom: 15px;
-  font-family: 'Funnel Sans', sans-serif;
+  /* font-family: 'Funnel Sans', sans-serif;   */
 }
 
 .category-heading p {

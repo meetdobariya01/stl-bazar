@@ -156,7 +156,7 @@ const Sell = () => {
             <Row className="g-0 align-items-center">
               <Col lg={7}>
                 <div className="seller-form-box">
-                  <h1>Create Your Seller Account</h1>
+                  <h1 className="funnel-sans">Create Your Seller Account</h1>
                   <p>Get started in just a few simple steps.</p>
 
                   {error && (
