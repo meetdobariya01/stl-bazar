@@ -21,7 +21,8 @@ router.get("/", async (req, res) => {
     }
 
     const collection = db.collection("categories");
-    const categories = await collection.find({}).toArray();
+    // const categories = await collection.find({}).toArray();
+    const categories = await collection.find({ status: "active" }).toArray();
     if (categories.length === 0) {
       return res.json([]);
     }

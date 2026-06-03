@@ -28,7 +28,7 @@ const CategoriesSection = () => {
           _t: Date.now() // This ensures fresh data every time
         }
       });
-      console.log("Categories from API:", response.data);
+      // console.log("Categories from API:", response.data);
       
       // Handle both response formats
       let categoriesData = [];
@@ -131,7 +131,7 @@ const CategoriesSection = () => {
           <Row className="g-4">
             {categories.map((category, index) => {
               const imageUrl = getImageUrl(category.image);
-              console.log(`Category: ${category.name}, Status: ${category.status}, Final URL: ${imageUrl}`);
+              // console.log(`Category: ${category.name}, Status: ${category.status}, Final URL: ${imageUrl}`);
               
               return (
                 <Col lg={1} md={3} sm={4} xs={3} key={category._id || index}>
@@ -153,7 +153,7 @@ const CategoriesSection = () => {
                             className="category-image"
                             style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "50%" }}
                             onError={(e) => {
-                              console.log(`Failed to load: ${imageUrl}`);
+                              // console.log(`Failed to load: ${imageUrl}`);
                               e.target.style.display = "none";
                               e.target.parentElement.innerHTML = `<div class="category-placeholder">${category.name.charAt(0).toUpperCase()}</div>`;
                             }}

@@ -29,7 +29,8 @@ import Footer from "../../components/footer/footer";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
+// ✅ VENDOR BACKEND URL for images
+const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
 // Helper function to format price
 const formatPrice = (price) => {
@@ -78,8 +79,6 @@ const Productdetails = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching product from:", `${API_URL}/product/${id}`);
-
       const response = await axios.get(`${API_URL}/product/${id}`);
       console.log("Product data received:", response.data);
 
@@ -103,7 +102,7 @@ const Productdetails = () => {
       console.error("Product fetch error details:", err);
       setError(
         err.response?.data?.message ||
-          "Failed to load product. Please try again later.",
+          "Failed to load product. Please try again later."
       );
     } finally {
       setLoading(false);
@@ -166,7 +165,6 @@ const Productdetails = () => {
           },
         });
         setWishlist(true);
-        // Navigate to wishlist page after adding
         navigate("/wishlist");
       }
     } catch (err) {
@@ -225,10 +223,8 @@ const Productdetails = () => {
           review: "",
         });
 
-        // Refresh reviews
         await fetchReviews();
 
-        // Close modal after 2 seconds
         setTimeout(() => {
           setShowReviewModal(false);
           setReviewSuccess("");
@@ -238,14 +234,14 @@ const Productdetails = () => {
       console.error("Error submitting review:", err);
       setReviewError(
         err.response?.data?.message ||
-          "Failed to submit review. Please try again.",
+          "Failed to submit review. Please try again."
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Helper function to get full image URL
+  // ✅ FIXED: Helper function to get full image URL from VENDOR backend
   const getImageUrl = (image) => {
     if (!image) return "/images/placeholder.png";
 
@@ -264,9 +260,9 @@ const Productdetails = () => {
       return imgStr;
     }
 
-    // Backend uploaded image
+    // ✅ FIXED: Vendor backend uploaded image (starts with /uploads)
     if (imgStr.startsWith("/uploads")) {
-      return `${BACKEND_URL}${imgStr}`;
+      return `${VENDOR_BACKEND_URL}${imgStr}`;
     }
 
     // Local images from public folder
@@ -274,13 +270,13 @@ const Productdetails = () => {
       return imgStr;
     }
 
-    // If it's just a filename, assume it's in uploads
+    // If it's just a filename, assume it's in vendor uploads
     if (!imgStr.startsWith("/")) {
-      return `${BACKEND_URL}/uploads/${imgStr}`;
+      return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
     }
 
     // Fallback
-    return `${BACKEND_URL}${imgStr}`;
+    return `${VENDOR_BACKEND_URL}${imgStr}`;
   };
 
   // Get all images as array with full URLs
@@ -349,7 +345,7 @@ const Productdetails = () => {
     }
   };
 
-  // ========== NEW BUY NOW FUNCTION ==========
+  // Buy Now function
   const buyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -364,7 +360,6 @@ const Productdetails = () => {
           ? product.image[0]
           : product.image;
 
-      // Add product to cart
       await axios.post(`${API_URL}/cart/add`, {
         guestId,
         product: {
@@ -376,14 +371,12 @@ const Productdetails = () => {
         },
       });
 
-      // Navigate directly to checkout page
       navigate("/checkout");
     } catch (err) {
       console.error("Buy Now error:", err);
       alert("Failed to proceed. Please try again.");
     }
   };
-  // ========== END BUY NOW FUNCTION ==========
 
   // Render stars for rating
   const renderStars = (rating) => {
@@ -451,7 +444,6 @@ const Productdetails = () => {
     <>
       <Header />
 
-      {/* ================= PRODUCT DETAILS PAGE ================= */}
       <div className="product-details-page">
         <Container className="py-5 lexend">
           <Row className="g-5">
@@ -586,7 +578,7 @@ const Productdetails = () => {
                   ₹{formatPrice(product.price)}
                 </div>
 
-                {/* Wishlist Button - Updated */}
+                {/* Wishlist Button */}
                 <p
                   className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
                   onClick={toggleWishlist}
@@ -616,7 +608,7 @@ const Productdetails = () => {
                   </div>
                 </div>
 
-                {/* Buttons - UPDATED Buy Now button with onClick */}
+                {/* Buttons */}
                 <div className="action-buttons">
                   <Button className="cart-btn" onClick={addToCart}>
                     <FaShoppingCart /> Add to Cart
