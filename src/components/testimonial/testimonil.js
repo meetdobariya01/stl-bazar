@@ -76,7 +76,7 @@ const Testimonil = () => {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="section-header lexend"
+          className="section-header funnel-sans"
         >
           <h2>Stories From Our Customerscc</h2>
         </motion.div>
@@ -114,7 +114,7 @@ const Testimonil = () => {
                       </div>
                     </div>
 
-                    <p className="testimonial-text funnel-sans">{item.text}</p>
+                    <p className="testimonial-text lexend ">{item.text}</p>
                   </motion.div>
                 ))}
               </div>

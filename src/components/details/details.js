@@ -41,9 +41,11 @@ const promises = [
 const Details = () => {
   return (
     <div>
-      <section className="our-promise-section funnel-sans">
+      <section className="our-promise-section lexend">
         <Container>
-          <h2 className="promise-title lexend mb-5">Our Commitment to Excellence</h2>
+          <h2 className="promise-title funnel-sans mb-5">
+            Our Commitment to Excellence
+          </h2>
 
           <Row className="justify-content-center">
             {promises.map((item, index) => (

@@ -63,7 +63,7 @@ const Product = () => {
           viewport={{ once: true }}
         />
         <Container>
-          <h2 className="text-center lexend my-5">Our Brands</h2>
+          <h2 className="text-center funnel-sans my-5">Our Brands</h2>
           {companies.map((item, index) => (
             <Row
               key={item._id}
@@ -101,7 +101,7 @@ const Product = () => {
                 >
                   <h4 className="lexend">{item.name}</h4>
 
-                  <p className="funnel-sans">{item.description}</p>
+                  <p className="lexend">{item.description}</p>
 
                   {/* BUY BUTTON */}
                   <NavLink
