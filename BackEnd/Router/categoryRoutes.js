@@ -4,12 +4,8 @@ const router = express.Router();
 const Category = require("../Models/Category");
 const Product = require("../Models/Product");
 
-
-
-
+// GET all active categories
 router.get("/", async (req, res) => {
-
-
   try {
     const db = mongoose.connection.db;
 
@@ -21,21 +17,24 @@ router.get("/", async (req, res) => {
     }
 
     const collection = db.collection("categories");
-    // const categories = await collection.find({}).toArray();
+    // Get only active categories
     const categories = await collection.find({ status: "active" }).toArray();
+    
     if (categories.length === 0) {
       return res.json([]);
     }
 
-    // FIXED
+    // Format the response
     const formatted = categories.map((cat) => ({
       _id: cat._id,
       name: cat.name,
       image: cat.image || "",
       description: cat.description || "",
+      status: cat.status,
       productCount: 0
     }));
 
+    console.log("Categories sent:", formatted.map(c => c.name));
     res.json(formatted);
 
   } catch (error) {
@@ -46,11 +45,15 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET single category
+// GET single category with products
 router.get("/:categoryName", async (req, res) => {
   try {
+    // Decode the category name (handles spaces)
+    const categoryName = decodeURIComponent(req.params.categoryName);
+    console.log("Looking for category:", categoryName);
+    
     const category = await Category.findOne({
-      name: req.params.categoryName
+      name: categoryName
     });
 
     if (!category) {
@@ -80,17 +83,29 @@ router.get("/:categoryName", async (req, res) => {
     });
   }
 });
-// GET products by category
+
+// GET products by category - FIXED for spaces
 router.get("/:categoryName/products", async (req, res) => {
   try {
-    const products = await Product.find({ 
-      category: req.params.categoryName 
-    }).sort({ createdAt: -1 });
-    
+    const categoryName = decodeURIComponent(req.params.categoryName);
+
+    console.log("URL Category:", categoryName);
+
+    const allProducts = await Product.find({});
+    console.log(
+      "Product Categories:",
+      allProducts.map((p) => p.category)
+    );
+
+    const products = await Product.find({
+      category: categoryName
+    });
+
+    console.log("Found:", products.length);
+
     res.json({
-      category: req.params.categoryName,
-      products: products,
-      total: products.length
+      success: true,
+      products
     });
   } catch (err) {
     console.error(err);
@@ -101,7 +116,7 @@ router.get("/:categoryName/products", async (req, res) => {
 // POST - Create category
 router.post("/", async (req, res) => {
   try {
-    const { name, description, icon, image, order } = req.body;
+    const { name, description, icon, image, order, status } = req.body;
     
     if (!name) {
       return res.status(400).json({ message: "Name required" });
@@ -117,7 +132,8 @@ router.post("/", async (req, res) => {
       description: description || "",
       icon: icon || "FaBoxOpen",
       image: image || null,
-      order: order || 0
+      order: order || 0,
+      status: status || "active"
     });
     
     await category.save();
@@ -131,11 +147,11 @@ router.post("/", async (req, res) => {
 // PUT - Update category
 router.put("/:id", async (req, res) => {
   try {
-    const { name, description, icon, image, isActive, order } = req.body;
+    const { name, description, icon, image, status, order } = req.body;
     
     const category = await Category.findByIdAndUpdate(
       req.params.id,
-      { name, description, icon, image, isActive, order },
+      { name, description, icon, image, status, order },
       { new: true }
     );
     
@@ -161,6 +177,45 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PATCH - Update category status
+router.patch("/:id/status", async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    if (!status || !["active", "inactive"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid status (active/inactive) is required"
+      });
+    }
+
+    const category = await Category.findByIdAndUpdate(
+      req.params.id,
+      { status: status },
+      { new: true }
+    );
+    
+    if (!category) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Category not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Category ${status === "active" ? "activated" : "deactivated"} successfully`,
+      category
+    });
+  } catch (err) {
+    console.error("Status update error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: err.message 
+    });
   }
 });
 
