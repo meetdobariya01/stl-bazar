@@ -122,7 +122,7 @@ const ContactUs = () => {
                   <FaEnvelope />
 
                   <div>
-                    <h5>Email</h5>
+                    <h5 className="funnel-sans">Email</h5>
 
                     <a
                       href="mailto:care@brandel.shop"
