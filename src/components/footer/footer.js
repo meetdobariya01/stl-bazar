@@ -22,7 +22,7 @@ const Footer = () => {
 
   return (
     <>
-      <footer className="footer-section funnel-sans">
+      <footer className="footer-section lexend">
         <Container fluid>
           {/* DESKTOP VIEW */}
           <Row className="d-none d-md-flex">

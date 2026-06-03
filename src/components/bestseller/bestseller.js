@@ -76,8 +76,8 @@ const Bestseller = () => {
     <section className="collection-section py-5">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title">
-            Best Sellers
+          <h2 className="section-title funnel-sans">
+            Most Loved Picks
           </h2>
 
           <a

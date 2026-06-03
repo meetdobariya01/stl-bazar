@@ -477,7 +477,7 @@ const placeOrder = async () => {
                       <div className="d-flex gap-2">
                         {savedAddresses.length > 0 && (
                           <Button 
-                            variant="outline-primary" 
+                            variant="outline-success" 
                             size="sm"
                             onClick={() => setShowSavedAddresses(!showSavedAddresses)}
                             className="d-flex align-items-center gap-2"
@@ -763,6 +763,7 @@ const placeOrder = async () => {
                         <Form.Check
                           checked={payment === "upi"}
                           readOnly
+                          className="checkbox-button"
                           type="radio"
                           label="UPI / Net Banking / Wallets"
                         />
@@ -784,6 +785,7 @@ const placeOrder = async () => {
                         <Form.Check
                           checked={payment === "card"}
                           readOnly
+                          className="checkbox-button"
                           type="radio"
                           label="Credit / Debit Card"
                         />
@@ -804,6 +806,7 @@ const placeOrder = async () => {
                         <Form.Check
                           checked={payment === "cod"}
                           readOnly
+                          className="checkbox-button"
                           type="radio"
                           label="Cash on Delivery (COD)"
                         />

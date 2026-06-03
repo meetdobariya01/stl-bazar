@@ -3,11 +3,13 @@
 }
 
 .section-title {
+  /* margin-bottom: 0 !important; */
   font-size: 42px;
   font-weight: 600;
   color: #222;
   margin: 0;
 }
+
 
 .view-all-link {
   color: #b38b59;

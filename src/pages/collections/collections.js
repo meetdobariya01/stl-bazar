@@ -61,7 +61,7 @@ const Collections = ({ limit = 6 }) => {
   const getImageUrl = (image) => {
     if (!image) return null;
 
-    let imagePath = Array.isArray(image) ? image[0] : image;
+    let imagePath = Array.isArray(image) ? image[0] : image; 
 
     if (!imagePath) return null;
 
@@ -151,14 +151,14 @@ const Collections = ({ limit = 6 }) => {
   return (
     <section className="collection-section-bg py-5 lexend">
       <Container>
-        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-          <h2 className="section-title funnel-sans">Curated Collections</h2>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">  
+          <h2 className="section-title funnel-sans">Handpicked Selections</h2>
 
           <a
             href="/product"
             className="view-all-link d-flex align-items-center"
           >
-            View all companies
+            View all 
             <FaArrowRight className="ms-2" />
           </a>
         </div>
