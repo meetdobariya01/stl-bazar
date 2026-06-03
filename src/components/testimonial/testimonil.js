@@ -78,7 +78,7 @@ const Testimonil = () => {
           viewport={{ once: true }}
           className="section-header funnel-sans"
         >
-          <h2>Stories From Our Customerscc</h2>
+          <h2 className="testimonial-title">Stories From Our Customers</h2>
         </motion.div>
 
         <Carousel

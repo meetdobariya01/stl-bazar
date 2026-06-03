@@ -8,7 +8,12 @@
   gap: 24px;
   justify-content: center;
 }
-
+.testimonial-title {
+  font-size: 32px;
+  font-weight: 700;
+  /* text-align: center; */
+  margin-bottom: 40px;
+}
 /* Card */
 .testimonial-card {
   background: #fff;
