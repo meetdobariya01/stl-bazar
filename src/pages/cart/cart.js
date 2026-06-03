@@ -31,7 +31,8 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
+// ✅ USE VENDOR BACKEND URL FOR IMAGES
+const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -40,6 +41,7 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
+// ✅ FIXED: Format image path using VENDOR backend
 const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
@@ -67,14 +69,14 @@ const formatImagePath = (image) => {
   }
 
   if (imgPath.startsWith("/uploads")) {
-    return `${BACKEND_URL}${imgPath}`;
+    return `${VENDOR_BACKEND_URL}${imgPath}`;
   }
 
   if (imgPath.startsWith("/images")) {
     return imgPath;
   }
 
-  return `${BACKEND_URL}${imgPath}`;
+  return `${VENDOR_BACKEND_URL}${imgPath}`;
 };
 
 const Cart = () => {
