@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Container, Row, Col, Card, Button, Form, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
   FaStar,
@@ -18,7 +18,7 @@ import "./categorygrid.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 // ✅ USE VENDOR BACKEND URL FOR IMAGES
-const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
+const VENDOR_BEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
 // ✅ FIXED: Image formatting function using VENDOR backend
 const formatImagePath = (image) => {
@@ -48,14 +48,14 @@ const formatImagePath = (image) => {
   }
 
   if (imgPath.startsWith("/uploads")) {
-    return `${VENDOR_BACKEND_URL}${imgPath}`;
+    return `${VENDOR_BEND_URL}${imgPath}`;
   }
 
   if (imgPath.startsWith("/images")) {
     return imgPath;
   }
 
-  return `${VENDOR_BACKEND_URL}${imgPath}`;
+  return `${VENDOR_BEND_URL}${imgPath}`;
 };
 
 const CategoryProducts = () => {
@@ -70,7 +70,6 @@ const CategoryProducts = () => {
   }, [pathname]);
 
   const { categoryName } = useParams();
-  // ✅ Decode the category name (handles %20 to spaces)
   const decodedCategory = decodeURIComponent(categoryName || "All");
   const navigate = useNavigate();
 
@@ -89,36 +88,27 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // ✅ Fetch products for current category using the products-by-category endpoint
+  // Fetch products for current category
   useEffect(() => {
-    if (!decodedCategory || decodedCategory === "All") return;
+    if (!decodedCategory) return;
 
-    const fetchProductsByCategory = async () => {
-      setLoading(true);
-      try {
-        // ✅ Use the specific endpoint for products by category
-        const encodedCategory = encodeURIComponent(decodedCategory);
-        const response = await axios.get(`${API_URL}/categories/${encodedCategory}/products`);
-        
-        console.log("Products response:", response.data);
-        
-        if (response.data.success) {
-          setProducts(response.data.products || []);
-          setFilteredProducts(response.data.products || []);
-        } else {
-          setProducts(response.data.products || []);
-          setFilteredProducts(response.data.products || []);
-        }
-      } catch (err) {
+    setLoading(true);
+    axios
+      .get(`${API_URL}/products`, {
+        params: {
+          category: decodedCategory !== "All" ? decodedCategory : undefined,
+        },
+      })
+      .then((res) => {
+        setProducts(res.data);
+        setFilteredProducts(res.data);
+      })
+      .catch((err) => {
         console.error("Error fetching products:", err);
         setProducts([]);
         setFilteredProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProductsByCategory();
+      })
+      .finally(() => setLoading(false));
   }, [decodedCategory]);
 
   // Fetch all categories for sidebar
@@ -126,8 +116,7 @@ const CategoryProducts = () => {
     axios
       .get(`${API_URL}/categories`)
       .then((res) => {
-        let categoriesData = Array.isArray(res.data) ? res.data : [];
-        setAllCategories(categoriesData);
+        setAllCategories(res.data);
       })
       .catch((err) => console.error("Error fetching categories:", err));
   }, []);
@@ -216,14 +205,15 @@ const CategoryProducts = () => {
     }
   };
 
-  const handleCategorySelect = (category) => {
-    if (category === decodedCategory) {
-      window.location.reload();
-    } else {
-      navigate(`/category/${encodeURIComponent(category)}`);
-    }
-    setShowMobileFilters(false);
-  };
+const handleCategorySelect = (category) => {
+  if (category === "All") {
+    navigate("/category/All");
+  } else {
+    navigate(`/category/${encodeURIComponent(category)}`);
+  }
+
+  setShowMobileFilters(false);
+};
 
   const clearFilters = () => {
     setSelectedCategories([]);
@@ -239,9 +229,11 @@ const CategoryProducts = () => {
     return (
       <>
         <Header />
-        <div className="category-loading text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-3">Loading products...</p>
+        <div className="category-loading">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p>Loading products...</p>
         </div>
         <Footer />
       </>
@@ -525,8 +517,8 @@ const CategoryProducts = () => {
             <Col lg={9}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
-                  <h5>No products found in "{decodedCategory}"</h5>
-                  <p className="text-muted">Try adjusting your filters or check back later</p>
+                  <h5>No products found</h5>
+                  <p className="text-muted">Try adjusting your filters</p>
                   <Button variant="primary" onClick={clearFilters}>
                     Clear Filters
                   </Button>
@@ -546,12 +538,12 @@ const CategoryProducts = () => {
                           transition={{ duration: 0.3 }}
                         >
                           <Card
-                            className="product-card-hover"
+                            className=""
                             onClick={() => navigate(`/product/${item._id}`)}
                           >
                             <div className="product-image-wrapper">
                               <Card.Img
-                                className="product-card-img"
+                                className="product-card"
                                 src={imageUrl}
                                 onError={(e) => {
                                   e.target.onerror = null;
