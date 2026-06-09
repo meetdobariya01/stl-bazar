@@ -1,141 +1,134 @@
 .category-section {
-  padding: 80px 0;
-  /* background: #fff */
-}
-
-.category-heading {
-  margin-bottom: 50px;
+  padding: 100px 0;
+  background: #faf8f5;
 }
 
 .category-heading span {
-  color: #c59d5f;
-  font-size: 14px;
+  color: #b8860b;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  display: inline-block;
-  margin-bottom: 10px;
+  letter-spacing: 3px;
 }
 
 .category-heading h2 {
-  font-size: 26px;
+  font-size: 40px;
   font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 15px;
-  /* font-family: 'Funnel Sans', sans-serif;   */
+  margin-top: 10px;
+  color: #111;
+  position: relative;
+  margin-bottom: 10px;
+}
+.category-heading h2::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: #c8a96b;
 }
 
 .category-heading p {
   color: #666;
   font-size: 16px;
-  line-height: 1.6;
-  max-width: 550px;
 }
 
-.category-item-home {
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.category-image-wrapper {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
+.premium-category-card {
+  background: #fff;
+  border-radius: 28px;
   overflow: hidden;
-  background: #f5f5f5;
-  margin-bottom: 15px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.4s ease;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-.category-item-home:hover .category-image-wrapper {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+.premium-category-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.4),
+    rgba(255, 255, 255, 0.2)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
 }
 
-.category-image {
+.premium-category-card:hover {
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12);
+}
+
+.premium-category-image {
+  /* height: auto; */
+  overflow: hidden;
+}
+
+.premium-category-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform .3s ease;
+  transition: transform 0.6s ease;
 }
 
-.category-item-home:hover .category-image {
-  transform: scale(1.05);
+.premium-category-card:hover .premium-category-image img {
+  transform: scale(1.1);
 }
 
-.category-placeholder {
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: linear-gradient(
-    135deg,
-    #c59d5f 0%,
-    #e8c48a 100%
-  );
-  font-size:48px;
-  font-weight:600;
-  color:#fff;
+.premium-category-content {
+  text-align: center;
+  padding: 24px;
 }
 
-.category-name {
-  font-size:16px;
-  font-weight:500;
-  color:#333;
-  margin:0;
-  transition:color .3s ease;
-  font-family:'Lexend',sans-serif;
+.premium-category-content h5 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #111;
 }
 
-.category-item-home:hover .category-name {
-  color:#c59d5f;
+.premium-category-content span {
+  color: #b8860b;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-@media (max-width:991px) {
-  .category-section {
-    padding:60px 0;
+@media (max-width: 768px) {
+  .premium-category-image {
+    height: 160px;
   }
-
+  .premium-category-content {
+    padding: 15px;
+  }
   .category-heading h2 {
-    font-size:36px;
+    font-size: 32px;
   }
-
-  .category-name {
-    font-size:14px;
-  }
-}
-
-@media (max-width:767px) {
-  .category-heading h2 {
-    font-size:30px;
-  }
-
   .category-heading p {
-    font-size:14px;
+    font-size: 14px;
   }
-
-  .category-name {
-    font-size:13px;
+  .premium-category-content h5 {
+    font-size: 15px;
   }
 }
-
-@media (max-width:575px) {
-  .category-section {
-    padding:50px 0;
+@media (max-width: 576px) {
+  .premium-category-image {
+    height: 140px;
   }
-
   .category-heading h2 {
-    font-size:26px;
+    font-size: 24px;
   }
-
-  .category-heading span {
-    font-size:12px;
+  .category-heading p {
+    font-size: 13px;
   }
-
-  .category-name {
-    font-size:12px;
+  .premium-category-content h5 {
+    font-size: 14px;
   }
 }

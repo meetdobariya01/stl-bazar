@@ -24,21 +24,26 @@ const CategoriesSection = () => {
       setLoading(true);
       const response = await axios.get(`${API_URL}/categories`, {
         params: {
-          _t: Date.now()
-        }
+          _t: Date.now(), // This ensures fresh data every time
+        },
       });
-      
+      console.log("Categories from API:", response.data);
+
+      // Handle both response formats
       let categoriesData = [];
       if (response.data.success && Array.isArray(response.data.categories)) {
         categoriesData = response.data.categories;
       } else if (Array.isArray(response.data)) {
         categoriesData = response.data;
-      } else if (response.data.categories && Array.isArray(response.data.categories)) {
+      } else if (
+        response.data.categories &&
+        Array.isArray(response.data.categories)
+      ) {
         categoriesData = response.data.categories;
       } else {
         categoriesData = response.data || [];
       }
-      
+
       setCategories(categoriesData);
       setError(null);
     } catch (error) {
@@ -65,6 +70,7 @@ const CategoriesSection = () => {
 
     // If it starts with /images/categories/ (stored by admin)
     if (imagePath.startsWith("/images/categories/")) {
+      // return `${ADMIN_BACKEND_URL}${imagePath}`;
       return `${ADMIN_BACKEND_URL}${imagePath}`;
     }
 
@@ -74,7 +80,7 @@ const CategoriesSection = () => {
     }
 
     // Default fallback
-    return `${ADMIN_BACKEND_URL}${imagePath}`;
+    return `${imagePath}`;
   };
 
   if (loading) {
@@ -116,68 +122,46 @@ const CategoriesSection = () => {
   }
 
   return (
-    <section className="category-section">
-      <Container>
-        <div className="category-heading text-start mb-5">
-          <span>POPULAR CATEGORIES</span>
-          <h2 className="funnel-sans">Explore Our World</h2>
-          <p>Explore premium collections for your modern lifestyle.</p>
-        </div>
+    <Row className="g-4 justify-content-center container mx-auto lexend">
+      <div className="category-heading text-start mt-5">
+        <span>POPULAR CATEGORIES</span>
+        <h2 className="funnel-sans category-title">Explore Our World</h2>
+        {/* <p>Explore premium collections for your modern lifestyle.</p> */}
+      </div>
+      {categories.map((category, index) => {
+        const imageUrl = getImageUrl(category.image);
 
-        {categories.length === 0 ? (
-          <div className="text-center py-5">
-            <p>No categories found</p>
-          </div>
-        ) : (
-          <Row className="g-4">
-            {categories.map((category, index) => {
-              const imageUrl = getImageUrl(category.image);
-              
-              return (
-                <Col lg={1} md={3} sm={4} xs={3} key={category._id || index}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ y: -5 }}
-                  >
-                    <div
-                      className="category-item-home"
-                      onClick={() => handleCategoryClick(category.name)}
-                    >
-                      <div className="category-image-wrapper">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={category.name}
-                            className="category-image"
-                            style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "50%" }}
-                            onError={(e) => {
-                              console.log(`Failed to load: ${imageUrl}`);
-                              e.target.style.display = "none";
-                              const placeholder = document.createElement('div');
-                              placeholder.className = 'category-placeholder';
-                              placeholder.textContent = category.name.charAt(0).toUpperCase();
-                              e.target.parentElement.appendChild(placeholder);
-                            }}
-                          />
-                        ) : (
-                          <div className="category-placeholder">
-                            {category.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <h4 className="category-name">{category.name}</h4>
-                    </div>
-                  </motion.div>
-                </Col>
-              );
-            })}
-          </Row>
-        )}
-      </Container>
-    </section>
+        return (
+          <Col lg={4} md={4} sm={6} xs={6} key={category._id || index}>
+            <motion.div
+              className="premium-category-card"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
+              whileHover={{
+                y: -10,
+                scale: 1.03,
+              }}
+              onClick={() => handleCategoryClick(category.name)}
+            >
+              <div className="premium-category-image">
+                <img
+                  src={imageUrl}
+                  alt={category.name}
+                  className="category-image"
+                />
+              </div>
+
+              <div className="premium-category-content">
+                <h5>{category.name}</h5>
+                <span>Explore Collection</span>
+              </div>
+            </motion.div>
+          </Col>
+        );
+      })}
+    </Row>
   );
 };
 
-export default CategoriesSection; 
+export default CategoriesSection;

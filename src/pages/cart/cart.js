@@ -467,13 +467,13 @@ const Cart = () => {
         centered 
         size="lg"
       >
-        <Modal.Header closeButton>
+        <Modal.Header closeButton className="lexend">
           <Modal.Title>
-            <FaGift className="me-2" style={{ color: "#ff6b6b" }} />
+            <FaGift className="me-2" style={{ color: "#0f5132 " }} />
             Apply Coupon Code
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="lexend">
           <div className="mb-4">
             <Form.Label className="fw-bold">Enter Coupon Code</Form.Label>
             <div className="d-flex gap-2">
@@ -489,7 +489,7 @@ const Cart = () => {
                 variant="primary" 
                 onClick={applyCoupon}
                 disabled={applyingCoupon}
-                style={{ backgroundColor: "#ff6b6b", borderColor: "#ff6b6b" }}
+                style={{ backgroundColor: "#0f5132 ", borderColor: "#0f5132 " }}
               >
                 {applyingCoupon ? <FaSpinner className="fa-spin" /> : "Apply"}
               </Button>

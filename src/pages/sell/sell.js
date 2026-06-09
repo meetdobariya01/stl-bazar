@@ -199,7 +199,7 @@ const Sell = () => {
                     <Form.Group className="mb-4">
                       <Form.Label>Phone Number *</Form.Label>
                       <div className="phone-input d-flex gap-2">
-                        <Form.Select 
+                        {/* <Form.Select 
                           name="countryCode"
                           value={formData.countryCode}
                           onChange={handleChange}
@@ -209,7 +209,7 @@ const Sell = () => {
                           <option value="+1">+1 (USA)</option>
                           <option value="+44">+44 (UK)</option>
                           <option value="+61">+61 (AUS)</option>
-                        </Form.Select>
+                        </Form.Select> */}
 
                         <Form.Control
                           type="tel"
