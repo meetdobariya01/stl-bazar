@@ -68,10 +68,10 @@ const Footer = () => {
                 <li>Contact Us</li>
                 <li>Track Order</li>
                 <li>FAQ</li>
-                <li>Naturopedia</li>
+                {/* <li>Naturopedia</li> */}
                 <li>Shop All</li>
-                <li>Store Locator</li>
-                <li>Re:fresh Certifications</li>
+                {/* <li>Store Locator</li> */}
+                {/* <li>Re:fresh Certifications</li> */}
               </ul>
             </Col>
 
@@ -89,7 +89,7 @@ const Footer = () => {
                 <a href="https://pinterest.com" target="_blank">
                   <FaPinterestP />
                 </a> */}
-                <a href="https://instagram.com" target="_blank">
+                <a href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank">
                   <FaInstagram />
                 </a>
                 <a href="https://youtube.com" target="_blank">
@@ -106,11 +106,11 @@ const Footer = () => {
               <ul>
                 <li>Disclaimer</li>
                 <li>Terms & Conditions</li>
-                <li>Corporate Governance</li>
+                {/* <li>Corporate Governance</li> */}
                 <li>Shipping Policy</li>
                 <li>Return, Refund & Cancellation</li>
                 <li>Privacy Policy</li>
-                <li>Refresh Social Handles</li>
+                {/* <li>Refresh Social Handles</li> */}
               </ul>
             </Col>
           </Row>
@@ -143,10 +143,10 @@ const Footer = () => {
                     <p>Contact Us</p>
                     <p>Track Order</p>
                     <p>FAQ</p>
-                    <p>Naturopedia</p>
+                    {/* <p>Naturopedia</p> */}
                     <p>Shop All</p>
-                    <p>Store Locator</p>
-                    <p>Re:fresh Certifications</p>
+                    {/* <p>Store Locator</p> */}
+                    {/* <p>Re:fresh Certifications</p> */}
                   </div>
                 </details>
 
@@ -167,7 +167,7 @@ const Footer = () => {
                       <a href="https://pinterest.com" target="_blank">
                         <FaPinterestP />
                       </a> */}
-                      <a href="https://instagram.com" target="_blank">
+                      <a href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank">
                         <FaInstagram />
                       </a>
                       <a href="https://youtube.com" target="_blank">

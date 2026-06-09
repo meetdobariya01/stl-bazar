@@ -2,14 +2,23 @@
   /* background: #faf8f4; */
 }
 
-.section-title {
+.section-title-collection {
   /* margin-bottom: 0 !important; */
-  font-size: 42px;
+  font-size: 40px;
   font-weight: 600;
   color: #222;
   margin: 0;
+  position: relative;
 }
-
+.section-title-collection:after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: #c8a96b;
+}
 
 .view-all-link {
   color: #b38b59;
@@ -133,7 +142,9 @@
   .image-wrapper-main img {
     height: 260px;
   }
-
+.section-title-collection {
+    font-size: 32px;
+  }
   .product-name-main {
     font-size: 18px;
   }
@@ -147,7 +158,9 @@
   .image-wrapper-main img {
     height: 220px;
   }
-
+  .section-title-collection {
+    font-size: 22px;
+  }
   .product-name-main {
     font-size: 16px;
   }

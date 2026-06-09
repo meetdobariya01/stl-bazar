@@ -4,15 +4,15 @@
   /* background-color: #f8f9fa; */
 }
 
-.section-title {
-  font-size: 2rem;
+.section-title-seller {
+  font-size: 40px;
   font-weight: 700;
-  color: #2c3e50;
+  color: #000;
   position: relative;
   margin-bottom: 0;
 }
 
-.section-title:after {
+.section-title-seller:after {
   content: '';
   position: absolute;
   bottom: -10px;
@@ -104,8 +104,8 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .section-title {
-    font-size: 1.5rem;
+  .section-title-seller {
+    font-size: 32px;
   }
   
   .image-wrapper {
@@ -124,6 +124,9 @@
 @media (max-width: 576px) {
   .image-wrapper {
     height: 120px;
+  }
+  .section-title-seller {
+    font-size: 22px;
   }
   
   .card-content {

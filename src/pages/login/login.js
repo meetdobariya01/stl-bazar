@@ -21,7 +21,7 @@ const Login = () => {
     try {
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/login`,
-        { email, password }
+        { email, password },
       );
 
       setLoading(false);
@@ -31,7 +31,6 @@ const Login = () => {
 
       // Redirect user to home page
       navigate("/"); // <-- redirect to home
-
     } catch (error) {
       setLoading(false);
       if (error.response && error.response.data.message) {
@@ -56,7 +55,7 @@ const Login = () => {
           theme: "outline",
           size: "large",
           width: "100%",
-        }
+        },
       );
     }
   }, []);
@@ -71,15 +70,21 @@ const Login = () => {
     <section className="login-section">
       <Header />
       <Container>
-        <Row className="justify-content-center align-items-center min-vh-100">
-          <Col xs={12} sm={10} md={7} lg={5}>
-            <motion.div
-              initial={{ opacity: 0, y: 60 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-            >
-              <Card className="login-card">
-                <h3 className="text-center mb-4 lexend">Welcome Back 👋</h3>
+        <Row className="justify-content-center align-items-center min-vh-100 py-5">
+          <Col lg={10}>
+            <div className="login-container">
+              {/* Left Image */}
+              <div className="login-image-wrapper">
+                <img
+                  src="./images/login.png"
+                  alt="Premium Grocery"
+                  className="login-side-image"
+                />
+              </div>
+
+              {/* Right Form */}
+              <Card className="login-card border-0">
+                <h3 className="text-center mb-4 lexend">Welcome Back </h3>
                 <p className="text-center text-muted mb-4 funnel-sans">
                   Login to continue shopping
                 </p>
@@ -105,6 +110,7 @@ const Login = () => {
                     <Form.Group className="mb-3 input-group-custom funnel-sans underline-input">
                       <FaEnvelope />
                       <Form.Control
+                      className="form-control-custom"
                         type="email"
                         placeholder="Email address"
                         value={email}
@@ -122,6 +128,7 @@ const Login = () => {
                     <Form.Group className="mb-3 input-group-custom funnel-sans underline-input">
                       <FaLock />
                       <Form.Control
+                        className="form-control-custom"
                         type="password"
                         placeholder="Password"
                         value={password}
@@ -162,7 +169,7 @@ const Login = () => {
                   </a>
                 </div>
               </Card>
-            </motion.div>
+            </div>
           </Col>
         </Row>
       </Container>
