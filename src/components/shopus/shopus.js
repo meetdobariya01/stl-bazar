@@ -41,7 +41,7 @@ const Shopus = () => {
             viewport={{ once: true }}
           >
             <h2 className="funnel-sans">The Experience We Deliver</h2>
-            <p>Trusted by thousands of happy customers</p>
+            {/* <p>Trusted by thousands of happy customers</p> */}
           </motion.div>
 
           {/* Cards */}

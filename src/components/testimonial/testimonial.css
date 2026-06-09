@@ -9,10 +9,18 @@
   justify-content: center;
 }
 .testimonial-title {
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 700;
   /* text-align: center; */
   margin-bottom: 40px;
+}
+.testimonial-title::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: #c8a96b;
+  margin-top: 10px;
 }
 /* Card */
 .testimonial-card {
@@ -75,5 +83,16 @@
 @media (max-width: 768px) {
   .testimonial-card {
     max-width: 100%;
+  }
+  .testimonial-title {
+    font-size: 32px;
+  }
+}
+@media (max-width: 576px) {
+  .testimonial-title {
+    font-size: 22px;
+  }
+  .testimonial-section {
+    padding: 60px 15px;
   }
 }

@@ -28,7 +28,7 @@ const Product = () => {
     const image = Array.isArray(logo) ? logo[0] : logo;
 
     // already full URL
-    if (image.startsWith("http")) {
+    if (image.startsWith("http")) { 
       return image;
     }
 
@@ -56,14 +56,14 @@ const Product = () => {
         <motion.img
           src="./images/product-banner.png"
           alt="Nature"
-          className="simple-image"
+          className="simple-image w-100"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         />
         <Container>
-          <h2 className="text-center funnel-sans my-5">Our Brands</h2>
+          <h2 className="text-center funnel-sans my-5 display-2">Our Brands</h2>
           {companies.map((item, index) => (
             <Row
               key={item._id}
@@ -99,7 +99,7 @@ const Product = () => {
                   transition={{ duration: 0.8 }}
                   viewport={{ once: true }}
                 >
-                  <h4 className="lexend">{item.name}</h4>
+                  <h4 className="funnel-sans">{item.name}</h4>
 
                   <p className="lexend">{item.description}</p>
 
