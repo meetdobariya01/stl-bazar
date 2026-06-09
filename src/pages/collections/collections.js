@@ -152,7 +152,7 @@ const Collections = ({ limit = 6 }) => {
     <section className="collection-section-bg py-5 lexend">
       <Container>
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">  
-          <h2 className="section-title funnel-sans">Handpicked Selections</h2>
+          <h2 className="section-title-collection funnel-sans">Handpicked Selections</h2>
 
           <a
             href="/product"

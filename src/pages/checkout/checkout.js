@@ -141,7 +141,7 @@ const Checkout = () => {
     if (guestId) {
       fetchSavedAddresses();
     }
-  }, [guestId]);
+  }, [guestId]);  
 
   const fetchCart = async () => {
     if (!guestId) return;
