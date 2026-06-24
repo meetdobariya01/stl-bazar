@@ -307,108 +307,108 @@ const Checkout = () => {
     }
   };
 
-const placeOrder = async () => {
-  if (isProcessing) return;
-  
-  try {
-    if (!guestId || cart.items.length === 0) {
-      alert("Cart is empty");
-      return;
-    }
-
-    const required = [
-      "name",
-      "phone",
-      "email",
-      "address",
-      "city",
-      "state",
-      "pincode",
-    ];
-
-    for (let field of required) {
-      if (!shipping[field]) {
-        alert(`Please fill ${field}`);
+  const placeOrder = async () => {
+    if (isProcessing) return;
+    
+    try {
+      if (!guestId || cart.items.length === 0) {
+        alert("Cart is empty");
         return;
       }
-    }
 
-    setIsProcessing(true);
+      const required = [
+        "name",
+        "phone",
+        "email",
+        "address",
+        "city",
+        "state",
+        "pincode",
+      ];
 
-    if (saveAddressChecked) {
-      await saveAddressToDB();
-    }
+      for (let field of required) {
+        if (!shipping[field]) {
+          alert(`Please fill ${field}`);
+          return;
+        }
+      }
 
-    const orderData = {
-      guestId,
-      shippingAddress: shipping,
-      paymentMethod: payment,
-      shippingMethod: shippingMethod,
-      subtotal: subtotal,
-      couponDiscount: couponDiscount,
-      appliedCoupon: cart.appliedCoupon,
-      shippingCost: shippingCost,
-      total: total,
-    };
+      setIsProcessing(true);
 
-    console.log("Placing order with data:", orderData);
+      if (saveAddressChecked) {
+        await saveAddressToDB();
+      }
 
-    const res = await axios.post(`${API_URL}/order/place`, orderData);
+      const orderData = {
+        guestId,
+        shippingAddress: shipping,
+        paymentMethod: payment,
+        shippingMethod: shippingMethod,
+        subtotal: subtotal,
+        couponDiscount: couponDiscount,
+        appliedCoupon: cart.appliedCoupon,
+        shippingCost: shippingCost,
+        total: total,
+      };
 
-    console.log("Order response:", res.data);
+      console.log("Placing order with data:", orderData);
 
-    if (res.data.success) {
-      // Send email confirmation (don't await to avoid blocking)
-      sendOrderEmail(res.data.orderId).catch(err => {
-        console.error("Email sending error:", err);
-      });
+      const res = await axios.post(`${API_URL}/order/place`, orderData);
+
+      console.log("Order response:", res.data);
+
+      if (res.data.success) {
+        // Send email confirmation (don't await to avoid blocking)
+        sendOrderEmail(res.data.orderId).catch(err => {
+          console.error("Email sending error:", err);
+        });
+        
+        // Clear cart from localStorage
+        localStorage.removeItem("guestId");
+        
+        // Navigate to order complete page
+        navigate("/order-complete", { 
+          state: { 
+            orderId: res.data.orderId,
+            orderDetails: {
+              items: cart.items,
+              subtotal: subtotal,
+              couponDiscount: couponDiscount,
+              appliedCoupon: cart.appliedCoupon,
+              shippingCost: shippingCost,
+              total: total,
+              shipping: shipping,
+              paymentMethod: payment,
+              shippingMethod: shippingMethod
+            }
+          } 
+        });
+      } else {
+        // Only show error if order failed
+        alert(res.data.message || "Failed to place order");
+        setIsProcessing(false);
+      }
       
-      // Clear cart from localStorage
-      localStorage.removeItem("guestId");
+    } catch (err) {
+      console.error("Order placement error:", err);
       
-      // Navigate to order complete page
-      navigate("/order-complete", { 
-        state: { 
-          orderId: res.data.orderId,
-          orderDetails: {
-            items: cart.items,
-            subtotal: subtotal,
-            couponDiscount: couponDiscount,
-            appliedCoupon: cart.appliedCoupon,
-            shippingCost: shippingCost,
-            total: total,
-            shipping: shipping,
-            paymentMethod: payment,
-            shippingMethod: shippingMethod
-          }
-        } 
-      });
-    } else {
-      // Only show error if order failed
-      alert(res.data.message || "Failed to place order");
-      setIsProcessing(false);
+      // Check if the error is actually a success message
+      if (err.message === "Order placed successfully") {
+        // This is a success, navigate anyway
+        navigate("/order-complete");
+      } else {
+        // Real error
+        alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
+        setIsProcessing(false);
+      }
+    } finally {
+      // Only set processing to false if not navigating
+      // The component will unmount on navigation anyway
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 3000);
     }
-    
-  } catch (err) {
-    console.error("Order placement error:", err);
-    
-    // Check if the error is actually a success message
-    if (err.message === "Order placed successfully") {
-      // This is a success, navigate anyway
-      navigate("/order-complete");
-    } else {
-      // Real error
-      alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
-      setIsProcessing(false);
-    }
-  } finally {
-    // Only set processing to false if not navigating
-    // The component will unmount on navigation anyway
-    setTimeout(() => {
-      setIsProcessing(false);
-    }, 3000);
-  }
-};
+  };
 
   return (
     <>

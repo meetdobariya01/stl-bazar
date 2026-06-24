@@ -30,8 +30,8 @@ import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 // ✅ VENDOR BACKEND URL for images
-const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
-
+// const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
+const VENDOR_BACKEND_URL = "http://localhost:5001"; // Adjust this to your vendor backend URL if needed
 // Helper function to format price
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";

@@ -144,7 +144,7 @@ const CategoriesSection = () => {
               }}
               onClick={() => handleCategoryClick(category.name)}
             >
-              <div className="premium-category-image">
+              <div className="premium-category-image">  
                 <img
                   src={imageUrl}
                   alt={category.name}
