@@ -10,11 +10,14 @@ import Footer from "../../components/footer/footer";
 import { useCart } from "../../context/CartContext";
 
 const API_URL = process.env.REACT_APP_API_URL;
-const BACKEND_URL = "http://localhost:9000";
+// ✅ USE VENDOR BACKEND URL FOR IMAGES
+const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
+// ✅ FIXED: Format image using VENDOR backend
 const formatImage = (image) => {
   if (!image) return "/images/placeholder.png";
   if (image.startsWith("http")) return image;
+  if (image.startsWith("/uploads")) return `${VENDOR_BACKEND_URL}${image}`;
   return `${image}`;
 };
 
@@ -26,7 +29,6 @@ const Wishlist = () => {
 
   const guestId = localStorage.getItem("guestId");
 
-  // Fetch wishlist from backend
   const fetchWishlist = async () => {
     if (!guestId) {
       setLoading(false);
@@ -46,7 +48,6 @@ const Wishlist = () => {
     fetchWishlist();
   }, []);
 
-  // Remove from wishlist
   const removeItem = async (productId) => {
     try {
       await axios.delete(`${API_URL}/wishlist/remove`, {
@@ -60,7 +61,6 @@ const Wishlist = () => {
     }
   };
 
-  // Add to cart from wishlist
   const addToCart = async (item) => {
     try {
       await axios.post(`${API_URL}/cart/add`, {
@@ -110,9 +110,6 @@ const Wishlist = () => {
                 <p className="funnel-sans">
                   Add items you love to see them here.
                 </p>
-                {/* <Button variant="dark" className="mt-2" onClick={() => navigate("/")}>
-                  Browse Products
-                </Button> */}
               </motion.div>
             ) : (
               <div className="wishlist-wrapper">
@@ -129,7 +126,6 @@ const Wishlist = () => {
                 </div>
 
                 <Row className="g-4">
-                  {/* Left Side */}
                   <Col lg={8}>
                     {wishlist.map((item) => (
                       <motion.div
@@ -142,7 +138,6 @@ const Wishlist = () => {
                         className="wishlist-item-card"
                       >
                         <Row className="align-items-center">
-                          {/* Image */}
                           <Col md={3}>
                             <div
                               className="wishlist-product-image"
@@ -160,7 +155,6 @@ const Wishlist = () => {
                             </div>
                           </Col>
 
-                          {/* Content */}
                           <Col md={5}>
                             <div className="wishlist-product-content">
                               <h3
@@ -189,7 +183,6 @@ const Wishlist = () => {
                             </div>
                           </Col>
 
-                          {/* Actions */}
                           <Col md={4}>
                             <div className="wishlist-action-area">
                               <button
@@ -228,7 +221,6 @@ const Wishlist = () => {
                     ))}
                   </Col>
 
-                  {/* Right Sidebar */}
                   <Col lg={4}>
                     <motion.div
                       className="wishlist-sidebar"

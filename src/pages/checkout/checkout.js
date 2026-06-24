@@ -31,7 +31,8 @@ import Header from "../../components/header/header";
 import "./checkout.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
+// ✅ USE VENDOR BACKEND URL FOR IMAGES
+const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -40,6 +41,7 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
+// ✅ FIXED: Format image path using VENDOR backend
 const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
@@ -67,14 +69,14 @@ const formatImagePath = (image) => {
   }
 
   if (imgPath.startsWith("/uploads")) {
-    return `${BACKEND_URL}${imgPath}`;
+    return `${VENDOR_BACKEND_URL}${imgPath}`;
   }
 
   if (imgPath.startsWith("/images")) {
     return imgPath;
   }
 
-  return `${BACKEND_URL}${imgPath}`;
+  return `${VENDOR_BACKEND_URL}${imgPath}`;
 };
 
 const Checkout = () => {
@@ -146,7 +148,6 @@ const Checkout = () => {
 
     try {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
-      console.log("Fetched cart in checkout:", res.data);
       setCart(res.data || { items: [], appliedCoupon: null });
     } catch (err) {
       console.error("Cart fetch error:", err);
@@ -310,7 +311,10 @@ const Checkout = () => {
     if (isProcessing) return;
     
     try {
-      if (!guestId || cart.items.length === 0) return alert("Cart is empty");
+      if (!guestId || cart.items.length === 0) {
+        alert("Cart is empty");
+        return;
+      }
 
       const required = [
         "name",
@@ -323,7 +327,10 @@ const Checkout = () => {
       ];
 
       for (let field of required) {
-        if (!shipping[field]) return alert(`Please fill ${field}`);
+        if (!shipping[field]) {
+          alert(`Please fill ${field}`);
+          return;
+        }
       }
 
       setIsProcessing(true);
@@ -348,11 +355,18 @@ const Checkout = () => {
 
       const res = await axios.post(`${API_URL}/order/place`, orderData);
 
+      console.log("Order response:", res.data);
+
       if (res.data.success) {
-        await sendOrderEmail(res.data.orderId);
+        // Send email confirmation (don't await to avoid blocking)
+        sendOrderEmail(res.data.orderId).catch(err => {
+          console.error("Email sending error:", err);
+        });
         
+        // Clear cart from localStorage
         localStorage.removeItem("guestId");
         
+        // Navigate to order complete page
         navigate("/order-complete", { 
           state: { 
             orderId: res.data.orderId,
@@ -370,13 +384,29 @@ const Checkout = () => {
           } 
         });
       } else {
-        throw new Error(res.data.message || "Failed to place order");
+        // Only show error if order failed
+        alert(res.data.message || "Failed to place order");
+        setIsProcessing(false);
       }
       
     } catch (err) {
       console.error("Order placement error:", err);
-      alert(err.response?.data?.message || "Failed to place order. Please try again.");
-      setIsProcessing(false);
+      
+      // Check if the error is actually a success message
+      if (err.message === "Order placed successfully") {
+        // This is a success, navigate anyway
+        navigate("/order-complete");
+      } else {
+        // Real error
+        alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
+        setIsProcessing(false);
+      }
+    } finally {
+      // Only set processing to false if not navigating
+      // The component will unmount on navigation anyway
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 3000);
     }
   };
 

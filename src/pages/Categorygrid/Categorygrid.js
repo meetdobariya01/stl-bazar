@@ -14,13 +14,13 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import Details from "../../components/details/details";
-// FIXED: Correct CSS import path
 import "./categorygrid.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
+// ✅ USE VENDOR BACKEND URL FOR IMAGES
+const VENDOR_BEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
-// Image formatting function
+// ✅ FIXED: Image formatting function using VENDOR backend
 const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
@@ -48,14 +48,14 @@ const formatImagePath = (image) => {
   }
 
   if (imgPath.startsWith("/uploads")) {
-    return `${BACKEND_URL}${imgPath}`;
+    return `${VENDOR_BEND_URL}${imgPath}`;
   }
 
   if (imgPath.startsWith("/images")) {
     return imgPath;
   }
 
-  return `${BACKEND_URL}${imgPath}`;
+  return `${VENDOR_BEND_URL}${imgPath}`;
 };
 
 const CategoryProducts = () => {
@@ -65,7 +65,7 @@ const CategoryProducts = () => {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant", // or "smooth"
+      behavior: "instant",
     });
   }, [pathname]);
 
@@ -100,7 +100,6 @@ const CategoryProducts = () => {
         },
       })
       .then((res) => {
-        console.log("Products loaded:", res.data.length);
         setProducts(res.data);
         setFilteredProducts(res.data);
       })
@@ -126,14 +125,12 @@ const CategoryProducts = () => {
   useEffect(() => {
     let filtered = [...products];
 
-    // Category filter
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
         selectedCategories.includes(p.category),
       );
     }
 
-    // Price range filter
     if (selectedPriceRange) {
       switch (selectedPriceRange) {
         case "under-500":
@@ -163,7 +160,6 @@ const CategoryProducts = () => {
       }
     }
 
-    // Rating filter
     if (selectedRating > 0) {
       filtered = filtered.filter(
         (p) => (p.averageRating || 0) >= selectedRating,
@@ -180,7 +176,6 @@ const CategoryProducts = () => {
     products,
   ]);
 
-  // Sort products
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
     switch (sortBy) {
@@ -210,14 +205,15 @@ const CategoryProducts = () => {
     }
   };
 
-  const handleCategorySelect = (category) => {
-    if (category === decodedCategory) {
-      window.location.reload();
-    } else {
-      navigate(`/category/${encodeURIComponent(category)}`);
-    }
-    setShowMobileFilters(false);
-  };
+const handleCategorySelect = (category) => {
+  if (category === "All") {
+    navigate("/category/All");
+  } else {
+    navigate(`/category/${encodeURIComponent(category)}`);
+  }
+
+  setShowMobileFilters(false);
+};
 
   const clearFilters = () => {
     setSelectedCategories([]);
@@ -250,7 +246,6 @@ const CategoryProducts = () => {
 
       <div className="category-background lexend px-2">
         <Container className="category-page">
-          {/* Hero Section */}
           <div className="category-hero-section">
             <Container>
               <div className="hero-content text-center">
@@ -264,7 +259,7 @@ const CategoryProducts = () => {
               </div>
             </Container>
           </div>
-          {/* Top Bar */}
+
           <div className="top-bar">
             <div className="d-flex justify-content-end align-items-center flex-wrap gap-3">
               <Button
@@ -307,7 +302,6 @@ const CategoryProducts = () => {
                   </Button>
                 </div>
 
-                {/* All Categories Section */}
                 <div className="filter-group">
                   <h6>Categories</h6>
                   <div className="category-list">
@@ -331,7 +325,6 @@ const CategoryProducts = () => {
                   </div>
                 </div>
 
-                {/* Price Range */}
                 <div className="filter-group">
                   <h6>Price</h6>
                   <div className="price-options">
@@ -396,7 +389,6 @@ const CategoryProducts = () => {
                   </div>
                 </div>
 
-                {/* Rating Filter */}
                 <div className="filter-group">
                   <h6>Rating</h6>
                   <div className="rating-options">
@@ -430,7 +422,6 @@ const CategoryProducts = () => {
               </div>
             </Col>
 
-            {/* Mobile Filters Modal */}
             {showMobileFilters && (
               <div
                 className="mobile-filters-overlay"
