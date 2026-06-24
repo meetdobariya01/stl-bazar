@@ -66,7 +66,7 @@ app.get("/", (req, res) => {
 });
 
 /* ===============================
-   SERVER
+   SERVERa
 ================================ */
 const PORT = process.env.PORT || 9000;
 app.listen(PORT, () =>

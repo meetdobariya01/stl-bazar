@@ -6,7 +6,6 @@ import {
   Button,
   Form,
   Modal,
-  Rating,
   Alert,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
@@ -29,10 +28,8 @@ import Footer from "../../components/footer/footer";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// ✅ VENDOR BACKEND URL for images
-// const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
-const VENDOR_BACKEND_URL = "http://localhost:5001"; // Adjust this to your vendor backend URL if needed
-// Helper function to format price
+const VENDOR_BACKEND_URL = "http://localhost:5001";
+
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
   const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -80,11 +77,10 @@ const Productdetails = () => {
       setError(null);
 
       const response = await axios.get(`${API_URL}/product/${id}`);
-      console.log("Product data received:", response.data);
+      // console.log("Product data received:", response.data);
 
       setProduct(response.data);
 
-      // Set active image - handle both array and string
       if (response.data.image) {
         if (
           Array.isArray(response.data.image) &&
@@ -109,7 +105,6 @@ const Productdetails = () => {
     }
   };
 
-  // Fetch reviews
   const fetchReviews = async () => {
     try {
       const response = await axios.get(`${API_URL}/products/${id}/reviews`);
@@ -121,7 +116,6 @@ const Productdetails = () => {
     }
   };
 
-  // Check if product is in wishlist
   const checkWishlistStatus = async () => {
     try {
       const guestId = localStorage.getItem("guestId");
@@ -136,7 +130,6 @@ const Productdetails = () => {
     }
   };
 
-  // Toggle wishlist
   const toggleWishlist = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -147,14 +140,12 @@ const Productdetails = () => {
       }
 
       if (wishlist) {
-        // Remove from wishlist
         await axios.delete(`${API_URL}/wishlist/remove`, {
           data: { guestId, productId: product._id },
         });
         setWishlist(false);
         alert("Removed from wishlist");
       } else {
-        // Add to wishlist
         await axios.post(`${API_URL}/wishlist/add`, {
           guestId,
           product: {
@@ -173,7 +164,6 @@ const Productdetails = () => {
     }
   };
 
-  // Handle review input changes
   const handleReviewChange = (e) => {
     const { name, value } = e.target;
     setReviewData((prev) => ({
@@ -182,7 +172,6 @@ const Productdetails = () => {
     }));
   };
 
-  // Handle rating change
   const handleRatingChange = (newRating) => {
     setReviewData((prev) => ({
       ...prev,
@@ -190,7 +179,6 @@ const Productdetails = () => {
     }));
   };
 
-  // Submit review
   const handleSubmitReview = async () => {
     if (!reviewData.rating || reviewData.rating === 0) {
       setReviewError("Please select a rating");
@@ -241,13 +229,11 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ FIXED: Helper function to get full image URL from VENDOR backend
   const getImageUrl = (image) => {
     if (!image) return "/images/placeholder.png";
 
     let img = image;
 
-    // If array, take first image for URLs that need a single image
     if (Array.isArray(image)) {
       if (image.length === 0) return "/images/placeholder.png";
       img = image[0];
@@ -255,31 +241,25 @@ const Productdetails = () => {
 
     const imgStr = String(img);
 
-    // Already full URL
     if (imgStr.startsWith("http")) {
       return imgStr;
     }
 
-    // ✅ FIXED: Vendor backend uploaded image (starts with /uploads)
     if (imgStr.startsWith("/uploads")) {
       return `${VENDOR_BACKEND_URL}${imgStr}`;
     }
 
-    // Local images from public folder
     if (imgStr.startsWith("/images")) {
       return imgStr;
     }
 
-    // If it's just a filename, assume it's in vendor uploads
     if (!imgStr.startsWith("/")) {
       return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
     }
 
-    // Fallback
     return `${VENDOR_BACKEND_URL}${imgStr}`;
   };
 
-  // Get all images as array with full URLs
   const getAllImages = () => {
     if (!product) return [];
 
@@ -313,64 +293,81 @@ const Productdetails = () => {
     setActiveImg(images[newIndex]);
   };
 
+  // ✅ FIXED: Add to Cart - Flat format
   const addToCart = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
 
       if (!guestId) {
-        guestId = Date.now().toString();
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const primaryImage =
         Array.isArray(product.image) && product.image.length > 0
           ? product.image[0]
-          : product.image;
+          : product.image || "";
 
-      await axios.post(`${API_URL}/cart/add`, {
-        guestId,
-        product: {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          image: primaryImage,
-          quantity: qty,
-        },
-      });
+      // ✅ Send flat format (no product object)
+      const payload = {
+        guestId: guestId,
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        image: primaryImage,
+        quantity: qty,
+      };
 
-      navigate("/cart");
+      // console.log("🛒 Add to cart payload:", payload);
+
+      const response = await axios.post(`${API_URL}/cart/add`, payload);
+
+      // console.log("✅ Response:", response.data);
+
+      if (response.data.success !== false) {
+        alert("✅ Added to cart!");
+        navigate("/cart");
+      } else {
+        alert(response.data.message || "Failed to add to cart");
+      }
     } catch (err) {
-      console.error("Add to cart error:", err);
-      alert("Failed to add to cart");
+      console.error("❌ Add to cart error:", err);
+      console.error("Response:", err.response?.data);
+      
+      const errorMessage = err.response?.data?.message || 
+                           err.message || 
+                           "Failed to add to cart. Please try again.";
+      alert(errorMessage);
     }
   };
 
-  // Buy Now function
+  // ✅ FIXED: Buy Now - Flat format
   const buyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
 
       if (!guestId) {
-        guestId = Date.now().toString();
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const primaryImage =
         Array.isArray(product.image) && product.image.length > 0
           ? product.image[0]
-          : product.image;
+          : product.image || "";
 
-      await axios.post(`${API_URL}/cart/add`, {
-        guestId,
-        product: {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          image: primaryImage,
-          quantity: qty,
-        },
-      });
+      const payload = {
+        guestId: guestId,
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        image: primaryImage,
+        quantity: qty,
+      };
 
+      console.log("🛒 Buy Now payload:", payload);
+
+      await axios.post(`${API_URL}/cart/add`, payload);
       navigate("/checkout");
     } catch (err) {
       console.error("Buy Now error:", err);
@@ -378,7 +375,6 @@ const Productdetails = () => {
     }
   };
 
-  // Render stars for rating
   const renderStars = (rating) => {
     return (
       <div className="stars-display">
@@ -450,7 +446,6 @@ const Productdetails = () => {
             {/* LEFT SIDE - IMAGE GALLERY */}
             <Col lg={6}>
               <div className="product-gallery">
-                {/* Thumbnail Images */}
                 {images.length > 0 && (
                   <div className="thumbnail-list">
                     {images.map((img, i) => (
@@ -474,7 +469,6 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* Main Image with Navigation Arrows */}
                 <div
                   className="main-image-container"
                   style={{ position: "relative" }}
@@ -496,7 +490,6 @@ const Productdetails = () => {
                     />
                   </motion.div>
 
-                  {/* Navigation Arrows for Multiple Images */}
                   {hasMultipleImages && (
                     <>
                       <button
@@ -558,7 +551,6 @@ const Productdetails = () => {
 
                 <h1 className="funnel-sans">{product.name}</h1>
 
-                {/* Ratings */}
                 <div className="rating-row">
                   <div className="stars">{renderStars(averageRating)}</div>
                   <span className="ms-2">
@@ -573,12 +565,10 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
-                {/* Price */}
                 <div className="price-box funnel-sans">
                   ₹{formatPrice(product.price)}
                 </div>
 
-                {/* Wishlist Button */}
                 <p
                   className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
                   onClick={toggleWishlist}
@@ -593,10 +583,9 @@ const Productdetails = () => {
 
                 <p className="description-text">
                   {product.description ||
-                    "A timeless piece to elevate your space. This handcrafted ceramic vase is perfect for fresh blooms or a statement decor on its own."}
+                    "A timeless piece to elevate your space."}
                 </p>
 
-                {/* Quantity */}
                 <div className="quantity-section">
                   <span>Quantity</span>
                   <div className="qty-box-product-details">
@@ -608,7 +597,6 @@ const Productdetails = () => {
                   </div>
                 </div>
 
-                {/* Buttons */}
                 <div className="action-buttons">
                   <Button className="cart-btn" onClick={addToCart}>
                     <FaShoppingCart /> Add to Cart
@@ -619,7 +607,6 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
-                {/* Features */}
                 <div className="features-row-product-details">
                   <div className="feature-item">
                     <FaHeart /> <span>Handmade with love</span>
@@ -632,7 +619,6 @@ const Productdetails = () => {
                   </div>
                 </div>
 
-                {/* Delivery */}
                 <div className="delivery-text">
                   Estimated delivery: 3 – 5 business days
                 </div>

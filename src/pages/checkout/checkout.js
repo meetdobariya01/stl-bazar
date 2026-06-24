@@ -31,7 +31,6 @@ import Header from "../../components/header/header";
 import "./checkout.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// ✅ USE VENDOR BACKEND URL FOR IMAGES
 const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
 const formatPrice = (price) => {
@@ -41,41 +40,18 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
-// ✅ FIXED: Format image path using VENDOR backend
 const formatImagePath = (image) => {
-  if (!image) {
-    return "/images/placeholder.png";
-  }
-
+  if (!image) return "/images/placeholder.png";
   let imgPath = image;
-
   if (Array.isArray(image)) {
-    if (image.length === 0) {
-      return "/images/placeholder.png";
-    }
+    if (image.length === 0) return "/images/placeholder.png";
     imgPath = image[0];
   }
-
-  if (typeof imgPath !== "string") {
-    return "/images/placeholder.png";
-  }
-
-  if (imgPath.trim() === "") {
-    return "/images/placeholder.png";
-  }
-
-  if (imgPath.startsWith("http")) {
-    return imgPath;
-  }
-
-  if (imgPath.startsWith("/uploads")) {
-    return `${VENDOR_BACKEND_URL}${imgPath}`;
-  }
-
-  if (imgPath.startsWith("/images")) {
-    return imgPath;
-  }
-
+  if (typeof imgPath !== "string") return "/images/placeholder.png";
+  if (imgPath.trim() === "") return "/images/placeholder.png";
+  if (imgPath.startsWith("http")) return imgPath;
+  if (imgPath.startsWith("/uploads")) return `${VENDOR_BACKEND_URL}${imgPath}`;
+  if (imgPath.startsWith("/images")) return imgPath;
   return `${VENDOR_BACKEND_URL}${imgPath}`;
 };
 
@@ -109,10 +85,15 @@ const Checkout = () => {
   
   const guestId = localStorage.getItem("guestId");
   
+  // ✅ FIX: Keep guestId persistent - Don't delete after order
   useEffect(() => {
-    if (!localStorage.getItem("guestId")) {
+    let currentGuestId = localStorage.getItem("guestId");
+    // console.log("🔑 Checkout - Current guestId:", currentGuestId);
+    
+    if (!currentGuestId) {
       const newGuestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
       localStorage.setItem("guestId", newGuestId);
+      // console.log("🆕 New guestId created:", newGuestId);
     }
   }, []);
 
@@ -158,17 +139,31 @@ const Checkout = () => {
     fetchCart();
   }, [guestId]);
 
+  // ✅ FIX: Fetch addresses with current guestId
   const fetchSavedAddresses = async () => {
-    if (!guestId) return;
+    const currentGuestId = localStorage.getItem("guestId");
+    // console.log("📦 Fetching addresses for guestId:", currentGuestId);
+    
+    if (!currentGuestId) {
+      // console.log("⚠️ No guestId found");
+      return;
+    }
     
     setLoadingAddresses(true);
     try {
-      const res = await axios.get(`${API_URL}/addresses/${guestId}`);
+      const res = await axios.get(`${API_URL}/addresses/${currentGuestId}`);
+      // console.log("📦 Addresses response:", res.data);
+      
       if (res.data.success) {
-        setSavedAddresses(res.data.addresses);
+        setSavedAddresses(res.data.addresses || []);
+        if (res.data.addresses && res.data.addresses.length > 0) {
+          // console.log("✅ Found", res.data.addresses.length, "addresses");
+        } else {
+          // console.log("ℹ️ No saved addresses found");
+        }
       }
     } catch (err) {
-      console.error("Fetch addresses error:", err);
+      console.error("❌ Fetch addresses error:", err);
     } finally {
       setLoadingAddresses(false);
     }
@@ -238,8 +233,12 @@ const Checkout = () => {
   const shippingCost = getShippingCost(discountedSubtotal, shippingMethod);
   const total = discountedSubtotal + shippingCost;
 
+  // ✅ FIX: Save address with current guestId
   const saveAddressToDB = async () => {
-    if (!guestId) {
+    const currentGuestId = localStorage.getItem("guestId");
+    // console.log("📦 Saving address for guestId:", currentGuestId);
+    
+    if (!currentGuestId) {
       setAddressSaveError("Unable to save address. Please refresh the page.");
       return;
     }
@@ -254,7 +253,7 @@ const Checkout = () => {
 
     try {
       const response = await axios.post(`${API_URL}/addresses`, {
-        guestId,
+        guestId: currentGuestId,
         name: shipping.name,
         address: {
           name: shipping.name,
@@ -268,13 +267,20 @@ const Checkout = () => {
         }
       });
       
+      // console.log("📦 Save address response:", response.data);
+      
       if (response.data.success) {
         setAddressSaveSuccess("✅ Address saved successfully!");
         await fetchSavedAddresses();
+        setTimeout(() => setAddressSaveSuccess(""), 3000);
+      } else {
+        setAddressSaveError("❌ " + (response.data.message || "Failed to save address"));
+        setTimeout(() => setAddressSaveError(""), 3000);
       }
     } catch (err) {
-      console.error("Save address error:", err);
-      setAddressSaveError("❌ Failed to save address. Please try again.");
+      console.error("❌ Save address error:", err);
+      setAddressSaveError("❌ " + (err.response?.data?.message || "Failed to save address. Please try again."));
+      setTimeout(() => setAddressSaveError(""), 3000);
     }
   };
 
@@ -307,6 +313,7 @@ const Checkout = () => {
     }
   };
 
+  // ✅ FIX: Don't delete guestId after order
   const placeOrder = async () => {
     if (isProcessing) return;
     
@@ -339,8 +346,11 @@ const Checkout = () => {
         await saveAddressToDB();
       }
 
+      const currentGuestId = localStorage.getItem("guestId");
+      // console.log("📦 Placing order with guestId:", currentGuestId);
+
       const orderData = {
-        guestId,
+        guestId: currentGuestId,
         shippingAddress: shipping,
         paymentMethod: payment,
         shippingMethod: shippingMethod,
@@ -351,22 +361,20 @@ const Checkout = () => {
         total: total,
       };
 
-      console.log("Placing order with data:", orderData);
+      // console.log("Placing order with data:", orderData);
 
       const res = await axios.post(`${API_URL}/order/place`, orderData);
 
       console.log("Order response:", res.data);
 
       if (res.data.success) {
-        // Send email confirmation (don't await to avoid blocking)
         sendOrderEmail(res.data.orderId).catch(err => {
           console.error("Email sending error:", err);
         });
         
-        // Clear cart from localStorage
-        localStorage.removeItem("guestId");
+        // ✅ FIX: DON'T DELETE guestId - Keep it for future orders
+        // localStorage.removeItem("guestId"); // ❌ REMOVED
         
-        // Navigate to order complete page
         navigate("/order-complete", { 
           state: { 
             orderId: res.data.orderId,
@@ -384,26 +392,15 @@ const Checkout = () => {
           } 
         });
       } else {
-        // Only show error if order failed
         alert(res.data.message || "Failed to place order");
         setIsProcessing(false);
       }
       
     } catch (err) {
       console.error("Order placement error:", err);
-      
-      // Check if the error is actually a success message
-      if (err.message === "Order placed successfully") {
-        // This is a success, navigate anyway
-        navigate("/order-complete");
-      } else {
-        // Real error
-        alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
-        setIsProcessing(false);
-      }
+      alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
+      setIsProcessing(false);
     } finally {
-      // Only set processing to false if not navigating
-      // The component will unmount on navigation anyway
       setTimeout(() => {
         setIsProcessing(false);
       }, 3000);
@@ -434,7 +431,6 @@ const Checkout = () => {
                   <Card.Body>
                     <div className="section-head">
                       <h4 className="funnel-sans">1. Contact Information</h4>
-
                       <p>
                         Already have an account?{" "}
                         <NavLink to="/login" className="login-link">
@@ -442,7 +438,6 @@ const Checkout = () => {
                         </NavLink>
                       </p>
                     </div>
-
                     <Form.Control
                       type="email"
                       name="email"
@@ -452,7 +447,6 @@ const Checkout = () => {
                       className="custom-input"
                       required
                     />
-
                     <Form.Check
                       type="checkbox"
                       label="Keep me updated on news and exclusive offers"
@@ -473,7 +467,6 @@ const Checkout = () => {
                       <h4 className="section-title funnel-sans mb-0">
                         2. Shipping Address
                       </h4>
-                      
                       <div className="d-flex gap-2">
                         {savedAddresses.length > 0 && (
                           <Button 
@@ -486,7 +479,6 @@ const Checkout = () => {
                             {showSavedAddresses ? "Hide" : "My Addresses"} ({savedAddresses.length})
                           </Button>
                         )}
-                        
                         <Button 
                           variant="outline-success" 
                           size="sm"
@@ -573,7 +565,6 @@ const Checkout = () => {
                           required
                         />
                       </Col>
-
                       <Col md={6}>
                         <Form.Label>Phone Number *</Form.Label>
                         <Form.Control
@@ -585,7 +576,6 @@ const Checkout = () => {
                           required
                         />
                       </Col>
-
                       <Col md={6}>
                         <Form.Label>Address *</Form.Label>
                         <Form.Control
@@ -597,7 +587,6 @@ const Checkout = () => {
                           required
                         />
                       </Col>
-
                       <Col md={12}>
                         <Form.Label>Address Line 2</Form.Label>
                         <Form.Control
@@ -605,7 +594,6 @@ const Checkout = () => {
                           className="custom-input"
                         />
                       </Col>
-
                       <Col md={4}>
                         <Form.Label>City *</Form.Label>
                         <Form.Control
@@ -617,7 +605,6 @@ const Checkout = () => {
                           required
                         />
                       </Col>
-
                       <Col md={4}>
                         <Form.Label>State *</Form.Label>
                         <Form.Control
@@ -629,7 +616,6 @@ const Checkout = () => {
                           required
                         />
                       </Col>
-
                       <Col md={4}>
                         <Form.Label>Pin Code *</Form.Label>
                         <Form.Control
@@ -661,35 +647,24 @@ const Checkout = () => {
               >
                 <Card className="checkout-card border-0 mt-4">
                   <Card.Body>
-                    <h4 className="section-title funnel-sans">
-                      3. Shipping Method
-                    </h4>
-
+                    <h4 className="section-title funnel-sans">3. Shipping Method</h4>
                     {discountedSubtotal >= 1500 && shippingMethod === "standard" && (
                       <Alert variant="success" className="mb-3">
                         🎉 Free shipping applied on orders above ₹1500!
                       </Alert>
                     )}
-
                     <div
-                      className={`method-box ${
-                        shippingMethod === "standard" ? "active-method" : ""
-                      }`}
+                      className={`method-box ${shippingMethod === "standard" ? "active-method" : ""}`}
                       onClick={() => setShippingMethod("standard")}
                     >
                       <div>
                         <h6>Standard Shipping</h6>
                         <p>Delivery in 3 - 5 business days</p>
                       </div>
-                      <strong>
-                        {discountedSubtotal >= 1500 ? "FREE" : "₹99"}
-                      </strong>
+                      <strong>{discountedSubtotal >= 1500 ? "FREE" : "₹99"}</strong>
                     </div>
-
                     <div
-                      className={`method-box ${
-                        shippingMethod === "express" ? "active-method" : ""
-                      }`}
+                      className={`method-box ${shippingMethod === "express" ? "active-method" : ""}`}
                       onClick={() => setShippingMethod("express")}
                     >
                       <div>
@@ -698,7 +673,6 @@ const Checkout = () => {
                       </div>
                       <strong>₹199</strong>
                     </div>
-
                     {discountedSubtotal < 1500 && shippingMethod === "standard" && (
                       <div className="shipping-note mt-3">
                         <small className="text-muted">
@@ -706,7 +680,6 @@ const Checkout = () => {
                         </small>
                       </div>
                     )}
-
                     {shippingMethod === "express" && (
                       <div className="shipping-note mt-3">
                         <small className="text-muted">
@@ -725,13 +698,8 @@ const Checkout = () => {
               >
                 <Card className="checkout-card border-0 mt-4">
                   <Card.Body>
-                    <h4 className="section-title funnel-sans">
-                      4. Payment Method
-                    </h4>
-
-                    <p className="payment-note">
-                      All transactions are secure and encrypted.
-                    </p>
+                    <h4 className="section-title funnel-sans">4. Payment Method</h4>
+                    <p className="payment-note">All transactions are secure and encrypted.</p>
 
                     {emailStatus === "sending" && (
                       <Alert variant="info" className="py-2 mb-3">
@@ -739,14 +707,12 @@ const Checkout = () => {
                         Sending order confirmation to your email...
                       </Alert>
                     )}
-                    
                     {emailStatus === "success" && (
                       <Alert variant="success" className="py-2 mb-3">
                         <FaCheckCircle className="me-2" />
                         Order confirmation sent to your email!
                       </Alert>
                     )}
-                    
                     {emailStatus === "error" && (
                       <Alert variant="warning" className="py-2 mb-3">
                         ⚠️ Order placed but email could not be sent.
@@ -754,9 +720,7 @@ const Checkout = () => {
                     )}
 
                     <div
-                      className={`payment-option ${
-                        payment === "upi" ? "active-pay" : ""
-                      }`}
+                      className={`payment-option ${payment === "upi" ? "active-pay" : ""}`}
                       onClick={() => setPayment("upi")}
                     >
                       <div>
@@ -776,9 +740,7 @@ const Checkout = () => {
                     </div>
 
                     <div
-                      className={`payment-option ${
-                        payment === "card" ? "active-pay" : ""
-                      }`}
+                      className={`payment-option ${payment === "card" ? "active-pay" : ""}`}
                       onClick={() => setPayment("card")}
                     >
                       <div>
@@ -797,9 +759,7 @@ const Checkout = () => {
                     </div>
 
                     <div
-                      className={`payment-option ${
-                        payment === "cod" ? "active-pay" : ""
-                      }`}
+                      className={`payment-option ${payment === "cod" ? "active-pay" : ""}`}
                       onClick={() => setPayment("cod")}
                     >
                       <div>
