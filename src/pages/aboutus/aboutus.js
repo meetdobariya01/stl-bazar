@@ -278,6 +278,12 @@ const Aboutus = () => {
             >
               Explore Our Products
             </button>
+              <button
+              className="closing-btn ms-2"
+              onClick={() => navigate("/sell")}
+            >
+              Sell With Us
+            </button>
           </motion.div>
         </Container>
       </section>

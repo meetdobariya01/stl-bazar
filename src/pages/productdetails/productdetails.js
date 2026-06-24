@@ -162,7 +162,9 @@ const Productdetails = () => {
             productId: product._id,
             name: product.name,
             price: product.price,
-            image: Array.isArray(product.image) ? product.image[0] : product.image,
+            image: Array.isArray(product.image)
+              ? product.image[0]
+              : product.image,
           },
         });
         setWishlist(true);
@@ -676,7 +678,7 @@ const Productdetails = () => {
           {/* REVIEWS SECTION */}
           <div className="reviews-section mt-5">
             <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
-              <h3 className="funnel-sans">Customer Reviews</h3>
+              <h3 className="funnel-sans me-2">Customer Reviews</h3>
               <Button
                 variant="outline-success"
                 onClick={() => setShowReviewModal(true)}
@@ -835,7 +837,20 @@ const Productdetails = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+      {/* Mobile Sticky Add To Cart */}
+      <div className="mobile-sticky-cart">
+        <button
+          className={`mobile-wishlist ${wishlist ? "active" : ""}`}
+          onClick={toggleWishlist}
+        >
+          <FaHeart />
+        </button>
 
+        <button className="mobile-add-cart" onClick={addToCart}>
+          <FaShoppingBag className="me-2" />
+          Add to Cart
+        </button>
+      </div>
       <Footer />
     </>
   );
