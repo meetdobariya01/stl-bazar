@@ -1,3 +1,4 @@
+// CategoriesSection.js - Updated version
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import { motion } from "framer-motion";
@@ -5,14 +6,13 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./category.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const USER_BACKEND_URL = "http://localhost:9000";
-const ADMIN_BACKEND_URL = "http://localhost:7000";
+const API_URL = process.env.REACT_APP_API_URL || "https://api.gourmetbazar.starlighttechlabsindia.com/api";
+const ADMIN_BACKEND_URL = "https://api.brandelsuperadmin.starlighttechlabsindia.com";
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); 
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +22,6 @@ const CategoriesSection = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      // Add cache-busting timestamp to prevent caching
       const response = await axios.get(`${API_URL}/categories`, {
         params: {
           _t: Date.now(), // This ensures fresh data every time
@@ -49,7 +48,7 @@ const CategoriesSection = () => {
       setError(null);
     } catch (error) {
       console.error("Error fetching categories:", error);
-      setError("Categories load karva ma error aavi");
+      setError("Failed to load categories");
       setCategories([]);
     } finally {
       setLoading(false);
@@ -60,23 +59,28 @@ const CategoriesSection = () => {
     navigate(`/category/${encodeURIComponent(categoryName)}`);
   };
 
-  // ✅ Fix: Get correct image URL based on path
+  // ✅ FIXED: Get correct image URL from admin backend
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
 
-    if (imagePath.startsWith("http")) {
+    // If it's already a full URL
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
       return imagePath;
     }
 
+    // If it starts with /images/categories/ (stored by admin)
     if (imagePath.startsWith("/images/categories/")) {
+      // return `${ADMIN_BACKEND_URL}${imagePath}`;
       return `${ADMIN_BACKEND_URL}${imagePath}`;
     }
 
-    if (imagePath.startsWith("/images/Category/")) {
-      return `${USER_BACKEND_URL}${imagePath}`;
+    // If it's just a filename
+    if (!imagePath.startsWith("/")) {
+      return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
     }
 
-    return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
+    // Default fallback
+    return `${imagePath}`;
   };
 
   if (loading) {
@@ -140,7 +144,7 @@ const CategoriesSection = () => {
               }}
               onClick={() => handleCategoryClick(category.name)}
             >
-              <div className="premium-category-image">
+              <div className="premium-category-image">  
                 <img
                   src={imageUrl}
                   alt={category.name}

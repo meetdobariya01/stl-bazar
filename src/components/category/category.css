@@ -67,7 +67,7 @@
 }
 
 .premium-category-image {
-  height: 220px;
+  height:auto;
   overflow: hidden;
 }
 

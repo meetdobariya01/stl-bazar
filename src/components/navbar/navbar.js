@@ -23,7 +23,7 @@ const Mainnavbar = () => {
 
             <Nav.Link
               as={NavLink}
-              to="/category/gifting"
+              to="/category/Gifting"
               className="nav-link-main"
             >
               Gifting Guides

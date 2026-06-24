@@ -27,7 +27,20 @@ import "./grid.css";
 import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
-const BACKEND_URL = "http://localhost:9000";
+// ✅ USE VENDOR BACKEND URL FOR IMAGES
+const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
+
+// ✅ FIXED: Get primary image URL using VENDOR backend
+const getPrimaryImageUrl = (image) => {
+  if (!image) return "/images/placeholder.png";
+  let img = Array.isArray(image) ? image[0] : image;
+  if (!img) return "/images/placeholder.png";
+  const imgStr = String(img);
+  if (imgStr.startsWith("http")) return imgStr;
+  if (imgStr.startsWith("/uploads")) return `${VENDOR_BACKEND_URL}${imgStr}`;
+  if (imgStr.startsWith("/images")) return imgStr;
+  return `${VENDOR_BACKEND_URL}${imgStr}`;
+};
 
 const Grid = () => {
   const { pathname } = useLocation();
@@ -36,7 +49,7 @@ const Grid = () => {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant", // or "smooth"
+      behavior: "instant",
     });
   }, [pathname]);
 
@@ -54,7 +67,6 @@ const Grid = () => {
   const [wishlist, setWishlist] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
@@ -62,7 +74,6 @@ const Grid = () => {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
 
-  // Data for filters
   const [categories, setCategories] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -77,7 +88,6 @@ const Grid = () => {
         setProducts(res.data);
         setFilteredProducts(res.data);
 
-        // Extract filter options
         const uniqueCategories = [
           ...new Set(res.data.map((p) => p.category).filter(Boolean)),
         ];
@@ -96,28 +106,23 @@ const Grid = () => {
       .finally(() => setLoading(false));
   }, [decodedName]);
 
-  // Apply filters
   useEffect(() => {
     let filtered = [...products];
 
-    // Category filter
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
         selectedCategories.includes(p.category),
       );
     }
 
-    // Material filter
     if (selectedMaterials.length > 0) {
       filtered = filtered.filter((p) => selectedMaterials.includes(p.material));
     }
 
-    // Brand filter
     if (selectedBrands.length > 0) {
       filtered = filtered.filter((p) => selectedBrands.includes(p.brand));
     }
 
-    // Price filter
     if (priceMin) {
       filtered = filtered.filter((p) => p.price >= Number(priceMin));
     }
@@ -125,7 +130,6 @@ const Grid = () => {
       filtered = filtered.filter((p) => p.price <= Number(priceMax));
     }
 
-    // Rating filter
     if (selectedRating > 0) {
       filtered = filtered.filter(
         (p) => (p.averageRating || 0) >= selectedRating,
@@ -142,17 +146,6 @@ const Grid = () => {
     selectedRating,
     products,
   ]);
-
-  const getPrimaryImageUrl = (image) => {
-    if (!image) return "/images/placeholder.png";
-    let img = Array.isArray(image) ? image[0] : image;
-    if (!img) return "/images/placeholder.png";
-    const imgStr = String(img);
-    if (imgStr.startsWith("http")) return imgStr;
-    if (imgStr.startsWith("/uploads")) return `${BACKEND_URL}${imgStr}`;
-    if (imgStr.startsWith("/images")) return imgStr;
-    return `${BACKEND_URL}${imgStr}`;
-  };
 
   const changeQty = (id, val) => {
     setQty((prev) => ({
@@ -255,22 +248,8 @@ const Grid = () => {
     <>
       <Header />
 
-      {/* Hero Section */}
-      <div className="category-hero">
-        <Container>
-          {/* <div className="hero-content text-center">
-            <h1 className="hero-title">Home Decor</h1>
-            <p className="hero-subtitle">
-              Thoughtfully crafted pieces to style your space and make it truly yours.
-            </p>
-            <p className="product-count">{filteredProducts.length} Products</p>
-          </div> */}
-        </Container>
-      </div>
-
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
-          {/* Top Bar */}
           <div className="top-bar">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div className="d-flex align-items-center gap-3">
@@ -326,7 +305,6 @@ const Grid = () => {
                   </Button>
                 </div>
 
-                {/* Categories */}
                 {categories.length > 0 && (
                   <div className="filter-group">
                     <h6>Categories</h6>
@@ -344,7 +322,6 @@ const Grid = () => {
                   </div>
                 )}
 
-                {/* Price Range */}
                 <div className="filter-group">
                   <h6>Price</h6>
                   <div className="price-inputs">
@@ -364,7 +341,6 @@ const Grid = () => {
                   </div>
                 </div>
 
-                {/* Materials */}
                 {materials.length > 0 && (
                   <div className="filter-group">
                     <h6>Material</h6>
@@ -387,7 +363,6 @@ const Grid = () => {
                   </div>
                 )}
 
-                {/* Brands */}
                 {brands.length > 0 && (
                   <div className="filter-group">
                     <h6>Brand</h6>
@@ -410,7 +385,6 @@ const Grid = () => {
                   </div>
                 )}
 
-                {/* Rating */}
                 <div className="filter-group">
                   <h6>Rating</h6>
                   <div className="rating-options">
@@ -444,7 +418,6 @@ const Grid = () => {
               </div>
             </Col>
 
-            {/* Mobile Filters Modal-like drawer */}
             {showMobileFilters && (
               <div
                 className="mobile-filters-overlay"
@@ -465,7 +438,6 @@ const Grid = () => {
                     </Button>
                   </div>
                   <div className="drawer-body">
-                    {/* Same filter content as desktop */}
                     <div className="filter-group">
                       <h6>Categories</h6>
                       {categories.map((cat) => (

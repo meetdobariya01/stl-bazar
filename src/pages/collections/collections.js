@@ -6,7 +6,8 @@ import axios from "axios";
 import "./collections.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
-const BACKEND_URL = "http://localhost:9000";
+// ✅ USE VENDOR BACKEND URL FOR IMAGES
+const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
 const Collections = ({ limit = 6 }) => {
   const [collections, setCollections] = useState([]);
@@ -22,25 +23,19 @@ const Collections = ({ limit = 6 }) => {
     try {
       setLoading(true);
 
-      // First, get all companies
-      const companiesResponse = await axios.get(`${API_URL}/companies`); 
+      const companiesResponse = await axios.get(`${API_URL}/companies`);
       const companies = companiesResponse.data;
 
-      // console.log("Companies:", companies);
-
-      // For each company, get one product
       const productsData = [];
 
       for (const company of companies) {
         try {
-          // Get products for this company
           const productsResponse = await axios.get(`${API_URL}/products`, {
             params: { company: company.name },
           });
 
           const products = productsResponse.data;
 
-          // If company has products, take the first one
           if (products && products.length > 0) {
             productsData.push({
               ...products[0],
@@ -52,9 +47,6 @@ const Collections = ({ limit = 6 }) => {
         }
       }
 
-      // console.log("Collection products (one per company):", productsData);
-
-      // Limit the number of items shown
       setCollections(productsData.slice(0, limit));
       setError(null);
     } catch (error) {
@@ -65,7 +57,7 @@ const Collections = ({ limit = 6 }) => {
     }
   };
 
-  // Helper function to get image URL safely
+  // ✅ FIXED: Get image URL from VENDOR backend
   const getImageUrl = (image) => {
     if (!image) return null;
 
@@ -77,18 +69,17 @@ const Collections = ({ limit = 6 }) => {
       return imagePath;
     }
 
+    if (imagePath.startsWith("/uploads")) {
+      return `${VENDOR_BACKEND_URL}${imagePath}`;
+    }
+
     if (imagePath.startsWith("/images")) {
       return imagePath;
     }
 
-    if (imagePath.startsWith("/uploads")) {
-      return `${BACKEND_URL}${imagePath}`;
-    }
-
-    return `${BACKEND_URL}/uploads/${imagePath}`;
+    return `${VENDOR_BACKEND_URL}/uploads/${imagePath}`;
   };
 
-  // Format price to 2 decimal places
   const formatPrice = (price) => {
     if (!price && price !== 0) return "0";
     const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -96,17 +87,14 @@ const Collections = ({ limit = 6 }) => {
     return numPrice.toFixed(2);
   };
 
-  // Handle product click
   const handleProductClick = (productId) => {
     navigate(`/product/${productId}`);
   };
 
-  // Handle company click
   const handleCompanyClick = (companyName) => {
     navigate(`/company/${encodeURIComponent(companyName)}`);
   };
 
-  // Render stars for rating
   const renderStars = (rating) => {
     const starRating = rating || 0;
     return (
@@ -192,7 +180,6 @@ const Collections = ({ limit = 6 }) => {
                   className="collection-card-main"
                   onClick={() => handleProductClick(product._id)}
                 >
-                  {/* Product Image */}
                   <div className="image-wrapper-main mb-3">
                     <img
                       src={imageUrl || "/images/placeholder-product.jpg"}
@@ -203,10 +190,8 @@ const Collections = ({ limit = 6 }) => {
                       }}
                     />
 
-                    {/* NEW Badge */}
                     {product.isNew && <span className="new-badge">NEW</span>}
 
-                    {/* Wishlist */}
                     <button
                       className="wishlist-btn"
                       onClick={(e) => e.stopPropagation()}
@@ -215,7 +200,6 @@ const Collections = ({ limit = 6 }) => {
                     </button>
                   </div>
 
-                  {/* Content */}
                   <div className="card-content-main">
                     <p
                       className="company-name"
