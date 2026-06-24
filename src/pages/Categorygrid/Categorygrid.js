@@ -261,10 +261,10 @@ const handleCategorySelect = (category) => {
           </div>
 
           <div className="top-bar">
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div className="d-flex justify-content-end align-items-center flex-wrap gap-3">
               <Button
                 variant="outline-secondary"
-                className="mobile-filter-btn d-lg-none"
+                className="mobile-filter-btn "
                 onClick={() => setShowMobileFilters(true)}
               >
                 <FaFilter /> Filters
@@ -288,8 +288,9 @@ const handleCategorySelect = (category) => {
           </div>
 
           <Row className="g-4">
-            <Col lg={3} className="d-none d-lg-block">
-              <div className="filters-sidebar">
+            {/* Filters Sidebar */}
+            <Col lg={3} className="d-none ">
+              <div className="filters-sidebar ">
                 <div className="filter-header">
                   <h5>Filters</h5>
                   <Button
@@ -435,8 +436,9 @@ const handleCategorySelect = (category) => {
                     <Button
                       variant="link"
                       onClick={() => setShowMobileFilters(false)}
+                      className="text-dark text-decoration-none"
                     >
-                      ✕
+                      ✘
                     </Button>
                   </div>
                   <div className="drawer-body">
@@ -455,7 +457,7 @@ const handleCategorySelect = (category) => {
                             className="category-item"
                             onClick={() => handleCategorySelect(cat.name)}
                           >
-                            <span>{cat.name}</span>
+                            <span>► {cat.name}</span>
                           </div>
                         ))}
                       </div>
@@ -504,7 +506,7 @@ const handleCategorySelect = (category) => {
                       Clear All
                     </Button>
                     <Button
-                      variant="primary"
+                      variant="outline-success"
                       onClick={() => setShowMobileFilters(false)}
                     >
                       Apply
@@ -514,7 +516,8 @@ const handleCategorySelect = (category) => {
               </div>
             )}
 
-            <Col lg={9}>
+            {/* Products Grid */}
+            <Col lg={12}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
                   <h5>No products found</h5>
@@ -530,7 +533,7 @@ const handleCategorySelect = (category) => {
                     const imageUrl = formatImagePath(item.image);
 
                     return (
-                      <Col key={item._id} xs={6} md={4} className="text-center">
+                      <Col key={item._id} xs={6} md={4} lg={3} className="text-center">
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -538,7 +541,7 @@ const handleCategorySelect = (category) => {
                           transition={{ duration: 0.3 }}
                         >
                           <Card
-                            className=""
+                            className="product-card-grid"
                             onClick={() => navigate(`/product/${item._id}`)}
                           >
                             <div className="product-image-wrapper">

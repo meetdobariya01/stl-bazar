@@ -113,7 +113,7 @@ const Product = () => {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      Buy Now
+                      Explore Brand
                     </motion.button>
                   </NavLink>
                 </motion.div>

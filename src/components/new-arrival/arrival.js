@@ -96,7 +96,7 @@ const Arrival = () => {
   }
 
   return (
-    <section className="arrival-section lexend">
+    <section className="arrival-section lexend mt-5">
       <Container fluid className="px-lg-5">
         <Carousel
           indicators={true}
@@ -110,7 +110,7 @@ const Arrival = () => {
             <Carousel.Item key={idx}>
               <div className="arrival-wrapper">
                 <div className="left-content">
-                  <span>New Arrivals</span>
+                  <span>Our Brands</span>
                   <h2>
                     Fresh Finds,
                     <br />

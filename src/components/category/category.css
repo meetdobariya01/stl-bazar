@@ -85,6 +85,7 @@
 .premium-category-content {
   text-align: center;
   padding: 24px;
+  height: 85px;
 }
 
 .premium-category-content h5 {
@@ -129,6 +130,12 @@
     font-size: 13px;
   }
   .premium-category-content h5 {
-    font-size: 14px;
+    font-size: 10px;
+  }
+  .premium-category-card{
+    border-radius: 10px;
+  }
+  .premium-category-content{
+    height: 50px;
   }
 }

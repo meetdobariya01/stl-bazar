@@ -255,7 +255,7 @@ const Grid = () => {
               <div className="d-flex align-items-center gap-3">
                 <Button
                   variant="outline-secondary"
-                  className="mobile-filter-btn d-lg-none"
+                  className="mobile-filter-btn"
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                 >
                   <FaSlidersH /> Filters
@@ -291,7 +291,8 @@ const Grid = () => {
           </div>
 
           <Row className="g-4">
-            <Col lg={3} className="d-none d-lg-block">
+            {/* Filters Sidebar */}
+            <Col lg={3} className="d-none">
               <div className="filters-sidebar">
                 <div className="filter-header">
                   <h5>Filter By</h5>
@@ -430,9 +431,10 @@ const Grid = () => {
                     <h5>Filters</h5>
                     <Button
                       variant="link"
+                       className="text-dark text-decoration-none"
                       onClick={() => setShowMobileFilters(false)}
                     >
-                      ✕
+                      ✘
                     </Button>
                   </div>
                   <div className="drawer-body">
@@ -482,7 +484,8 @@ const Grid = () => {
               </div>
             )}
 
-            <Col lg={9}>
+            {/* Products Grid */}
+            <Col lg={12}>
               {loading ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary" />
@@ -500,7 +503,7 @@ const Grid = () => {
                   {sortedProducts.map((item) => {
                     const isInWishlist = wishlist.includes(item._id);
                     return (
-                      <Col key={item._id} xs={6} md={4}>
+                      <Col key={item._id} xs={6} md={4} lg={3}>
                         <motion.div
                           whileHover={{ y: -4 }}
                           transition={{ duration: 0.2 }}
@@ -530,7 +533,7 @@ const Grid = () => {
                             </div>
                             <Card.Body>
                               <div className="product-brand">
-                                {item.brand || "Artisan Craft"}
+                                {item.brand || "Brand Name"}
                               </div>
                               <h6 className="product-name">{item.name}</h6>
                               <div className="product-rating">
