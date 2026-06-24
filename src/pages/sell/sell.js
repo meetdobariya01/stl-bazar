@@ -1,5 +1,14 @@
-import React, { useState } from "react";
-import { Container, Row, Col, Form, Button, Alert, Spinner } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import {
+  Container,
+  Row,
+  Col,
+  Form,
+  Button,
+  Alert,
+  Spinner,
+} from "react-bootstrap";
 import {
   FaStore,
   FaUsers,
@@ -17,6 +26,15 @@ import "./sell.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const Sell = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -33,56 +51,56 @@ const Sell = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     if (validationErrors[name]) {
-      setValidationErrors(prev => ({ ...prev, [name]: "" }));
+      setValidationErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateForm = () => {
     const errors = {};
-    
+
     if (!formData.fullName.trim()) {
       errors.fullName = "Full name is required";
     }
-    
+
     if (!formData.email.trim()) {
       errors.email = "Email address is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = "Email address is invalid";
     }
-    
+
     if (!formData.phoneNumber.trim()) {
       errors.phoneNumber = "Phone number is required";
     } else if (!/^\d{10}$/.test(formData.phoneNumber)) {
       errors.phoneNumber = "Phone number must be 10 digits";
     }
-    
+
     if (!formData.businessName.trim()) {
       errors.businessName = "Business/Brand name is required";
     }
-    
+
     if (!formData.category) {
       errors.category = "Please select a product category";
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
     setError("");
-    
+
     try {
       // Updated endpoint: /api/sellers/register
       const response = await axios.post(`${API_URL}/sellers/register`, {
@@ -92,16 +110,18 @@ const Sell = () => {
         businessName: formData.businessName,
         category: formData.category,
       });
-      
+
       console.log("Response:", response.data);
-      
+
       if (response.data.success) {
         setSuccess(true);
       }
     } catch (err) {
       console.error("Registration error:", err);
       console.error("Error response:", err.response?.data);
-      setError(err.response?.data?.message || "Failed to register. Please try again.");
+      setError(
+        err.response?.data?.message || "Failed to register. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -114,17 +134,22 @@ const Sell = () => {
         <div className="seller-register-section lexend">
           <Container>
             <div className="success-container text-center py-5">
-              <FaCheckCircle className="success-icon" size={80} color="#28a745" />
+              <FaCheckCircle
+                className="success-icon"
+                size={80}
+                color="#28a745"
+              />
               <h2 className="mt-4">Registration Successful!</h2>
               <p className="mt-3">
                 Thank you for registering as a seller on Brandel.
               </p>
               <p>
-                We have sent a confirmation email to <strong>{formData.email}</strong>.
-                Please check your inbox for further instructions.
+                We have sent a confirmation email to{" "}
+                <strong>{formData.email}</strong>. Please check your inbox for
+                further instructions.
               </p>
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 className="mt-3"
                 onClick={() => window.location.reload()}
               >
@@ -160,7 +185,11 @@ const Sell = () => {
                   <p>Get started in just a few simple steps.</p>
 
                   {error && (
-                    <Alert variant="danger" onClose={() => setError("")} dismissible>
+                    <Alert
+                      variant="danger"
+                      onClose={() => setError("")}
+                      dismissible
+                    >
                       {error}
                     </Alert>
                   )}
@@ -249,7 +278,9 @@ const Sell = () => {
                         onChange={handleChange}
                         isInvalid={!!validationErrors.category}
                       >
-                        <option value="">Select your main product category</option>
+                        <option value="">
+                          Select your main product category
+                        </option>
                         <option value="Fashion">Fashion</option>
                         <option value="Handmade">Handmade</option>
                         <option value="Beauty">Beauty</option>
@@ -267,21 +298,27 @@ const Sell = () => {
                     <div className="privacy-note d-flex align-items-center gap-2 mb-4">
                       <FaShieldAlt />
                       <span>
-                        We respect your privacy. Your information is safe with us.
+                        We respect your privacy. Your information is safe with
+                        us.
                       </span>
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="create-btn w-100"
                       disabled={loading}
                       style={{ padding: "12px" }}
                     >
-                      {loading ? <Spinner size="sm" animation="border" /> : "Create My Account"}
+                      {loading ? (
+                        <Spinner size="sm" animation="border" />
+                      ) : (
+                        "Create My Account"
+                      )}
                     </Button>
 
                     <div className="signin-text text-center mt-3">
-                      Already have an account? <span style={{  cursor: "pointer" }}>Sign in</span>
+                      Already have an account?{" "}
+                      <span style={{ cursor: "pointer" }}>Sign in</span>
                     </div>
                   </Form>
                 </div>
@@ -300,8 +337,8 @@ const Sell = () => {
                       <FaUsers size={24} />
                     </div>
                     <div>
-                      <h5>Quality Customers</h5>
-                      <p>Connect with people who appreciate handcrafted and authentic products.</p>
+                      <h5>Invite-only marketplace</h5>
+                      <p>Reserved exclusively for exceptional brands</p>
                     </div>
                   </div>
 
@@ -310,8 +347,8 @@ const Sell = () => {
                       <FaLeaf size={24} />
                     </div>
                     <div>
-                      <h5>Low Commission</h5>
-                      <p>Competitive fees with no hidden charges.</p>
+                      <h5>Curated to maintain quality</h5>
+                      <p>Carefully selected brands and products</p>
                     </div>
                   </div>
 
@@ -320,8 +357,8 @@ const Sell = () => {
                       <FaShoppingBag size={24} />
                     </div>
                     <div>
-                      <h5>Easy to Get Started</h5>
-                      <p>Simple onboarding and quick product listing.</p>
+                      <h5>Better visibility for selected brands</h5>
+                      <p>Reach customers with enhanced exposure</p>
                     </div>
                   </div>
 
@@ -330,8 +367,8 @@ const Sell = () => {
                       <FaShieldAlt size={24} />
                     </div>
                     <div>
-                      <h5>Dedicated Support</h5>
-                      <p>We're here to help you grow your business.</p>
+                      <h5>Founding Seller benefits available</h5>
+                      <p>Unlock exclusive early seller advantages</p>
                     </div>
                   </div>
 

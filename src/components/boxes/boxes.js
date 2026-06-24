@@ -53,22 +53,21 @@ const Boxes = () => {
                   }}
                 >
                   <div className="overlay"></div>
+                  <a
+                    href="/shop"
+                    className="text-decoration-none"
+                  >
+                    <div className="promo-content">
+                      <span>{item.subtitle}</span>
 
-                  <div className="promo-content">
-                    <span>{item.subtitle}</span>
+                      <h3>{item.title}</h3>
 
-                    <h3>{item.title}</h3>
+                      <p>{item.desc}</p>
 
-                    <p>{item.desc}</p>
-
-                    <a
-                      href="/shop"
-                      className="promo-btn d-flex align-items-center"
-                    >
-                      {item.button}
-                      <FaArrowRight className="ms-2" />
-                    </a>
-                  </div>
+                      {/* {item.button} */}
+                      {/* <FaArrowRight className="ms-2" /> */}
+                    </div>
+                  </a>
                 </div>
               </Col>
             ))}
