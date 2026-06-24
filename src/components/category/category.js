@@ -122,7 +122,7 @@ const CategoriesSection = () => {
   }
 
   return (
-    <Row className="g-4 justify-content-center container mx-auto lexend">
+    <Row className="g-4 justify-content-center container mx-auto lexend mt-5">
       <div className="category-heading text-start mt-5">
         <span>POPULAR CATEGORIES</span>
         <h2 className="funnel-sans category-title">Explore Our World</h2>
@@ -132,7 +132,7 @@ const CategoriesSection = () => {
         const imageUrl = getImageUrl(category.image);
 
         return (
-          <Col lg={4} md={4} sm={6} xs={6} key={category._id || index}>
+          <Col lg={4} md={4} sm={4} xs={4} key={category._id || index}>
             <motion.div
               className="premium-category-card"
               initial={{ opacity: 0, y: 40 }}
@@ -154,7 +154,7 @@ const CategoriesSection = () => {
 
               <div className="premium-category-content">
                 <h5>{category.name}</h5>
-                <span>Explore Collection</span>
+                {/* <span>Explore Collection</span> */}
               </div>
             </motion.div>
           </Col>

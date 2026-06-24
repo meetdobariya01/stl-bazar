@@ -26,16 +26,19 @@ const Home = () => {
       <Carouselhero />
 
       {/* features */}
-      <Features />
+      {/* <Features /> */}
 
       {/* category */}
       <Category />
 
       {/* collection */}
-      <Collections />
+      {/* <Collections /> */}
 
       {/* New Arrivals */}
       <Arrival />
+
+      {/* best seller */}
+      <Bestseller />
 
       {/* boxes */}
       <Boxes />
@@ -44,10 +47,7 @@ const Home = () => {
       {/* <Explore /> */}
 
       {/* Details */}
-      <Details />
-
-      {/* best seller */}
-      <Bestseller />
+      {/* <Details /> */}
 
       {/* shop with us */}
       <Shopus />
