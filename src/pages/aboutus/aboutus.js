@@ -287,7 +287,7 @@ const Aboutus = () => {
           </motion.div>
         </Container>
       </section>
-
+        
       {/* Footer Component */}
       <Footer />
     </div>

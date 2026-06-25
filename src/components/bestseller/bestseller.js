@@ -8,9 +8,19 @@ import "swiper/css";
 import "swiper/css/pagination";
 import axios from "axios";
 import "./bestseller.css";
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const BACKEND_URL = "http://localhost:9000";
+
+// ✅ Slug helper function
+const createSlug = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const Bestseller = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -22,9 +32,10 @@ const Bestseller = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+  
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); // Add navigate hook
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchBestSellers();
@@ -33,9 +44,6 @@ const Bestseller = () => {
   const fetchBestSellers = async () => {
     try {
       const { data } = await axios.get(`${API_URL}/best-sellers`);
-
-      // console.log("Best Sellers data:", data);
-      // Only show first 6 products
       setBestSellers(data.slice(0, 6));
     } catch (error) {
       console.error("Error fetching best sellers:", error);
@@ -48,28 +56,25 @@ const Bestseller = () => {
   const getImageUrl = (image) => {
     if (!image) return null;
 
-    // If it's an array, get the first item
     let imagePath = Array.isArray(image) ? image[0] : image;
 
     if (!imagePath) return null;
 
-    // If it's a full URL, return as is
     if (imagePath.startsWith("http")) {
       return imagePath;
     }
 
-    // If it starts with /images, serve from backend
     if (imagePath.startsWith("/images")) {
       return `${imagePath}`;
     }
 
-    // Default: serve from uploads folder
     return `${BACKEND_URL}/uploads/${imagePath}`;
   };
 
-  // Handle product click
-  const handleProductClick = (productId) => {
-    navigate(`/product/${productId}`);
+  // ✅ Handle product click with slug
+  const handleProductClick = (productName, productId) => {
+    const slug = createSlug(productName);
+    navigate(`/product/${slug}`);
   };
 
   if (loading) {
@@ -91,7 +96,7 @@ const Bestseller = () => {
           <h2 className="section-title-seller funnel-sans">Most Loved Picks</h2>
 
           <a
-            href="/products"
+            href="/category/All"
             className="view-all-link d-flex align-items-center"
           >
             View all products
@@ -116,7 +121,7 @@ const Bestseller = () => {
                 <SwiperSlide key={product._id || index}>
                   <div
                     className="collection-card"
-                    onClick={() => handleProductClick(product._id)}
+                    onClick={() => handleProductClick(product.name, product._id)}
                   >
                     <div className="image-wrapper">
                       <img
@@ -131,7 +136,7 @@ const Bestseller = () => {
                     <div className="card-content">
                       <h5>{product.name}</h5>
                       <p className="product-price lexend">₹{product.price}</p>
-                      <p>Brand Name</p>
+                      <p>{product.company || "Brand Name"}</p>
                     </div>
                   </div>
                 </SwiperSlide>
@@ -147,7 +152,7 @@ const Bestseller = () => {
                 <Col lg={2} md={4} sm={6} xs={6} key={product._id || index}>
                   <div
                     className="collection-card"
-                    onClick={() => handleProductClick(product._id)}
+                    onClick={() => handleProductClick(product.name, product._id)}
                   >
                     <div className="image-wrapper">
                       <img
@@ -162,7 +167,7 @@ const Bestseller = () => {
                     <div className="card-content">
                       <h5>{product.name}</h5>
                       <p className="product-price lexend">₹{product.price}</p>
-                      <p>Brand Name</p>
+                      <p>{product.company || "Brand Name"}</p>
                     </div>
                   </div>
                 </Col>
