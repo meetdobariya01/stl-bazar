@@ -28,8 +28,8 @@ import Footer from "../../components/footer/footer";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BACKEND_URL = "http://localhost:5001";
-
+// const VENDOR_BACKEND_URL = "http://localhost:5001";
+const VENDOR_BACKEND_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
   const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -37,8 +37,25 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
+// ✅ Helper to decode slug back to name
+const decodeSlug = (slug) => {
+  if (!slug) return '';
+  return slug
+    .replace(/-/g, ' ')  // Replace - with space
+    .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize each word
+};
+
+// ✅ Helper to create slug from name (for comparison)
+const createSlug = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const Productdetails = () => {
-  const { id } = useParams();
+  const { slug } = useParams(); // ✅ Get slug from URL
   const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
@@ -48,6 +65,7 @@ const Productdetails = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [error, setError] = useState(null);
   const [wishlist, setWishlist] = useState(false);
+  const [allProducts, setAllProducts] = useState([]);
 
   // Review states
   const [reviews, setReviews] = useState([]);
@@ -63,41 +81,112 @@ const Productdetails = () => {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // ✅ Fetch product by slug
   useEffect(() => {
-    if (id) {
-      fetchProduct();
-      fetchReviews();
-      checkWishlistStatus();
+    if (slug) {
+      fetchProductBySlug();
     }
-  }, [id]);
+  }, [slug]);
 
-  const fetchProduct = async () => {
+  const fetchProductBySlug = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_URL}/product/${id}`);
-      // console.log("Product data received:", response.data);
+      console.log("🔍 Looking for product with slug:", slug);
+      
+      // Decode slug to get product name
+      const productName = decodeSlug(slug);
+      console.log("📝 Decoded product name:", productName);
+      
+      // Fetch all products
+      const response = await axios.get(`${API_URL}/products`);
+      const products = response.data;
+      setAllProducts(products);
+      
+      console.log(`📦 Total products fetched: ${products.length}`);
+      console.log("📋 First 3 products:", products.slice(0, 3).map(p => ({ name: p.name, category: p.category })));
+      
+      // Try multiple ways to find the product
+      let foundProduct = null;
+      
+      // 1. Try exact name match (case insensitive)
+      foundProduct = products.find(
+        p => p.name && p.name.toLowerCase() === productName.toLowerCase()
+      );
+      
+      if (foundProduct) {
+        console.log("✅ Found product by exact name match:", foundProduct.name);
+      }
+      
+      // 2. If not found, try matching by slug
+      if (!foundProduct) {
+        const productSlug = createSlug(productName);
+        foundProduct = products.find(
+          p => p.name && createSlug(p.name) === productSlug
+        );
+        if (foundProduct) {
+          console.log("✅ Found product by slug match:", foundProduct.name);
+        }
+      }
+      
+      // 3. If still not found, try partial match
+      if (!foundProduct) {
+        const searchTerms = productName.toLowerCase().split(' ');
+        foundProduct = products.find(p => {
+          if (!p.name) return false;
+          const nameLower = p.name.toLowerCase();
+          return searchTerms.some(term => nameLower.includes(term));
+        });
+        if (foundProduct) {
+          console.log("✅ Found product by partial match:", foundProduct.name);
+        }
+      }
+      
+      // 4. Last resort: try to find by ID if slug looks like an ID
+      if (!foundProduct && slug.length === 24) {
+        try {
+          const productResponse = await axios.get(`${API_URL}/product/${slug}`);
+          if (productResponse.data) {
+            foundProduct = productResponse.data;
+            console.log("✅ Found product by ID fallback:", foundProduct.name);
+          }
+        } catch (idErr) {
+          console.log("❌ ID fallback failed");
+        }
+      }
 
-      setProduct(response.data);
+      if (!foundProduct) {
+        console.error("❌ Product not found. Available products:", products.map(p => p.name));
+        throw new Error(`Product "${productName}" not found`);
+      }
 
-      if (response.data.image) {
+      setProduct(foundProduct);
+
+      // Set active image
+      if (foundProduct.image) {
         if (
-          Array.isArray(response.data.image) &&
-          response.data.image.length > 0
+          Array.isArray(foundProduct.image) &&
+          foundProduct.image.length > 0
         ) {
-          const firstImageUrl = getImageUrl(response.data.image[0]);
+          const firstImageUrl = getImageUrl(foundProduct.image[0]);
           setActiveImg(firstImageUrl);
-        } else if (typeof response.data.image === "string") {
-          setActiveImg(getImageUrl(response.data.image));
+        } else if (typeof foundProduct.image === "string") {
+          setActiveImg(getImageUrl(foundProduct.image));
         }
       } else {
         setActiveImg("/images/placeholder.png");
       }
+
+      // Fetch reviews and wishlist status using product ID
+      await fetchReviews(foundProduct._id);
+      await checkWishlistStatus(foundProduct._id);
+
     } catch (err) {
-      console.error("Product fetch error details:", err);
+      console.error("❌ Product fetch error details:", err);
       setError(
         err.response?.data?.message ||
+          err.message ||
           "Failed to load product. Please try again later."
       );
     } finally {
@@ -105,8 +194,10 @@ const Productdetails = () => {
     }
   };
 
-  const fetchReviews = async () => {
+  const fetchReviews = async (productId) => {
     try {
+      const id = productId || product?._id;
+      if (!id) return;
       const response = await axios.get(`${API_URL}/products/${id}/reviews`);
       setReviews(response.data.reviews || []);
       setAverageRating(response.data.averageRating || 0);
@@ -116,14 +207,14 @@ const Productdetails = () => {
     }
   };
 
-  const checkWishlistStatus = async () => {
+  const checkWishlistStatus = async (productId) => {
     try {
       const guestId = localStorage.getItem("guestId");
       if (!guestId) return;
 
       const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
       const items = res.data.items || [];
-      const exists = items.some((item) => item.productId === id);
+      const exists = items.some((item) => item.productId === productId);
       setWishlist(exists);
     } catch (err) {
       console.error("Error checking wishlist:", err);
@@ -199,7 +290,7 @@ const Productdetails = () => {
     setReviewError("");
 
     try {
-      const response = await axios.post(`${API_URL}/products/${id}/review`, {
+      const response = await axios.post(`${API_URL}/products/${product._id}/review`, {
         rating: reviewData.rating,
         review: reviewData.review,
         userName: reviewData.userName,
@@ -213,7 +304,7 @@ const Productdetails = () => {
           review: "",
         });
 
-        await fetchReviews();
+        await fetchReviews(product._id);
 
         setTimeout(() => {
           setShowReviewModal(false);
@@ -295,7 +386,7 @@ const Productdetails = () => {
     setActiveImg(images[newIndex]);
   };
 
-  // ✅ FIXED: Add to Cart - Flat format
+  // ✅ Add to Cart
   const addToCart = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -310,7 +401,6 @@ const Productdetails = () => {
           ? product.image[0]
           : product.image || "";
 
-      // ✅ Send flat format (no product object)
       const payload = {
         guestId: guestId,
         productId: product._id,
@@ -320,11 +410,7 @@ const Productdetails = () => {
         quantity: qty,
       };
 
-      // console.log("🛒 Add to cart payload:", payload);
-
       const response = await axios.post(`${API_URL}/cart/add`, payload);
-
-      // console.log("✅ Response:", response.data);
 
       if (response.data.success !== false) {
         alert("✅ Added to cart!");
@@ -334,8 +420,6 @@ const Productdetails = () => {
       }
     } catch (err) {
       console.error("❌ Add to cart error:", err);
-      console.error("Response:", err.response?.data);
-      
       const errorMessage = err.response?.data?.message || 
                            err.message || 
                            "Failed to add to cart. Please try again.";
@@ -343,7 +427,7 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ FIXED: Buy Now - Flat format
+  // ✅ Buy Now
   const buyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -366,8 +450,6 @@ const Productdetails = () => {
         image: primaryImage,
         quantity: qty,
       };
-
-      console.log("🛒 Buy Now payload:", payload);
 
       await axios.post(`${API_URL}/cart/add`, payload);
       navigate("/checkout");
@@ -418,16 +500,24 @@ const Productdetails = () => {
           >
             <h4>Error Loading Product</h4>
             <p>{error || "Product not found"}</p>
-            <Button variant="primary" onClick={() => navigate(-1)}>
-              Go Back
-            </Button>
-            <Button
-              variant="outline-secondary"
-              onClick={fetchProduct}
-              className="ms-2"
-            >
-              Try Again
-            </Button>
+            <div className="d-flex justify-content-center gap-2 flex-wrap">
+              <Button variant="primary" onClick={() => navigate(-1)}>
+                Go Back
+              </Button>
+              <Button
+                variant="outline-secondary"
+                onClick={fetchProductBySlug}
+                className="ms-2"
+              >
+                Try Again
+              </Button>
+              <Button
+                variant="outline-success"
+                onClick={() => navigate("/category/All")}
+              >
+                Browse All Products
+              </Button>
+            </div>
           </div>
         </div>
         <Footer />
@@ -815,6 +905,7 @@ const Productdetails = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
       {/* Mobile Sticky Add To Cart */}
       <div className="mobile-sticky-cart">
         <button
@@ -829,6 +920,7 @@ const Productdetails = () => {
           Add to Cart
         </button>
       </div>
+
       <Footer />
     </>
   );

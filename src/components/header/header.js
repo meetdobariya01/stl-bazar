@@ -268,14 +268,14 @@ const Header = () => {
              <span onClick={() => navigate("/category/All")}>
   Shop by Category
 </span>
-              <span onClick={() => navigate("/product")}>New In</span>
-              <span onClick={() => navigate("/aboutus")}>Brands</span>
-              <span onClick={() => navigate("/contactus")}>Gifting Guides</span>
-              <span onClick={() => navigate("/sell")}>Editorial</span>
-              <span onClick={() => navigate("/product")}>Sale</span>
-              <span onClick={() => navigate("/aboutus")}>Sell With Us</span>
+              {/* <span onClick={() => navigate("/product")}>New In</span> */}
+              <span onClick={() => navigate("/product")}>Brands</span>
+              {/* <span onClick={() => navigate("/contactus")}>Gifting Guides</span> */}
+              <span onClick={() => navigate("/")}>Editorial</span>
+              {/* <span onClick={() => navigate("/product")}>Sale</span> */}
+              <span onClick={() => navigate("/sell")}>Sell With Us</span>
               <span onClick={() => navigate("/aboutus")}>About Us</span>
-              <span onClick={() => navigate("/contactus")}>Contact Us</span>
+              {/* <span onClick={() => navigate("/contactus")}>Contact Us</span> */}
             </div>
           </motion.div>
         )}
