@@ -579,7 +579,7 @@ const CategoryProducts = () => {
                             </div>
                             <Card.Body>
                               <div className="product-brand">
-                                {item.brand || "Artisan Craft"}
+                                {item.company || "Artisan Craft"}
                               </div>
                               <h6 className="product-name">{item.name}</h6>
                               <div className="product-rating">
