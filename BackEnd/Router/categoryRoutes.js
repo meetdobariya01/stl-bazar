@@ -34,7 +34,7 @@ router.get("/", async (req, res) => {
       productCount: 0
     }));
 
-    console.log("Categories sent:", formatted.map(c => c.name));
+    // console.log("Categories sent:", formatted.map(c => c.name));
     res.json(formatted);
 
   } catch (error) {
@@ -50,7 +50,7 @@ router.get("/:categoryName", async (req, res) => {
   try {
     // Decode the category name (handles spaces)
     const categoryName = decodeURIComponent(req.params.categoryName);
-    console.log("Looking for category:", categoryName);
+    // console.log("Looking for category:", categoryName);
     
     const category = await Category.findOne({
       name: categoryName
@@ -89,19 +89,19 @@ router.get("/:categoryName/products", async (req, res) => {
   try {
     const categoryName = decodeURIComponent(req.params.categoryName);
 
-    console.log("URL Category:", categoryName);
+    // console.log("URL Category:", categoryName);
 
     const allProducts = await Product.find({});
-    console.log(
-      "Product Categories:",
-      allProducts.map((p) => p.category)
-    );
+    // console.log(
+    //   "Product Categories:",
+    //   allProducts.map((p) => p.category)
+    // );
 
     const products = await Product.find({
       category: categoryName
     });
 
-    console.log("Found:", products.length);
+    // console.log("Found:", products.length);
 
     res.json({
       success: true,

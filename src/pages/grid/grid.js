@@ -23,14 +23,13 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import { useCart } from "../../context/CartContext";
+import { createSlug } from "../../utils/slugUtils"; // ✅ Import slug helper
 import "./grid.css";
 import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
-// ✅ USE VENDOR BACKEND URL FOR IMAGES
 const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
-// ✅ FIXED: Get primary image URL using VENDOR backend
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
   let img = Array.isArray(image) ? image[0] : image;
@@ -431,7 +430,7 @@ const Grid = () => {
                     <h5>Filters</h5>
                     <Button
                       variant="link"
-                       className="text-dark text-decoration-none"
+                      className="text-dark text-decoration-none"
                       onClick={() => setShowMobileFilters(false)}
                     >
                       ✘
@@ -502,6 +501,8 @@ const Grid = () => {
                 <Row className="g-4 text-center">
                   {sortedProducts.map((item) => {
                     const isInWishlist = wishlist.includes(item._id);
+                    const productSlug = createSlug(item.name); // ✅ Create slug from name
+
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3}>
                         <motion.div
@@ -510,7 +511,7 @@ const Grid = () => {
                         >
                           <Card
                             className=""
-                            onClick={() => navigate(`/product/${item._id}`)}
+                            onClick={() => navigate(`/product/${productSlug}`)} // ✅ Using slug
                           >
                             <div className="product-image-wrapper">
                               <Card.Img
@@ -571,7 +572,6 @@ const Grid = () => {
         </Container>
       </div>
       <Details />
-
       <Footer />
     </>
   );

@@ -11,19 +11,41 @@ router.get("/:guestId", async (req, res) => {
     const cart = await Cart.findOne({ guestId: req.params.guestId });
     res.json(cart || { guestId: req.params.guestId, items: [] });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Get cart error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error" 
+    });
   }
 });
 
 /* =====================================
-   ADD / UPDATE CART ITEM
+   ADD / UPDATE CART ITEM (Supports Both Formats)
 ===================================== */
 router.post("/add", async (req, res) => {
-  const { guestId, product } = req.body;
+  const { guestId, productId, quantity, name, price, image, product } = req.body;
 
-  if (!guestId || !product?.productId) {
-    return res.status(400).json({ message: "Invalid cart data" });
+  // // console.log("📦 Add to cart request:", req.body);
+
+  // ✅ Support both formats
+  let productData = product;
+  
+  // If product object not provided, use flat fields
+  if (!productData && productId) {
+    productData = {
+      productId: productId,
+      name: name || "Product",
+      price: price || 0,
+      image: image || [],
+      quantity: quantity || 1,
+    };
+  }
+
+  if (!guestId || !productData?.productId) {
+    return res.status(400).json({ 
+      success: false,
+      message: "guestId and productId required" 
+    });
   }
 
   try {
@@ -34,26 +56,38 @@ router.post("/add", async (req, res) => {
     }
 
     const itemIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === product.productId
+      (item) => item.productId.toString() === productData.productId
     );
 
     if (itemIndex > -1) {
-      cart.items[itemIndex].quantity += product.quantity || 1;
+      // Update quantity
+      cart.items[itemIndex].quantity += productData.quantity || 1;
     } else {
+      // Add new item
       cart.items.push({
-        productId: product.productId,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        quantity: product.quantity || 1,
+        productId: productData.productId,
+        name: productData.name || "Product",
+        price: productData.price || 0,
+        image: productData.image || [],
+        quantity: productData.quantity || 1,
       });
     }
 
     await cart.save();
-    res.json(cart);
+    
+          // console.log("✅ Cart updated:", cart);
+    
+    res.json({
+      success: true,
+      message: "Added to cart",
+      cart: cart,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Add to cart error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: err.message 
+    });
   }
 });
 
@@ -65,7 +99,10 @@ router.delete("/remove/:guestId/:productId", async (req, res) => {
     const cart = await Cart.findOne({ guestId: req.params.guestId });
 
     if (!cart) {
-      return res.status(404).json({ message: "Cart not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Cart not found" 
+      });
     }
 
     cart.items = cart.items.filter(
@@ -73,10 +110,17 @@ router.delete("/remove/:guestId/:productId", async (req, res) => {
     );
 
     await cart.save();
-    res.json(cart);
+    res.json({
+      success: true,
+      message: "Item removed from cart",
+      cart: cart,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Remove item error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error" 
+    });
   }
 });
 
@@ -86,10 +130,16 @@ router.delete("/remove/:guestId/:productId", async (req, res) => {
 router.delete("/clear/:guestId", async (req, res) => {
   try {
     await Cart.findOneAndDelete({ guestId: req.params.guestId });
-    res.json({ message: "Cart cleared" });
+    res.json({ 
+      success: true,
+      message: "Cart cleared" 
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Clear cart error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error" 
+    });
   }
 });
 

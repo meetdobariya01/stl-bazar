@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Order = require("../Models/Order");
 const Cart = require("../Models/Cart");
-const User = require("../Models/User");
+const Vendor = require("../Models/Vendor");
 const Product = require("../Models/Product");
 const axios = require("axios");
 const { 
@@ -14,7 +14,7 @@ const {
 } = require("../Comfig/emailConfig");
 
 const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
-
+// const VENDOR_API_URL = process.env.VENDOR_API_URL || "http://localhost:5001/api"; // Local fallback
 // ================= PLACE ORDER WITH VENDOR NOTIFICATION =================
 router.post("/place", async (req, res) => {
   const { guestId, shippingAddress, paymentMethod } = req.body;
@@ -36,7 +36,7 @@ router.post("/place", async (req, res) => {
       });
     }
 
-    // ✅ Get full product details including vendor information
+    // Get full product details including vendor information
     const itemsWithVendorInfo = await Promise.all(
       cart.items.map(async (item) => {
         const product = await Product.findById(item.productId);
@@ -89,7 +89,6 @@ router.post("/place", async (req, res) => {
         const customerHtml = getCustomerOrderEmail(order, orderId);
         const result = await sendEmail(customerEmail, `Order Confirmed! - Order #${orderId}`, customerHtml);
         emailResults.customer = result.success;
-        console.log(`📧 Customer email sent to: ${customerEmail}`);
       } catch (error) {
         console.error("Error sending customer email:", error.message);
       }
@@ -104,7 +103,6 @@ router.post("/place", async (req, res) => {
         const adminHtml = getAdminOrderEmail(order, orderId);
         const result = await sendEmail(adminEmail, `New Order Received - Order #${orderId}`, adminHtml);
         emailResults.admin = result.success;
-        console.log(`📧 Admin email sent to: ${adminEmail}`);
       } catch (error) {
         console.error("Error sending admin email:", error.message);
       }
@@ -129,31 +127,34 @@ router.post("/place", async (req, res) => {
       }
     }
     
-    console.log(`🏢 Vendors found: ${vendorGroups.size}`);
     for (const [company, data] of vendorGroups) {
       console.log(`  - ${company}: ${data.items.length} items`);
     }
     
     // ============================================
-    // 4. SEND EMAIL TO EACH VENDOR (Company wise)
+    // 4. SEND EMAIL TO EACH VENDOR (Using Vendor Model)
     // ============================================
     for (const [company, vendorData] of vendorGroups) {
       try {
-        // ✅ Find vendor by company name from User model
-        const vendor = await User.findOne({ 
-          company: company,
-          role: "vendor"
-        }).select("email name company phone");
-        
+        let vendor = null;
         let vendorEmail = null;
         let vendorName = company;
+        
+        // Search in vendors collection
+        vendor = await Vendor.findOne({ 
+          company: company
+        }).select("email name company phone");
+        
+        // Case insensitive
+        if (!vendor) {
+          vendor = await Vendor.findOne({ 
+            company: { $regex: new RegExp(`^${company}$`, "i") }
+          }).select("email name company phone");
+        }
         
         if (vendor) {
           vendorEmail = vendor.email;
           vendorName = vendor.name || company;
-          console.log(`✅ Found vendor for ${company}: ${vendorEmail}`);
-        } else {
-          console.log(`⚠️ No vendor found for company: ${company}`);
         }
         
         if (vendorEmail) {
@@ -201,7 +202,7 @@ router.post("/place", async (req, res) => {
     }
 
     // ============================================
-    // 5. CREATE VENDOR NOTIFICATIONS (Dashboard)
+    // 5. ✅ CREATE VENDOR NOTIFICATIONS (Added)
     // ============================================
     const notificationResults = [];
     
@@ -343,8 +344,6 @@ router.post("/send-confirmation", async (req, res) => {
         message: "Recipient email is required" 
       });
     }
-
-    console.log(`📧 Sending confirmation email to: ${to}`);
 
     const html = `
       <!DOCTYPE html>
