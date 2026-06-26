@@ -40,7 +40,7 @@ const Footer = () => {
                 />
 
                 <p className="footer-text">
-                  Gourmet Bazar brings you handpicked, high-quality foods,
+                  Brandel brings you handpicked, high-quality foods,
                   crafted for taste lovers who value freshness, authenticity,
                   and exceptional culinary experiences.
                 </p>
@@ -129,7 +129,7 @@ const Footer = () => {
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
-                Gourmet Bazar brings you handpicked, high-quality foods, crafted
+                Brandel brings you handpicked, high-quality foods, crafted
                 for taste lovers who value freshness, authenticity, and
                 exceptional culinary experiences.
               </p>
