@@ -1,291 +1,437 @@
-.arrival-section {
-  background: #062d1f;
-  padding: 50px 0;
+/* ============================================
+   PREMIUM LUXURY ARRIVAL
+   ============================================ */
+
+.arrival-premium {
+  background:
+    radial-gradient(circle at top right,
+    rgba(212, 175, 55, 0.15),
+    transparent 40%),
+    radial-gradient(circle at bottom left,
+    rgba(212, 175, 55, 0.08),
+    transparent 30%),
+    linear-gradient(135deg,
+    #07120d 0%,
+    #102019 50%,
+    #07120d 100%);
+  padding: 40px 0 55px;
   overflow: hidden;
-}
-
-.arrival-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 25px;
-  min-height: 430px;
-}
-
-/* Left Content */
-.left-content {
-  width: 26%;
-  color: white;
-  padding-left: 20px;
-  animation: fadeLeft 0.8s ease;
-}
-
-.left-content span {
-  color: #f0dfb2;
-  font-size: 20px;
-  display: block;
-  margin-bottom: 10px;
-}
-
-.left-content h2 {
-  font-size: 54px;
-  line-height: 1.15;
-  font-weight: 500;
-  margin-bottom: 30px;
-}
-
-.left-content h2 span {
-  color: #d4af37;
-  font-size: 54px;
-}
-
-.explore-btn {
-  background: #f4e6c4;
-  color: #222;
-  border: none;
-  padding: 12px 28px;
-  border-radius: 10px;
-  font-weight: 600;
-  transition: 0.4s;
-}
-
-.explore-btn:hover {
-  background: #d4af37;
-  transform: translateY(-3px);
-}
-
-/* Product Grid */
-.product-grid {
-  width: 74%;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.product-card {
-  background: white;
-  border-radius: 18px;
-  overflow: hidden;
-  transition: 0.4s ease;
-  animation: fadeUp 0.8s ease;
-}
-
-.product-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.product-img {
-  height: 260px;
-  overflow: hidden;
-}
-
-.product-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: 0.5s;
-}
-
-.product-card:hover img {
-  transform: scale(1.08);
-}
-
-.product-info {
-  padding: 16px;
-}
-
-.product-info h5 {
-  font-size: 15px;
-  margin-bottom: 6px;
-  font-weight: 600;
-  color: #222;
-}
-
-.product-info p {
-  margin: 0;
-  color: #666;
-  font-weight: 500;
-}
-
-/* Carousel Arrows */
-.custom-arrow {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  transition: 0.3s;
-  backdrop-filter: blur(5px);
-}
-
-.custom-arrow:hover {
-  background: #d4af37;
-}
-
-.carousel-control-prev,
-.carousel-control-next {
-  width: 5%;
-}
-
-.carousel-indicators {
-  bottom: -45px;
-}
-
-.carousel-indicators [data-bs-target] {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: none;
-  background: white;
-  opacity: 0.5;
-}
-
-.carousel-indicators .active {
-  opacity: 1;
-}
-/* ===== Carousel Arrows Top Right ===== */
-
-.carousel {
   position: relative;
 }
 
-.carousel-control-prev,
-.carousel-control-next {
+.arrival-premium::before {
+  content: '';
   position: absolute;
-  top: -40px;
-  width: 50px;
-  height: 50px;
+  top: -20%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.03) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ============================================
+   PREMIUM HEADER
+   ============================================ */
+
+.arrival-header-premium {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  padding: 0 5px;
+}
+
+.header-left-premium {
+  display: flex;
+  flex-direction: column;
+}
+
+.badge-premium {
+  color: #d4af37;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.title-premium {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.title-premium .gold-premium {
+  color: #d4af37;
+  font-weight: 700;
+  position: relative;
+}
+
+.title-premium .gold-premium::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #d4af37, transparent);
+  border-radius: 2px;
+  opacity: 0.3;
+}
+
+.subtitle-premium {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+  font-weight: 300;
+  margin: 0;
+}
+
+.view-premium {
+  background: transparent;
+  color: #d4af37;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  padding: 8px 24px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.4s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.view-premium:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: #d4af37;
+  color: #f4e6c4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 25px rgba(212, 175, 55, 0.1);
+}
+
+/* ============================================
+   SLIDE LABEL
+   ============================================ */
+
+.slide-label-premium {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 5px 10px 5px;
+}
+
+.count-premium {
+  color: rgba(255, 255, 255, 0.06);
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+/* ============================================
+   PREMIUM BRAND CARDS
+   ============================================ */
+
+.carousel-premium .carousel-inner {
+  padding: 5px 0 10px;
+}
+
+.brand-grid-premium {
+  margin: 0 -6px;
+}
+
+/* Premium Card - Vertical Layout */
+.brand-premium {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  cursor: pointer;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), transparent 50%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  border-radius: 16px;
+}
+
+.brand-premium:hover {
+  transform: translateY(-6px);
+  border-color: #d4af37;
+  box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.brand-premium:hover::before {
   opacity: 1;
 }
 
-.carousel-control-prev {
-  right: 70px;
-  left: auto;
-}
-
-.carousel-control-next {
-  right: 10px;
-}
-
-/* Custom Arrow Design */
-.custom-arrow {
-  width: 50px;
-  height: 50px;
+/* Logo - Circular */
+.logo-premium {
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-size: 18px;
+  padding: 10px;
+  flex-shrink: 0;
+  transition: all 0.4s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.brand-premium:hover .logo-premium {
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(212, 175, 55, 0.2);
+}
+
+.logo-premium img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.brand-premium:hover .logo-premium img {
+  transform: scale(1.04);
+}
+
+/* Info - Below Logo */
+.info-premium {
+  flex: 1;
+  width: 100%;
+  padding-top: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.name-premium {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  letter-spacing: 0.5px;
+  min-height: 42px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.desc-premium {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.7rem;
+  font-weight: 300;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Shop Button - Modern with Arrow */
+.shop-premium {
+  background: transparent;
+  color: #d4af37 !important;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
-  backdrop-filter: blur(6px);
+  border: none;
+  width: auto;
+  gap: 4px;
 }
 
-.custom-arrow:hover {
-  background: #d4af37;
-  transform: scale(1.1);
+.shop-premium:hover {
+  color: #f4e6c4 !important;
+  transform: translateX(0);
+  background: transparent;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
-  .carousel-control-prev,
-  .carousel-control-next {
-    top: 180px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .carousel-control-prev {
-    right: 55px;
-  }
-
-  .carousel-control-next {
-    right: 5px;
-  }
-
-  .custom-arrow {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
-  }
-}
-/* Animations */
-@keyframes fadeLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.shop-premium .arrow-icon {
+  transition: transform 0.3s ease;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.shop-premium:hover .arrow-icon {
+  transform: translateX(4px);
 }
 
-/* Tablet */
+/* Remove underline from all buttons */
+.btn,
+.btn-link,
+.btn:hover,
+.btn-link:hover {
+  text-decoration: none !important;
+}
+
+/* ============================================
+   HIDE ALL CAROUSEL CONTROLS & INDICATORS
+   ============================================ */
+
+/* Hide Bootstrap default carousel controls */
+.carousel-control-prev,
+.carousel-control-next,
+.carousel-indicators {
+  display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 991px) {
-  .arrival-wrapper {
-    flex-direction: column;
+  .logo-premium {
+    width: 60px;
+    height: 60px;
   }
-
-  .left-content {
-    width: 100%;
-    text-align: center;
-    padding: 0;
+  
+  .name-premium {
+    font-size: 0.9rem;
+    min-height: 38px;
   }
-
-  .left-content h2,
-  .left-content h2 span {
-    font-size: 40px;
+  
+  .desc-premium {
+    font-size: 0.65rem;
   }
-
-  .product-grid {
-    width: 100%;
-    grid-template-columns: repeat(2, 1fr);
+  
+  .title-premium {
+    font-size: 1.7rem;
+  }
+  
+  .brand-premium {
+    padding: 15px;
   }
 }
 
-/* Mobile */
+@media (max-width: 768px) {
+  .arrival-premium {
+    padding: 25px 0 40px;
+  }
+  
+  .arrival-header-premium {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  
+  .title-premium {
+    font-size: 1.4rem;
+  }
+  
+  .subtitle-premium {
+    font-size: 0.7rem;
+  }
+  
+  .badge-premium {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+  }
+  
+  .view-premium {
+    padding: 5px 16px;
+    font-size: 0.7rem;
+  }
+  
+  .brand-premium {
+    padding: 12px;
+    border-radius: 12px;
+  }
+  
+  .logo-premium {
+    width: 50px;
+    height: 50px;
+    padding: 8px;
+  }
+  
+  .name-premium {
+    font-size: 0.8rem;
+    min-height: 36px;
+  }
+  
+  .desc-premium {
+    font-size: 0.6rem;
+  }
+  
+  .shop-premium {
+    font-size: 0.65rem;
+  }
+  
+  .slide-label-premium {
+    padding: 0 5px 6px 5px;
+  }
+  
+  .count-premium {
+    font-size: 0.6rem;
+  }
+}
+
 @media (max-width: 576px) {
-  .arrival-section {
-    padding: 40px 0 70px;
+  .title-premium {
+    font-size: 1.2rem;
   }
-
-  .left-content h2,
-  .left-content h2 span {
-    font-size: 30px;
+  
+  .badge-premium {
+    font-size: 0.55rem;
+    letter-spacing: 1.5px;
   }
-
-  .left-content span {
-    font-size: 16px;
+  
+  .subtitle-premium {
+    display: none;
   }
-
-  .product-grid {
-    grid-template-columns: 1fr;
+  
+  .view-premium {
+    font-size: 0.6rem;
+    padding: 4px 12px;
   }
-
-  .product-img {
-    height: 175px;
+  
+  .brand-premium {
+    padding: 10px;
+    border-radius: 10px;
   }
-
-  .custom-arrow {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
+  
+  .logo-premium {
+    width: 42px;
+    height: 42px;
+    padding: 6px;
+  }
+  
+  .name-premium {
+    font-size: 0.7rem;
+    min-height: 30px;
+  }
+  
+  .desc-premium {
+    display: none;
+  }
+  
+  .shop-premium {
+    font-size: 0.6rem;
   }
 }

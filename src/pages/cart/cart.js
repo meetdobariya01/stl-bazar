@@ -181,9 +181,9 @@ const Cart = () => {
         });
 
         if (applyRes.data.success) {
-          setCouponMessage({
-            type: "success",
-            text: `✅ Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}`,
+          setCouponMessage({ 
+            type: "success", 
+            text: `Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}` 
           });
 
           await fetchCart();

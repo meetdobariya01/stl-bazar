@@ -14,47 +14,26 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import Details from "../../components/details/details";
+import { createSlug } from "../../utils/slugUtils";
 import "./categorygrid.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// ✅ USE VENDOR BACKEND URL FOR IMAGES
 const VENDOR_BEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
 
-// ✅ FIXED: Image formatting function using VENDOR backend
 const formatImagePath = (image) => {
-  if (!image) {
-    return "/images/placeholder.png";
-  }
-
+  if (!image) return "/images/placeholder.png";
+  
   let imgPath = image;
-
   if (Array.isArray(image)) {
-    if (image.length === 0) {
-      return "/images/placeholder.png";
-    }
+    if (image.length === 0) return "/images/placeholder.png";
     imgPath = image[0];
   }
-
-  if (typeof imgPath !== "string") {
-    return "/images/placeholder.png";
-  }
-
-  if (imgPath.trim() === "") {
-    return "/images/placeholder.png";
-  }
-
-  if (imgPath.startsWith("http")) {
-    return imgPath;
-  }
-
-  if (imgPath.startsWith("/uploads")) {
-    return `${VENDOR_BEND_URL}${imgPath}`;
-  }
-
-  if (imgPath.startsWith("/images")) {
-    return imgPath;
-  }
-
+  
+  if (typeof imgPath !== "string") return "/images/placeholder.png";
+  if (imgPath.trim() === "") return "/images/placeholder.png";
+  if (imgPath.startsWith("http")) return imgPath;
+  if (imgPath.startsWith("/uploads")) return `${VENDOR_BEND_URL}${imgPath}`;
+  if (imgPath.startsWith("/images")) return imgPath;
   return `${VENDOR_BEND_URL}${imgPath}`;
 };
 
@@ -80,7 +59,6 @@ const CategoryProducts = () => {
   const [wishlist, setWishlist] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
   const [priceMin, setPriceMin] = useState("");
@@ -88,27 +66,60 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // Fetch products for current category
+  // ✅ Fetch products - FIXED to properly filter by category
   useEffect(() => {
     if (!decodedCategory) return;
 
     setLoading(true);
-    axios
-      .get(`${API_URL}/products`, {
-        params: {
-          category: decodedCategory !== "All" ? decodedCategory : undefined,
-        },
-      })
-      .then((res) => {
-        setProducts(res.data);
-        setFilteredProducts(res.data);
-      })
-      .catch((err) => {
-        console.error("Error fetching products:", err);
-        setProducts([]);
-        setFilteredProducts([]);
-      })
-      .finally(() => setLoading(false));
+    
+    // ✅ If "All" categories, fetch all products
+    if (decodedCategory === "All") {
+      axios
+        .get(`${API_URL}/products`)
+        .then((res) => {
+          console.log("All products fetched:", res.data.length);
+          setProducts(res.data);
+          setFilteredProducts(res.data);
+        })
+        .catch((err) => {
+          console.error("Error fetching all products:", err);
+          setProducts([]);
+          setFilteredProducts([]);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // ✅ Fetch products by category
+      // Try different API endpoints that might work
+      axios
+        .get(`${API_URL}/products/category/${encodeURIComponent(decodedCategory)}`)
+        .then((res) => {
+          console.log(`Products for category "${decodedCategory}":`, res.data.length);
+          setProducts(res.data);
+          setFilteredProducts(res.data);
+        })
+        .catch((err) => {
+          // If category endpoint fails, try filtering all products
+          console.log("Category endpoint failed, trying alternative...");
+          axios
+            .get(`${API_URL}/products`)
+            .then((res) => {
+              const allProducts = res.data;
+              // ✅ Filter products by category (case insensitive)
+              const filtered = allProducts.filter(
+                (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
+              );
+              console.log(`Filtered ${filtered.length} products for category "${decodedCategory}"`);
+              setProducts(filtered);
+              setFilteredProducts(filtered);
+            })
+            .catch((err2) => {
+              console.error("Error fetching products:", err2);
+              setProducts([]);
+              setFilteredProducts([]);
+            })
+            .finally(() => setLoading(false));
+        });
+    }
   }, [decodedCategory]);
 
   // Fetch all categories for sidebar
@@ -127,7 +138,9 @@ const CategoryProducts = () => {
 
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
-        selectedCategories.includes(p.category),
+        selectedCategories.some(cat => 
+          p.category && p.category.toLowerCase() === cat.toLowerCase()
+        )
       );
     }
 
@@ -205,15 +218,14 @@ const CategoryProducts = () => {
     }
   };
 
-const handleCategorySelect = (category) => {
-  if (category === "All") {
-    navigate("/category/All");
-  } else {
-    navigate(`/category/${encodeURIComponent(category)}`);
-  }
-
-  setShowMobileFilters(false);
-};
+  const handleCategorySelect = (category) => {
+    if (category === "All") {
+      navigate("/category/All");
+    } else {
+      navigate(`/category/${encodeURIComponent(category)}`);
+    }
+    setShowMobileFilters(false);
+  };
 
   const clearFilters = () => {
     setSelectedCategories([]);
@@ -264,7 +276,7 @@ const handleCategorySelect = (category) => {
             <div className="d-flex justify-content-end align-items-center flex-wrap gap-3">
               <Button
                 variant="outline-secondary"
-                className="mobile-filter-btn "
+                className="mobile-filter-btn"
                 onClick={() => setShowMobileFilters(true)}
               >
                 <FaFilter /> Filters
@@ -289,8 +301,8 @@ const handleCategorySelect = (category) => {
 
           <Row className="g-4">
             {/* Filters Sidebar */}
-            <Col lg={3} className="d-none ">
-              <div className="filters-sidebar ">
+            <Col lg={3} className="d-none">
+              <div className="filters-sidebar">
                 <div className="filter-header">
                   <h5>Filters</h5>
                   <Button
@@ -520,10 +532,10 @@ const handleCategorySelect = (category) => {
             <Col lg={12}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
-                  <h5>No products found</h5>
-                  <p className="text-muted">Try adjusting your filters</p>
-                  <Button variant="primary" onClick={clearFilters}>
-                    Clear Filters
+                  <h5>No products found in "{decodedCategory}"</h5>
+                  <p className="text-muted">Try adjusting your filters or select another category</p>
+                  <Button variant="primary" onClick={() => navigate("/category/All")}>
+                    View All Products
                   </Button>
                 </div>
               ) : (
@@ -531,6 +543,7 @@ const handleCategorySelect = (category) => {
                   {sortedProducts.map((item) => {
                     const isInWishlist = wishlist.includes(item._id);
                     const imageUrl = formatImagePath(item.image);
+                    const productSlug = createSlug(item.name);
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3} className="text-center">
@@ -542,7 +555,7 @@ const handleCategorySelect = (category) => {
                         >
                           <Card
                             className="product-card-grid"
-                            onClick={() => navigate(`/product/${item._id}`)}
+                            onClick={() => navigate(`/product/${productSlug}`)}
                           >
                             <div className="product-image-wrapper">
                               <Card.Img
@@ -605,7 +618,6 @@ const handleCategorySelect = (category) => {
       </div>
 
       <Details />
-
       <Footer />
     </>
   );

@@ -6,7 +6,6 @@ import {
   Button,
   Form,
   Modal,
-  Rating,
   Alert,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
@@ -29,10 +28,8 @@ import Footer from "../../components/footer/footer";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// ✅ VENDOR BACKEND URL for images
-// const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
-const VENDOR_BACKEND_URL = "http://localhost:5001"; // Adjust this to your vendor backend URL if needed
-// Helper function to format price
+// const VENDOR_BACKEND_URL = "http://localhost:5001";
+const VENDOR_BACKEND_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
   const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -40,8 +37,25 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
+// ✅ Helper to decode slug back to name
+const decodeSlug = (slug) => {
+  if (!slug) return '';
+  return slug
+    .replace(/-/g, ' ')  // Replace - with space
+    .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize each word
+};
+
+// ✅ Helper to create slug from name (for comparison)
+const createSlug = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const Productdetails = () => {
-  const { id } = useParams();
+  const { slug } = useParams(); // ✅ Get slug from URL
   const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
@@ -51,6 +65,7 @@ const Productdetails = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [error, setError] = useState(null);
   const [wishlist, setWishlist] = useState(false);
+  const [allProducts, setAllProducts] = useState([]);
 
   // Review states
   const [reviews, setReviews] = useState([]);
@@ -66,42 +81,112 @@ const Productdetails = () => {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // ✅ Fetch product by slug
   useEffect(() => {
-    if (id) {
-      fetchProduct();
-      fetchReviews();
-      checkWishlistStatus();
+    if (slug) {
+      fetchProductBySlug();
     }
-  }, [id]);
+  }, [slug]);
 
-  const fetchProduct = async () => {
+  const fetchProductBySlug = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_URL}/product/${id}`);
-      console.log("Product data received:", response.data);
+      console.log("🔍 Looking for product with slug:", slug);
+      
+      // Decode slug to get product name
+      const productName = decodeSlug(slug);
+      console.log("📝 Decoded product name:", productName);
+      
+      // Fetch all products
+      const response = await axios.get(`${API_URL}/products`);
+      const products = response.data;
+      setAllProducts(products);
+      
+      console.log(`📦 Total products fetched: ${products.length}`);
+      console.log("📋 First 3 products:", products.slice(0, 3).map(p => ({ name: p.name, category: p.category })));
+      
+      // Try multiple ways to find the product
+      let foundProduct = null;
+      
+      // 1. Try exact name match (case insensitive)
+      foundProduct = products.find(
+        p => p.name && p.name.toLowerCase() === productName.toLowerCase()
+      );
+      
+      if (foundProduct) {
+        console.log("✅ Found product by exact name match:", foundProduct.name);
+      }
+      
+      // 2. If not found, try matching by slug
+      if (!foundProduct) {
+        const productSlug = createSlug(productName);
+        foundProduct = products.find(
+          p => p.name && createSlug(p.name) === productSlug
+        );
+        if (foundProduct) {
+          console.log("✅ Found product by slug match:", foundProduct.name);
+        }
+      }
+      
+      // 3. If still not found, try partial match
+      if (!foundProduct) {
+        const searchTerms = productName.toLowerCase().split(' ');
+        foundProduct = products.find(p => {
+          if (!p.name) return false;
+          const nameLower = p.name.toLowerCase();
+          return searchTerms.some(term => nameLower.includes(term));
+        });
+        if (foundProduct) {
+          console.log("✅ Found product by partial match:", foundProduct.name);
+        }
+      }
+      
+      // 4. Last resort: try to find by ID if slug looks like an ID
+      if (!foundProduct && slug.length === 24) {
+        try {
+          const productResponse = await axios.get(`${API_URL}/product/${slug}`);
+          if (productResponse.data) {
+            foundProduct = productResponse.data;
+            console.log("✅ Found product by ID fallback:", foundProduct.name);
+          }
+        } catch (idErr) {
+          console.log("❌ ID fallback failed");
+        }
+      }
 
-      setProduct(response.data);
+      if (!foundProduct) {
+        console.error("❌ Product not found. Available products:", products.map(p => p.name));
+        throw new Error(`Product "${productName}" not found`);
+      }
 
-      // Set active image - handle both array and string
-      if (response.data.image) {
+      setProduct(foundProduct);
+
+      // Set active image
+      if (foundProduct.image) {
         if (
-          Array.isArray(response.data.image) &&
-          response.data.image.length > 0
+          Array.isArray(foundProduct.image) &&
+          foundProduct.image.length > 0
         ) {
-          const firstImageUrl = getImageUrl(response.data.image[0]);
+          const firstImageUrl = getImageUrl(foundProduct.image[0]);
           setActiveImg(firstImageUrl);
-        } else if (typeof response.data.image === "string") {
-          setActiveImg(getImageUrl(response.data.image));
+        } else if (typeof foundProduct.image === "string") {
+          setActiveImg(getImageUrl(foundProduct.image));
         }
       } else {
         setActiveImg("/images/placeholder.png");
       }
+
+      // Fetch reviews and wishlist status using product ID
+      await fetchReviews(foundProduct._id);
+      await checkWishlistStatus(foundProduct._id);
+
     } catch (err) {
-      console.error("Product fetch error details:", err);
+      console.error("❌ Product fetch error details:", err);
       setError(
         err.response?.data?.message ||
+          err.message ||
           "Failed to load product. Please try again later."
       );
     } finally {
@@ -109,9 +194,10 @@ const Productdetails = () => {
     }
   };
 
-  // Fetch reviews
-  const fetchReviews = async () => {
+  const fetchReviews = async (productId) => {
     try {
+      const id = productId || product?._id;
+      if (!id) return;
       const response = await axios.get(`${API_URL}/products/${id}/reviews`);
       setReviews(response.data.reviews || []);
       setAverageRating(response.data.averageRating || 0);
@@ -121,22 +207,20 @@ const Productdetails = () => {
     }
   };
 
-  // Check if product is in wishlist
-  const checkWishlistStatus = async () => {
+  const checkWishlistStatus = async (productId) => {
     try {
       const guestId = localStorage.getItem("guestId");
       if (!guestId) return;
 
       const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
       const items = res.data.items || [];
-      const exists = items.some((item) => item.productId === id);
+      const exists = items.some((item) => item.productId === productId);
       setWishlist(exists);
     } catch (err) {
       console.error("Error checking wishlist:", err);
     }
   };
 
-  // Toggle wishlist
   const toggleWishlist = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -147,14 +231,12 @@ const Productdetails = () => {
       }
 
       if (wishlist) {
-        // Remove from wishlist
         await axios.delete(`${API_URL}/wishlist/remove`, {
           data: { guestId, productId: product._id },
         });
         setWishlist(false);
         alert("Removed from wishlist");
       } else {
-        // Add to wishlist
         await axios.post(`${API_URL}/wishlist/add`, {
           guestId,
           product: {
@@ -175,7 +257,6 @@ const Productdetails = () => {
     }
   };
 
-  // Handle review input changes
   const handleReviewChange = (e) => {
     const { name, value } = e.target;
     setReviewData((prev) => ({
@@ -184,7 +265,6 @@ const Productdetails = () => {
     }));
   };
 
-  // Handle rating change
   const handleRatingChange = (newRating) => {
     setReviewData((prev) => ({
       ...prev,
@@ -192,7 +272,6 @@ const Productdetails = () => {
     }));
   };
 
-  // Submit review
   const handleSubmitReview = async () => {
     if (!reviewData.rating || reviewData.rating === 0) {
       setReviewError("Please select a rating");
@@ -211,7 +290,7 @@ const Productdetails = () => {
     setReviewError("");
 
     try {
-      const response = await axios.post(`${API_URL}/products/${id}/review`, {
+      const response = await axios.post(`${API_URL}/products/${product._id}/review`, {
         rating: reviewData.rating,
         review: reviewData.review,
         userName: reviewData.userName,
@@ -225,7 +304,7 @@ const Productdetails = () => {
           review: "",
         });
 
-        await fetchReviews();
+        await fetchReviews(product._id);
 
         setTimeout(() => {
           setShowReviewModal(false);
@@ -243,13 +322,11 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ FIXED: Helper function to get full image URL from VENDOR backend
   const getImageUrl = (image) => {
     if (!image) return "/images/placeholder.png";
 
     let img = image;
 
-    // If array, take first image for URLs that need a single image
     if (Array.isArray(image)) {
       if (image.length === 0) return "/images/placeholder.png";
       img = image[0];
@@ -257,31 +334,25 @@ const Productdetails = () => {
 
     const imgStr = String(img);
 
-    // Already full URL
     if (imgStr.startsWith("http")) {
       return imgStr;
     }
 
-    // ✅ FIXED: Vendor backend uploaded image (starts with /uploads)
     if (imgStr.startsWith("/uploads")) {
       return `${VENDOR_BACKEND_URL}${imgStr}`;
     }
 
-    // Local images from public folder
     if (imgStr.startsWith("/images")) {
       return imgStr;
     }
 
-    // If it's just a filename, assume it's in vendor uploads
     if (!imgStr.startsWith("/")) {
       return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
     }
 
-    // Fallback
     return `${VENDOR_BACKEND_URL}${imgStr}`;
   };
 
-  // Get all images as array with full URLs
   const getAllImages = () => {
     if (!product) return [];
 
@@ -315,64 +386,72 @@ const Productdetails = () => {
     setActiveImg(images[newIndex]);
   };
 
+  // ✅ Add to Cart
   const addToCart = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
 
       if (!guestId) {
-        guestId = Date.now().toString();
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const primaryImage =
         Array.isArray(product.image) && product.image.length > 0
           ? product.image[0]
-          : product.image;
+          : product.image || "";
 
-      await axios.post(`${API_URL}/cart/add`, {
-        guestId,
-        product: {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          image: primaryImage,
-          quantity: qty,
-        },
-      });
+      const payload = {
+        guestId: guestId,
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        image: primaryImage,
+        quantity: qty,
+      };
 
-      navigate("/cart");
+      const response = await axios.post(`${API_URL}/cart/add`, payload);
+
+      if (response.data.success !== false) {
+        alert("✅ Added to cart!");
+        navigate("/cart");
+      } else {
+        alert(response.data.message || "Failed to add to cart");
+      }
     } catch (err) {
-      console.error("Add to cart error:", err);
-      alert("Failed to add to cart");
+      console.error("❌ Add to cart error:", err);
+      const errorMessage = err.response?.data?.message || 
+                           err.message || 
+                           "Failed to add to cart. Please try again.";
+      alert(errorMessage);
     }
   };
 
-  // Buy Now function
+  // ✅ Buy Now
   const buyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
 
       if (!guestId) {
-        guestId = Date.now().toString();
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const primaryImage =
         Array.isArray(product.image) && product.image.length > 0
           ? product.image[0]
-          : product.image;
+          : product.image || "";
 
-      await axios.post(`${API_URL}/cart/add`, {
-        guestId,
-        product: {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          image: primaryImage,
-          quantity: qty,
-        },
-      });
+      const payload = {
+        guestId: guestId,
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        image: primaryImage,
+        quantity: qty,
+      };
 
+      await axios.post(`${API_URL}/cart/add`, payload);
       navigate("/checkout");
     } catch (err) {
       console.error("Buy Now error:", err);
@@ -380,7 +459,6 @@ const Productdetails = () => {
     }
   };
 
-  // Render stars for rating
   const renderStars = (rating) => {
     return (
       <div className="stars-display">
@@ -422,16 +500,24 @@ const Productdetails = () => {
           >
             <h4>Error Loading Product</h4>
             <p>{error || "Product not found"}</p>
-            <Button variant="primary" onClick={() => navigate(-1)}>
-              Go Back
-            </Button>
-            <Button
-              variant="outline-secondary"
-              onClick={fetchProduct}
-              className="ms-2"
-            >
-              Try Again
-            </Button>
+            <div className="d-flex justify-content-center gap-2 flex-wrap">
+              <Button variant="primary" onClick={() => navigate(-1)}>
+                Go Back
+              </Button>
+              <Button
+                variant="outline-secondary"
+                onClick={fetchProductBySlug}
+                className="ms-2"
+              >
+                Try Again
+              </Button>
+              <Button
+                variant="outline-success"
+                onClick={() => navigate("/category/All")}
+              >
+                Browse All Products
+              </Button>
+            </div>
           </div>
         </div>
         <Footer />
@@ -452,7 +538,6 @@ const Productdetails = () => {
             {/* LEFT SIDE - IMAGE GALLERY */}
             <Col lg={6}>
               <div className="product-gallery">
-                {/* Thumbnail Images */}
                 {images.length > 0 && (
                   <div className="thumbnail-list">
                     {images.map((img, i) => (
@@ -476,7 +561,6 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* Main Image with Navigation Arrows */}
                 <div
                   className="main-image-container"
                   style={{ position: "relative" }}
@@ -498,7 +582,6 @@ const Productdetails = () => {
                     />
                   </motion.div>
 
-                  {/* Navigation Arrows for Multiple Images */}
                   {hasMultipleImages && (
                     <>
                       <button
@@ -560,7 +643,6 @@ const Productdetails = () => {
 
                 <h1 className="funnel-sans">{product.name}</h1>
 
-                {/* Ratings */}
                 <div className="rating-row">
                   <div className="stars">{renderStars(averageRating)}</div>
                   <span className="ms-2">
@@ -575,12 +657,10 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
-                {/* Price */}
                 <div className="price-box funnel-sans">
                   ₹{formatPrice(product.price)}
                 </div>
 
-                {/* Wishlist Button */}
                 <p
                   className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
                   onClick={toggleWishlist}
@@ -595,10 +675,9 @@ const Productdetails = () => {
 
                 <p className="description-text">
                   {product.description ||
-                    "A timeless piece to elevate your space. This handcrafted ceramic vase is perfect for fresh blooms or a statement decor on its own."}
+                    "A timeless piece to elevate your space."}
                 </p>
 
-                {/* Quantity */}
                 <div className="quantity-section">
                   <span>Quantity</span>
                   <div className="qty-box-product-details">
@@ -610,7 +689,6 @@ const Productdetails = () => {
                   </div>
                 </div>
 
-                {/* Buttons */}
                 <div className="action-buttons">
                   <Button className="cart-btn" onClick={addToCart}>
                     <FaShoppingCart /> Add to Cart
@@ -621,7 +699,6 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
-                {/* Features */}
                 <div className="features-row-product-details">
                   <div className="feature-item">
                     <FaHeart /> <span>Handmade with love</span>
@@ -634,7 +711,6 @@ const Productdetails = () => {
                   </div>
                 </div>
 
-                {/* Delivery */}
                 <div className="delivery-text">
                   Estimated delivery: 3 – 5 business days
                 </div>
@@ -829,6 +905,7 @@ const Productdetails = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
       {/* Mobile Sticky Add To Cart */}
       <div className="mobile-sticky-cart">
         <button
@@ -843,6 +920,7 @@ const Productdetails = () => {
           Add to Cart
         </button>
       </div>
+
       <Footer />
     </>
   );
