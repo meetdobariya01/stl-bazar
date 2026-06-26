@@ -23,7 +23,7 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import { useCart } from "../../context/CartContext";
-import { createSlug } from "../../utils/slugUtils"; // ✅ Import slug helper
+import { createSlug } from "../../utils/slugUtils";
 import "./grid.css";
 import Details from "../../components/details/details";
 
@@ -249,6 +249,19 @@ const Grid = () => {
 
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
+          {/* 🔹 Category Description Section */}
+          {categories.length > 0 && (
+            <div className="category-description mb-4 p-4 bg-light rounded text-center">
+              <h2 className="h4 mb-3 funnel-sans">{decodedName}</h2>
+              <p className="text-muted mb-0">
+                Explore our collection of premium {decodedName.toLowerCase()} products.
+                From everyday essentials to luxury items, find the perfect match
+                for your needs. Browse through our curated selection and enjoy
+                quality craftsmanship at competitive prices.
+              </p>
+            </div>
+          )}
+
           <div className="top-bar">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div className="d-flex align-items-center gap-3">
@@ -259,6 +272,9 @@ const Grid = () => {
                 >
                   <FaSlidersH /> Filters
                 </Button>
+                <span className="product-count">
+                  {filteredProducts.length} Products
+                </span>
               </div>
 
               <div className="d-flex align-items-center gap-3">
@@ -290,7 +306,7 @@ const Grid = () => {
           </div>
 
           <Row className="g-4">
-            {/* Filters Sidebar */}
+            {/* Filters Sidebar (hidden - you can enable if needed) */}
             <Col lg={3} className="d-none">
               <div className="filters-sidebar">
                 <div className="filter-header">
@@ -501,7 +517,7 @@ const Grid = () => {
                 <Row className="g-4 text-center">
                   {sortedProducts.map((item) => {
                     const isInWishlist = wishlist.includes(item._id);
-                    const productSlug = createSlug(item.name); // ✅ Create slug from name
+                    const productSlug = createSlug(item.name);
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3}>
@@ -511,7 +527,7 @@ const Grid = () => {
                         >
                           <Card
                             className=""
-                            onClick={() => navigate(`/product/${productSlug}`)} // ✅ Using slug
+                            onClick={() => navigate(`/product/${productSlug}`)}
                           >
                             <div className="product-image-wrapper">
                               <Card.Img
@@ -534,7 +550,7 @@ const Grid = () => {
                             </div>
                             <Card.Body>
                               <div className="product-brand">
-                                {item.brand || "Brand Name"}
+                                {item.company || "Brand Name"}
                               </div>
                               <h6 className="product-name">{item.name}</h6>
                               <div className="product-rating">
