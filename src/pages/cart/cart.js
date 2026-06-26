@@ -10,7 +10,7 @@ import {
   Modal,
   Form,
   Alert,
-  Spinner
+  Spinner,
 } from "react-bootstrap";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -23,7 +23,7 @@ import {
   FaTimes,
   FaGift,
   FaSpinner,
-  FaStore
+  FaStore,
 } from "react-icons/fa";
 import axios from "axios";
 import "./cart.css";
@@ -32,11 +32,12 @@ import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 // ✅ USE VENDOR BACKEND URL FOR IMAGES
-const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
+const VENDOR_BACKEND_URL =
+  "https://api.brandelvendor.starlighttechlabsindia.com";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
-  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  const numPrice = typeof price === "string" ? parseFloat(price) : price;
   if (isNaN(numPrice)) return "0.00";
   return numPrice.toFixed(2);
 };
@@ -107,7 +108,7 @@ const Cart = () => {
     if (!item) return;
 
     const newQuantity = type === "inc" ? item.quantity + 1 : item.quantity - 1;
-    
+
     if (newQuantity < 1) {
       removeItem(productId);
       return;
@@ -126,7 +127,10 @@ const Cart = () => {
       });
       fetchCart();
     } catch (err) {
-      console.error("Update quantity error:", err.response?.data || err.message);
+      console.error(
+        "Update quantity error:",
+        err.response?.data || err.message,
+      );
     }
   };
 
@@ -141,15 +145,16 @@ const Cart = () => {
 
   const subtotal = cart.items.reduce(
     (acc, item) => acc + item.price * item.quantity,
-    0
+    0,
   );
 
   const FREE_SHIPPING_THRESHOLD = 1500;
   const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 99;
-  
+
   const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
   const discountedSubtotal = subtotal - couponDiscount;
-  const finalShippingCost = discountedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : shippingCost;
+  const finalShippingCost =
+    discountedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : shippingCost;
   const total = discountedSubtotal + finalShippingCost;
 
   const applyCoupon = async () => {
@@ -165,24 +170,24 @@ const Cart = () => {
       const validateRes = await axios.post(`${API_URL}/coupon/user/validate`, {
         code: couponCode,
         guestId,
-        subtotal: subtotal
+        subtotal: subtotal,
       });
 
       if (validateRes.data.success) {
         const applyRes = await axios.post(`${API_URL}/coupon/user/apply`, {
           code: couponCode,
           guestId,
-          subtotal: subtotal
+          subtotal: subtotal,
         });
 
         if (applyRes.data.success) {
-          setCouponMessage({ 
-            type: "success", 
-            text: `✅ Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}` 
+          setCouponMessage({
+            type: "success",
+            text: `✅ Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}`,
           });
-          
+
           await fetchCart();
-          
+
           setTimeout(() => {
             setShowCouponModal(false);
             setCouponCode("");
@@ -192,7 +197,7 @@ const Cart = () => {
       }
     } catch (err) {
       console.error("Apply coupon error:", err);
-      
+
       let errorMessage = "Failed to apply coupon";
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -201,7 +206,7 @@ const Cart = () => {
       } else if (err.response?.status === 400) {
         errorMessage = err.response.data.message || "Invalid coupon code";
       }
-      
+
       setCouponMessage({ type: "error", text: errorMessage });
     } finally {
       setApplyingCoupon(false);
@@ -210,18 +215,23 @@ const Cart = () => {
 
   const removeCoupon = async () => {
     try {
-      const response = await axios.delete(`${API_URL}/coupon/user/remove/${guestId}`);
-      
+      const response = await axios.delete(
+        `${API_URL}/coupon/user/remove/${guestId}`,
+      );
+
       if (response.data.success) {
-        setCouponMessage({ type: "success", text: "Coupon removed successfully" });
+        setCouponMessage({
+          type: "success",
+          text: "Coupon removed successfully",
+        });
         await fetchCart();
         setTimeout(() => setCouponMessage({ type: "", text: "" }), 3000);
       }
     } catch (err) {
       console.error("Remove coupon error:", err);
-      setCouponMessage({ 
-        type: "error", 
-        text: err.response?.data?.message || "Failed to remove coupon" 
+      setCouponMessage({
+        type: "error",
+        text: err.response?.data?.message || "Failed to remove coupon",
       });
       setTimeout(() => setCouponMessage({ type: "", text: "" }), 3000);
     }
@@ -229,13 +239,13 @@ const Cart = () => {
 
   const fetchAvailableCoupons = async () => {
     if (!guestId) return;
-    
+
     try {
       const response = await axios.post(`${API_URL}/coupon/user/available`, {
         guestId,
-        subtotal: subtotal
+        subtotal: subtotal,
       });
-      
+
       if (response.data.success) {
         setAvailableCoupons(response.data.coupons);
       }
@@ -250,7 +260,10 @@ const Cart = () => {
   };
 
   const amountToFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
-  const shippingProgress = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
+  const shippingProgress = Math.min(
+    (subtotal / FREE_SHIPPING_THRESHOLD) * 100,
+    100,
+  );
 
   return (
     <>
@@ -272,6 +285,111 @@ const Cart = () => {
             </NavLink>
           </motion.div>
 
+          <Col lg={4} className="my-3 d-lg-none d-md-none">
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <Card className="summary-card border-0">
+                <Card.Body>
+                  <h3>Order Summary</h3>
+
+                  <div className="summary-row">
+                    <span>Subtotal ({cart.items.length} items)</span>
+                    <span>₹{formatPrice(subtotal)}</span>
+                  </div>
+
+                  {cart.appliedCoupon && (
+                    <div className="summary-row coupon-applied">
+                      <span>
+                        <FaTag className="me-1" /> Coupon (
+                        {cart.appliedCoupon.code})
+                      </span>
+                      <span className="discount">
+                        -₹{formatPrice(cart.appliedCoupon.discountAmount)}
+                        <FaTimes
+                          className="ms-2 remove-coupon"
+                          onClick={removeCoupon}
+                          style={{ cursor: "pointer", fontSize: "12px" }}
+                        />
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="summary-row">
+                    <span>Shipping</span>
+                    <span className={finalShippingCost === 0 ? "free" : ""}>
+                      {finalShippingCost === 0
+                        ? "FREE"
+                        : `₹${formatPrice(finalShippingCost)}`}
+                    </span>
+                  </div>
+
+                  {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD && (
+                    <div className="summary-row shipping-note">
+                      <small>
+                        Add ₹{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
+                        more for free shipping
+                      </small>
+                    </div>
+                  )}
+
+                  <hr />
+
+                  <div className="summary-total">
+                    <div>
+                      <h4>Total</h4>
+                      <p>Inclusive of all taxes</p>
+                    </div>
+                    <h2>₹{formatPrice(total)}</h2>
+                  </div>
+
+                  {!cart.appliedCoupon ? (
+                    <button
+                      className="coupon-btn"
+                      onClick={handleOpenCouponModal}
+                    >
+                      <FaTag /> Apply Coupon
+                    </button>
+                  ) : (
+                    <button
+                      className="coupon-btn applied"
+                      onClick={removeCoupon}
+                    >
+                      <FaTag /> Remove Coupon
+                    </button>
+                  )}
+
+                  <Button as={NavLink} to="/checkout" className="checkout-btn">
+                    Proceed to Checkout
+                  </Button>
+
+                  <div className="secure-checkout">
+                    <FaShieldAlt />
+                    <span>Secure Checkout</span>
+                  </div>
+                </Card.Body>
+              </Card>
+            </motion.div>
+            <div className="shipping-box">
+              <div className="shipping-top">
+                <span>
+                  {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+                    "🎉 Congratulations! You've got FREE Shipping!"
+                  ) : (
+                    <>
+                      🎉 Add ₹{formatPrice(amountToFreeShipping)} more for FREE
+                      Shipping!
+                    </>
+                  )}
+                </span>
+                <span>
+                  ₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}
+                </span>
+              </div>
+              <ProgressBar now={shippingProgress} />
+            </div>
+          </Col>
           <Row className="g-4">
             <Col lg={8}>
               <AnimatePresence>
@@ -302,8 +420,8 @@ const Cart = () => {
                             <Row className="align-items-center">
                               <Col md={3} xs={4}>
                                 <div className="cart-img">
-                                  <img 
-                                    src={formatImagePath(item.image)} 
+                                  <img
+                                    src={formatImagePath(item.image)}
                                     alt={item.name}
                                     onError={(e) => {
                                       e.target.onerror = null;
@@ -315,15 +433,22 @@ const Cart = () => {
                               <Col md={6} xs={8}>
                                 <div className="cart-info">
                                   <h4>{item.name}</h4>
-                                  <h5 className="funnel-sans">₹{formatPrice(item.price)}</h5>
+                                  <h5 className="funnel-sans">
+                                    ₹{formatPrice(item.price)}
+                                  </h5>
                                   <div className="product-meta">
                                     <span>Qty: {item.quantity}</span>
                                   </div>
                                   <div className="item-total">
-                                    <small>Item Total: ₹{formatPrice(item.price * item.quantity)}</small>
+                                    <small>
+                                      Item Total: ₹
+                                      {formatPrice(item.price * item.quantity)}
+                                    </small>
                                   </div>
                                   <div className="cart-actions">
-                                    <button onClick={() => removeItem(item.productId)}>
+                                    <button
+                                      onClick={() => removeItem(item.productId)}
+                                    >
                                       <FaTrash /> Remove
                                     </button>
                                   </div>
@@ -331,11 +456,19 @@ const Cart = () => {
                               </Col>
                               <Col md={3} xs={12}>
                                 <div className="qty-box">
-                                  <button onClick={() => updateQty(item.productId, "dec")}>
+                                  <button
+                                    onClick={() =>
+                                      updateQty(item.productId, "dec")
+                                    }
+                                  >
                                     <FaMinus />
                                   </button>
                                   <span>{item.quantity}</span>
-                                  <button onClick={() => updateQty(item.productId, "inc")}>
+                                  <button
+                                    onClick={() =>
+                                      updateQty(item.productId, "inc")
+                                    }
+                                  >
                                     <FaPlus />
                                   </button>
                                 </div>
@@ -346,23 +479,32 @@ const Cart = () => {
                       </motion.div>
                     ))}
 
-                    <div className="shipping-box">
+                    <div className="shipping-box d-none d-md-block d-lg-block">
                       <div className="shipping-top">
                         <span>
                           {subtotal >= FREE_SHIPPING_THRESHOLD ? (
                             "🎉 Congratulations! You've got FREE Shipping!"
                           ) : (
-                            <>🎉 Add ₹{formatPrice(amountToFreeShipping)} more for FREE Shipping!</>
+                            <>
+                              🎉 Add ₹{formatPrice(amountToFreeShipping)} more
+                              for FREE Shipping!
+                            </>
                           )}
                         </span>
-                        <span>₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}</span>
+                        <span>
+                          ₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}
+                        </span>
                       </div>
                       <ProgressBar now={shippingProgress} />
                     </div>
 
                     {couponMessage.text && (
-                      <Alert 
-                        variant={couponMessage.type === "success" ? "success" : "danger"} 
+                      <Alert
+                        variant={
+                          couponMessage.type === "success"
+                            ? "success"
+                            : "danger"
+                        }
                         className="mt-3"
                         dismissible
                         onClose={() => setCouponMessage({ type: "", text: "" })}
@@ -375,7 +517,7 @@ const Cart = () => {
               </AnimatePresence>
             </Col>
 
-            <Col lg={4}>
+            <Col lg={4} className="d-none d-md-block d-lg-block">
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -392,12 +534,13 @@ const Cart = () => {
                     {cart.appliedCoupon && (
                       <div className="summary-row coupon-applied">
                         <span>
-                          <FaTag className="me-1" /> Coupon ({cart.appliedCoupon.code})
+                          <FaTag className="me-1" /> Coupon (
+                          {cart.appliedCoupon.code})
                         </span>
                         <span className="discount">
                           -₹{formatPrice(cart.appliedCoupon.discountAmount)}
-                          <FaTimes 
-                            className="ms-2 remove-coupon" 
+                          <FaTimes
+                            className="ms-2 remove-coupon"
                             onClick={removeCoupon}
                             style={{ cursor: "pointer", fontSize: "12px" }}
                           />
@@ -408,13 +551,18 @@ const Cart = () => {
                     <div className="summary-row">
                       <span>Shipping</span>
                       <span className={finalShippingCost === 0 ? "free" : ""}>
-                        {finalShippingCost === 0 ? "FREE" : `₹${formatPrice(finalShippingCost)}`}
+                        {finalShippingCost === 0
+                          ? "FREE"
+                          : `₹${formatPrice(finalShippingCost)}`}
                       </span>
                     </div>
 
                     {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD && (
                       <div className="summary-row shipping-note">
-                        <small>Add ₹{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)} more for free shipping</small>
+                        <small>
+                          Add ₹{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
+                          more for free shipping
+                        </small>
                       </div>
                     )}
 
@@ -429,19 +577,26 @@ const Cart = () => {
                     </div>
 
                     {!cart.appliedCoupon ? (
-                      <button 
-                        className="coupon-btn" 
+                      <button
+                        className="coupon-btn"
                         onClick={handleOpenCouponModal}
                       >
                         <FaTag /> Apply Coupon
                       </button>
                     ) : (
-                      <button className="coupon-btn applied" onClick={removeCoupon}>
+                      <button
+                        className="coupon-btn applied"
+                        onClick={removeCoupon}
+                      >
                         <FaTag /> Remove Coupon
                       </button>
                     )}
 
-                    <Button as={NavLink} to="/checkout" className="checkout-btn">
+                    <Button
+                      as={NavLink}
+                      to="/checkout"
+                      className="checkout-btn"
+                    >
                       Proceed to Checkout
                     </Button>
 
@@ -457,14 +612,14 @@ const Cart = () => {
         </Container>
       </section>
 
-      <Modal 
-        show={showCouponModal} 
+      <Modal
+        show={showCouponModal}
         onHide={() => {
           setShowCouponModal(false);
           setCouponMessage({ type: "", text: "" });
           setCouponCode("");
-        }} 
-        centered 
+        }}
+        centered
         size="lg"
       >
         <Modal.Header closeButton className="lexend">
@@ -485,8 +640,8 @@ const Cart = () => {
                 autoFocus
                 style={{ textTransform: "uppercase" }}
               />
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 onClick={applyCoupon}
                 disabled={applyingCoupon}
                 style={{ backgroundColor: "#0f5132 ", borderColor: "#0f5132 " }}
@@ -495,7 +650,12 @@ const Cart = () => {
               </Button>
             </div>
             {couponMessage.text && (
-              <Alert variant={couponMessage.type === "success" ? "success" : "warning"} className="mt-3">
+              <Alert
+                variant={
+                  couponMessage.type === "success" ? "success" : "warning"
+                }
+                className="mt-3"
+              >
                 {couponMessage.text}
               </Alert>
             )}
@@ -512,7 +672,7 @@ const Cart = () => {
                 <Row className="g-3">
                   {availableCoupons.map((coupon, idx) => (
                     <Col md={6} key={idx}>
-                      <div 
+                      <div
                         className="available-coupon-card p-3 border rounded"
                         style={{ cursor: "pointer", transition: "all 0.2s" }}
                         onClick={() => {
@@ -521,18 +681,23 @@ const Cart = () => {
                         }}
                       >
                         <div className="d-flex justify-content-between align-items-start mb-2">
-                          <strong className="text-primary">{coupon.code}</strong>
+                          <strong className="text-primary">
+                            {coupon.code}
+                          </strong>
                           {coupon.vendorName && (
                             <small className="text-muted">
                               <FaStore size={10} /> {coupon.vendorName}
                             </small>
                           )}
                         </div>
-                        <p className="small mb-1">{coupon.description || `${coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}`}</p>
+                        <p className="small mb-1">
+                          {coupon.description ||
+                            `${coupon.discountType === "percentage" ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}`}
+                        </p>
                         <div className="d-flex justify-content-between align-items-center mt-2">
                           <span className="text-success fw-bold">
-                            {coupon.discountType === "percentage" 
-                              ? `${coupon.discountValue}% OFF` 
+                            {coupon.discountType === "percentage"
+                              ? `${coupon.discountValue}% OFF`
                               : `₹${coupon.discountValue} OFF`}
                           </span>
                           {coupon.minOrderAmount > 0 && (
@@ -541,9 +706,9 @@ const Cart = () => {
                             </small>
                           )}
                         </div>
-                        <Button 
-                          variant="link" 
-                          size="sm" 
+                        <Button
+                          variant="link"
+                          size="sm"
                           className="p-0 mt-2 text-decoration-none"
                           onClick={(e) => {
                             e.stopPropagation();

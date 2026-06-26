@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect  } from "react";
+import { useLocation } from "react-router-dom";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from "react-icons/fa";
@@ -40,7 +41,7 @@ const ContactUs = () => {
 
       const res = await axios.post(
         "http://localhost:9000/api/contact/send-mail",
-        formData
+        formData,
       );
 
       alert(res.data.message);
@@ -60,6 +61,15 @@ const ContactUs = () => {
       setLoading(false);
     }
   };
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
 
   return (
     <div>
@@ -124,10 +134,7 @@ const ContactUs = () => {
                   <div>
                     <h5 className="funnel-sans">Email</h5>
 
-                    <a
-                      href="mailto:care@brandel.shop"
-                      className="email-link"
-                    >
+                    <a href="mailto:care@brandel.shop" className="email-link">
                       care@brandel.shop
                     </a>
                   </div>
