@@ -94,31 +94,31 @@ const Productdetails = () => {
       setError(null);
 
       console.log("🔍 Looking for product with slug:", slug);
-      
+
       // Decode slug to get product name
       const productName = decodeSlug(slug);
       console.log("📝 Decoded product name:", productName);
-      
+
       // Fetch all products
       const response = await axios.get(`${API_URL}/products`);
       const products = response.data;
       setAllProducts(products);
-      
+
       console.log(`📦 Total products fetched: ${products.length}`);
       console.log("📋 First 3 products:", products.slice(0, 3).map(p => ({ name: p.name, category: p.category })));
-      
+
       // Try multiple ways to find the product
       let foundProduct = null;
-      
+
       // 1. Try exact name match (case insensitive)
       foundProduct = products.find(
         p => p.name && p.name.toLowerCase() === productName.toLowerCase()
       );
-      
+
       if (foundProduct) {
         console.log("✅ Found product by exact name match:", foundProduct.name);
       }
-      
+
       // 2. If not found, try matching by slug
       if (!foundProduct) {
         const productSlug = createSlug(productName);
@@ -129,7 +129,7 @@ const Productdetails = () => {
           console.log("✅ Found product by slug match:", foundProduct.name);
         }
       }
-      
+
       // 3. If still not found, try partial match
       if (!foundProduct) {
         const searchTerms = productName.toLowerCase().split(' ');
@@ -142,7 +142,7 @@ const Productdetails = () => {
           console.log("✅ Found product by partial match:", foundProduct.name);
         }
       }
-      
+
       // 4. Last resort: try to find by ID if slug looks like an ID
       if (!foundProduct && slug.length === 24) {
         try {
@@ -186,8 +186,8 @@ const Productdetails = () => {
       console.error("❌ Product fetch error details:", err);
       setError(
         err.response?.data?.message ||
-          err.message ||
-          "Failed to load product. Please try again later."
+        err.message ||
+        "Failed to load product. Please try again later."
       );
     } finally {
       setLoading(false);
@@ -315,7 +315,7 @@ const Productdetails = () => {
       console.error("Error submitting review:", err);
       setReviewError(
         err.response?.data?.message ||
-          "Failed to submit review. Please try again."
+        "Failed to submit review. Please try again."
       );
     } finally {
       setSubmitting(false);
@@ -420,9 +420,9 @@ const Productdetails = () => {
       }
     } catch (err) {
       console.error("❌ Add to cart error:", err);
-      const errorMessage = err.response?.data?.message || 
-                           err.message || 
-                           "Failed to add to cart. Please try again.";
+      const errorMessage = err.response?.data?.message ||
+        err.message ||
+        "Failed to add to cart. Please try again.";
       alert(errorMessage);
     }
   };
@@ -581,7 +581,7 @@ const Productdetails = () => {
                       }}
                     />
                   </motion.div>
-
+                 
                   {hasMultipleImages && (
                     <>
                       <button
@@ -642,7 +642,9 @@ const Productdetails = () => {
                 <span className="best-seller-badge">Bestseller</span>
 
                 <h1 className="funnel-sans">{product.name}</h1>
-
+                   <div className="product-brand">
+                    {product.company || "Brand Name"}
+                  </div>
                 <div className="rating-row">
                   <div className="stars">{renderStars(averageRating)}</div>
                   <span className="ms-2">
