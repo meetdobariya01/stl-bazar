@@ -158,14 +158,14 @@ const Arrival = () => {
   }
 
   return (
-    <section className="arrival-premium">
+    <section className="arrival-premium mt-5 lexend">
       <Container fluid className="px-4">
         {/* Premium Header */}
         <div className="arrival-header-premium">
           <div className="header-left-premium">
             <span className="badge-premium">✦ PREMIUM COLLECTION</span>
-            <h2 className="title-premium">
-              <span className="gold-premium">Luxury</span> Brands
+            <h2 className="title-premium funnel-sans">
+              <span className="gold-premium funnel-sans">Luxury</span> Brands
             </h2>
             <p className="subtitle-premium">Handpicked collections from distinguished artisans</p>
           </div>

@@ -108,6 +108,7 @@ const Header = () => {
   const formatPrice = (price) => {
     return Number(price).toFixed(2);
   };
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
   return (
     <>
@@ -265,17 +266,51 @@ const Header = () => {
             )}
 
             <div className="mobile-links lexend">
-             <span onClick={() => navigate("/category/All")}>
-  Shop by Category
-</span>
-              {/* <span onClick={() => navigate("/product")}>New In</span> */}
+              {/* Shop by Category Dropdown */}
+              <div className="mobile-dropdown">
+                <div className="d-block">
+                  {" "}
+                  <span
+                    className="dropdown-title d-flex"
+                    onClick={() => setCategoryOpen(!categoryOpen)}
+                  >
+                    Shop by Category
+                    <span className={`arrow ${categoryOpen ? "open" : ""}`}>
+                      ▼
+                    </span>
+                  </span>
+                </div>
+
+                {categoryOpen && (
+                  <div className="dropdown-menu-navbar">
+                    <span onClick={() => navigate("/category/All")}>All Categories</span>
+                    <span onClick={() => navigate("/category/Jewellery")}>
+                      Orgenic Food & Healthy Snacks
+                    </span>
+                    <span onClick={() => navigate("/category/Accessories")}>
+                      Natural Skin Care & Wellness
+                    </span>
+                    <span onClick={() => navigate("/category/Bags")}>
+                      Gifts & Hamper
+                    </span>
+                    <span onClick={() => navigate("/category/Watches")}>
+                      Handmade Home Decor
+                    </span>
+                    <span onClick={() => navigate("/category/Watches")}>
+                      Sustainable Lifestyle
+                    </span>
+                    <span onClick={() => navigate("/category/Watches")}>
+                      Jewelry & Accessories
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <span onClick={() => navigate("/product")}>Brands</span>
-              {/* <span onClick={() => navigate("/contactus")}>Gifting Guides</span> */}
               <span onClick={() => navigate("/")}>Editorial</span>
-              {/* <span onClick={() => navigate("/product")}>Sale</span> */}
               <span onClick={() => navigate("/sell")}>Sell With Us</span>
               <span onClick={() => navigate("/aboutus")}>About Us</span>
-              {/* <span onClick={() => navigate("/contactus")}>Contact Us</span> */}
+              <span onClick={() => navigate("/contactus")}>Contact Us</span>
             </div>
           </motion.div>
         )}

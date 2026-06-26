@@ -49,13 +49,13 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 28px;
+  border-radius: 10px;
   padding: 1px;
-  background: linear-gradient(
+  /* background: linear-gradient(
     135deg,
     rgba(212, 175, 55, 0.4),
     rgba(255, 255, 255, 0.2)
-  );
+  ); */
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
