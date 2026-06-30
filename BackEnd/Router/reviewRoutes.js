@@ -39,13 +39,13 @@ router.post(
     res.status(201).json({
       message: "Review added successfully",
       averageRating: product.averageRating,
-      totalReviews: product.ratings.length,
+      totalReviews: product.ratings.length, // ✅ Fixed: length
     });
   })
 );
 
 /* ======================================
-   GET: All Reviews for Product
+   GET: All Reviews for Product (FIXED)
 ====================================== */
 router.get(
   "/:productId/reviews",
@@ -56,13 +56,18 @@ router.get(
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // ✅ FIXED: totalReviews should be a number (length), not the array
     res.json({
-      averageRating: product.averageRating,
-      totalReviews: product.ratings,
-      reviews: product.ratings,
+      averageRating: product.averageRating || 0,
+      totalReviews: product.ratings.length, // ✅ This is the fix!
+      reviews: product.ratings || [],
     });
   })
 );
+
+/* ======================================
+   GET: All Products
+====================================== */
 router.get("/", asyncHandler(async (req, res) => {
   const { category } = req.query;
 

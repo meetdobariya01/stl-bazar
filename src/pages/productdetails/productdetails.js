@@ -33,8 +33,7 @@ import Footer from "../../components/footer/footer";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BACKEND_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com";
-const API_VENDOR_URL = process.env.VENDOR_API_URL || "http://localhost:5001/api";
+const VENDOR_BACKEND_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -72,8 +71,9 @@ const Productdetails = () => {
   const [error, setError] = useState(null);
   const [wishlist, setWishlist] = useState(false);
   const [allProducts, setAllProducts] = useState([]);
-  
-  // Coupon states
+  const [productImages, setProductImages] = useState([]);
+
+  // ================= COUPON STATES =================
   const [vendorCoupons, setVendorCoupons] = useState([]);
   const [showCoupons, setShowCoupons] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
@@ -94,67 +94,21 @@ const Productdetails = () => {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Get image URL
-  const getImageUrl = (image) => {
-    if (!image) return "/images/placeholder.png";
-
-    let img = image;
-
-    if (Array.isArray(image)) {
-      if (image.length === 0) return "/images/placeholder.png";
-      img = image[0];
-    }
-
-    const imgStr = String(img);
-
-    if (imgStr.startsWith("http")) {
-      return imgStr;
-    }
-
-    if (imgStr.startsWith("/uploads")) {
-      return `${VENDOR_BACKEND_URL}${imgStr}`;
-    }
-
-    if (imgStr.startsWith("/images")) {
-      return imgStr;
-    }
-
-    if (!imgStr.startsWith("/")) {
-      return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
-    }
-
-    return `${VENDOR_BACKEND_URL}${imgStr}`;
-  };
-
-  const getAllImages = () => {
-    if (!product) return [];
-
-    if (product.image) {
-      if (Array.isArray(product.image)) {
-        const validImages = product.image.filter((img) => img && img.trim());
-        if (validImages.length > 0) {
-          return validImages.map((img) => getImageUrl(img));
-        }
-      } else if (typeof product.image === "string" && product.image.trim()) {
-        return [getImageUrl(product.image)];
-      }
-    }
-
-    return ["/images/placeholder.png"];
-  };
-
-  // ================= CALCULATE DISCOUNTED PRICE =================
+  // ================= COUPON FUNCTIONS =================
+  
   const calculateDiscountedPrice = (coupon) => {
     if (!product || !coupon) return null;
     
     const originalPrice = parseFloat(product.price);
     let discountAmount = 0;
     
-    if (coupon.type === 'percentage') {
-      discountAmount = (originalPrice * coupon.discount) / 100;
+    const discount = coupon.discount || coupon.discountValue || 0;
+    const type = coupon.type || coupon.discountType || 'percentage';
+    
+    if (type === 'percentage') {
+      discountAmount = (originalPrice * discount) / 100;
     } else {
-      // Fixed amount
-      discountAmount = Math.min(coupon.discount, originalPrice);
+      discountAmount = Math.min(discount, originalPrice);
     }
     
     const newPrice = originalPrice - discountAmount;
@@ -166,126 +120,136 @@ const Productdetails = () => {
     };
   };
 
-  // ================= APPLY COUPON =================
   const applyCoupon = (coupon) => {
     const priceInfo = calculateDiscountedPrice(coupon);
     if (priceInfo) {
       setAppliedCoupon(coupon);
       setDiscountedPrice(priceInfo);
-      // Show success message
       alert(`Coupon "${coupon.code}" applied! You saved ₹${priceInfo.discountAmount.toFixed(2)}`);
     }
   };
 
-  // ================= REMOVE COUPON =================
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setDiscountedPrice(null);
   };
 
-  // Fetch reviews
-  const fetchReviews = async (productId) => {
-    try {
-      const id = productId || product?._id;
-      if (!id) return;
-      const response = await axios.get(`${API_URL}/products/${id}/reviews`);
-      setReviews(response.data.reviews || []);
-      setAverageRating(response.data.averageRating || 0);
-      setTotalReviews(response.data.totalReviews || 0);
-    } catch (err) {
-      console.error("Error fetching reviews:", err);
-    }
-  };
-
-  // Check wishlist status
-  const checkWishlistStatus = async (productId) => {
-    try {
-      const guestId = localStorage.getItem("guestId");
-      if (!guestId) return;
-
-      const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
-      const items = res.data.items || [];
-      const exists = items.some((item) => item.productId === productId);
-      setWishlist(exists);
-    } catch (err) {
-      console.error("Error checking wishlist:", err);
-    }
-  };
-
-  // ================= UPDATED: Fetch vendor coupons from main API =================
   const fetchVendorCoupons = async () => {
     try {
       setCouponLoading(true);
       
       if (!product?._id) {
-        console.log("No product ID available");
         setVendorCoupons([]);
         return;
       }
 
       const companyName = product?.company || product?.vendor || product?.vendorName;
-      
-      console.log("Fetching coupons for product:", product._id);
-      console.log("Company:", companyName);
 
-      // Use the main API coupon endpoints
       try {
-        // First: Get coupons by product ID
-        const response = await axios.get(`${API_VENDOR_URL}/coupons/public/product/${product._id}`);
-        
+        const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/product/${product._id}`);
         if (response.data.success && response.data.coupons && response.data.coupons.length > 0) {
-          console.log("Found coupons for product:", response.data.coupons);
           setVendorCoupons(response.data.coupons);
           return;
         }
       } catch (err) {
-        console.log("Product coupon fetch failed:", err.message);
+        console.log("Product coupon fetch failed");
       }
 
-      // Second: Get coupons by company name
       if (companyName) {
         try {
-          const response = await axios.get(`${API_VENDOR_URL}/coupons/public/company/${encodeURIComponent(companyName)}`);
-          
+          const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/company/${encodeURIComponent(companyName)}`);
           if (response.data.success && response.data.coupons && response.data.coupons.length > 0) {
-            console.log("Found coupons for company:", response.data.coupons);
             setVendorCoupons(response.data.coupons);
             return;
           }
         } catch (err) {
-          console.log("Company coupon fetch failed:", err.message);
+          console.log("Company coupon fetch failed");
         }
       }
 
-      // Third: Get all active coupons and filter
       try {
-        const response = await axios.get(`${API_VENDOR_URL}/coupons/public/all`);
-        
+        const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/all`);
         if (response.data.success && response.data.coupons) {
-          // Filter by company if company name exists
           let filtered = response.data.coupons;
           if (companyName) {
             filtered = response.data.coupons.filter(c => 
               !c.company || c.company.toLowerCase() === companyName.toLowerCase()
             );
           }
-          console.log("Found all coupons, filtered:", filtered);
           setVendorCoupons(filtered);
           return;
         }
       } catch (err) {
-        console.log("All coupons fetch failed:", err.message);
+        console.log("All coupons fetch failed");
       }
 
-      console.log("No coupons found for this product");
       setVendorCoupons([]);
-
     } catch (err) {
       console.error("Error fetching coupons:", err);
       setVendorCoupons([]);
     } finally {
       setCouponLoading(false);
     }
+  };
+
+  // Get image URL
+  const getImageUrl = (image) => {
+    if (!image) return "/images/placeholder.png";
+
+    let img = image;
+
+    if (Array.isArray(image)) {
+      if (image.length === 0) return "/images/placeholder.png";
+      img = image[0];
+    }
+
+    const imgStr = String(img).trim();
+    
+    if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
+      return imgStr;
+    }
+
+    if (imgStr.startsWith("/uploads")) {
+      return `${VENDOR_BACKEND_URL}${imgStr}`;
+    }
+
+    if (imgStr.startsWith("/images")) {
+      return imgStr;
+    }
+
+    if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
+      return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
+    }
+
+    return `${VENDOR_BACKEND_URL}${imgStr}`;
+  };
+
+  const getAllImagesFromProduct = (product) => {
+    if (!product) return ["/images/placeholder.png"];
+    
+    let images = [];
+    const imageFields = ['images', 'image', 'productImages', 'gallery'];
+    
+    for (const field of imageFields) {
+      if (product[field]) {
+        if (Array.isArray(product[field])) {
+          const validImages = product[field]
+            .filter(img => img && typeof img === 'string' && img.trim())
+            .map(img => getImageUrl(img));
+          images = [...images, ...validImages];
+        } else if (typeof product[field] === 'string' && product[field].trim()) {
+          images.push(getImageUrl(product[field]));
+        }
+      }
+    }
+    
+    images = [...new Set(images)];
+    
+    if (images.length === 0) {
+      images = ["/images/placeholder.png"];
+    }
+    
+    return images;
   };
 
   // Fetch product by slug
@@ -307,25 +271,18 @@ const Productdetails = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Looking for product with slug:", slug);
-
       const productName = decodeSlug(slug);
-      console.log("Decoded product name:", productName);
 
       const response = await axios.get(`${API_URL}/products`);
       const products = response.data;
       setAllProducts(products);
 
-      console.log(`Total products fetched: ${products.length}`);
-
       let foundProduct = null;
 
-      // 1. Try exact name match
       foundProduct = products.find(
         p => p.name && p.name.toLowerCase() === productName.toLowerCase()
       );
 
-      // 2. Try slug match
       if (!foundProduct) {
         const productSlug = createSlug(productName);
         foundProduct = products.find(
@@ -333,7 +290,6 @@ const Productdetails = () => {
         );
       }
 
-      // 3. Try partial match
       if (!foundProduct) {
         const searchTerms = productName.toLowerCase().split(' ');
         foundProduct = products.find(p => {
@@ -343,7 +299,6 @@ const Productdetails = () => {
         });
       }
 
-      // 4. Try by ID
       if (!foundProduct && slug.length === 24) {
         try {
           const productResponse = await axios.get(`${API_URL}/product/${slug}`);
@@ -361,27 +316,21 @@ const Productdetails = () => {
 
       setProduct(foundProduct);
 
-      // Set active image
-      if (foundProduct.image) {
-        if (
-          Array.isArray(foundProduct.image) &&
-          foundProduct.image.length > 0
-        ) {
-          const firstImageUrl = getImageUrl(foundProduct.image[0]);
-          setActiveImg(firstImageUrl);
-        } else if (typeof foundProduct.image === "string") {
-          setActiveImg(getImageUrl(foundProduct.image));
-        }
+      const allImages = getAllImagesFromProduct(foundProduct);
+      setProductImages(allImages);
+      
+      if (allImages.length > 0) {
+        setActiveImg(allImages[0]);
+        setCurrentImageIndex(0);
       } else {
         setActiveImg("/images/placeholder.png");
       }
 
-      // Fetch reviews and wishlist status
       await fetchReviews(foundProduct._id);
       await checkWishlistStatus(foundProduct._id);
 
     } catch (err) {
-      console.error("Product fetch error details:", err);
+      console.error("Product fetch error:", err);
       setError(
         err.response?.data?.message ||
         err.message ||
@@ -389,6 +338,47 @@ const Productdetails = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReviews = async (productId) => {
+    try {
+      const id = productId || product?._id;
+      if (!id) return;
+      const response = await axios.get(`${API_URL}/products/${id}/reviews`);
+      
+      // ✅ SAFETY: Ensure reviews are properly sanitized
+      const reviewsData = response.data.reviews || [];
+      const sanitizedReviews = reviewsData.map(review => ({
+        _id: String(review._id || ''),
+        userName: String(review.userName || 'Anonymous'),
+        rating: typeof review.rating === 'number' ? review.rating : 0,
+        review: String(review.review || ''),
+        createdAt: review.createdAt || new Date().toISOString(),
+      }));
+      
+      setReviews(sanitizedReviews);
+      setAverageRating(response.data.averageRating || 0);
+      setTotalReviews(response.data.totalReviews || 0);
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+      setReviews([]);
+      setAverageRating(0);
+      setTotalReviews(0);
+    }
+  };
+
+  const checkWishlistStatus = async (productId) => {
+    try {
+      const guestId = localStorage.getItem("guestId");
+      if (!guestId) return;
+
+      const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
+      const items = res.data.items || [];
+      const exists = items.some((item) => item.productId === productId);
+      setWishlist(exists);
+    } catch (err) {
+      console.error("Error checking wishlist:", err);
     }
   };
 
@@ -494,21 +484,20 @@ const Productdetails = () => {
   };
 
   const nextImage = () => {
-    const images = getAllImages();
-    if (images.length <= 1) return;
-    const newIndex = (currentImageIndex + 1) % images.length;
+    if (productImages.length <= 1) return;
+    const newIndex = (currentImageIndex + 1) % productImages.length;
     setCurrentImageIndex(newIndex);
-    setActiveImg(images[newIndex]);
+    setActiveImg(productImages[newIndex]);
   };
 
   const prevImage = () => {
-    const images = getAllImages();
-    if (images.length <= 1) return;
-    const newIndex = (currentImageIndex - 1 + images.length) % images.length;
+    if (productImages.length <= 1) return;
+    const newIndex = (currentImageIndex - 1 + productImages.length) % productImages.length;
     setCurrentImageIndex(newIndex);
-    setActiveImg(images[newIndex]);
+    setActiveImg(productImages[newIndex]);
   };
 
+  // Add to Cart
   const addToCart = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -518,7 +507,6 @@ const Productdetails = () => {
         localStorage.setItem("guestId", guestId);
       }
 
-      // Use discounted price if coupon is applied
       const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
 
       const primaryImage =
@@ -526,15 +514,16 @@ const Productdetails = () => {
           ? product.image[0]
           : product.image || "";
 
+      // ✅ Clean payload - ONLY primitive values
       const payload = {
-        guestId: guestId,
-        productId: product._id,
-        name: product.name,
-        price: finalPrice,
-        originalPrice: product.price,
-        image: primaryImage,
-        quantity: qty,
-        couponApplied: appliedCoupon ? appliedCoupon.code : null,
+        guestId: String(guestId),
+        productId: String(product._id),
+        name: String(product.name || 'Product'),
+        price: parseFloat(finalPrice) || 0,
+        originalPrice: parseFloat(product.price) || 0,
+        image: String(primaryImage || ''),
+        quantity: parseInt(qty) || 1,
+        couponApplied: appliedCoupon ? String(appliedCoupon.code) : null,
       };
 
       const response = await axios.post(`${API_URL}/cart/add`, payload);
@@ -547,13 +536,11 @@ const Productdetails = () => {
       }
     } catch (err) {
       console.error("Add to cart error:", err);
-      const errorMessage = err.response?.data?.message ||
-        err.message ||
-        "Failed to add to cart. Please try again.";
-      alert(errorMessage);
+      alert("Failed to add to cart. Please try again.");
     }
   };
 
+  // Buy Now
   const buyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
@@ -563,7 +550,6 @@ const Productdetails = () => {
         localStorage.setItem("guestId", guestId);
       }
 
-      // Use discounted price if coupon is applied
       const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
 
       const primaryImage =
@@ -572,14 +558,14 @@ const Productdetails = () => {
           : product.image || "";
 
       const payload = {
-        guestId: guestId,
-        productId: product._id,
-        name: product.name,
-        price: finalPrice,
-        originalPrice: product.price,
-        image: primaryImage,
-        quantity: qty,
-        couponApplied: appliedCoupon ? appliedCoupon.code : null,
+        guestId: String(guestId),
+        productId: String(product._id),
+        name: String(product.name || 'Product'),
+        price: parseFloat(finalPrice) || 0,
+        originalPrice: parseFloat(product.price) || 0,
+        image: String(primaryImage || ''),
+        quantity: parseInt(qty) || 1,
+        couponApplied: appliedCoupon ? String(appliedCoupon.code) : null,
       };
 
       await axios.post(`${API_URL}/cart/add`, payload);
@@ -590,17 +576,19 @@ const Productdetails = () => {
     }
   };
 
+  // ✅ SAFE renderStars function
   const renderStars = (rating) => {
+    const numRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
     return (
       <div className="stars-display">
         {[...Array(5)].map((_, i) => (
           <FaStar
             key={i}
-            color={i < Math.floor(rating) ? "#ffc107" : "#e4e5e9"}
+            color={i < Math.floor(numRating) ? "#ffc107" : "#e4e5e9"}
             size={16}
           />
         ))}
-        <span className="ms-2 text-muted">{rating.toFixed(1)}</span>
+        <span className="ms-2 text-muted">{numRating.toFixed(1)}</span>
       </div>
     );
   };
@@ -656,10 +644,7 @@ const Productdetails = () => {
     );
   }
 
-  const images = getAllImages();
-  const hasMultipleImages = images.length > 1;
-
-  // Get the current display price
+  const hasMultipleImages = productImages.length > 1;
   const displayPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
   const originalPrice = product.price;
 
@@ -673,9 +658,9 @@ const Productdetails = () => {
             {/* LEFT SIDE - IMAGE GALLERY */}
             <Col lg={6}>
               <div className="product-gallery">
-                {images.length > 0 && (
+                {productImages.length > 0 && (
                   <div className="thumbnail-list">
-                    {images.map((img, i) => (
+                    {productImages.map((img, i) => (
                       <div
                         key={i}
                         className={`thumb-box ${activeImg === img ? "active" : ""}`}
@@ -708,7 +693,7 @@ const Productdetails = () => {
                     transition={{ duration: 0.5 }}
                   >
                     <img
-                      src={activeImg || images[0]}
+                      src={activeImg || productImages[0] || "/images/placeholder.png"}
                       alt={product.name}
                       className="main-product-image"
                       onError={(e) => {
@@ -727,7 +712,7 @@ const Productdetails = () => {
                           left: "10px",
                           top: "50%",
                           transform: "translateY(-50%)",
-                          background: "rgba(0,0,0,0.5)",
+                          background: "rgba(0,0,0,0.6)",
                           color: "white",
                           border: "none",
                           borderRadius: "50%",
@@ -738,6 +723,7 @@ const Productdetails = () => {
                           justifyContent: "center",
                           cursor: "pointer",
                           zIndex: 10,
+                          transition: "all 0.3s ease",
                         }}
                       >
                         <FaChevronLeft />
@@ -750,7 +736,7 @@ const Productdetails = () => {
                           right: "10px",
                           top: "50%",
                           transform: "translateY(-50%)",
-                          background: "rgba(0,0,0,0.5)",
+                          background: "rgba(0,0,0,0.6)",
                           color: "white",
                           border: "none",
                           borderRadius: "50%",
@@ -761,11 +747,31 @@ const Productdetails = () => {
                           justifyContent: "center",
                           cursor: "pointer",
                           zIndex: 10,
+                          transition: "all 0.3s ease",
                         }}
                       >
                         <FaChevronRight />
                       </button>
                     </>
+                  )}
+
+                  {hasMultipleImages && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "10px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "rgba(0,0,0,0.6)",
+                        color: "white",
+                        padding: "4px 12px",
+                        borderRadius: "20px",
+                        fontSize: "12px",
+                        zIndex: 10,
+                      }}
+                    >
+                      {currentImageIndex + 1} / {productImages.length}
+                    </div>
                   )}
                 </div>
               </div>
@@ -776,9 +782,9 @@ const Productdetails = () => {
               <div className="product-content">
                 <span className="best-seller-badge">Bestseller</span>
 
-                <h1 className="funnel-sans">{product.name}</h1>
+                <h1 className="funnel-sans">{String(product.name)}</h1>
                 <div className="product-brand">
-                  {product.company || "Brand Name"}
+                  {String(product.company || "Brand Name")}
                 </div>
                 <div className="rating-row">
                   <div className="stars">{renderStars(averageRating)}</div>
@@ -794,7 +800,7 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
-                {/* ================= UPDATED PRICE DISPLAY WITH DISCOUNT ================= */}
+                {/* PRICE DISPLAY */}
                 <div className="price-box funnel-sans">
                   {discountedPrice ? (
                     <>
@@ -840,7 +846,7 @@ const Productdetails = () => {
                   }}>
                     <div>
                       <FaCheckCircle className="text-success me-2" />
-                      <span style={{ fontWeight: 'bold' }}>{appliedCoupon.code}</span>
+                      <span style={{ fontWeight: 'bold' }}>{String(appliedCoupon.code)}</span>
                       <span className="ms-2 text-success">
                         ₹{formatPrice(discountedPrice.discountAmount)} OFF applied!
                       </span>
@@ -869,11 +875,10 @@ const Productdetails = () => {
                 </p>
 
                 <p className="description-text">
-                  {product.description ||
-                    "A timeless piece to elevate your space."}
+                  {String(product.description || "A timeless piece to elevate your space.")}
                 </p>
 
-                {/* ================= UPDATED COUPONS SECTION WITH APPLY BUTTON ================= */}
+                {/* COUPONS SECTION */}
                 {vendorCoupons.length > 0 && !couponLoading && (
                   <div className="vendor-coupons-section mt-3 p-3 border rounded bg-light">
                     <div className="d-flex justify-content-between align-items-center mb-2">
@@ -899,6 +904,8 @@ const Productdetails = () => {
                         {vendorCoupons.map((coupon, index) => {
                           const isApplied = appliedCoupon && appliedCoupon.code === coupon.code;
                           const priceInfo = calculateDiscountedPrice(coupon);
+                          const discount = coupon.discount || coupon.discountValue || 0;
+                          const type = coupon.type || coupon.discountType || 'percentage';
                           
                           return (
                             <div 
@@ -909,11 +916,11 @@ const Productdetails = () => {
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
                                   <span className="badge bg-success me-2">
-                                    {coupon.type === 'percentage' 
-                                      ? `${coupon.discount}% OFF` 
-                                      : `₹${coupon.discount} OFF`}
+                                    {type === 'percentage' 
+                                      ? `${discount}% OFF` 
+                                      : `₹${discount} OFF`}
                                   </span>
-                                  <strong className="text-primary">{coupon.code}</strong>
+                                  <strong className="text-primary">{String(coupon.code)}</strong>
                                   {isApplied && (
                                     <Badge bg="success" className="ms-2">
                                       <FaCheckCircle className="me-1" /> Applied
@@ -921,7 +928,7 @@ const Productdetails = () => {
                                   )}
                                 </div>
                                 <p className="mb-0 small text-muted">
-                                  {coupon.description || `${coupon.type === 'percentage' ? coupon.discount + '%' : '₹' + coupon.discount} off`}
+                                  {String(coupon.description || `${type === 'percentage' ? discount + '%' : '₹' + discount} off`)}
                                 </p>
                                 {priceInfo && (
                                   <small className="text-success">
@@ -931,7 +938,7 @@ const Productdetails = () => {
                                 )}
                                 {coupon.company && (
                                   <small className="text-muted ms-2">
-                                    By: {coupon.company}
+                                    By: {String(coupon.company)}
                                   </small>
                                 )}
                                 {coupon.expiryDate && (
@@ -964,7 +971,7 @@ const Productdetails = () => {
                                   variant="outline-secondary" 
                                   size="sm"
                                   onClick={() => {
-                                    navigator.clipboard.writeText(coupon.code);
+                                    navigator.clipboard.writeText(String(coupon.code));
                                     alert(`Coupon code "${coupon.code}" copied!`);
                                   }}
                                   className="ms-2"
@@ -1031,7 +1038,7 @@ const Productdetails = () => {
           <div className="product-accordion mt-5">
             <details open>
               <summary className="funnel-sans">Product Details</summary>
-              <p>{product.description}</p>
+              <p>{String(product.description)}</p>
             </details>
             <details>
               <summary className="funnel-sans">Materials & Care</summary>
@@ -1052,7 +1059,7 @@ const Productdetails = () => {
             </details>
           </div>
 
-          {/* REVIEWS SECTION */}
+          {/* ========== REVIEWS SECTION - FIXED ========== */}
           <div className="reviews-section mt-5">
             <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
               <h3 className="funnel-sans me-2">Customer Reviews</h3>
@@ -1078,38 +1085,39 @@ const Productdetails = () => {
               </div>
             ) : (
               <Row className="g-4">
-                {reviews
-                  .slice()
-                  .reverse()
-                  .map((review, index) => (
-                    <Col md={4} lg={3} key={index}>
+                {reviews.map((review, index) => {
+                  // ✅ SAFETY: Extract primitive values only
+                  const reviewText = String(review?.review || '');
+                  const userName = String(review?.userName || 'Anonymous');
+                  const rating = typeof review?.rating === 'number' ? review.rating : 0;
+                  const createdAt = review?.createdAt || new Date().toISOString();
+                  
+                  return (
+                    <Col md={4} lg={3} key={review?._id || index}>
                       <div className="review-card p-3 border rounded h-100">
                         <div className="review-stars mb-2">
-                          {renderStars(review.rating)}
+                          {renderStars(rating)}
                         </div>
-                        <p className="review-text mt-3">{review.review}</p>
+                        {/* ✅ IMPORTANT: Using reviewText which is a string */}
+                        <p className="review-text mt-3">{reviewText}</p>
                         <div className="review-meta mt-3">
                           <div className="reviewer-info d-flex align-items-center">
                             <FaUser className="me-2 text-muted" />
-                            <strong>{review.userName || "Anonymous"}</strong>
+                            <strong>{userName}</strong>
                           </div>
-                          {review.createdAt && (
+                          {createdAt && (
                             <div className="review-date mt-1">
-                              <FaCalendarAlt
-                                className="me-1 text-muted"
-                                size={12}
-                              />
+                              <FaCalendarAlt className="me-1 text-muted" size={12} />
                               <small className="text-muted">
-                                {new Date(
-                                  review.createdAt,
-                                ).toLocaleDateString()}
+                                {new Date(createdAt).toLocaleDateString()}
                               </small>
                             </div>
                           )}
                         </div>
                       </div>
                     </Col>
-                  ))}
+                  );
+                })}
               </Row>
             )}
           </div>

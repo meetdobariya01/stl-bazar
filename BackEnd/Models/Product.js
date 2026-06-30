@@ -1,38 +1,32 @@
 const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  description: String,
-  price: {
-    type: Number,
-    required: true,
-  },
-  category: String,
-  image: [String],
-  company: String,
-  vendor: String,
-  vendorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-  },
-  stock: {
-    type: Number,
-    default: 0,
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+const ProductSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    description: String,
+    price: { type: Number, required: true },
+    category: { type: String, required: true },
+    categoryIcon: { type: String, default: "FaBoxOpen" },
 
-// Check if model already exists before creating
-const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
+    // ✅ FIX: support multiple images
+    image: [{ type: String }],
 
-module.exports = Product;
+    size: { type: String },
+    company: { type: String, required: true },
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    ratings: [
+      {
+        userName: { type: String, default: "Anonymous" },
+        rating: { type: Number, min: 1, max: 5 },
+        review: String,
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
+
+    averageRating: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Product", ProductSchema);
