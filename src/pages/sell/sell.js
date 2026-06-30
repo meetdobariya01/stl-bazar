@@ -22,6 +22,7 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import "./sell.css";
+import Pricing from "../../components/pricing/pricing";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
@@ -386,6 +387,8 @@ const Sell = () => {
           </div>
         </Container>
       </section>
+
+      <Pricing />
 
       <Footer />
     </div>
