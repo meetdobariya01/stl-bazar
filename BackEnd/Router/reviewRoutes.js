@@ -58,7 +58,7 @@ router.get(
 
     res.json({
       averageRating: product.averageRating,
-      totalReviews: product.ratings.length,
+      totalReviews: product.ratings,
       reviews: product.ratings,
     });
   })
