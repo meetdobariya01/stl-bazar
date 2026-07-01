@@ -113,7 +113,7 @@ const ContactUs = () => {
                   <div>
                     <h5 className="funnel-sans">Our Location</h5>
 
-                    <p>Ahmedabad, Gujarat, India</p>
+                    <p>Ahmedabad, India</p>
                   </div>
                 </div>
 

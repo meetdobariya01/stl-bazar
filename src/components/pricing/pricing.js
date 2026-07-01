@@ -15,13 +15,13 @@ const plans = [
     featured: false,
 
     features: [
-      "Seller Storefront",
-      "50 Product Listings",
-      "Homepage Feature",
-      "Category Features",
-      "Social Media Feature",
-      "Seller Dashboard",
-      "Seasonal Campaign Access",
+      "Seller storefront & order management",
+      "Up to 50 product listings",
+      "1 Homepage Feature/month",
+      "2 Category Features/month",
+      "1 Social Media Feature/month",
+      "Seller Dashboard & Analytics",
+      "Access to Seasonal Campaigns",
     ],
   },
 
@@ -29,18 +29,18 @@ const plans = [
     title: "Growth Seller",
     price: "₹999",
     monthly: "/ month",
-    commission: "8% Commission",
+    commission: "8% Commission on sales",
     icon: <FaChartLine />,
     featured: true,
 
     features: [
-      "50 Product Listings",
-      "2 Homepage Features",
-      "4 Category Features",
-      "2 Social Media Features",
-      "Analytics Dashboard",
+      "Up to 50 product listings",
+      "2 Homepage Feature/month",
+      "4 Category Features/month",
+      "2 Social Media Features/month",
+      "Seller Dashboard & Analytics",
       "Order Management",
-      "Campaign Access",
+      "Access to Seasonal Campaigns",
     ],
   },
 
@@ -54,12 +54,12 @@ const plans = [
 
     features: [
       "Unlimited Listings",
-      "Homepage Promotions",
+      "4 Homepage Features/month",
+      "8 Category Features/month",
+      "4 Social Media Features/month",
       "Newsletter Inclusion",
       "Advanced Analytics",
       "Priority Support",
-      "Dedicated Manager",
-      "Premium Badge",
     ],
   },
 ];
