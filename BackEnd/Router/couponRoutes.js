@@ -1,47 +1,53 @@
+// routes/couponRoutes.js
 const express = require("express");
 const router = express.Router();
 const Coupon = require("../Models/Coupon");
-const Cart = require("../Models/Cart");
+const Cart = require("../Models/Cart"); 
+// ========== PUBLIC COUPON ENDPOINTS ==========
 
-// ========== GET AVAILABLE COUPONS ==========
-router.post("/user/available", async (req, res) => {
+// Get coupons for a specific product
+// Get coupons for a specific product - Updated
+router.get("/public/product/:productId", async (req, res) => {
   try {
-    const { guestId, subtotal } = req.body;
-
-    // console.log("Fetching available coupons for subtotal:", subtotal);
-
-    // Fix: Use expiryDate instead of validUntil
+    const { productId } = req.params;
+    
+    console.log(`Fetching coupons for product: ${productId}`);
+    
     const coupons = await Coupon.find({
       isActive: true,
-      expiryDate: { $gte: new Date() } // Only future expiry dates
+      expiryDate: { $gte: new Date() },
+      $or: [
+        // Check both possible field names
+        { productIds: { $in: [productId] } },
+        { products: { $in: [productId] } },
+        { productIds: { $exists: false } },
+        { productIds: [] },
+        { products: { $exists: false } },
+        { products: [] }
+      ]
     }).sort({ createdAt: -1 });
 
-    // console.log("Found coupons:", coupons.length);
-    // console.log("Coupons:", coupons.map(c => ({ code: c.code, minOrderAmount: c.minOrderAmount })));
-
-    // Filter valid coupons based on min order amount
-    const validCoupons = coupons.filter((coupon) => {
-      return subtotal >= (coupon.minOrderAmount || 0);
-    });
-
-    const formattedCoupons = validCoupons.map((coupon) => ({
-      _id: coupon._id,
-      code: coupon.code,
-      description: coupon.description,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-      minOrderAmount: coupon.minOrderAmount,
-      maxDiscount: coupon.maxDiscount,
-      vendorName: coupon.vendorName || null
-    }));
-
+    console.log(`Found ${coupons.length} coupons for product`);
+    
     res.json({
       success: true,
-      coupons: formattedCoupons
+      coupons: coupons.map(c => ({
+        _id: c._id,
+        code: c.code,
+        description: c.description || `${c.discountValue || c.discount || 0}% off`,
+        discountType: c.discountType || c.type || 'percentage',
+        discountValue: c.discountValue || c.discount || 0,
+        minOrderAmount: c.minOrderAmount || 0,
+        maxDiscount: c.maxDiscount || 0,
+        company: c.company || c.vendorName || null,
+        expiryDate: c.expiryDate,
+        discount: c.discount || c.discountValue || 0,
+        type: c.type || c.discountType || 'percentage',
+        isActive: c.isActive
+      }))
     });
-
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching product coupons:", err);
     res.status(500).json({
       success: false,
       message: "Server error"
@@ -49,177 +55,311 @@ router.post("/user/available", async (req, res) => {
   }
 });
 
-// ========== VALIDATE COUPON ==========
-router.post("/user/validate", async (req, res) => {
-  const { code, guestId, subtotal } = req.body;
-
-  // console.log("Validating coupon:", { code, guestId, subtotal });
-
-  if (!code) {
-    return res.status(400).json({ success: false, message: "Coupon code is required" });
-  }
-
+// Get coupons by company name - Updated
+router.get("/public/company/:companyName", async (req, res) => {
   try {
-    // Fix: Use expiryDate instead of validFrom/validUntil
-    const coupon = await Coupon.findOne({ 
-      code: code.toUpperCase(),
+    const { companyName } = req.params;
+    
+    console.log(`Fetching coupons for company: ${companyName}`);
+    
+    const coupons = await Coupon.find({
       isActive: true,
-      expiryDate: { $gte: new Date() } // Only show if not expired
+      expiryDate: { $gte: new Date() },
+      $or: [
+        { company: { $regex: new RegExp(companyName, 'i') } },
+        { vendorName: { $regex: new RegExp(companyName, 'i') } }
+      ]
+    }).sort({ createdAt: -1 });
+
+    console.log(`Found ${coupons.length} coupons for company`);
+    
+    res.json({
+      success: true,
+      coupons: coupons.map(c => ({
+        _id: c._id,
+        code: c.code,
+        description: c.description || `${c.discountValue || c.discount || 0}% off`,
+        discountType: c.discountType || c.type || 'percentage',
+        discountValue: c.discountValue || c.discount || 0,
+        minOrderAmount: c.minOrderAmount || 0,
+        maxDiscount: c.maxDiscount || 0,
+        company: c.company || c.vendorName || null,
+        expiryDate: c.expiryDate,
+        discount: c.discount || c.discountValue || 0,
+        type: c.type || c.discountType || 'percentage',
+        isActive: c.isActive
+      }))
     });
+  } catch (err) {
+    console.error("Error fetching company coupons:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+});
 
-    console.log("Found coupon:", coupon);
+// Get all available coupons - Updated
+router.get("/public/all", async (req, res) => {
+  try {
+    console.log("Fetching all available coupons");
+    
+    const coupons = await Coupon.find({
+      isActive: true,
+      expiryDate: { $gte: new Date() }
+    }).sort({ createdAt: -1 });
 
-    if (!coupon) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Invalid or expired coupon code" 
-      });
-    }
+    console.log(`Found ${coupons.length} total coupons`);
+    
+    res.json({
+      success: true,
+      coupons: coupons.map(c => ({
+        _id: c._id,
+        code: c.code,
+        description: c.description || `${c.discountValue || c.discount || 0}% off`,
+        discountType: c.discountType || c.type || 'percentage',
+        discountValue: c.discountValue || c.discount || 0,
+        minOrderAmount: c.minOrderAmount || 0,
+        maxDiscount: c.maxDiscount || 0,
+        company: c.company || c.vendorName || null,
+        expiryDate: c.expiryDate,
+        discount: c.discount || c.discountValue || 0,
+        type: c.type || c.discountType || 'percentage',
+        isActive: c.isActive
+      }))
+    });
+  } catch (err) {
+    console.error("Error fetching all coupons:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+});
 
-    // Check usage limit
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Coupon usage limit reached" 
-      });
-    }
+// Get available coupons for user (with subtotal validation)
+router.post("/user/available", async (req, res) => {
+  try {
+    const { subtotal } = req.body;
 
-    // Check minimum order amount
-    if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Minimum order amount of ₹${coupon.minOrderAmount} required. Your subtotal is ₹${subtotal}` 
-      });
-    }
+    const coupons = await Coupon.find({
+      isActive: true,
+      expiryDate: { $gte: new Date() },
 
-    // Calculate discount
-    let discountAmount = 0;
-    if (coupon.discountType === "percentage") {
-      discountAmount = (subtotal * coupon.discountValue) / 100;
-      if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
-        discountAmount = coupon.maxDiscount;
-      }
-    } else {
-      discountAmount = Math.min(coupon.discountValue, subtotal);
-    }
+      // ONLY ADMIN COUPONS
+      $or: [
+        { company: null },
+        { company: "" },
+        { vendorName: null },
+        { vendorName: "" }
+      ]
+    }).sort({ createdAt: -1 });
+
+    const validCoupons = coupons.filter(
+      (coupon) => subtotal >= (coupon.minOrderAmount || 0)
+    );
 
     res.json({
       success: true,
-      coupon: {
-        code: coupon.code,
-        discountType: coupon.discountType,
-        discountValue: coupon.discountValue,
-        discountAmount: parseFloat(discountAmount.toFixed(2)),
-        minOrderAmount: coupon.minOrderAmount,
-        description: coupon.description
-      }
+      coupons: validCoupons,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 });
 
-// ========== APPLY COUPON ==========
-router.post("/user/apply", async (req, res) => {
-  const { code, guestId, subtotal } = req.body;
-
-  // console.log("Applying coupon:", { code, guestId, subtotal });
-
-  if (!code || !guestId) {
-    return res.status(400).json({ success: false, message: "Missing required fields" });
-  }
+// Validate coupon
+router.post("/user/validate", async (req, res) => {
+  const { code, subtotal } = req.body;
 
   try {
-    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
-    
+    const coupon = await Coupon.findOne({
+      code: code.toUpperCase(),
+      isActive: true,
+      expiryDate: { $gte: new Date() },
+
+      // ONLY ADMIN COUPONS
+      $or: [
+        { company: null },
+        { company: "" },
+        { vendorName: null },
+        { vendorName: "" }
+      ]
+    });
+
     if (!coupon) {
-      return res.status(404).json({ success: false, message: "Coupon not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Invalid Admin Coupon",
+      });
     }
 
-    // Calculate discount amount
+    if (
+      coupon.minOrderAmount &&
+      subtotal < coupon.minOrderAmount
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum order amount ₹${coupon.minOrderAmount}`,
+      });
+    }
+
     let discountAmount = 0;
-    if (coupon.discountType === "percentage") {
-      discountAmount = (subtotal * coupon.discountValue) / 100;
-      if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+
+    if ((coupon.discountType || coupon.type) === "percentage") {
+      discountAmount =
+        subtotal *
+        ((coupon.discountValue || coupon.discount) / 100);
+
+      if (
+        coupon.maxDiscount &&
+        discountAmount > coupon.maxDiscount
+      ) {
         discountAmount = coupon.maxDiscount;
       }
     } else {
-      discountAmount = Math.min(coupon.discountValue, subtotal);
+      discountAmount = Math.min(
+        coupon.discountValue || coupon.discount,
+        subtotal
+      );
     }
 
-    // Store applied coupon in cart
-    await Cart.findOneAndUpdate(
-      { guestId },
-      { 
-        $set: { 
-          appliedCoupon: {
-            code: coupon.code,
-            discountType: coupon.discountType,
-            discountValue: coupon.discountValue,
-            discountAmount: parseFloat(discountAmount.toFixed(2))
-          }
-        }
+    return res.json({
+      success: true,
+      coupon: {
+        code: coupon.code,
+        discountAmount,
+        discountType: coupon.discountType || coupon.type,
+        discountValue: coupon.discountValue || coupon.discount,
       },
-      { upsert: true }
-    );
-
-    res.json({ success: true });
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 });
+router.post("/user/apply", async (req, res) => {
+  try {
+    const { guestId, code } = req.body;
 
-// ========== REMOVE COUPON ==========
+    const cart = await Cart.findOne({ guestId });
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
+
+    const subtotal = cart.items.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+
+    const coupon = await Coupon.findOne({
+      code: code.toUpperCase(),
+      isActive: true,
+      expiryDate: { $gte: new Date() },
+
+      // ONLY ADMIN COUPONS
+      $or: [
+        { company: null },
+        { company: "" },
+        { vendorName: null },
+        { vendorName: "" }
+      ]
+    });
+
+    if (!coupon) {
+      return res.status(404).json({
+        success: false,
+        message: "Only Admin Coupons Allowed",
+      });
+    }
+
+    let discountAmount = 0;
+
+    if ((coupon.discountType || coupon.type) === "percentage") {
+      discountAmount =
+        subtotal *
+        ((coupon.discountValue || coupon.discount) / 100);
+
+      if (
+        coupon.maxDiscount &&
+        discountAmount > coupon.maxDiscount
+      ) {
+        discountAmount = coupon.maxDiscount;
+      }
+    } else {
+      discountAmount = Math.min(
+        coupon.discountValue || coupon.discount,
+        subtotal
+      );
+    }
+
+    cart.appliedCoupon = {
+      code: coupon.code,
+      discountType: coupon.discountType || coupon.type,
+      discountValue: coupon.discountValue || coupon.discount,
+      discountAmount,
+    };
+
+    await cart.save();
+
+    res.json({
+      success: true,
+      appliedCoupon: cart.appliedCoupon,
+      subtotal,
+      discountAmount,
+      finalTotal: subtotal - discountAmount,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+});
 router.delete("/user/remove/:guestId", async (req, res) => {
   try {
-    await Cart.findOneAndUpdate(
-      { guestId: req.params.guestId },
-      { $unset: { appliedCoupon: "" } }
-    );
-    res.json({ success: true });
+    const cart = await Cart.findOne({
+      guestId: req.params.guestId
+    });
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found"
+      });
+    }
+
+    cart.appliedCoupon = undefined;
+
+    await cart.save();
+
+    res.json({
+      success: true,
+      message: "Coupon removed"
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 });
-
-// ========== ADMIN: CREATE COUPON ==========
-router.post("/admin/create", async (req, res) => {
-  try {
-    const coupon = new Coupon(req.body);
-    await coupon.save();
-    res.json({ success: true, coupon });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// ========== ADMIN: GET ALL COUPONS ==========
-router.get("/admin/all", async (req, res) => {
-  try {
-    const coupons = await Coupon.find().sort({ createdAt: -1 });
-    res.json(coupons);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// ========== ADMIN: DELETE COUPON ==========
-router.delete("/admin/:couponId", async (req, res) => {
-  try {
-    await Coupon.findByIdAndDelete(req.params.couponId);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// Test route to verify the router is working
+// Test route
 router.get("/test", (req, res) => {
   res.json({ message: "Coupon routes are working!" });
 });

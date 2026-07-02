@@ -23,7 +23,18 @@ router.get("/:guestId", async (req, res) => {
    ADD / UPDATE CART ITEM (Supports Both Formats)
 ===================================== */
 router.post("/add", async (req, res) => {
-  const { guestId, productId, quantity, name, price, image, product } = req.body;
+  const {
+  guestId,
+  productId,
+  quantity,
+  name,
+  price,
+  image,
+  product,
+  originalPrice,
+  discountAmount,
+  couponCode,
+} = req.body;
 
   // // console.log("📦 Add to cart request:", req.body);
 
@@ -64,13 +75,16 @@ router.post("/add", async (req, res) => {
       cart.items[itemIndex].quantity += productData.quantity || 1;
     } else {
       // Add new item
-      cart.items.push({
-        productId: productData.productId,
-        name: productData.name || "Product",
-        price: productData.price || 0,
-        image: productData.image || [],
-        quantity: productData.quantity || 1,
-      });
+    cart.items.push({
+  productId: productData.productId,
+  name: productData.name,
+  price: productData.price,
+  originalPrice: originalPrice || productData.price,
+  discountAmount: discountAmount || 0,
+  couponCode: couponCode || "",
+  image: productData.image,
+  quantity: productData.quantity,
+});
     }
 
     await cart.save();
