@@ -19,6 +19,10 @@ import Productdetails from "./pages/productdetails/productdetails";
 import CategoryProducts from "./pages/Categorygrid/Categorygrid";
 import Sell from "./pages/sell/sell";
 import Ordercomplate from "./pages/thankyou/ordercomplate";
+import Condition from "./pages/termsandcondition/condition";
+import Shipping from "./pages/shipping/shipping";
+import Return from "./pages/returnpage/return";
+import Privacypolicy from "./pages/privacypolicy/privacypolicy";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -39,6 +43,10 @@ root.render(
         <Route path="/category/:categoryName" element={<CategoryProducts />} />
         <Route path="/sell" element={<Sell />} />
         <Route path="/Order-Complete" element={<Ordercomplate />} />
+        <Route path="/terms-and-conditions" element={<Condition />} />
+        <Route path="/shipping-policy" element={<Shipping />} />
+        <Route path="/return-policy" element={<Return />} />
+        <Route path="/privacypolicy" element={<Privacypolicy />} />
       </Routes>
     </Router>
   </CartProvider>,
