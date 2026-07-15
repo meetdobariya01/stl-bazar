@@ -51,7 +51,7 @@
 }
 
 .form-control-custom {
-  border: none !important; 
+  border: none !important;
   box-shadow: none !important;
   background: transparent !important;
 }
@@ -177,4 +177,26 @@
   .login-card {
     padding: 30px;
   }
+}
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #888;
+  font-size: 18px;
+  transition: 0.3s;
+}
+
+.password-toggle:hover {
+  color: #000;
+}
+
+.underline-input {
+  position: relative;
+}
+
+.form-control-custom {
+  padding-right: 45px;
 }

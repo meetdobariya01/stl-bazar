@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Container,
   Row,
@@ -319,7 +320,17 @@ const Sell = () => {
 
                     <div className="signin-text text-center mt-3">
                       Already have an account?{" "}
-                      <span style={{ cursor: "pointer" }}>Sign in</span>
+                      <Link
+                        to="/login"
+                        style={{
+                          textDecoration: "none",
+                          color: "#b08d57",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Sign in
+                      </Link>
                     </div>
                   </Form>
                 </div>

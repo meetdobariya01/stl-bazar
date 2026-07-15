@@ -1,0 +1,147 @@
+.progressBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #ff9800, #009688);
+  z-index: 9999;
+  transition: 0.3s;
+}
+
+.hero {
+  padding: 120px 20px;
+  background: linear-gradient(135deg, #0f172a, #0ea5a4);
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  top: -180px;
+  right: -150px;
+  animation: float 8s infinite linear;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(30px);
+  }
+}
+
+.hero h1 {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.hero p {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.glass {
+  background: #fff;
+  border-radius: 20px;
+  padding: 35px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  transition: 0.4s;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.glass:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.12);
+}
+
+.glass h3 {
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #0f172a;
+}
+
+.glass i {
+  color: #0ea5a4;
+  margin-right: 10px;
+}
+
+.glass ul {
+  padding-left: 20px;
+}
+
+.glass li {
+  margin-bottom: 12px;
+}
+
+.toc {
+  top: 100px;
+  background: #fff;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.toc h5 {
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc li {
+  margin-bottom: 10px;
+}
+
+.toc a {
+  text-decoration: none;
+  color: #555;
+  transition: 0.3s;
+}
+
+.toc a:hover {
+  color: #0ea5a4;
+  padding-left: 5px;
+}
+
+@media (max-width: 991px) {
+  .toc {
+    position: relative !important;
+    top: 0;
+    margin-bottom: 30px;
+  }
+
+  .hero {
+    padding: 90px 20px;
+  }
+
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+
+  .glass {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero h1 {
+    font-size: 32px;
+  }
+
+  .hero p {
+    font-size: 15px;
+  }
+
+  .glass {
+    padding: 20px;
+  }
+}
