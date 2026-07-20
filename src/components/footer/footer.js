@@ -1,5 +1,6 @@
 import { Container, Row, Col } from "react-bootstrap";
 import { motion } from "framer-motion";
+import { NavLink } from "react-router-dom";
 import {
   FaFacebookF,
   FaPinterestP,
@@ -22,10 +23,10 @@ const Footer = () => {
 
   return (
     <>
-      <footer className="footer-section lexend">
+      <footer className="footer-section lexend ">
         <Container fluid>
           {/* DESKTOP VIEW */}
-          <Row className="d-none d-md-flex">
+          <Row className="d-none d-md-flex ">
             <Col md={4}>
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -33,16 +34,16 @@ const Footer = () => {
                 transition={{ duration: 0.6 }}
               >
                 <img
-                  src="/images/brandel.png"
+                  src="/images/native.webp"
                   alt="Refresh"
-                  className="footer-logo w-50"
+                  className="footer-logo"
                   onClick={refreshPage}
                 />
 
                 <p className="footer-text">
-                  Brandel brings you handpicked, high-quality foods,
-                  crafted for taste lovers who value freshness, authenticity,
-                  and exceptional culinary experiences.
+                  Native91 brings you handpicked, high-quality foods, crafted
+                  for taste lovers who value freshness, authenticity, and
+                  exceptional culinary experiences.
                 </p>
                 <div className="d-flex align-items-center gap-2">
                   <img
@@ -63,22 +64,34 @@ const Footer = () => {
 
             <Col md={2}>
               <h5 className="lexend">INFO</h5>
-              <ul>
-                <li>Our Story</li>
-                <li>Contact Us</li>
-                <li>Track Order</li>
-                <li>FAQ</li>
-                {/* <li>Naturopedia</li> */}
-                <li>Shop All</li>
-                {/* <li>Store Locator</li> */}
-                {/* <li>Re:fresh Certifications</li> */}
+              <ul className="footer-links">
+                <li>
+                  <NavLink to="/aboutus">Our Story</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/contactus">Contact Us</NavLink>
+                </li>
+                <li>
+                  {/* <NavLink to="/track-order">Track Order</NavLink> */}
+                </li>
+                <li>
+                  <NavLink to="/faqs">FAQ</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/orderhistory">Order History</NavLink>
+                </li>
               </ul>
             </Col>
 
             <Col md={3}>
               <h5 className="lexend">OUR PROGRAMS</h5>
               <ul>
-                <li>E-Gift Voucher</li>
+                <li  className="footer-links">
+                  <NavLink to="/category/Gifts%20%26%20Hamper">
+                    {" "}
+                    E-Gift Voucher
+                  </NavLink>
+                </li>
               </ul>
 
               <h5 className="mt-4 lexend">FOLLOW US ON</h5>
@@ -89,7 +102,10 @@ const Footer = () => {
                 <a href="https://pinterest.com" target="_blank">
                   <FaPinterestP />
                 </a> */}
-                <a href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank">
+                <a
+                  href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                  target="_blank"
+                >
                   <FaInstagram />
                 </a>
                 <a href="https://youtube.com" target="_blank">
@@ -103,14 +119,28 @@ const Footer = () => {
 
             <Col md={3}>
               <h5 className="lexend">POLICY</h5>
-              <ul>
-                <li>Disclaimer</li>
-                <li>Terms & Conditions</li>
-                {/* <li>Corporate Governance</li> */}
-                <li>Shipping Policy</li>
-                <li>Return, Refund & Cancellation</li>
-                <li>Privacy Policy</li>
-                {/* <li>Refresh Social Handles</li> */}
+              <ul className="footer-links">
+                <li>{/* <NavLink to="/disclaimer">Disclaimer</NavLink> */}</li>
+
+                <li>
+                  <NavLink to="/terms-and-conditions">
+                    Terms & Conditions
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink to="/shipping-policy">Shipping Policy</NavLink>
+                </li>
+
+                <li>
+                  <NavLink to="/return-policy">
+                    Return, Refund & Cancellation
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink to="/privacypolicy">Privacy Policy</NavLink>
+                </li>
               </ul>
             </Col>
           </Row>
@@ -121,18 +151,32 @@ const Footer = () => {
             <Col>
               {/* LOGO */}
               <img
-                src="/images/brandel.png"
+                src="/images/native.webp"
                 alt="Refresh"
-                className="footer-logo mb-3 w-75"
+                className="footer-logo w-50"
                 onClick={refreshPage}
               />
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
-                Brandel brings you handpicked, high-quality foods, crafted
-                for taste lovers who value freshness, authenticity, and
-                exceptional culinary experiences.
+                Native91 brings you handpicked, high-quality foods, crafted for
+                taste lovers who value freshness, authenticity, and exceptional
+                culinary experiences.
               </p>
+              <div className="d-flex align-items-center gap-2">
+                <img
+                  src="/images/india.png"
+                  alt="Refresh"
+                  className="footer-logo w-50"
+                  onClick={refreshPage}
+                />{" "}
+                {/* <img
+                    src="/images/brandel.png"
+                    alt="Refresh"
+                    className="footer-logo w-50"
+                    onClick={refreshPage}
+                  /> */}
+              </div>
 
               {/* MOBILE MENU */}
               <div className="mobile-footer">
@@ -167,7 +211,10 @@ const Footer = () => {
                       <a href="https://pinterest.com" target="_blank">
                         <FaPinterestP />
                       </a> */}
-                      <a href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank">
+                      <a
+                        href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                        target="_blank"
+                      >
                         <FaInstagram />
                       </a>
                       <a href="https://youtube.com" target="_blank">
@@ -187,7 +234,7 @@ const Footer = () => {
 
       {/* WHATSAPP BUTTON */}
       <a
-        href="https://wa.me/919824018555?text=Hello%20Brandel,%20I%20have%20a%20query%20about%20your%20products."
+        href="https://wa.me/919824018555?text=Hello%20Native91,%20I%20have%20a%20query%20about%20your%20products."
         target="_blank"
         className="whatsapp-btn"
       >
