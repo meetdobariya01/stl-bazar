@@ -24,6 +24,7 @@ import Shipping from "./pages/shipping/shipping";
 import Return from "./pages/returnpage/return";
 import Privacypolicy from "./pages/privacypolicy/privacypolicy";
 import Faqs from "./pages/faqs/faqs";
+import Orderhistory from "./pages/orderhistory/orderhistory";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -49,6 +50,7 @@ root.render(
         <Route path="/return-policy" element={<Return />} />
         <Route path="/privacypolicy" element={<Privacypolicy />} />
         <Route path="/faqs" element={<Faqs />} />
+        <Route path="/orderhistory" element={<Orderhistory />} />
       </Routes>
     </Router>
   </CartProvider>,
