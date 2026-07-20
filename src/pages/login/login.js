@@ -83,7 +83,7 @@ const Login = () => {
           <Col lg={10}>
             <div className="login-container">
               {/* Left Image */}
-              <div className="login-image-wrapper">
+              <div className="login-image-wrapper d-none d-sm-block ">
                 <img
                   src="./images/login.webp"
                   alt="Premium Grocery"

@@ -78,7 +78,7 @@ const Footer = () => {
                   <NavLink to="/faqs">FAQ</NavLink>
                 </li>
                 <li>
-                  <NavLink to="/category/All">Shop All</NavLink>
+                  <NavLink to="/orderhistory">Order History</NavLink>
                 </li>
               </ul>
             </Col>
