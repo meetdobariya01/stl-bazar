@@ -190,7 +190,7 @@ const Arrival = () => {
           {brandSlides.map((slide, idx) => (
             <Carousel.Item key={idx}>
               <div className="slide-label-premium">
-                <span className="count-premium">{slide.brands.length} Brands</span>
+                {/* <span className="count-premium">{slide.brands.length} Brands</span> */}
               </div>
               <Row className="g-3 brand-grid-premium">
                 {slide.brands.map((brand, index) => (
