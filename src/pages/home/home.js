@@ -15,6 +15,8 @@ import Arrival from "../../components/new-arrival/arrival";
 import Boxes from "../../components/boxes/boxes";
 import Bestseller from "../../components/bestseller/bestseller";
 import Email from "../../components/email/email";
+import StatsSection from "../../components/details/details";
+import CTASection from "../../components/email/email";
 
 const Home = () => {
   return (
@@ -24,9 +26,6 @@ const Home = () => {
 
       {/* carousel */}
       <Carouselhero />
-
-      {/* features */}
-      {/* <Features /> */}
 
       {/* category */}
       <Category />
@@ -46,17 +45,20 @@ const Home = () => {
       {/* explore */}
       {/* <Explore /> */}
 
-      {/* Details */}
-      {/* <Details /> */}
-
       {/* shop with us */}
       <Shopus />
 
       {/* testimonial */}
-      <Testimonil />
+      {/* <Testimonil /> */}
+
+      {/* features */}
+      <Features />
+
+      {/* Details */}
+      <StatsSection />
 
       {/* Email subscription */}
-      <Email />
+      <CTASection />
 
       {/* footer */}
       <Footer />
