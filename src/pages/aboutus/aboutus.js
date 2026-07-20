@@ -1,4 +1,5 @@
-import React from "react";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom"; 
 import "./aboutus.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
@@ -72,6 +73,15 @@ const values = [
 ];
 
 const Aboutus = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   const navigate = useNavigate();
   return (
     <div className="lexend">

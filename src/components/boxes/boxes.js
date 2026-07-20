@@ -1,6 +1,7 @@
 import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { FaArrowRight } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import "./boxes.css";
 
 const bannerData = [
@@ -9,32 +10,32 @@ const bannerData = [
     title: "Spring Refresh",
     desc: "Bright & natural essentials for your home.",
     button: "Shop Now",
-    image:
-      "https://images.unsplash.com/photo-1512428813834-c702c7702b78?q=80&w=1200",
+    image: "./images/box1.webp",
+    link: "/category/Handmade%20Home%20Decor",
   },
   {
     subtitle: "Gift Guide",
     title: "Thoughtful Gifts",
     desc: "For every occasion.",
     button: "Explore Gifts",
-    image:
-      "https://images.unsplash.com/photo-1512909006721-3d6018887383?q=80&w=1200",
+    image: "./images/box2.webp",
+    link: "/category/Gifts%20%26%20Hamper",
   },
   {
     subtitle: "Brand Spotlight",
     title: "New Makers, Great Stories",
     desc: "Support independent artisans & brands.",
     button: "Discover Brands",
-    image:
-      "https://images.unsplash.com/photo-1578500494198-246f612d3b3d?q=80&w=1200",
+    image: "./images/box3.webp",
+    link: "/category/Sustainable%20Lifestyle",
   },
   {
     subtitle: "Limited Drops",
     title: "Exclusive Creations",
     desc: "Limited stock unique finds.",
     button: "Shop Now",
-    image:
-      "https://unsplash.com/photos/a-woman-is-wrapping-a-red-gift-with-a-brown-ribbon-yfqtFOw_l70",
+    image: "./images/box4.webp",
+    link: "/category/Jewelry%20%26%20Accessories",
   },
 ];
 
@@ -53,21 +54,15 @@ const Boxes = () => {
                   }}
                 >
                   <div className="overlay"></div>
-                  <a
-                    href="/shop"
-                    className="text-decoration-none"
-                  >
+                  <Link to={item.link} className="text-decoration-none">
                     <div className="promo-content">
                       <span>{item.subtitle}</span>
 
                       <h3>{item.title}</h3>
 
                       <p>{item.desc}</p>
-
-                      {/* {item.button} */}
-                      {/* <FaArrowRight className="ms-2" /> */}
                     </div>
-                  </a>
+                  </Link>
                 </div>
               </Col>
             ))}
