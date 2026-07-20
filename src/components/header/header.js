@@ -123,7 +123,7 @@ const Header = () => {
           </div>
 
           <div className="logo-box" onClick={() => navigate("/")}>
-            <img src="/images/brandel.png" alt="logo" />
+            <img src="/images/native.webp" alt="logo" />
           </div>
 
           {/* DESKTOP SEARCH WITH SUGGESTIONS */}

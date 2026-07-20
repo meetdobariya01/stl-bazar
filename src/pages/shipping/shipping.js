@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import AOS from "aos";
 import Footer from "../../components/footer/footer";
 import Header from "../../components/header/header";
@@ -106,6 +107,15 @@ const sections = [
   },
 ];
 const Shipping = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -166,7 +176,7 @@ const Shipping = () => {
 
             <div className="col-lg-9">
               <div className="policy-card mb-4" data-aos="fade-up">
-                <h2>Welcome to Brandel</h2>
+                <h2>Welcome to Native91</h2>
 
                 <p>
                   We are committed to delivering your orders safely, securely,
@@ -238,7 +248,7 @@ const Shipping = () => {
                 <p>
                   <strong>Email:</strong>
                   <br />
-                  care@brandel.shop
+                  support@native91.com
                 </p>
 
                 <p>

@@ -85,7 +85,7 @@ const Login = () => {
               {/* Left Image */}
               <div className="login-image-wrapper">
                 <img
-                  src="./images/login.png"
+                  src="./images/login.webp"
                   alt="Premium Grocery"
                   className="login-side-image"
                 />
