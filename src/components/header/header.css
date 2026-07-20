@@ -12,7 +12,7 @@ HEADER
 }
 
 .logo-box img {
-  height: 100px;
+  height: 110px;
   cursor: pointer;
 }
 
@@ -157,7 +157,7 @@ HEADER
     width: 100%;
   }
   .logo-box img {
-    height: 75px;
+    height: 110px;
   }
 }
 .mobile-toggle {

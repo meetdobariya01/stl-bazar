@@ -1,0 +1,150 @@
+.progress-bar-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #16a34a, #0ea5e9);
+  z-index: 9999;
+  transition: 0.3s;
+}
+
+.shipping-hero {
+  padding: 120px 20px;
+  background: linear-gradient(135deg, #14532d, #15803d, #0f766e);
+  color: #fff;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.shipping-hero::before {
+  content: "";
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  top: -150px;
+  right: -100px;
+  animation: float 8s infinite ease-in-out;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(25px);
+  }
+}
+
+.shipping-hero h1 {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.shipping-hero p {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.policy-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 35px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+  transition: 0.35s;
+}
+
+.policy-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.12);
+}
+
+.policy-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+.policy-card h3 i {
+  color: #16a34a;
+  margin-right: 10px;
+}
+
+.policy-card ul {
+  padding-left: 20px;
+}
+
+.policy-card li {
+  margin-bottom: 10px;
+}
+
+.policy-menu {
+  background: #fff;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  top: 100px;
+}
+
+.policy-menu ul {
+  list-style: none;
+  padding: 0;
+}
+
+.policy-menu li {
+  margin-bottom: 10px;
+}
+
+.policy-menu a {
+  color: #555;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.policy-menu a:hover {
+  color: #16a34a;
+  padding-left: 5px;
+}
+
+.table {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table thead {
+  background: #16a34a;
+  color: #fff;
+}
+
+@media (max-width: 992px) {
+  .policy-menu {
+    position: relative !important;
+    top: 0;
+    margin-bottom: 30px;
+  }
+
+  .shipping-hero h1 {
+    font-size: 2.2rem;
+  }
+
+  .policy-card {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 576px) {
+  .shipping-hero {
+    padding: 90px 20px;
+  }
+
+  .shipping-hero h1 {
+    font-size: 1.9rem;
+  }
+
+  .shipping-hero p {
+    font-size: 15px;
+  }
+
+  .policy-card {
+    padding: 20px;
+  }
+}

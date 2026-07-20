@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaGoogle } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
 import "./login.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; // <-- import useNavigate
+import { useNavigate, useLocation } from "react-router-dom"; // <-- import useNavigate
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate(); // <-- initialize navigate
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,18 +66,26 @@ const Login = () => {
     alert("Google Login Successful ✅");
     // You can also send response.credential to backend for JWT
   };
+  const { pathname } = useLocation();
 
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   return (
     <section className="login-section">
       <Header />
       <Container>
-        <Row className="justify-content-center align-items-center min-vh-100 py-5">
+        <Row className="justify-content-center align-items-center min-vh-100 py-5 4 lexend">
           <Col lg={10}>
             <div className="login-container">
               {/* Left Image */}
-              <div className="login-image-wrapper">
+              <div className="login-image-wrapper d-none d-sm-block ">
                 <img
-                  src="./images/login.png"
+                  src="./images/login.webp"
                   alt="Premium Grocery"
                   className="login-side-image"
                 />
@@ -85,7 +94,7 @@ const Login = () => {
               {/* Right Form */}
               <Card className="login-card border-0">
                 <h3 className="text-center mb-4 lexend">Welcome Back </h3>
-                <p className="text-center text-muted mb-4 funnel-sans">
+                <p className="text-center text-muted mb-">
                   Login to continue shopping
                 </p>
 
@@ -107,10 +116,10 @@ const Login = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <Form.Group className="mb-3 input-group-custom funnel-sans underline-input">
+                    <Form.Group className="mb-3 input-group-custom lexend underline-input">
                       <FaEnvelope />
                       <Form.Control
-                      className="form-control-custom"
+                        className="form-control-custom"
                         type="email"
                         placeholder="Email address"
                         value={email}
@@ -125,16 +134,32 @@ const Login = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 }}
                   >
-                    <Form.Group className="mb-3 input-group-custom funnel-sans underline-input">
+                    <Form.Group className="mb-3 input-group-custom lexend underline-input position-relative">
                       <FaLock />
+
                       <Form.Control
-                        className="form-control-custom"
-                        type="password"
+                        className="form-control-custom pe-5"
+                        type={showPassword ? "text" : "password"}
                         placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                       />
+
+                      <span
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: "absolute",
+                          right: "15px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          cursor: "pointer",
+                          color: "#888",
+                          zIndex: 10,
+                        }}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </span>
                     </Form.Group>
                   </motion.div>
 

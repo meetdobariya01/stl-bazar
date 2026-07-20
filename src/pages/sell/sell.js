@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Container,
   Row,
@@ -142,7 +143,7 @@ const Sell = () => {
               />
               <h2 className="mt-4">Registration Successful!</h2>
               <p className="mt-3">
-                Thank you for registering as a seller on Brandel.
+                Thank you for registering as a seller on Native91.
               </p>
               <p>
                 We have sent a confirmation email to{" "}
@@ -170,7 +171,7 @@ const Sell = () => {
 
       <section className="seller-banner">
         <img
-          src="./images/sell.png"
+          src="./images/sell.webp"
           alt="Sell Banner"
           className="banner-image"
         />
@@ -319,7 +320,17 @@ const Sell = () => {
 
                     <div className="signin-text text-center mt-3">
                       Already have an account?{" "}
-                      <span style={{ cursor: "pointer" }}>Sign in</span>
+                      <Link
+                        to="/login"
+                        style={{
+                          textDecoration: "none",
+                          color: "#b08d57",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Sign in
+                      </Link>
                     </div>
                   </Form>
                 </div>
@@ -331,7 +342,7 @@ const Sell = () => {
                     <FaStore size={40} />
                   </div>
 
-                  <h2 className="mb-4">Why sell on Brandel?</h2>
+                  <h2 className="mb-4">Why sell on Native91?</h2>
 
                   <div className="info-item d-flex gap-3 mb-4">
                     <div className="icon-box-ordercomplate">
