@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import AOS from "aos";
 import "./condition.css";
 import Footer from "../../components/footer/footer";
@@ -7,10 +8,10 @@ import "aos/dist/aos.css";
 
 const sections = [
   {
-    title: "About Brandel",
+    title: "About Native91",
     icon: "bi-shop",
     content:
-      "Brandel is an invite-only marketplace connecting customers with independent brands, creators, artisans, and businesses while supporting small businesses.",
+      "Native91 is an invite-only marketplace connecting customers with independent brands, creators, artisans, and businesses while supporting small businesses.",
   },
   {
     title: "Eligibility",
@@ -102,7 +103,7 @@ const sections = [
     title: "Intellectual Property",
     icon: "bi-shield-lock",
     content:
-      "All logos, branding, graphics, software, images, text and design are owned by Brandel and protected under intellectual property laws.",
+      "All logos, branding, graphics, software, images, text and design are owned by Native91 and protected under intellectual property laws.",
   },
   {
     title: "User Conduct",
@@ -119,12 +120,12 @@ const sections = [
     title: "Reviews & User Content",
     icon: "bi-chat-left-text",
     content:
-      "By submitting reviews, ratings or comments you grant Brandel a royalty-free license to display and use the content.",
+      "By submitting reviews, ratings or comments you grant Native91 a royalty-free license to display and use the content.",
   },
   {
     title: "Privacy",
     icon: "bi-lock",
-    content: "Your use of Brandel is governed by our Privacy Policy.",
+    content: "Your use of Native91 is governed by our Privacy Policy.",
   },
   {
     title: "Third-Party Links",
@@ -171,6 +172,15 @@ const sections = [
 ];
 
 const Condition = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -227,7 +237,7 @@ const Condition = () => {
 
             <div className="col-lg-9">
               <div className="glass mb-4" data-aos="fade-up">
-                <h2>Welcome to Brandel</h2>
+                <h2>Welcome to Native91</h2>
 
                 <p>
                   These Terms govern your use of our website, marketplace,
@@ -267,12 +277,12 @@ const Condition = () => {
                 </h3>
 
                 <p>
-                  <strong>Brandel</strong>
+                  <strong>Native91</strong>
                 </p>
 
-                <p>Email : care@brandel.com</p>
+                <p>Email :  support@native91.com</p>
 
-                <p>Website : www.brandel.shop</p>
+                <p>Website : www.native91.com</p>
 
                 <p>
                   Business Hours : Monday – Saturday 10:00 AM – 6:00 PM (IST)

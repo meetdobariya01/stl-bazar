@@ -90,7 +90,7 @@ const Aboutus = () => {
               viewport={{ once: true }}
               className="col-lg-6 aboutContent"
             >
-              <span className="smallTitle">ABOUT BRANDEL</span>
+              <span className="smallTitle">ABOUT Native91</span>
 
               <h1>
                 Curating India's
@@ -103,7 +103,7 @@ const Aboutus = () => {
               <div className="goldLine"></div>
 
               <p>
-                Brandel is an invite-only curated marketplace bringing together
+                Native91 is an invite-only curated marketplace bringing together
                 exceptional homegrown brands. We celebrate craftsmanship,
                 authenticity and conscious living through thoughtfully curated
                 shopping experiences.
@@ -120,7 +120,7 @@ const Aboutus = () => {
               className="col-lg-6"
             >
               <img
-                src="./images/aboutus.png"
+                src="./images/aboutus.webp"
                 className="img-fluid heroImg"
                 alt=""
               />
@@ -186,7 +186,7 @@ const Aboutus = () => {
               viewport={{ once: true }}
             >
               <div className="brand-logo">
-                <img src="./images/brandel.png" className="img-fluid" alt="" />
+                <img src="./images/native.webp" className="img-fluid" alt="" />
               </div>
             </motion.div>
 
@@ -220,7 +220,7 @@ const Aboutus = () => {
                 <h3>FOR BRANDS</h3>
 
                 <p className="mt-4">
-                  Brandel is more than just a marketplace-it's a curated
+                  Native91 is more than just a marketplace-it's a curated
                   ecosystem built for premium brands that want to stand out. We
                   connect exceptional businesses with the right audience through
                   powerful storytelling, thoughtfully curated collections, and
@@ -242,7 +242,7 @@ const Aboutus = () => {
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <img src="./images/aboutus1.png" alt="" />
+              <img src="./images/aboutus1.webp" alt="" />
             </motion.div>
           </div>
 

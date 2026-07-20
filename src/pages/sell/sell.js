@@ -143,7 +143,7 @@ const Sell = () => {
               />
               <h2 className="mt-4">Registration Successful!</h2>
               <p className="mt-3">
-                Thank you for registering as a seller on Brandel.
+                Thank you for registering as a seller on Native91.
               </p>
               <p>
                 We have sent a confirmation email to{" "}
@@ -171,7 +171,7 @@ const Sell = () => {
 
       <section className="seller-banner">
         <img
-          src="./images/sell.png"
+          src="./images/sell.webp"
           alt="Sell Banner"
           className="banner-image"
         />
@@ -342,7 +342,7 @@ const Sell = () => {
                     <FaStore size={40} />
                   </div>
 
-                  <h2 className="mb-4">Why sell on Brandel?</h2>
+                  <h2 className="mb-4">Why sell on Native91?</h2>
 
                   <div className="info-item d-flex gap-3 mb-4">
                     <div className="icon-box-ordercomplate">

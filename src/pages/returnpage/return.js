@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import AOS from "aos";
 import "./return.css";
 import Header from "../../components/header/header";
@@ -129,6 +130,15 @@ const steps = [
 ];
 
 const Return = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -300,7 +310,7 @@ const Return = () => {
                   <strong>Customer Support</strong>
                 </p>
 
-                <p>Email : care@brandel.shop</p>
+                <p>Email :  support@native91.com</p>
 
                 <p>
                   Monday – Saturday

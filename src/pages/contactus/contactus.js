@@ -1,4 +1,4 @@
-import React, { useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
@@ -134,8 +134,11 @@ const ContactUs = () => {
                   <div>
                     <h5 className="funnel-sans">Email</h5>
 
-                    <a href="mailto:care@brandel.shop" className="email-link">
-                      care@brandel.shop
+                    <a
+                      href="mailto:support@native91.com"
+                      className="email-link"
+                    >
+                      support@native91.com
                     </a>
                   </div>
                 </div>

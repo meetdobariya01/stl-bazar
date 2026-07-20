@@ -1047,7 +1047,7 @@ const Productdetails = () => {
             <details>
               <summary className="funnel-sans">About the Brand</summary>
               <p>
-                Brandel focuses on timeless handcrafted products made with love.
+                Native91 focuses on timeless handcrafted products made with love.
               </p>
             </details>
           </div>

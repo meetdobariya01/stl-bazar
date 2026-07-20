@@ -34,15 +34,15 @@ const Footer = () => {
                 transition={{ duration: 0.6 }}
               >
                 <img
-                  src="/images/brandel.png"
+                  src="/images/native.webp"
                   alt="Refresh"
-                  className="footer-logo w-50"
+                  className="footer-logo"
                   onClick={refreshPage}
                 />
 
                 <p className="footer-text">
-                  Brandel brings you handpicked, high-quality foods, crafted for
-                  taste lovers who value freshness, authenticity, and
+                  Native91 brings you handpicked, high-quality foods, crafted
+                  for taste lovers who value freshness, authenticity, and
                   exceptional culinary experiences.
                 </p>
                 <div className="d-flex align-items-center gap-2">
@@ -64,22 +64,34 @@ const Footer = () => {
 
             <Col md={2}>
               <h5 className="lexend">INFO</h5>
-              <ul>
-                <li>Our Story</li>
-                <li>Contact Us</li>
-                <li>Track Order</li>
-                <li>FAQ</li>
-                {/* <li>Naturopedia</li> */}
-                <li>Shop All</li>
-                {/* <li>Store Locator</li> */}
-                {/* <li>Re:fresh Certifications</li> */}
+              <ul className="footer-links">
+                <li>
+                  <NavLink to="/aboutus">Our Story</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/contactus">Contact Us</NavLink>
+                </li>
+                <li>
+                  {/* <NavLink to="/track-order">Track Order</NavLink> */}
+                </li>
+                <li>
+                  <NavLink to="/faqs">FAQ</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/category/All">Shop All</NavLink>
+                </li>
               </ul>
             </Col>
 
             <Col md={3}>
               <h5 className="lexend">OUR PROGRAMS</h5>
               <ul>
-                <li>E-Gift Voucher</li>
+                <li  className="footer-links">
+                  <NavLink to="/category/Gifts%20%26%20Hamper">
+                    {" "}
+                    E-Gift Voucher
+                  </NavLink>
+                </li>
               </ul>
 
               <h5 className="mt-4 lexend">FOLLOW US ON</h5>
@@ -108,9 +120,7 @@ const Footer = () => {
             <Col md={3}>
               <h5 className="lexend">POLICY</h5>
               <ul className="footer-links">
-                <li>
-                  <NavLink to="/disclaimer">Disclaimer</NavLink>
-                </li>
+                <li>{/* <NavLink to="/disclaimer">Disclaimer</NavLink> */}</li>
 
                 <li>
                   <NavLink to="/terms-and-conditions">
@@ -141,15 +151,15 @@ const Footer = () => {
             <Col>
               {/* LOGO */}
               <img
-                src="/images/brandel.png"
+                src="/images/native.webp"
                 alt="Refresh"
-                className="footer-logo mb-3 w-75"
+                className="footer-logo w-50"
                 onClick={refreshPage}
               />
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
-                Brandel brings you handpicked, high-quality foods, crafted for
+                Native91 brings you handpicked, high-quality foods, crafted for
                 taste lovers who value freshness, authenticity, and exceptional
                 culinary experiences.
               </p>
@@ -224,7 +234,7 @@ const Footer = () => {
 
       {/* WHATSAPP BUTTON */}
       <a
-        href="https://wa.me/919824018555?text=Hello%20Brandel,%20I%20have%20a%20query%20about%20your%20products."
+        href="https://wa.me/919824018555?text=Hello%20Native91,%20I%20have%20a%20query%20about%20your%20products."
         target="_blank"
         className="whatsapp-btn"
       >
