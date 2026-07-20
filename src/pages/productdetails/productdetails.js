@@ -33,7 +33,7 @@ import Footer from "../../components/footer/footer";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BACKEND_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
+const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -79,7 +79,6 @@ const Productdetails = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-
   // Review states
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
@@ -95,22 +94,28 @@ const Productdetails = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // ================= COUPON FUNCTIONS =================
-  
+
   const calculateDiscountedPrice = (coupon) => {
     if (!product || !coupon) return null;
-    
+
     const originalPrice = parseFloat(product.price);
     let discountAmount = 0;
-    
+
+    // Support both field name formats
     const discount = coupon.discount || coupon.discountValue || 0;
     const type = coupon.type || coupon.discountType || 'percentage';
-    
+    const maxDiscount = coupon.maxDiscount || 0;
+
     if (type === 'percentage') {
       discountAmount = (originalPrice * discount) / 100;
+      // Apply max discount if exists
+      if (maxDiscount && discountAmount > maxDiscount) {
+        discountAmount = maxDiscount;
+      }
     } else {
       discountAmount = Math.min(discount, originalPrice);
     }
-    
+
     const newPrice = originalPrice - discountAmount;
     return {
       originalPrice: originalPrice,
@@ -120,72 +125,227 @@ const Productdetails = () => {
     };
   };
 
-  const applyCoupon = (coupon) => {
-    const priceInfo = calculateDiscountedPrice(coupon);
-    if (priceInfo) {
+  const applyCoupon = async (coupon) => {
+    try {
+      const guestId = localStorage.getItem("guestId");
+
+      if (!guestId) {
+        alert("Please add product to cart first.");
+        return;
+      }
+
+      // CRITICAL: Check if coupon is valid for this specific product
+      const couponProducts = coupon.products || coupon.productIds || [];
+      if (couponProducts.length > 0) {
+        const isProductValid = couponProducts.some(id => id.toString() === product._id.toString());
+        
+        if (!isProductValid) {
+          alert("This coupon is not valid for this product.");
+          return;
+        }
+      }
+
+      // Save coupon in database with product context
+      await axios.post(`${API_URL}/coupons/user/apply`, {
+        guestId,
+        code: coupon.code,
+        productId: product._id // Send product ID for validation
+      });
+
+      // Apply coupon locally
+      const priceInfo = calculateDiscountedPrice(coupon);
+
       setAppliedCoupon(coupon);
       setDiscountedPrice(priceInfo);
-      alert(`Coupon "${coupon.code}" applied! You saved ₹${priceInfo.discountAmount.toFixed(2)}`);
+
+      // Store in localStorage
+      localStorage.setItem("appliedCoupon", JSON.stringify(coupon));
+      localStorage.setItem("discountedPrice", JSON.stringify(priceInfo));
+      localStorage.setItem("appliedProductId", product._id);
+
+      alert(`Coupon ${coupon.code} applied successfully`);
+
+    } catch (err) {
+      console.error(err);
+      alert(
+        err.response?.data?.message || "Failed to apply coupon"
+      );
     }
   };
 
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setDiscountedPrice(null);
+  const removeCoupon = async () => {
+    try {
+      const guestId = localStorage.getItem("guestId");
+
+      if (guestId) {
+        await axios.delete(
+          `${API_URL}/coupons/user/remove/${guestId}`
+        );
+      }
+
+      localStorage.removeItem("appliedCoupon");
+      localStorage.removeItem("discountedPrice");
+      localStorage.removeItem("appliedProductId");
+
+      setAppliedCoupon(null);
+      setDiscountedPrice(null);
+
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const fetchVendorCoupons = async () => {
     try {
       setCouponLoading(true);
-      
+
       if (!product?._id) {
         setVendorCoupons([]);
         return;
       }
 
+      const productId = product._id;
       const companyName = product?.company || product?.vendor || product?.vendorName;
+      
+      console.log("=== FETCHING COUPONS ===");
+      console.log("Product ID:", productId);
+      console.log("Company name:", companyName);
 
+      // Check if the applied coupon from localStorage is valid for this product
+      const storedCoupon = localStorage.getItem("appliedCoupon");
+      const storedProductId = localStorage.getItem("appliedProductId");
+      
+      // If the stored coupon is for a different product, remove it
+      if (storedProductId && storedProductId !== productId) {
+        console.log("⚠️ Stored coupon is for a different product. Removing...");
+        localStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("discountedPrice");
+        localStorage.removeItem("appliedProductId");
+        setAppliedCoupon(null);
+        setDiscountedPrice(null);
+      }
+
+      // FIRST: Try to get coupons specifically for this product
       try {
-        const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/product/${product._id}`);
-        if (response.data.success && response.data.coupons && response.data.coupons.length > 0) {
-          setVendorCoupons(response.data.coupons);
+        const response = await axios.get(`${COUPON_API_URL}/coupons/public/product/${productId}`);
+        console.log("Product coupon response:", response.data);
+        
+        if (response.data.success && response.data.coupons) {
+          console.log(`Found ${response.data.coupons.length} coupons from API`);
+          
+          // STRICT filtering - ONLY show coupons that explicitly include this product
+          const validCoupons = response.data.coupons.filter(coupon => {
+            const couponProducts = coupon.products || coupon.productIds || [];
+            
+            console.log(`\n--- Checking coupon: ${coupon.code} ---`);
+            console.log(`Coupon products:`, couponProducts);
+            console.log(`Coupon products count: ${couponProducts.length}`);
+            
+            // If NO products specified → applies to ALL products
+            if (couponProducts.length === 0) {
+              console.log(`✅ ${coupon.code} applies to ALL products - SHOWING`);
+              return true;
+            }
+            
+            // Check if this product is in the coupon's products list
+            const isIncluded = couponProducts.some(id => {
+              const idStr = id ? id.toString() : '';
+              const productIdStr = productId.toString();
+              const matches = idStr === productIdStr;
+              if (matches) {
+                console.log(`✅ Product ${productIdStr} FOUND in coupon ${coupon.code}`);
+              }
+              return matches;
+            });
+            
+            if (isIncluded) {
+              console.log(`✅ ${coupon.code} INCLUDES this product - SHOWING`);
+              return true;
+            } else {
+              console.log(`❌ ${coupon.code} does NOT include product ${productId} - HIDING`);
+              return false;
+            }
+          });
+          
+          console.log(`\n✅ After strict filtering: ${validCoupons.length} valid coupons`);
+          setVendorCoupons(validCoupons);
+          
+          // If no valid coupons and there's a stored coupon, remove it
+          if (validCoupons.length === 0 && storedCoupon) {
+            console.log("⚠️ No valid coupons for this product. Removing stored coupon...");
+            localStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("discountedPrice");
+            localStorage.removeItem("appliedProductId");
+            setAppliedCoupon(null);
+            setDiscountedPrice(null);
+          }
+          
           return;
         }
       } catch (err) {
-        console.log("Product coupon fetch failed");
+        console.error("Product coupon fetch failed:", err);
       }
 
+      // SECOND: Try to get company coupons with product filter
       if (companyName) {
         try {
-          const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/company/${encodeURIComponent(companyName)}`);
-          if (response.data.success && response.data.coupons && response.data.coupons.length > 0) {
-            setVendorCoupons(response.data.coupons);
+          const response = await axios.get(
+            `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(companyName)}`,
+            { 
+              params: { productId: productId }
+            }
+          );
+          console.log("Company coupon response:", response.data);
+          
+          if (response.data.success && response.data.coupons) {
+            // STRICT filtering on company coupons too
+            const validCoupons = response.data.coupons.filter(coupon => {
+              const couponProducts = coupon.products || coupon.productIds || [];
+              
+              // If no products specified → applies to ALL products
+              if (couponProducts.length === 0) {
+                return true;
+              }
+              
+              // Check if this product is in the list
+              return couponProducts.some(id => id.toString() === productId.toString());
+            });
+            
+            console.log(`Found ${validCoupons.length} valid company coupons`);
+            setVendorCoupons(validCoupons);
+            
+            // If no valid coupons and there's a stored coupon, remove it
+            if (validCoupons.length === 0 && storedCoupon) {
+              console.log("⚠️ No valid company coupons for this product. Removing stored coupon...");
+              localStorage.removeItem("appliedCoupon");
+              localStorage.removeItem("discountedPrice");
+              localStorage.removeItem("appliedProductId");
+              setAppliedCoupon(null);
+              setDiscountedPrice(null);
+            }
+            
             return;
           }
         } catch (err) {
-          console.log("Company coupon fetch failed");
+          console.error("Company coupon fetch failed:", err);
         }
       }
 
-      try {
-        const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/all`);
-        if (response.data.success && response.data.coupons) {
-          let filtered = response.data.coupons;
-          if (companyName) {
-            filtered = response.data.coupons.filter(c => 
-              !c.company || c.company.toLowerCase() === companyName.toLowerCase()
-            );
-          }
-          setVendorCoupons(filtered);
-          return;
-        }
-      } catch (err) {
-        console.log("All coupons fetch failed");
-      }
-
+      // No coupons found - clear any stored coupon
+      console.log("No coupons found for this product");
       setVendorCoupons([]);
+      
+      // Clear stored coupon if it exists
+      if (storedCoupon) {
+        console.log("⚠️ No coupons available. Removing stored coupon...");
+        localStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("discountedPrice");
+        localStorage.removeItem("appliedProductId");
+        setAppliedCoupon(null);
+        setDiscountedPrice(null);
+      }
     } catch (err) {
-      console.error("Error fetching coupons:", err);
+      console.error("Error in fetchVendorCoupons:", err);
       setVendorCoupons([]);
     } finally {
       setCouponLoading(false);
@@ -204,32 +364,39 @@ const Productdetails = () => {
     }
 
     const imgStr = String(img).trim();
-    
+
+    // If it's already a full URL, return it
     if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
       return imgStr;
     }
 
+    // Check if this is a vendor uploaded image (starts with /uploads/)
     if (imgStr.startsWith("/uploads")) {
-      return `${VENDOR_BACKEND_URL}${imgStr}`;
+      // Use the vendor API URL for vendor images
+      return `https://api.brandelvendor.starlighttechlabsindia.com${imgStr}`;
     }
 
+    // Handle other image paths
     if (imgStr.startsWith("/images")) {
       return imgStr;
     }
 
+    // If no leading slash, try with both APIs
     if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
-      return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
+      // Try vendor API first (for vendor images)
+      return `https://api.brandelvendor.starlighttechlabsindia.com/uploads/${imgStr}`;
     }
 
-    return `${VENDOR_BACKEND_URL}${imgStr}`;
+    // Fallback to local API
+    return `${API_URL}${imgStr}`;
   };
 
   const getAllImagesFromProduct = (product) => {
     if (!product) return ["/images/placeholder.png"];
-    
+
     let images = [];
     const imageFields = ['images', 'image', 'productImages', 'gallery'];
-    
+
     for (const field of imageFields) {
       if (product[field]) {
         if (Array.isArray(product[field])) {
@@ -242,13 +409,13 @@ const Productdetails = () => {
         }
       }
     }
-    
+
     images = [...new Set(images)];
-    
+
     if (images.length === 0) {
       images = ["/images/placeholder.png"];
     }
-    
+
     return images;
   };
 
@@ -258,6 +425,29 @@ const Productdetails = () => {
       fetchProductBySlug();
     }
   }, [slug]);
+
+  // Check localStorage for applied coupon when product changes
+  useEffect(() => {
+    const coupon = localStorage.getItem("appliedCoupon");
+    const price = localStorage.getItem("discountedPrice");
+    const storedProductId = localStorage.getItem("appliedProductId");
+
+    // Only apply stored coupon if it matches the current product
+    if (coupon && price && storedProductId && product?._id) {
+      if (storedProductId === product._id) {
+        setAppliedCoupon(JSON.parse(coupon));
+        setDiscountedPrice(JSON.parse(price));
+      } else {
+        // Stored coupon is for a different product - clear it
+        console.log("⚠️ Stored coupon is for a different product. Clearing...");
+        localStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("discountedPrice");
+        localStorage.removeItem("appliedProductId");
+        setAppliedCoupon(null);
+        setDiscountedPrice(null);
+      }
+    }
+  }, [product]);
 
   // Fetch coupons when product is loaded
   useEffect(() => {
@@ -318,7 +508,7 @@ const Productdetails = () => {
 
       const allImages = getAllImagesFromProduct(foundProduct);
       setProductImages(allImages);
-      
+
       if (allImages.length > 0) {
         setActiveImg(allImages[0]);
         setCurrentImageIndex(0);
@@ -346,8 +536,7 @@ const Productdetails = () => {
       const id = productId || product?._id;
       if (!id) return;
       const response = await axios.get(`${API_URL}/products/${id}/reviews`);
-      
-      // ✅ SAFETY: Ensure reviews are properly sanitized
+
       const reviewsData = response.data.reviews || [];
       const sanitizedReviews = reviewsData.map(review => ({
         _id: String(review._id || ''),
@@ -356,7 +545,7 @@ const Productdetails = () => {
         review: String(review.review || ''),
         createdAt: review.createdAt || new Date().toISOString(),
       }));
-      
+
       setReviews(sanitizedReviews);
       setAverageRating(response.data.averageRating || 0);
       setTotalReviews(response.data.totalReviews || 0);
@@ -513,19 +702,27 @@ const Productdetails = () => {
         Array.isArray(product.image) && product.image.length > 0
           ? product.image[0]
           : product.image || "";
-
-      // ✅ Clean payload - ONLY primitive values
       const payload = {
         guestId: String(guestId),
         productId: String(product._id),
-        name: String(product.name || 'Product'),
-        price: parseFloat(finalPrice) || 0,
-        originalPrice: parseFloat(product.price) || 0,
-        image: String(primaryImage || ''),
-        quantity: parseInt(qty) || 1,
-        couponApplied: appliedCoupon ? String(appliedCoupon.code) : null,
-      };
+        name: String(product.name),
 
+        price: parseFloat(finalPrice),
+
+        originalPrice: parseFloat(product.price),
+
+        discountAmount: discountedPrice
+          ? discountedPrice.discountAmount
+          : 0,
+
+        couponCode: appliedCoupon
+          ? appliedCoupon.code
+          : null,
+
+        image: String(primaryImage),
+
+        quantity: parseInt(qty),
+      };
       const response = await axios.post(`${API_URL}/cart/add`, payload);
 
       if (response.data.success !== false) {
@@ -576,7 +773,6 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ SAFE renderStars function
   const renderStars = (rating) => {
     const numRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
     return (
@@ -701,7 +897,7 @@ const Productdetails = () => {
                       }}
                     />
                   </motion.div>
-                 
+
                   {hasMultipleImages && (
                     <>
                       <button
@@ -810,10 +1006,10 @@ const Productdetails = () => {
                       <span className="discounted-price" style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '1.3em' }}>
                         ₹{formatPrice(displayPrice)}
                       </span>
-                      <span className="savings-badge" style={{ 
-                        background: '#e74c3c', 
-                        color: 'white', 
-                        padding: '2px 10px', 
+                      <span className="savings-badge" style={{
+                        background: '#e74c3c',
+                        color: 'white',
+                        padding: '2px 10px',
                         borderRadius: '20px',
                         fontSize: '12px',
                         marginLeft: '10px',
@@ -834,11 +1030,11 @@ const Productdetails = () => {
                   )}
                 </div>
 
-                {/* Applied Coupon Badge */}
+                {/* Applied Coupon Badge - Only show if coupon is valid for this product */}
                 {appliedCoupon && discountedPrice && (
-                  <div className="applied-coupon-badge mt-2" style={{ 
-                    background: '#d4edda', 
-                    padding: '8px 15px', 
+                  <div className="applied-coupon-badge mt-2" style={{
+                    background: '#d4edda',
+                    padding: '8px 15px',
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
@@ -851,9 +1047,9 @@ const Productdetails = () => {
                         ₹{formatPrice(discountedPrice.discountAmount)} OFF applied!
                       </span>
                     </div>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
+                    <Button
+                      variant="link"
+                      size="sm"
                       className="text-danger p-0"
                       onClick={removeCoupon}
                     >
@@ -878,7 +1074,7 @@ const Productdetails = () => {
                   {String(product.description || "A timeless piece to elevate your space.")}
                 </p>
 
-                {/* COUPONS SECTION */}
+                {/* COUPONS SECTION - UPDATED WITH DOUBLE CHECK */}
                 {vendorCoupons.length > 0 && !couponLoading && (
                   <div className="vendor-coupons-section mt-3 p-3 border rounded bg-light">
                     <div className="d-flex justify-content-between align-items-center mb-2">
@@ -889,35 +1085,45 @@ const Productdetails = () => {
                           {vendorCoupons.length}
                         </Badge>
                       </h6>
-                      <Button 
-                        variant="link" 
-                        size="sm" 
+                      <Button
+                        variant="link"
+                        size="sm"
                         onClick={() => setShowCoupons(!showCoupons)}
                         className="text-decoration-none p-0"
                       >
                         {showCoupons ? 'Hide' : 'View All'}
                       </Button>
                     </div>
-                    
+
                     {showCoupons && (
                       <div className="coupon-list mt-2">
                         {vendorCoupons.map((coupon, index) => {
+                          // DOUBLE CHECK: Only show if coupon applies to this product
+                          const couponProducts = coupon.products || coupon.productIds || [];
+                          const shouldShow = couponProducts.length === 0 || 
+                                            couponProducts.some(id => id.toString() === product._id.toString());
+                          
+                          // Skip if coupon doesn't apply to this product
+                          if (!shouldShow) {
+                            return null;
+                          }
+
                           const isApplied = appliedCoupon && appliedCoupon.code === coupon.code;
                           const priceInfo = calculateDiscountedPrice(coupon);
                           const discount = coupon.discount || coupon.discountValue || 0;
                           const type = coupon.type || coupon.discountType || 'percentage';
-                          
+
                           return (
-                            <div 
-                              key={coupon._id || index} 
+                            <div
+                              key={coupon._id || index}
                               className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? 'border-success' : ''}`}
                               style={isApplied ? { background: '#f0fff4' } : {}}
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
                                   <span className="badge bg-success me-2">
-                                    {type === 'percentage' 
-                                      ? `${discount}% OFF` 
+                                    {type === 'percentage'
+                                      ? `${discount}% OFF`
                                       : `₹${discount} OFF`}
                                   </span>
                                   <strong className="text-primary">{String(coupon.code)}</strong>
@@ -949,8 +1155,8 @@ const Productdetails = () => {
                               </div>
                               <div className="d-flex flex-column gap-1">
                                 {!isApplied ? (
-                                  <Button 
-                                    variant="success" 
+                                  <Button
+                                    variant="success"
                                     size="sm"
                                     onClick={() => applyCoupon(coupon)}
                                     className="ms-2"
@@ -958,8 +1164,8 @@ const Productdetails = () => {
                                     Apply
                                   </Button>
                                 ) : (
-                                  <Button 
-                                    variant="outline-danger" 
+                                  <Button
+                                    variant="outline-danger"
                                     size="sm"
                                     onClick={removeCoupon}
                                     className="ms-2"
@@ -967,8 +1173,8 @@ const Productdetails = () => {
                                     Remove
                                   </Button>
                                 )}
-                                <Button 
-                                  variant="outline-secondary" 
+                                <Button
+                                  variant="outline-secondary"
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(String(coupon.code));
@@ -1059,7 +1265,7 @@ const Productdetails = () => {
             </details>
           </div>
 
-          {/* ========== REVIEWS SECTION - FIXED ========== */}
+          {/* REVIEWS SECTION */}
           <div className="reviews-section mt-5">
             <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
               <h3 className="funnel-sans me-2">Customer Reviews</h3>
@@ -1086,19 +1292,17 @@ const Productdetails = () => {
             ) : (
               <Row className="g-4">
                 {reviews.map((review, index) => {
-                  // ✅ SAFETY: Extract primitive values only
                   const reviewText = String(review?.review || '');
                   const userName = String(review?.userName || 'Anonymous');
                   const rating = typeof review?.rating === 'number' ? review.rating : 0;
                   const createdAt = review?.createdAt || new Date().toISOString();
-                  
+
                   return (
                     <Col md={4} lg={3} key={review?._id || index}>
                       <div className="review-card p-3 border rounded h-100">
                         <div className="review-stars mb-2">
                           {renderStars(rating)}
                         </div>
-                        {/* ✅ IMPORTANT: Using reviewText which is a string */}
                         <p className="review-text mt-3">{reviewText}</p>
                         <div className="review-meta mt-3">
                           <div className="reviewer-info d-flex align-items-center">

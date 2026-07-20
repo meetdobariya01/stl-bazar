@@ -1,3 +1,4 @@
+// Router/orderRouter.js - FIXED: Company now shows correctly
 const express = require("express");
 const router = express.Router();
 const Order = require("../Models/Order");
@@ -14,8 +15,10 @@ const {
 } = require("../Comfig/emailConfig");
 
 const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
-// const VENDOR_API_URL = process.env.VENDOR_API_URL || "http://localhost:5001/api"; // Local fallback
-// ================= PLACE ORDER WITH VENDOR NOTIFICATION =================
+
+// ============================================
+// PLACE ORDER WITH EMAIL & VENDOR NOTIFICATIONS
+// ============================================
 router.post("/place", async (req, res) => {
   const { guestId, shippingAddress, paymentMethod } = req.body;
 
@@ -36,18 +39,45 @@ router.post("/place", async (req, res) => {
       });
     }
 
-    // Get full product details including vendor information
+    // ✅ FIX: Get full product details including vendor company
     const itemsWithVendorInfo = await Promise.all(
       cart.items.map(async (item) => {
-        const product = await Product.findById(item.productId);
+        // Find product and populate vendor
+        const product = await Product.findById(item.productId).populate('vendorId', 'company name email');
+        
+        // Get company from product or vendor
+        let company = null;
+        
+        // First check if product has company field
+        if (product && product.company) {
+          company = product.company;
+        }
+        // Then check if vendor has company
+        else if (product && product.vendorId) {
+          // If vendor is populated, get company from vendor
+          if (product.vendorId.company) {
+            company = product.vendorId.company;
+          }
+        }
+        
+        // If still no company, try to get from vendor directly
+        if (!company && product && product.vendorId) {
+          const vendor = await Vendor.findById(product.vendorId._id || product.vendorId);
+          if (vendor && vendor.company) {
+            company = vendor.company;
+          }
+        }
+        
+        console.log(`Product: ${item.name}, Company: ${company}`); // Debug log
+        
         return {
           productId: item.productId,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: Array.isArray(item.image) ? item.image[0] : item.image,
-          vendorId: product?.vendorId || null,
-          company: product?.company || null,
+          name: item.name || product?.name || "Unknown Product",
+          price: item.price || product?.price || 0,
+          quantity: item.quantity || 1,
+          image: Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null),
+          vendorId: product?.vendorId?._id || product?.vendorId || null,
+          company: company || "N/A", // ← Set company
         };
       })
     );
@@ -57,7 +87,7 @@ router.post("/place", async (req, res) => {
       0
     );
 
-    // Create order
+    // Create order with company included
     const order = new Order({
       guestId,
       items: itemsWithVendorInfo,
@@ -68,14 +98,12 @@ router.post("/place", async (req, res) => {
     });
 
     await order.save();
-
-    // Clear cart after placing order
     await Cart.findOneAndDelete({ guestId });
 
     const orderId = order._id;
     
     // ============================================
-    // 1. SEND EMAIL TO CUSTOMER
+    // EMAIL RESULTS
     // ============================================
     const emailResults = {
       customer: false,
@@ -83,11 +111,18 @@ router.post("/place", async (req, res) => {
       vendors: []
     };
     
+    // ============================================
+    // 1. SEND EMAIL TO CUSTOMER
+    // ============================================
     const customerEmail = shippingAddress.email;
     if (customerEmail) {
       try {
         const customerHtml = getCustomerOrderEmail(order, orderId);
-        const result = await sendEmail(customerEmail, `Order Confirmed! - Order #${orderId}`, customerHtml);
+        const result = await sendEmail(
+          customerEmail, 
+          `Order Confirmed! - Order #${orderId}`, 
+          customerHtml
+        );
         emailResults.customer = result.success;
       } catch (error) {
         console.error("Error sending customer email:", error.message);
@@ -95,13 +130,17 @@ router.post("/place", async (req, res) => {
     }
     
     // ============================================
-    // 2. SEND EMAIL TO SUPER ADMIN
+    // 2. SEND EMAIL TO ADMIN
     // ============================================
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@yourstore.com";
+    const adminEmail = process.env.ADMIN_EMAIL || "orders@native91.com";
     if (adminEmail) {
       try {
         const adminHtml = getAdminOrderEmail(order, orderId);
-        const result = await sendEmail(adminEmail, `New Order Received - Order #${orderId}`, adminHtml);
+        const result = await sendEmail(
+          adminEmail, 
+          `New Order Received - Order #${orderId}`, 
+          adminHtml
+        );
         emailResults.admin = result.success;
       } catch (error) {
         console.error("Error sending admin email:", error.message);
@@ -114,7 +153,7 @@ router.post("/place", async (req, res) => {
     const vendorGroups = new Map();
     
     for (const item of itemsWithVendorInfo) {
-      if (item.company) {
+      if (item.company && item.company !== "N/A") {
         const company = item.company;
         if (!vendorGroups.has(company)) {
           vendorGroups.set(company, {
@@ -127,12 +166,8 @@ router.post("/place", async (req, res) => {
       }
     }
     
-    for (const [company, data] of vendorGroups) {
-      console.log(`  - ${company}: ${data.items.length} items`);
-    }
-    
     // ============================================
-    // 4. SEND EMAIL TO EACH VENDOR (Using Vendor Model)
+    // 4. SEND EMAIL TO EACH VENDOR
     // ============================================
     for (const [company, vendorData] of vendorGroups) {
       try {
@@ -159,10 +194,6 @@ router.post("/place", async (req, res) => {
         
         if (vendorEmail) {
           const vendorItems = vendorData.items;
-          const vendorTotal = vendorItems.reduce((sum, item) => {
-            return sum + (item.price || 0) * (item.quantity || 1);
-          }, 0);
-
           const vendorHtml = getVendorOrderEmail(order, orderId, vendorItems, { 
             name: vendorName,
             email: vendorEmail,
@@ -181,10 +212,7 @@ router.post("/place", async (req, res) => {
             email: vendorEmail,
             success: result.success
           });
-          
-          console.log(`📧 Vendor email sent to: ${vendorEmail} (${company})`);
         } else {
-          console.log(`❌ No email found for vendor: ${company}`);
           emailResults.vendors.push({
             company: company,
             success: false,
@@ -192,7 +220,7 @@ router.post("/place", async (req, res) => {
           });
         }
       } catch (vendorErr) {
-        console.error(`❌ Error sending email to vendor ${company}:`, vendorErr.message);
+        console.error(`Error sending email to vendor ${company}:`, vendorErr.message);
         emailResults.vendors.push({
           company: company,
           success: false,
@@ -202,7 +230,7 @@ router.post("/place", async (req, res) => {
     }
 
     // ============================================
-    // 5. ✅ CREATE VENDOR NOTIFICATIONS (Added)
+    // 5. CREATE VENDOR NOTIFICATIONS
     // ============================================
     const notificationResults = [];
     
@@ -227,8 +255,7 @@ router.post("/place", async (req, res) => {
           orderId: orderId,
         };
 
-        // Call Vendor API to create notification
-        const response = await axios.post(`${VENDOR_API_URL}/notifications/create`, notificationData, {
+        await axios.post(`${VENDOR_API_URL}/notifications/create`, notificationData, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -237,13 +264,11 @@ router.post("/place", async (req, res) => {
         
         notificationResults.push({ 
           company, 
-          success: true, 
-          method: "api"
+          success: true
         });
-        console.log(`✅ Notification created via API for: ${company}`);
         
       } catch (vendorError) {
-        console.error(`❌ Failed to create notification for ${company}:`, vendorError.message);
+        console.error(`Failed to create notification for ${company}:`, vendorError.message);
         notificationResults.push({ 
           company, 
           success: false, 
@@ -266,7 +291,7 @@ router.post("/place", async (req, res) => {
     });
     
   } catch (err) {
-    console.error("❌ Order placement error:", err);
+    console.error("Order placement error:", err);
     res.status(500).json({ 
       success: false,
       message: "Server error", 
@@ -305,7 +330,7 @@ router.get("/guest/:guestId", async (req, res) => {
 });
 
 // ============================================
-// GET USER ORDERS (AUTHENTICATED USERS)
+// GET USER ORDERS
 // ============================================
 router.get("/user/:userId", async (req, res) => {
   try {
@@ -369,6 +394,7 @@ router.post("/send-confirmation", async (req, res) => {
           .badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 14px; }
           .shipping-info { margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+          .free-shipping { color: #28a745; font-weight: bold; }
         </style>
       </head>
       <body>
@@ -443,6 +469,7 @@ router.post("/send-confirmation", async (req, res) => {
             <div class="footer">
               <p>Thank you for shopping with us! 🛍️</p>
               <p>If you have any questions, please contact our support team.</p>
+              <p style="font-size: 12px; color: #999;">This is a system generated email. Please do not reply.</p>
             </div>
           </div>
         </div>

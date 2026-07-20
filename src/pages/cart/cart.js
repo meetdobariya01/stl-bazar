@@ -167,23 +167,23 @@ const Cart = () => {
     setCouponMessage({ type: "", text: "" });
 
     try {
-      const validateRes = await axios.post(`${API_URL}/coupon/user/validate`, {
+      const validateRes = await axios.post(`${API_URL}/coupons/user/validate`, {
         code: couponCode,
         guestId,
         subtotal: subtotal,
       });
 
       if (validateRes.data.success) {
-        const applyRes = await axios.post(`${API_URL}/coupon/user/apply`, {
+        const applyRes = await axios.post(`${API_URL}/coupons/user/apply`, {
           code: couponCode,
           guestId,
           subtotal: subtotal,
         });
 
         if (applyRes.data.success) {
-          setCouponMessage({ 
-            type: "success", 
-            text: `Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}` 
+          setCouponMessage({
+            type: "success",
+            text: `Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}`
           });
 
           await fetchCart();
@@ -216,7 +216,7 @@ const Cart = () => {
   const removeCoupon = async () => {
     try {
       const response = await axios.delete(
-        `${API_URL}/coupon/user/remove/${guestId}`,
+        `${API_URL}/coupons/user/remove/${guestId}`,
       );
 
       if (response.data.success) {
@@ -241,7 +241,7 @@ const Cart = () => {
     if (!guestId) return;
 
     try {
-      const response = await axios.post(`${API_URL}/coupon/user/available`, {
+      const response = await axios.post(`${API_URL}/coupons/user/available`, {
         guestId,
         subtotal: subtotal,
       });
@@ -298,23 +298,22 @@ const Cart = () => {
                     <span>Subtotal ({cart.items.length} items)</span>
                     <span>₹{formatPrice(subtotal)}</span>
                   </div>
-
-                  {cart.appliedCoupon && (
-                    <div className="summary-row coupon-applied">
-                      <span>
-                        <FaTag className="me-1" /> Coupon (
-                        {cart.appliedCoupon.code})
-                      </span>
-                      <span className="discount">
-                        -₹{formatPrice(cart.appliedCoupon.discountAmount)}
-                        <FaTimes
-                          className="ms-2 remove-coupon"
-                          onClick={removeCoupon}
-                          style={{ cursor: "pointer", fontSize: "12px" }}
-                        />
-                      </span>
-                    </div>
-                  )}
+                  {cart.appliedCoupon &&
+                    cart.appliedCoupon.discountAmount > 0 && (
+                      <div className="summary-row coupon-applied">
+                        <span>
+                          <FaTag className="me-1" /> Coupon ({cart.appliedCoupon.code})
+                        </span>
+                        <span className="discount">
+                          -₹{formatPrice(cart.appliedCoupon.discountAmount)}
+                          <FaTimes
+                            className="ms-2 remove-coupon"
+                            onClick={removeCoupon}
+                            style={{ cursor: "pointer", fontSize: "12px" }}
+                          />
+                        </span>
+                      </div>
+                    )}
 
                   <div className="summary-row">
                     <span>Shipping</span>
@@ -344,19 +343,19 @@ const Cart = () => {
                     <h2>₹{formatPrice(total)}</h2>
                   </div>
 
-                  {!cart.appliedCoupon ? (
-                    <button
-                      className="coupon-btn"
-                      onClick={handleOpenCouponModal}
-                    >
-                      <FaTag /> Apply Coupon
-                    </button>
-                  ) : (
+                  {cart.appliedCoupon && cart.appliedCoupon.discountAmount > 0 ? (
                     <button
                       className="coupon-btn applied"
                       onClick={removeCoupon}
                     >
                       <FaTag /> Remove Coupon
+                    </button>
+                  ) : (
+                    <button
+                      className="coupon-btn"
+                      onClick={handleOpenCouponModal}
+                    >
+                      <FaTag /> Apply Coupon
                     </button>
                   )}
 
