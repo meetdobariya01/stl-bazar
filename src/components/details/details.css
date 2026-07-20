@@ -1,6 +1,5 @@
-.our-promise-section {
+/* .our-promise-section {
   padding: 80px 0;
-  /* background: #f8f6f2; */
 }
 
 .promise-title {
@@ -54,11 +53,9 @@
   font-size: 0.95rem;
   font-weight: 500;
   color: #2e2e2e;
-  /* max-width: 120px; */
   margin: auto;
 }
 
-/* Mobile tweaks */
 @media (max-width: 576px) {
   .promise-circle {
     width: 90px;
@@ -78,5 +75,87 @@
     width: 70px;
     margin: auto;
     margin-bottom: 10px;
+  }
+} */
+
+.brand-stats-section {
+  /* background: #f8f5f1; */
+}
+
+.brand-stat-card {
+  text-align: center;
+  padding: 15px 20px;
+  position: relative;
+  transition: 0.4s;
+}
+
+.stat-border::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 15%;
+  width: 1px;
+  height: 70%;
+  background: #d8cfc5;
+}
+
+.brand-stat-icon {
+  font-size: 42px;
+  color: #b28d5c;
+  margin-bottom: 15px;
+  transition: 0.4s;
+}
+
+.brand-stat-card h2 {
+  font-size: 42px;
+  font-weight: 500;
+  color: #222;
+  margin-bottom: 8px;
+  font-family: "Playfair Display", serif;
+}
+
+.brand-stat-card p {
+  margin: 0;
+  color: #444;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.brand-stat-card:hover {
+  transform: translateY(-10px);
+}
+
+.brand-stat-card:hover .brand-stat-icon {
+  transform: rotateY(180deg) scale(1.15);
+  color: #8b6b43;
+}
+
+@media (max-width: 991px) {
+  .stat-border::after {
+    display: none;
+  }
+
+  .brand-stat-card {
+    border: 1px solid #e4ddd4;
+    border-radius: 15px;
+    background: #fff;
+  }
+}
+
+@media (max-width: 576px) {
+  .brand-stat-card {
+    padding: 20px 10px;
+  }
+
+  .brand-stat-icon {
+    font-size: 34px;
+  }
+
+  .brand-stat-card h2 {
+    font-size: 30px;
+  }
+
+  .brand-stat-card p {
+    font-size: 14px;
   }
 }
