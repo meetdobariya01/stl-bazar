@@ -7,7 +7,7 @@
   display: inline-block;
   padding: 8px 20px;
   background: #e7f8ed;
-  color: #198754;
+  color: #0f5132;
   border-radius: 30px;
   font-weight: 600;
   margin-bottom: 20px;
@@ -42,7 +42,7 @@
 }
 
 .accordion-button:not(.collapsed) {
-  background: #198754;
+  background: #0f5132;
   color: #fff;
 }
 

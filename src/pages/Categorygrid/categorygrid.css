@@ -283,31 +283,32 @@
   transform: scale(1.05);
 }
 
-.wishlist-btn {
+.wishlist-btn-category {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: var(--white);
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
+  background: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  opacity: 0;
-  transform: translateY(-10px);
-  box-shadow: var(--shadow);
+  z-index: 99;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all .3s ease;
 }
 
-.product-card:hover .wishlist-btn {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.wishlist-btn:hover {
+.wishlist-btn-category:hover {
+  background: transparent;
+  box-shadow: none;
+  color: red;
   transform: scale(1.1);
+}
+
+.wishlist-btn-category svg {
+  font-size: 18px;
 }
 
 .product-card .card-body {
