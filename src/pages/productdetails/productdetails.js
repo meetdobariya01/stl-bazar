@@ -1218,7 +1218,7 @@ const Productdetails = () => {
             <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
               <h3 className="funnel-sans me-2">Customer Reviews</h3>
               <Button
-                variant="outline-success"
+                variant="outline-dark"
                 onClick={() => setShowReviewModal(true)}
               >
                 Write a Review
@@ -1231,7 +1231,7 @@ const Productdetails = () => {
                   No reviews yet. Be the first to review this product!
                 </p>
                 <Button
-                  variant="success"
+                  variant="dark"
                   onClick={() => setShowReviewModal(true)}
                 >
                   Write a Review
