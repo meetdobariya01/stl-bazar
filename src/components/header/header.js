@@ -9,6 +9,7 @@ import {
   Dropdown,
 } from "react-bootstrap";
 import {
+  HiOutlineHeart,
   HiOutlineMenuAlt3,
   HiOutlineSearch,
   HiOutlineUser,
@@ -156,6 +157,12 @@ const Header = () => {
               <NavLink to="/login" className="icon-link">
                 <button type="button">
                   <HiOutlineUser />
+                </button>
+              </NavLink>
+
+                <NavLink to="/wishlist" className="icon-link">
+                <button type="button">
+                  <HiOutlineHeart/>
                 </button>
               </NavLink>
 
