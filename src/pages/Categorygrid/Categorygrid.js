@@ -66,7 +66,7 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // ✅ Fetch products - FIXED to properly filter by category
+  // ✅ Fetch products - Using only existing endpoints
   useEffect(() => {
     if (!decodedCategory) return;
 
@@ -88,37 +88,26 @@ const CategoryProducts = () => {
         })
         .finally(() => setLoading(false));
     } else {
-      // ✅ Fetch products by category
-      // Try different API endpoints that might work
+      // ✅ Fetch all products and filter by category on frontend
+      // This avoids the 404 error completely
       axios
-        .get(`${API_URL}/products/category/${encodeURIComponent(decodedCategory)}`)
+        .get(`${API_URL}/products`)
         .then((res) => {
-          console.log(`Products for category "${decodedCategory}":`, res.data.length);
-          setProducts(res.data);
-          setFilteredProducts(res.data);
+          const allProducts = res.data;
+          // ✅ Filter products by category (case insensitive)
+          const filtered = allProducts.filter(
+            (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
+          );
+          console.log(`Filtered ${filtered.length} products for category "${decodedCategory}"`);
+          setProducts(filtered);
+          setFilteredProducts(filtered);
         })
-        .catch((err) => {
-          // If category endpoint fails, try filtering all products
-          console.log("Category endpoint failed, trying alternative...");
-          axios
-            .get(`${API_URL}/products`)
-            .then((res) => {
-              const allProducts = res.data;
-              // ✅ Filter products by category (case insensitive)
-              const filtered = allProducts.filter(
-                (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
-              );
-              console.log(`Filtered ${filtered.length} products for category "${decodedCategory}"`);
-              setProducts(filtered);
-              setFilteredProducts(filtered);
-            })
-            .catch((err2) => {
-              console.error("Error fetching products:", err2);
-              setProducts([]);
-              setFilteredProducts([]);
-            })
-            .finally(() => setLoading(false));
-        });
+        .catch((err2) => {
+          console.error("Error fetching products:", err2);
+          setProducts([]);
+          setFilteredProducts([]);
+        })
+        .finally(() => setLoading(false));
     }
   }, [decodedCategory]);
 
@@ -301,138 +290,7 @@ const CategoryProducts = () => {
 
           <Row className="g-4">
             {/* Filters Sidebar */}
-            <Col lg={3} className="d-none">
-              <div className="filters-sidebar">
-                <div className="filter-header">
-                  <h5>Filters</h5>
-                  <Button
-                    variant="link"
-                    onClick={clearFilters}
-                    className="clear-all-btn"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-
-                <div className="filter-group">
-                  <h6>Categories</h6>
-                  <div className="category-list">
-                    <div
-                      className={`category-item ${decodedCategory === "All" ? "active" : ""}`}
-                      onClick={() => handleCategorySelect("All")}
-                    >
-                      <span>All Categories</span>
-                      <FaChevronRight size={12} />
-                    </div>
-                    {allCategories.map((cat) => (
-                      <div
-                        key={cat._id}
-                        className={`category-item ${decodedCategory === cat.name ? "active" : ""}`}
-                        onClick={() => handleCategorySelect(cat.name)}
-                      >
-                        <span>{cat.name}</span>
-                        <FaChevronRight size={12} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <h6>Price</h6>
-                  <div className="price-options">
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="Under ₹500"
-                      checked={selectedPriceRange === "under-500"}
-                      onChange={() => setSelectedPriceRange("under-500")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="₹500 - ₹1,000"
-                      checked={selectedPriceRange === "500-1000"}
-                      onChange={() => setSelectedPriceRange("500-1000")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="₹1,000 - ₹2,000"
-                      checked={selectedPriceRange === "1000-2000"}
-                      onChange={() => setSelectedPriceRange("1000-2000")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="₹2,000 - ₹5,000"
-                      checked={selectedPriceRange === "2000-5000"}
-                      onChange={() => setSelectedPriceRange("2000-5000")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="Above ₹5,000"
-                      checked={selectedPriceRange === "above-5000"}
-                      onChange={() => setSelectedPriceRange("above-5000")}
-                    />
-                    <div className="custom-price">
-                      <div className="price-inputs">
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={priceMin}
-                          onChange={(e) => {
-                            setSelectedPriceRange("");
-                            setPriceMin(e.target.value);
-                          }}
-                        />
-                        <span>to</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={priceMax}
-                          onChange={(e) => {
-                            setSelectedPriceRange("");
-                            setPriceMax(e.target.value);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <h6>Rating</h6>
-                  <div className="rating-options">
-                    {[4, 3, 2, 1].map((rating) => (
-                      <Form.Check
-                        key={rating}
-                        type="radio"
-                        name="rating"
-                        label={
-                          <span className="rating-label">
-                            {[...Array(5)].map((_, i) => (
-                              <FaStar
-                                key={i}
-                                color={i < rating ? "#ffc107" : "#e4e5e9"}
-                                size={14}
-                              />
-                            ))}
-                            <span>& up</span>
-                          </span>
-                        }
-                        checked={selectedRating === rating}
-                        onChange={() =>
-                          setSelectedRating(
-                            rating === selectedRating ? 0 : rating,
-                          )
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Col>
+           
 
             {showMobileFilters && (
               <div

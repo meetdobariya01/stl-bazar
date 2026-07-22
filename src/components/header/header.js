@@ -1,372 +1,535 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Navbar, Container, Form, FormControl } from "react-bootstrap";
+// Header.jsx - WITH SEARCH RECOMMENDATIONS/AUTOCOMPLETE (FIXED)
+import { useState, useEffect, useRef } from "react";
 import {
-  FaHeart,
-  FaUser,
-  FaShoppingBag,
-  FaSearch,
-  FaTimes,
-  FaBars,
-} from "react-icons/fa";
+  Navbar,
+  Container,
+  Nav,
+  Offcanvas,
+  Form,
+  Button,
+  Dropdown,
+  Spinner, // ✅ ADD THIS - was missing
+} from "react-bootstrap";
+import {
+  HiOutlineMenuAlt3,
+  HiOutlineSearch,
+  HiOutlineUser,
+} from "react-icons/hi";
+import { FiHeart, FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, NavLink } from "react-router-dom";
-import { useCart } from "../../context/CartContext";
-import Mainnavbar from "../navbar/navbar";
+import { NavLink } from "react-router-dom";
 import axios from "axios";
 import "./header.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
 
 const Header = () => {
-  const navigate = useNavigate();
-  const { showCart, setShowCart, cart } = useCart();
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const searchRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const searchTimeout = useRef(null);
 
-  const totalQty = cart.reduce((total, item) => total + item.quantity, 0);
-
-  // Fetch search suggestions - CHANGED to work with 1 character
+  // Fetch categories from backend
   useEffect(() => {
-    // console.log("Search value changed:", search);
-    // ✅ Changed from > 1 to > 0
-    if (search.trim().length > 0) {
-      const delayDebounce = setTimeout(() => {
-        // console.log("Fetching suggestions for:", search);
-        fetchSuggestions(search);
-      }, 300);
-      return () => clearTimeout(delayDebounce);
-    } else {
-      // console.log("Search empty, clearing suggestions");
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }, [search]);
-
-  // Close suggestions when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        // console.log("Clicked outside, closing suggestions");
-        setShowSuggestions(false);
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/categories`);
+        if (response.data && Array.isArray(response.data)) {
+          setCategories(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        // Fallback categories if API fails
+        setCategories([
+          { _id: "1", name: "All Category" },
+          { _id: "2", name: "Organic Food & Healthy Snacks" },
+          { _id: "3", name: "Natural Skin Care & Wellness" },
+          { _id: "4", name: "Gifts & Hamper" },
+          { _id: "5", name: "Handmade Home Decor" },
+          { _id: "6", name: "Sustainable Lifestyle" },
+          { _id: "7", name: "Jewelry & Accessories" },
+        ]);
+      } finally {
+        setLoadingCategories(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    fetchCategories();
   }, []);
 
-  const fetchSuggestions = async (query) => {
+  // ✅ Fetch search recommendations as user types
+  const fetchRecommendations = async (query) => {
+    if (!query || query.trim().length < 2) {
+      setRecommendations([]);
+      setShowRecommendations(false);
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setLoading(true);
-      // console.log("Calling API:", `${API_URL}/search-suggestions?q=${query}`);
-      const response = await axios.get(
-        `${API_URL}/search-suggestions?q=${query}`,
-      );
-      // console.log("API Response:", response.data);
-      setSuggestions(response.data.products || []);
-      setShowSuggestions(true);
+      const response = await axios.get(`${API_URL}/search-suggestions`, {
+        params: { q: query }
+      });
+      
+      if (response.data && response.data.products) {
+        setRecommendations(response.data.products.slice(0, 8));
+        setShowRecommendations(true);
+      }
     } catch (error) {
-      console.error("Error fetching suggestions:", error);
-      setSuggestions([]);
+      console.error("Error fetching recommendations:", error);
+      // Fallback: try the products search endpoint
+      try {
+        const response = await axios.get(`${API_URL}/products/search`, {
+          params: { keyword: query }
+        });
+        if (response.data && response.data.products) {
+          setRecommendations(response.data.products.slice(0, 8));
+          setShowRecommendations(true);
+        }
+      } catch (err2) {
+        console.error("Fallback search also failed:", err2);
+        setRecommendations([]);
+        setShowRecommendations(false);
+      }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSearch = (e) => {
+  // ✅ Handle search input change with debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    // Clear previous timeout
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    
+    // Debounce API calls
+    searchTimeout.current = setTimeout(() => {
+      if (value.trim().length >= 2) {
+        fetchRecommendations(value);
+      } else {
+        setRecommendations([]);
+        setShowRecommendations(false);
+      }
+    }, 300);
+  };
+
+  // ✅ Handle search submission
+  const handleSearch = async (e) => {
     e.preventDefault();
-    if (search.trim()) {
-      navigate(`/products?search=${encodeURIComponent(search.trim())}`);
-      setSearch("");
-      setShowSuggestions(false);
-      setShowMobileMenu(false);
+    if (!searchQuery.trim()) return;
+
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_URL}/products/search`, {
+        params: { keyword: searchQuery }
+      });
+      setSearchResults(response.data.products || []);
+      setShowSearchResults(true);
+      setShowRecommendations(false);
+    } catch (error) {
+      console.error("Search error:", error);
+      // Fallback: try alternative endpoint
+      try {
+        const response = await axios.get(`${API_URL}/search`, {
+          params: { keyword: searchQuery }
+        });
+        setSearchResults(response.data.products || []);
+        setShowSearchResults(true);
+      } catch (err2) {
+        console.error("Alternative search also failed:", err2);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSuggestionClick = (productId) => {
-    console.log("Suggestion clicked, navigating to product:", productId);
-    navigate(`/product/${productId}`);
-    setSearch("");
-    setShowSuggestions(false);
-    setShowMobileMenu(false);
+  // ✅ Handle recommendation click
+  const handleRecommendationClick = (product) => {
+    setShowSearch(false);
+    setShowSearchResults(false);
+    setShowRecommendations(false);
+    setSearchQuery("");
+    setRecommendations([]);
+    // Navigate to product detail page using react-router
+    window.location.href = `/product/${product._id}`;
   };
 
-  const getImageUrl = (image) => {
-    if (!image) return null;
-    let imagePath = Array.isArray(image) ? image[0] : image;
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return imagePath;
-    if (imagePath.startsWith("/images")) return imagePath;
-    if (imagePath.startsWith("/uploads")) return `${BACKEND_URL}${imagePath}`;
-    return `${BACKEND_URL}/uploads/${imagePath}`;
-  };
+  // Close search on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.search-box')) {
+        setShowSearchResults(false);
+        setShowRecommendations(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
-  const formatPrice = (price) => {
-    return Number(price).toFixed(2);
-  };
-  const [categoryOpen, setCategoryOpen] = useState(false);
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
+  }, []);
+
+  // Menu items with dynamic categories
+  const menu = [
+    {
+      title: "Brands",
+      link: "/product",
+    },
+    {
+      title: "Category",
+      dropdown: categories.map((cat) => ({
+        title: cat.name,
+        link: `/category/${encodeURIComponent(cat.name)}`,
+        productCount: cat.productCount || 0
+      })),
+    },
+    {
+      title: "Sell With Us",
+      link: "/sell",
+    },
+    {
+      title: "About Us",
+      link: "/aboutus",
+    },
+  ];
 
   return (
     <>
-      {/* HEADER */}
-      <Navbar className="main-header">
-        <Container fluid className="header-wrapper">
-          <div
-            className="mobile-toggle"
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-          >
-            <FaBars />
-          </div>
-
-          <div className="logo-box" onClick={() => navigate("/")}>
-            <img src="/images/native.webp" alt="logo" />
-          </div>
-
-          {/* DESKTOP SEARCH WITH SUGGESTIONS */}
-          <div className="search-wrapper desktop-only" ref={searchRef}>
-            <Form className="search-form" onSubmit={handleSearch}>
-              <FormControl
-                type="search"
-                placeholder="Search products..."
-                className="search-input lexend"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => {
-                  if (suggestions.length > 0) {
-                    console.log("Input focused, showing suggestions");
-                    setShowSuggestions(true);
-                  }
-                }}
-              />
-              <button className="search-btn" type="submit">
-                <FaSearch />
-              </button>
-            </Form>
-
-            {/* Search Suggestions Dropdown */}
-            {showSuggestions && (
-              <div className="search-suggestions">
-                {loading ? (
-                  <div className="suggestion-loading">
-                    <div
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                    >
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <span>Searching...</span>
-                  </div>
-                ) : suggestions.length > 0 ? (
-                  <>
-                    {suggestions.map((product) => (
-                      <div
-                        key={product._id}
-                        className="suggestion-item"
-                        onClick={() => handleSuggestionClick(product._id)}
-                      >
-                        <div className="suggestion-image">
-                          <img
-                            src={
-                              getImageUrl(product.image) ||
-                              "/images/placeholder-product.jpg"
-                            }
-                            alt={product.name}
-                            onError={(e) => {
-                              e.target.src = "/images/placeholder-product.jpg";
-                            }}
-                          />
-                        </div>
-                        <div className="suggestion-info">
-                          <div className="suggestion-name">{product.name}</div>
-                          <div className="suggestion-price">
-                            ₹{formatPrice(product.price)}
-                          </div>
-                          <div className="suggestion-company">
-                            {product.company}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {/* <div
-                      className="view-all-results"
-                      onClick={handleSearch}
-                    >
-                      View all results for "{search}"
-                    </div> */}
-                  </>
-                ) : (
-                  <div className="no-suggestions">
-                    <p>No products found for "{search}"</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="icon-group">
-            <FaHeart onClick={() => navigate("/wishlist")} />
-            <FaUser onClick={() => navigate("/login")} />
-            <div className="cart-icon" onClick={() => setShowCart(true)}>
-              <FaShoppingBag />
-              {totalQty > 0 && <span className="cart-count">{totalQty}</span>}
-            </div>
-          </div>
-        </Container>
-      </Navbar>
-
-      {/* MOBILE MENU */}
-      <AnimatePresence>
-        {showMobileMenu && (
-          <motion.div
-            className="mobile-menu"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-          >
-            <Form className="search-form mobile-search" onSubmit={handleSearch}>
-              <FormControl
-                type="search"
-                placeholder="Search products..."
-                className="s lexend"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <button className="search-btn" type="submit">
-                <FaSearch />
-              </button>
-            </Form>
-
-            {/* ✅ Changed mobile search to work with 1 character */}
-            {search.trim().length > 0 && suggestions.length > 0 && (
-              <div className="mobile-search-results">
-                {suggestions.slice(0, 5).map((product) => (
-                  <div
-                    key={product._id}
-                    className="mobile-suggestion-item"
-                    onClick={() => handleSuggestionClick(product._id)}
-                  >
-                    <img
-                      src={
-                        getImageUrl(product.image) ||
-                        "/images/placeholder-product.jpg"
-                      }
-                      alt={product.name}
-                    />
-                    <div>
-                      <div className="name">{product.name}</div>
-                      <div className="price">₹{formatPrice(product.price)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mobile-links lexend">
-              {/* Shop by Category Dropdown */}
-              <div className="mobile-dropdown">
-                <div className="d-block">
-                  {" "}
-                  <span
-                    className="dropdown-title d-flex"
-                    onClick={() => setCategoryOpen(!categoryOpen)}
-                  >
-                    Shop by Category
-                    <span className={`arrow ${categoryOpen ? "open" : ""}`}>
-                      ▼
-                    </span>
-                  </span>
-                </div>
-
-                {categoryOpen && (
-                  <div className="dropdown-menu-navbar">
-                    <span onClick={() => navigate("/category/All")}>All Categories</span>
-                    <span onClick={() => navigate("/category/Jewellery")}>
-                      Orgenic Food & Healthy Snacks
-                    </span>
-                    <span onClick={() => navigate("/category/Accessories")}>
-                      Natural Skin Care & Wellness
-                    </span>
-                    <span onClick={() => navigate("/category/Bags")}>
-                      Gifts & Hamper
-                    </span>
-                    <span onClick={() => navigate("/category/Watches")}>
-                      Handmade Home Decor
-                    </span>
-                    <span onClick={() => navigate("/category/Watches")}>
-                      Sustainable Lifestyle
-                    </span>
-                    <span onClick={() => navigate("/category/Watches")}>
-                      Jewelry & Accessories
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <span onClick={() => navigate("/product")}>Brands</span>
-              <span onClick={() => navigate("/")}>Editorial</span>
-              <span onClick={() => navigate("/sell")}>Sell With Us</span>
-              <span onClick={() => navigate("/aboutus")}>About Us</span>
-              <span onClick={() => navigate("/contactus")}>Contact Us</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* CART DRAWER */}
-      <AnimatePresence>
-        {showCart && (
-          <motion.div
-            className="cart-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowCart(false)}
-          >
+      <div className="lexend">
+        {/* SEARCH OVERLAY */}
+        <AnimatePresence>
+          {showSearch && (
             <motion.div
-              className="cart-drawer"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.4 }}
-              onClick={(e) => e.stopPropagation()}
+              className="search-overlay"
+              initial={{ y: -120 }}
+              animate={{ y: 0 }}
+              exit={{ y: -120 }}
+              transition={{ duration: 0.35 }}
             >
-              <div className="cart-header">
-                <h5>Your Shopping Cart</h5>
-                <FaTimes onClick={() => setShowCart(false)} />
-              </div>
+              <Container>
+                <div className="search-box">
+                  <Form onSubmit={handleSearch} className="w-100 d-flex">
+                    <Form.Control
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      className="flex-grow-1"
+                      autoFocus
+                    />
+                    <Button type="submit" variant="dark" className="ms-2" disabled={isLoading}>
+                      {isLoading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        "Search"
+                      )}
+                    </Button>
+                  </Form>
 
-              {cart.length === 0 ? (
-                <p className="text-center mt-4">Your cart is empty</p>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.productId} className="cart-item">
-                    <span>{item.name}</span>
-                    <span>x {item.quantity}</span>
-                  </div>
-                ))
-              )}
+                  {/* Search Recommendations Dropdown */}
+                  {showRecommendations && recommendations.length > 0 && (
+                    <div className="search-recommendations-dropdown">
+                      <div className="recommendations-header">
+                        <span>Recommendations</span>
+                        <small>{recommendations.length} results</small>
+                      </div>
+                      {recommendations.map((product) => (
+                        <div
+                          key={product._id}
+                          className="search-recommendation-item"
+                          onClick={() => handleRecommendationClick(product)}
+                        >
+                          <div className="recommendation-img">
+                            <img 
+                              src={product.image?.[0] || "/images/placeholder.png"} 
+                              alt={product.name}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "/images/placeholder.png";
+                              }}
+                            />
+                          </div>
+                          <div className="recommendation-info">
+                            <div className="recommendation-name">{product.name}</div>
+                            <div className="recommendation-price">₹{product.price}</div>
+                            <div className="recommendation-company">{product.company || "Native91"}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {recommendations.length > 0 && (
+                        <div className="recommendations-footer">
+                          <Button 
+                            variant="link" 
+                            onClick={handleSearch}
+                            className="view-all-btn"
+                          >
+                            View all results for "{searchQuery}"
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-              <NavLink to="/checkout" className="checkout-btn">
-                Checkout
-              </NavLink>
+                  {/* Search Results Dropdown */}
+                  {showSearchResults && searchResults.length > 0 && (
+                    <div className="search-results-dropdown">
+                      {searchResults.map((product) => (
+                        <NavLink
+                          key={product._id}
+                          to={`/product/${product._id}`}
+                          className="search-result-item"
+                          onClick={() => {
+                            setShowSearch(false);
+                            setShowSearchResults(false);
+                            setSearchQuery("");
+                          }}
+                        >
+                          <div className="search-result-img">
+                            <img 
+                              src={product.image?.[0] || "/images/placeholder.png"} 
+                              alt={product.name}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "/images/placeholder.png";
+                              }}
+                            />
+                          </div>
+                          <div className="search-result-info">
+                            <div className="search-result-name">{product.name}</div>
+                            <div className="search-result-price">₹{product.price}</div>
+                            <div className="search-result-company">{product.company}</div>
+                          </div>
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
 
-              <NavLink to="/cart" className="outline-btn">
-                View Cart
-              </NavLink>
+                  {/* Loading State */}
+                  {isLoading && !recommendations.length && (
+                    <div className="search-loading">
+                      <Spinner animation="border" size="sm" />
+                      <span className="ms-2">Searching...</span>
+                    </div>
+                  )}
 
-              <NavLink to="/" className="outline-btn">
-                Continue Shopping
-              </NavLink>
+                  <button
+                    className="close-search"
+                    onClick={() => {
+                      setShowSearch(false);
+                      setShowSearchResults(false);
+                      setShowRecommendations(false);
+                      setSearchQuery("");
+                      setRecommendations([]);
+                    }}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+              </Container>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
-      <Mainnavbar />
+        {/* HEADER */}
+        <Navbar expand="lg" className="premium-navbar" sticky="top">
+          <Container>
+            {/* Logo */}
+            <Navbar.Brand as={NavLink} to="/">
+              <img src="/images/native.jpg" alt="Native91" className="logo" />
+            </Navbar.Brand>
+
+            {/* Desktop Menu */}
+            <Nav className="mx-auto desktop-menu">
+              {menu.map((item, index) => (
+                <motion.div key={index} whileHover={{ y: -3 }}>
+                  {item.dropdown ? (
+                    <Dropdown className="premium-dropdown">
+                      <Dropdown.Toggle
+                        as="div"
+                        className="premium-link dropdown-toggle-custom"
+                      >
+                        {item.title}
+                        {loadingCategories && (
+                          <span className="ms-1" style={{ fontSize: '10px' }}>⏳</span>
+                        )}
+                      </Dropdown.Toggle>
+
+                      <Dropdown.Menu>
+                        {loadingCategories ? (
+                          <Dropdown.Item className="dropdown-item-custom text-center">
+                            <span className="dropdown-loading">Loading categories...</span>
+                          </Dropdown.Item>
+                        ) : item.dropdown.length === 0 ? (
+                          <Dropdown.Item className="dropdown-item-custom text-center">
+                            <span className="dropdown-error">No categories available</span>
+                          </Dropdown.Item>
+                        ) : (
+                          item.dropdown.map((sub, i) => (
+                            <Dropdown.Item
+                              as={NavLink}
+                              to={sub.link}
+                              key={i}
+                              className="dropdown-item-custom"
+                              onClick={() => setShowMenu(false)}
+                            >
+                              {sub.title}
+                              {sub.productCount > 0 && (
+                                <span className="product-count">({sub.productCount})</span>
+                              )}
+                            </Dropdown.Item>
+                          ))
+                        )}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  ) : (
+                    <NavLink to={item.link} className="nav-link premium-link">
+                      {item.title}
+                    </NavLink>
+                  )}
+                </motion.div>
+              ))}
+            </Nav>
+
+            {/* Desktop Icons */}
+            <div className="desktop-icons">
+              <button onClick={() => setShowSearch(true)}>
+                <HiOutlineSearch />
+              </button>
+
+              <NavLink to="/login" className="icon-link">
+                <button type="button">
+                  <HiOutlineUser />
+                </button>
+              </NavLink>
+
+              <NavLink to="/cart" className="icon-link">
+                <button type="button">
+                  <FiShoppingBag />
+                </button>
+              </NavLink>
+            </div>
+
+            {/* Mobile Right */}
+            <div className="mobile-right">
+              <button onClick={() => setShowSearch(true)}>
+                <HiOutlineSearch />
+              </button>
+
+              <NavLink to="/login" className="icon-link">
+                <button type="button">
+                  <HiOutlineUser />
+                </button>
+              </NavLink>
+
+              <button onClick={() => setShowMenu(true)}>
+                <HiOutlineMenuAlt3 />
+              </button>
+            </div>
+          </Container>
+        </Navbar>
+
+        {/* MOBILE MENU */}
+        <Offcanvas
+          show={showMenu}
+          placement="end"
+          onHide={() => setShowMenu(false)}
+        >
+          <Offcanvas.Header closeButton>
+            <Offcanvas.Title>
+              <img src="/images/native.jpg" className="mobile-logo" alt="Native91" />
+            </Offcanvas.Title>
+          </Offcanvas.Header>
+
+          <Offcanvas.Body>
+            <Nav className="flex-column lexend">
+              {menu.map((item, index) => (
+                <div key={index}>
+                  {item.dropdown ? (
+                    <>
+                      <div className="mobile-link">
+                        {item.title}
+                        {loadingCategories && (
+                          <span className="ms-1" style={{ fontSize: '12px' }}>⏳</span>
+                        )}
+                      </div>
+
+                      {loadingCategories ? (
+                        <div className="mobile-sublink text-muted" style={{ paddingLeft: '20px' }}>
+                          Loading categories...
+                        </div>
+                      ) : item.dropdown.length === 0 ? (
+                        <div className="mobile-sublink text-danger" style={{ paddingLeft: '20px' }}>
+                          No categories available
+                        </div>
+                      ) : (
+                        item.dropdown.map((sub, i) => (
+                          <NavLink
+                            key={i}
+                            to={sub.link}
+                            className="mobile-sublink"
+                            onClick={() => setShowMenu(false)}
+                          >
+                            {sub.title}
+                            {sub.productCount > 0 && (
+                              <span className="product-count">({sub.productCount})</span>
+                            )}
+                          </NavLink>
+                        ))
+                      )}
+                    </>
+                  ) : (
+                    <NavLink
+                      to={item.link}
+                      className="mobile-link"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      {item.title}
+                    </NavLink>
+                  )}
+                </div>
+              ))}
+            </Nav>
+
+            <hr />
+
+            <div className="mobile-bottom-icons lexend">
+              <NavLink
+                to="/wishlist"
+                className="mobile-icon-btn"
+                onClick={() => setShowMenu(false)}
+              >
+                <FiHeart />
+                <span>Wishlist</span>
+              </NavLink>
+
+              <NavLink
+                to="/cart"
+                className="mobile-icon-btn"
+                onClick={() => setShowMenu(false)}
+              >
+                <FiShoppingBag />
+                <span>Cart</span>
+              </NavLink>
+            </div>
+          </Offcanvas.Body>
+        </Offcanvas>
+      </div>
     </>
   );
 };
