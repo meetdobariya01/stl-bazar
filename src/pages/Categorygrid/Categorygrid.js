@@ -567,7 +567,7 @@ const CategoryProducts = () => {
                                 }}
                               />
                               <div
-                                className="wishlist-btn"
+                                className="wishlist-btn-category"
                                 onClick={(e) => toggleWishlist(e, item._id)}
                               >
                                 {isInWishlist ? (

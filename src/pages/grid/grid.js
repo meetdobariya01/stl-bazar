@@ -538,7 +538,7 @@ const Grid = () => {
                                 }
                               />
                               <div
-                                className="wishlist-btn"
+                                className="wishlist-btn-grid"
                                 onClick={(e) => toggleWishlist(e, item._id)}
                               >
                                 {isInWishlist ? (

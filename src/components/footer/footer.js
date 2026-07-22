@@ -34,7 +34,7 @@ const Footer = () => {
                 transition={{ duration: 0.6 }}
               >
                 <img
-                  src="/images/native.webp"
+                  src="/images/native.jpg"
                   alt="Refresh"
                   className="footer-logo"
                   onClick={refreshPage}
@@ -86,7 +86,7 @@ const Footer = () => {
             <Col md={3}>
               <h5 className="lexend">OUR PROGRAMS</h5>
               <ul>
-                <li  className="footer-links">
+                <li className="footer-links">
                   <NavLink to="/category/Gifts%20%26%20Hamper">
                     {" "}
                     E-Gift Voucher
@@ -151,9 +151,9 @@ const Footer = () => {
             <Col>
               {/* LOGO */}
               <img
-                src="/images/native.webp"
+                src="/images/native.jpg"
                 alt="Refresh"
-                className="footer-logo w-50"
+                className="footer-logo w-25"
                 onClick={refreshPage}
               />
 
@@ -183,21 +183,66 @@ const Footer = () => {
                 <details>
                   <summary>INFO</summary>
                   <div className="mobile-footer-content">
-                    <p>Our Story</p>
-                    <p>Contact Us</p>
-                    <p>Track Order</p>
-                    <p>FAQ</p>
-                    {/* <p>Naturopedia</p> */}
-                    <p>Shop All</p>
-                    {/* <p>Store Locator</p> */}
-                    {/* <p>Re:fresh Certifications</p> */}
+                    <ul className="footer-links">
+                      <li>
+                        <NavLink to="/aboutus">Our Story</NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/contactus">Contact Us</NavLink>
+                      </li>
+                      <li>
+                        {/* <NavLink to="/track-order">Track Order</NavLink> */}
+                      </li>
+                      <li>
+                        <NavLink to="/faqs">FAQ</NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/orderhistory">Order History</NavLink>
+                      </li>
+                    </ul>
                   </div>
                 </details>
 
                 <details>
                   <summary>OUR PROGRAMS</summary>
+                  <ul>
+                    <li className="footer-links">
+                      <NavLink to="/category/Gifts%20%26%20Hamper">
+                        {" "}
+                        E-Gift Voucher
+                      </NavLink>
+                    </li>
+                  </ul>
+                </details>
+
+                <details>
+                  <summary>POLICY</summary>
                   <div className="mobile-footer-content">
-                    <p>E-Gift Voucher</p>
+                    <ul className="footer-links">
+                      <li>
+                        {/* <NavLink to="/disclaimer">Disclaimer</NavLink> */}
+                      </li>
+
+                      <li>
+                        <NavLink to="/terms-and-conditions">
+                          Terms & Conditions
+                        </NavLink>
+                      </li>
+
+                      <li>
+                        <NavLink to="/shipping-policy">Shipping Policy</NavLink>
+                      </li>
+
+                      <li>
+                        <NavLink to="/return-policy">
+                          Return, Refund & Cancellation
+                        </NavLink>
+                      </li>
+
+                      <li>
+                        <NavLink to="/privacypolicy">Privacy Policy</NavLink>
+                      </li>
+                    </ul>
                   </div>
                 </details>
 
