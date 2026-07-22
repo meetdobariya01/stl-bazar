@@ -13,7 +13,7 @@ const bannerData = [
       "Do you create remarkable products? We'd love to hear your story.",
     button: "APPLY TO JOIN",
     link: "/sell",
-    bgImage: "./images/123.png",
+    bgImage: "./images/email-box-1.webp",
     // image: "/images/vase.png",
   },
   {
@@ -22,7 +22,7 @@ const bannerData = [
     description: "",
     button: "JOIN THE PRIVATE LIST",
     link: "/contactus",
-    bgImage: "./images/234.png",
+    bgImage: "./images/email-box-2.webp",
     image: "/images/mail.png",
   },
   {
@@ -31,7 +31,7 @@ const bannerData = [
     description: "",
     button: "",
     link: "/",
-    bgImage: "./images/345.png",
+    bgImage: "./images/email-box-3.webp",
     logo: "/images/native-bg.png",
     image: "/images/plant.png",
   },
