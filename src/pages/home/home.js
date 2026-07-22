@@ -27,6 +27,9 @@ const Home = () => {
       {/* carousel */}
       <Carouselhero />
 
+      {/* explore */}
+      <Explore />
+
       {/* category */}
       <Category />
 
@@ -42,9 +45,6 @@ const Home = () => {
       {/* boxes */}
       <Boxes />
 
-      {/* explore */}
-      {/* <Explore /> */}
-
       {/* shop with us */}
       <Shopus />
 
@@ -55,7 +55,7 @@ const Home = () => {
       <Features />
 
       {/* Details */}
-      <StatsSection />
+      {/* <StatsSection /> */}
 
       {/* Email subscription */}
       <CTASection />

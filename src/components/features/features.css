@@ -202,7 +202,8 @@
   .story-content-wrapper {
     min-height: 420px;
     padding: 35px 25px;
-    background-position: right;
+    /* background-position: right; */
+    color: #000;
   }
 
   .story-content {

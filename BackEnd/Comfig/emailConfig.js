@@ -110,93 +110,93 @@ const sendEmail = async (to, subject, html) => {
 // ============================================================
 // CUSTOMER ORDER EMAIL
 // ============================================================
-const getCustomerOrderEmail = (order, orderId) => {
-  const itemsList = (order.items || []).map(item => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
-    </tr>
-  `).join("");
+// const getCustomerOrderEmail = (order, orderId) => {
+//   const itemsList = (order.items || []).map(item => `
+//     <tr>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price}</td>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+//     </tr>
+//   `).join("");
 
-  const totalAmount = order.totalPrice || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+//   const totalAmount = order.totalPrice || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Order Confirmation</title>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: linear-gradient(135deg, #28a745, #218838); padding: 30px 20px; text-align: center; }
-        .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
-        .header p { color: #e8f5e9; margin: 5px 0 0; }
-        .content { padding: 20px; }
-        .order-details { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; margin: 20px 0; }
-        .order-details p { margin: 5px 0; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th { background: #28a745; color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
-        .total-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #28a745; }
-        .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 18px; font-weight: bold; }
-        .total-amount { color: #28a745; font-size: 24px; }
-        .shipping-info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
-        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
-        .badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>🎉 Order Confirmed!</h1>
-          <p>Thank you for your order, ${order.shippingAddress?.name || "Customer"}!</p>
-        </div>
-        <div class="content">
-          <div class="order-details">
-            <p><strong>📋 Order #:</strong> ${orderId}</p>
-            <p><strong>📅 Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-            <p><strong>💳 Payment:</strong> ${order.paymentMethod || "COD"}</p>
-            <p><strong>📦 Status:</strong> <span class="badge">${order.orderStatus || "Pending"}</span></p>
-          </div>
+//   return `
+//     <!DOCTYPE html>
+//     <html>
+//     <head>
+//       <meta charset="UTF-8">
+//       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//       <title>Order Confirmation</title>
+//       <style>
+//         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; margin: 0; padding: 20px; }
+//         .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+//         .header { background: linear-gradient(135deg, #28a745, #218838); padding: 30px 20px; text-align: center; }
+//         .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+//         .header p { color: #e8f5e9; margin: 5px 0 0; }
+//         .content { padding: 20px; }
+//         .order-details { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; margin: 20px 0; }
+//         .order-details p { margin: 5px 0; }
+//         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+//         th { background: #28a745; color: white; padding: 12px; text-align: left; }
+//         td { padding: 10px; border-bottom: 1px solid #ddd; }
+//         .total-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #28a745; }
+//         .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 18px; font-weight: bold; }
+//         .total-amount { color: #28a745; font-size: 24px; }
+//         .shipping-info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+//         .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+//         .badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+//       </style>
+//     </head>
+//     <body>
+//       <div class="container">
+//         <div class="header">
+//           <h1>🎉 Order Confirmed!</h1>
+//           <p>Thank you for your order, ${order.shippingAddress?.name || "Customer"}!</p>
+//         </div>
+//         <div class="content">
+//           <div class="order-details">
+//             <p><strong>📋 Order #:</strong> ${orderId}</p>
+//             <p><strong>📅 Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+//             <p><strong>💳 Payment:</strong> ${order.paymentMethod || "COD"}</p>
+//             <p><strong>📦 Status:</strong> <span class="badge">${order.orderStatus || "Pending"}</span></p>
+//           </div>
 
-          <h3>🛍️ Order Items</h3>
-          <table>
-            <thead>
-              <tr><th>Product</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Price</th><th style="text-align: right;">Total</th></tr>
-            </thead>
-            <tbody>${itemsList}</tbody>
-          </table>
+//           <h3>🛍️ Order Items</h3>
+//           <table>
+//             <thead>
+//               <tr><th>Product</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Price</th><th style="text-align: right;">Total</th></tr>
+//             </thead>
+//             <tbody>${itemsList}</tbody>
+//           </table>
 
-          <div class="total-section">
-            <div class="total-row">
-              <span>Total</span>
-              <span class="total-amount">₹${totalAmount.toFixed(2)}</span>
-            </div>
-          </div>
+//           <div class="total-section">
+//             <div class="total-row">
+//               <span>Total</span>
+//               <span class="total-amount">₹${totalAmount.toFixed(2)}</span>
+//             </div>
+//           </div>
 
-          <div class="shipping-info">
-            <h4>📦 Shipping Address</h4>
-            <p><strong>Name:</strong> ${order.shippingAddress?.name || "N/A"}</p>
-            <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
-            <p><strong>Address:</strong> ${order.shippingAddress?.address || "N/A"}</p>
-            <p><strong>City:</strong> ${order.shippingAddress?.city || "N/A"}</p>
-            <p><strong>State:</strong> ${order.shippingAddress?.state || "N/A"}</p>
-            <p><strong>Pincode:</strong> ${order.shippingAddress?.pincode || "N/A"}</p>
-          </div>
-        </div>
-        <div class="footer">
-          <p>Thank you for shopping with Native91! 🛍️</p>
-          <p style="font-size: 12px;">This is a system generated email. Please do not reply.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-};
+//           <div class="shipping-info">
+//             <h4>📦 Shipping Address</h4>
+//             <p><strong>Name:</strong> ${order.shippingAddress?.name || "N/A"}</p>
+//             <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
+//             <p><strong>Address:</strong> ${order.shippingAddress?.address || "N/A"}</p>
+//             <p><strong>City:</strong> ${order.shippingAddress?.city || "N/A"}</p>
+//             <p><strong>State:</strong> ${order.shippingAddress?.state || "N/A"}</p>
+//             <p><strong>Pincode:</strong> ${order.shippingAddress?.pincode || "N/A"}</p>
+//           </div>
+//         </div>
+//         <div class="footer">
+//           <p>Thank you for shopping with Native91! 🛍️</p>
+//           <p style="font-size: 12px;">This is a system generated email. Please do not reply.</p>
+//         </div>
+//       </div>
+//     </body>
+//     </html>
+//   `;
+// };
 
 // ============================================================
 // ADMIN ORDER EMAIL
@@ -390,7 +390,7 @@ const getVendorOrderEmail = (order, orderId, vendorItems, vendor) => {
 // ============================================================
 module.exports = {
   sendEmail,
-  getCustomerOrderEmail,
+  // getCustomerOrderEmail,
   getAdminOrderEmail,
   getVendorOrderEmail,
   emailMode,

@@ -1,409 +1,500 @@
-HEADER
-.main-header {
-  background: #f1f3f0;
-  border-bottom: 1px solid #eee;
-  padding: 12px 20px;
+.premium-navbar {
+  background: #fff;
+  padding: 18px 0;
+  border-bottom: 1px solid #f2f2f2;
+  z-index: 999;
 }
 
-.header-wrapper {
+.logo {
+  height: 100px;
+}
+
+.desktop-menu {
+  gap: 38px;
+}
+
+.premium-link {
+  position: relative;
+  font-size: 13px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: #222 !important;
+  text-transform: uppercase;
+}
+
+.premium-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0;
+  height: 2px;
+  background: #b89b5e;
+  transition: 0.35s;
+}
+
+.premium-link:hover::after {
+  width: 100%;
+}
+
+.desktop-icons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.desktop-icons button,
+.mobile-right button,
+.mobile-bottom-icons button,
+.close-search {
+  border: none;
+  background: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.mobile-right {
+  display: none;
+  gap: 12px;
+}
+
+.search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 25px;
+  z-index: 2000;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+}
+
+.search-box {
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
-.logo-box img {
-  height: 110px;
-  cursor: pointer;
+.search-box input {
+  height: 58px;
+  border-radius: 50px;
+  padding-left: 25px;
+  font-size: 18px;
 }
 
-/* SEARCH */
-.search-wrapper {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+.mobile-link {
+  /* padding: 18px 0; */
+  text-decoration: none;
+  color: #222;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 35px;
 }
 
-.search-form {
-  display: flex;
-  width: 100%;
-  max-width: 600px;
-}
-
-.search-input {
-  border-radius: 30px 0 0 30px !important;
-  padding: 12px 20px;
-}
-
-.search-btn {
-  border: none;
-  background: #0f5132;
-  color: #c8a96b;
-  padding: 0 22px;
-  border-radius: 0 30px 30px 0;
-}
-
-/* ICONS */
-.icon-group {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  font-size: 22px;
-  color: #c8a96b;
-}
-
-.icon-group svg {
-  cursor: pointer;
-}
-
-.cart-icon {
-  position: relative;
-  margin-top: -6px;
-}
-
-.cart-count {
-  position: absolute;
-  top: -6px;
-  right: -10px;
-  background: #143d2b;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 50%;
-}
-
-/* CART */
-.cart-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 999;
-}
-
-.cart-drawer {
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 380px;
-  max-width: 100%;
-  height: 100%;
-  background: #fff;
-  padding: 20px;
-}
-
-.cart-header {
+.mobile-bottom-icons {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  margin-top: 35px;
 }
 
-.cart-header svg {
-  cursor: pointer;
-}
-
-.cart-empty {
-  margin: 60px 0;
-  text-align: center;
-  color: #666;
-}
-
-.checkout-btn {
-  width: 100%;
-  background: #053262;
-  color: white;
-  padding: 14px;
-  border: none;
-  border-radius: 12px;
-  margin-bottom: 12px;
-}
-
-.outline-btn {
-  width: 100%;
-  background: transparent;
-  border: 1px solid #053262;
-  color: #053262;
-  padding: 14px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-}
-/* same header styles as before */
-
-.cart-item {
+.mobile-bottom-icons button {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
+  font-size: 18px;
 }
 
-.qty-box {
+.mobile-logo {
+  height: 60px;
+}
+.mobile-icon-btn {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.qty-box svg {
-  cursor: pointer;
-  font-size: 14px;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-  .header-wrapper {
-    flex-wrap: wrap;
-  }
-
-  .search-wrapper {
-    order: 3;
-    width: 100%;
-  }
-  .logo-box img {
-    height: 110px;
-  }
-}
-.mobile-toggle {
-  display: none;
-  font-size: 24px;
-  cursor: pointer;
-}
-
-.mobile-menu {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  text-decoration: none;
+  color: #222;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  transition: all 0.3s ease;
   background: #fff;
-  padding: 15px;
-  border-bottom: 1px solid #eee;
 }
 
-.mobile-search {
-  margin-bottom: 15px;
+.mobile-icon-btn svg {
+  font-size: 20px;
 }
 
-.mobile-links span {
-  display: block;
-  padding: 12px 0;
-  font-weight: 500;
-  cursor: pointer;
+.mobile-icon-btn:hover,
+.mobile-icon-btn.active {
+  background: #f8f8f8;
+  color: #000;
+  border-color: #000;
 }
-
-.desktop-only {
-  display: flex;
-}
-
-.mobile-only {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .mobile-toggle {
-    display: block;
+@media (max-width: 991px) {
+  .desktop-menu {
+    display: none !important;
   }
 
-  .desktop-only {
+  .desktop-icons {
     display: none;
   }
 
-  .mobile-only {
-    display: block;
+  .mobile-right {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
   }
 
-  .header-wrapper {
-    justify-content: space-between;
+  .logo {
+    height: 60px;
+  }
+
+  .premium-navbar {
+    padding: 10px 0;
   }
 }
-.checkout-btn,
-.outline-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  cursor: pointer;
-}
-/* Search Suggestions Styles */
-.search-wrapper {
+/* Desktop Dropdown */
+
+.premium-dropdown {
   position: relative;
-  flex: 1;
-  max-width: 500px;
-  margin: 0 20px;
 }
 
-.search-suggestions {
+.dropdown-toggle-custom {
+  cursor: pointer;
+  padding: 10px 15px;
+  font-weight: 600;
+  color: #222;
+  transition: 0.3s;
+}
+
+.dropdown-toggle-custom::after {
+  display: none !important;
+}
+
+.premium-dropdown .dropdown-menu {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 0;
+  min-width: 220px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+  margin-top: 20px;
+  opacity: 0;
+  visibility: hidden;
+  display: block;
+  transition: 0.3s;
+}
+
+.premium-dropdown:hover .dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  margin-top: 8px;
+}
+
+.dropdown-item-custom {
+  padding: 12px 20px;
+  transition: 0.3s;
+}
+
+.dropdown-item-custom:hover {
+  background: #f8f8f8;
+  padding-left: 28px;
+}
+
+/* Mobile */
+
+.mobile-sublink {
+  display: block;
+  padding: 8px 20px 8px 35px;
+  color: #666;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.mobile-sublink:hover {
+  color: #000;
+  padding-left: 45px;
+}
+/* header.css - Add these styles */
+
+/* Search Results Dropdown */
+.search-results-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   max-height: 400px;
   overflow-y: auto;
-  margin-top: 5px;
+  z-index: 1000;
+  margin-top: 8px;
+  padding: 8px 0;
 }
 
-.suggestion-item {
+.search-result-item {
   display: flex;
   align-items: center;
-  padding: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 16px;
+  text-decoration: none;
+  color: #333;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f1f1f1;
 }
 
-.suggestion-item:hover {
-  background: #f8f9fa;
+.search-result-item:hover {
+  background-color: #f8f9fa;
+  text-decoration: none;
+  color: #333;
 }
 
-.suggestion-image {
+.search-result-img {
   width: 50px;
   height: 50px;
   flex-shrink: 0;
-  margin-right: 12px;
   border-radius: 8px;
   overflow: hidden;
   background: #f8f9fa;
+  margin-right: 12px;
 }
 
-.suggestion-image img {
+.search-result-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.suggestion-info {
+.search-result-info {
   flex: 1;
+  min-width: 0;
 }
 
-.suggestion-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.suggestion-price {
-  font-size: 13px;
+.search-result-name {
   font-weight: 600;
-  color: #0f5132;
-  margin-bottom: 2px;
+  font-size: 14px;
+  color: #1a2332;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.suggestion-company {
-  font-size: 11px;
-  color: #666;
+.search-result-price {
+  font-weight: 700;
+  font-size: 14px;
+  color: #28a745;
 }
 
-.view-all-results {
-  padding: 12px;
-  text-align: center;
-  background: #f8f9fa;
-  color: #0f5132;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 13px;
-  border-top: 1px solid #eee;
+.search-result-company {
+  font-size: 12px;
+  color: #6c757d;
 }
 
-.view-all-results:hover {
-  background: #e9ecef;
-}
-
-.no-suggestions {
-  padding: 20px;
-  text-align: center;
-  color: #666;
-}
-
-.suggestion-loading {
-  padding: 20px;
-  text-align: center;
+/* Search Box Container */
+.search-box {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
-  color: #666;
 }
 
-/* Mobile Search Results */
-.mobile-search-results {
-  margin: 10px 15px;
+.search-box .form-control {
+  border-radius: 12px;
+  padding: 12px 20px;
+  border: 2px solid #e9ecef;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.search-box .form-control:focus {
+  border-color: #0f5132;
+  box-shadow: none;
+}
+
+.search-box .btn-dark {
+  border-radius: 12px;
+  padding: 12px 24px;
+}
+
+/* Search Results Scrollbar */
+.search-results-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-results-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.search-results-dropdown::-webkit-scrollbar-thumb {
+  background: #D2DCD6;
+  border-radius: 10px;
+}
+
+.search-results-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #b0bfb6;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .search-result-item {
+    padding: 8px 12px;
+  }
+  
+  .search-result-img {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .search-result-name {
+    font-size: 13px;
+  }
+  
+  .search-result-price {
+    font-size: 13px;
+  }
+  
+  .search-box .form-control {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+/* header.css - Add these styles for recommendations */
+
+/* Search Recommendations Dropdown */
+.search-recommendations-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  max-height: 420px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 8px 0;
+  animation: fadeDown 0.25s ease;
 }
 
-.mobile-suggestion-item {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  gap: 12px;
-  border-bottom: 1px solid #f0f0f0;
-  cursor: pointer;
-}
-
-.mobile-suggestion-item:hover {
-  background: #f8f9fa;
-}
-
-.mobile-suggestion-item img {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.mobile-suggestion-item .name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-}
-
-.mobile-suggestion-item .price {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0f5132;
-}
-.mobile-dropdown {
-  width: 100%;
-}
-
-.dropdown-title {
+.recommendations-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
-  padding: 12px 0;
-  font-size: 16px;
-  font-weight: 500;
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid #f1f1f1;
+  font-size: 13px;
+  color: #6c757d;
 }
 
-.arrow {
-  font-size: 12px;
-  transition: transform 0.3s ease;
+.recommendations-header span {
+  font-weight: 600;
+  color: #1a2332;
 }
 
-.arrow.open {
-  transform: rotate(180deg);
-}
-
-.dropdown-menu-navbar {
+.search-recommendation-item {
   display: flex;
-  flex-direction: column;
-  padding-left: 15px;
-  animation: slideDown 0.3s ease;
-}
-
-.dropdown-menu-navbar span {
-  padding: 10px 0;
+  align-items: center;
+  padding: 8px 16px;
   cursor: pointer;
-  color: #555;
-  transition: color 0.3s;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f8f9fa;
 }
 
-.dropdown-menu-navbar span:hover {
-  color: #000;
+.search-recommendation-item:hover {
+  background-color: #f8f9fa;
 }
 
-@keyframes slideDown {
+.recommendation-img {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8f9fa;
+  margin-right: 12px;
+}
+
+.recommendation-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recommendation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recommendation-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #1a2332;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recommendation-price {
+  font-weight: 600;
+  font-size: 13px;
+  color: #28a745;
+}
+
+.recommendation-company {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.recommendations-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #f1f1f1;
+  text-align: center;
+}
+
+.view-all-btn {
+  color: #0f5132;
+  font-weight: 500;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.view-all-btn:hover {
+  color: #0a3d24;
+  text-decoration: underline;
+}
+
+.search-loading {
+  padding: 16px;
+  text-align: center;
+  color: #6c757d;
+  font-size: 14px;
+  background: white;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Scrollbar for recommendations */
+.search-recommendations-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-recommendations-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.search-recommendations-dropdown::-webkit-scrollbar-thumb {
+  background: #D2DCD6;
+  border-radius: 10px;
+}
+
+.search-recommendations-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #b0bfb6;
+}
+
+/* Animation */
+@keyframes fadeDown {
   from {
     opacity: 0;
     transform: translateY(-8px);
@@ -413,18 +504,24 @@ HEADER
     transform: translateY(0);
   }
 }
-/* Responsive */
+
+/* Mobile Responsive */
 @media (max-width: 768px) {
-  .search-suggestions {
-    max-height: 300px;
+  .search-recommendations-dropdown {
+    max-height: 350px;
+    margin-top: 4px;
   }
-
-  .suggestion-image {
-    width: 40px;
-    height: 40px;
+  
+  .recommendation-img {
+    width: 38px;
+    height: 38px;
   }
-
-  .suggestion-name {
-    font-size: 12px;
+  
+  .recommendation-name {
+    font-size: 13px;
+  }
+  
+  .search-recommendation-item {
+    padding: 6px 12px;
   }
 }
