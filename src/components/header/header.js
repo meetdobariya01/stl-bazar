@@ -1,4 +1,3 @@
-// Header.jsx - WITH PROPER CART COUNT
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -12,6 +11,7 @@ import {
   Badge,
 } from "react-bootstrap";
 import {
+  HiOutlineHeart,
   HiOutlineMenuAlt3,
   HiOutlineSearch,
   HiOutlineUser,
@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { NavLink } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import "./header.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
@@ -38,10 +39,9 @@ const Header = () => {
   const [isLoading, setIsLoading] = useState(false);
   const searchTimeout = useRef(null);
 
-  // ✅ Use Cart Context for cart count
   const { cartCount, fetchCart } = useCart();
+  const { wishlistCount, fetchWishlist } = useWishlist();
 
-  // Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -49,8 +49,7 @@ const Header = () => {
         if (response.data && Array.isArray(response.data)) {
           setCategories(response.data);
         }
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+      } catch {
         setCategories([
           { _id: "1", name: "All Category" },
           { _id: "2", name: "Organic Food & Healthy Snacks" },
@@ -64,27 +63,25 @@ const Header = () => {
         setLoadingCategories(false);
       }
     };
-
     fetchCategories();
   }, []);
 
-  // ✅ Fetch cart on mount and when cart changes
   useEffect(() => {
     fetchCart();
+    fetchWishlist();
 
-    // Listen for cart changes from other components
-    const handleCartUpdate = () => {
-      fetchCart();
-    };
+    const handleCartUpdate = () => fetchCart();
+    const handleWishlistUpdate = () => fetchWishlist();
 
-    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
 
     return () => {
-      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
     };
-  }, [fetchCart]);
+  }, [fetchCart, fetchWishlist]);
 
-  // ✅ Fetch search recommendations as user types
   const fetchRecommendations = async (query) => {
     if (!query || query.trim().length < 2) {
       setRecommendations([]);
@@ -95,25 +92,22 @@ const Header = () => {
     setIsLoading(true);
     try {
       const response = await axios.get(`${API_URL}/search-suggestions`, {
-        params: { q: query }
+        params: { q: query },
       });
-
-      if (response.data && response.data.products) {
+      if (response.data?.products) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
       }
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
+    } catch {
       try {
         const response = await axios.get(`${API_URL}/products/search`, {
-          params: { keyword: query }
+          params: { keyword: query },
         });
-        if (response.data && response.data.products) {
+        if (response.data?.products) {
           setRecommendations(response.data.products.slice(0, 8));
           setShowRecommendations(true);
         }
-      } catch (err2) {
-        console.error("Fallback search also failed:", err2);
+      } catch {
         setRecommendations([]);
         setShowRecommendations(false);
       }
@@ -122,14 +116,11 @@ const Header = () => {
     }
   };
 
-  // ✅ Handle search input change with debounce
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
 
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
-    }
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
 
     searchTimeout.current = setTimeout(() => {
       if (value.trim().length >= 2) {
@@ -141,36 +132,33 @@ const Header = () => {
     }, 300);
   };
 
-  // ✅ Handle search submission
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const response = await axios.get(`${API_URL}/products/search`, {
-        params: { keyword: searchQuery }
+        params: { keyword: searchQuery },
       });
-      setSearchResults(response.data.products || []);
+      setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
       setShowRecommendations(false);
-    } catch (error) {
-      console.error("Search error:", error);
+    } catch {
       try {
         const response = await axios.get(`${API_URL}/search`, {
-          params: { keyword: searchQuery }
+          params: { keyword: searchQuery },
         });
-        setSearchResults(response.data.products || []);
+        setSearchResults(response.data?.products || []);
         setShowSearchResults(true);
-      } catch (err2) {
-        console.error("Alternative search also failed:", err2);
+      } catch {
+        setSearchResults([]);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ Handle recommendation click
   const handleRecommendationClick = (product) => {
     setShowSearch(false);
     setShowSearchResults(false);
@@ -180,55 +168,40 @@ const Header = () => {
     window.location.href = `/product/${product._id}`;
   };
 
-  // Close search on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.search-box')) {
+      if (!e.target.closest(".search-box")) {
         setShowSearchResults(false);
         setShowRecommendations(false);
       }
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (searchTimeout.current) {
-        clearTimeout(searchTimeout.current);
-      }
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
   }, []);
 
-  // Menu items with dynamic categories
   const menu = [
-    {
-      title: "Brands",
-      link: "/product",
-    },
+    { title: "Brands", link: "/product" },
     {
       title: "Category",
       dropdown: categories.map((cat) => ({
         title: cat.name,
         link: `/category/${encodeURIComponent(cat.name)}`,
-        productCount: cat.productCount || 0
+        productCount: cat.productCount || 0,
       })),
     },
-    {
-      title: "Sell With Us",
-      link: "/sell",
-    },
-    {
-      title: "About Us",
-      link: "/aboutus",
-    },
+    { title: "Sell With Us", link: "/sell" },
+    { title: "About Us", link: "/aboutus" },
   ];
 
   return (
     <>
       <div className="lexend">
-        {/* SEARCH OVERLAY */}
         <AnimatePresence>
           {showSearch && (
             <motion.div
@@ -248,16 +221,16 @@ const Header = () => {
                       className="flex-grow-1"
                       autoFocus
                     />
-                    <Button type="submit" variant="dark" className="ms-2" disabled={isLoading}>
-                      {isLoading ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : (
-                        "Search"
-                      )}
+                    <Button
+                      type="submit"
+                      variant="dark"
+                      className="ms-2"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <Spinner animation="border" size="sm" /> : "Search"}
                     </Button>
                   </Form>
 
-                  {/* Search Recommendations Dropdown */}
                   {showRecommendations && recommendations.length > 0 && (
                     <div className="search-recommendations-dropdown">
                       <div className="recommendations-header">
@@ -281,9 +254,15 @@ const Header = () => {
                             />
                           </div>
                           <div className="recommendation-info">
-                            <div className="recommendation-name">{product.name}</div>
-                            <div className="recommendation-price">₹{product.price}</div>
-                            <div className="recommendation-company">{product.company || "Native91"}</div>
+                            <div className="recommendation-name">
+                              {product.name}
+                            </div>
+                            <div className="recommendation-price">
+                              ₹{product.price}
+                            </div>
+                            <div className="recommendation-company">
+                              {product.company || "Native91"}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -301,7 +280,6 @@ const Header = () => {
                     </div>
                   )}
 
-                  {/* Search Results Dropdown */}
                   {showSearchResults && searchResults.length > 0 && (
                     <div className="search-results-dropdown">
                       {searchResults.map((product) => (
@@ -326,16 +304,21 @@ const Header = () => {
                             />
                           </div>
                           <div className="search-result-info">
-                            <div className="search-result-name">{product.name}</div>
-                            <div className="search-result-price">₹{product.price}</div>
-                            <div className="search-result-company">{product.company}</div>
+                            <div className="search-result-name">
+                              {product.name}
+                            </div>
+                            <div className="search-result-price">
+                              ₹{product.price}
+                            </div>
+                            <div className="search-result-company">
+                              {product.company}
+                            </div>
                           </div>
                         </NavLink>
                       ))}
                     </div>
                   )}
 
-                  {/* Loading State */}
                   {isLoading && !recommendations.length && (
                     <div className="search-loading">
                       <Spinner animation="border" size="sm" />
@@ -361,15 +344,12 @@ const Header = () => {
           )}
         </AnimatePresence>
 
-        {/* HEADER */}
         <Navbar expand="lg" className="premium-navbar" sticky="top">
           <Container>
-            {/* Logo */}
             <Navbar.Brand as={NavLink} to="/">
               <img src="/images/native.jpg" alt="Native91" className="logo" />
             </Navbar.Brand>
 
-            {/* Desktop Menu */}
             <Nav className="mx-auto desktop-menu">
               {menu.map((item, index) => (
                 <motion.div key={index} whileHover={{ y: -3 }}>
@@ -381,18 +361,24 @@ const Header = () => {
                       >
                         {item.title}
                         {loadingCategories && (
-                          <span className="ms-1" style={{ fontSize: '10px' }}>⏳</span>
+                          <span className="ms-1" style={{ fontSize: "10px" }}>
+                            ⏳
+                          </span>
                         )}
                       </Dropdown.Toggle>
 
                       <Dropdown.Menu>
                         {loadingCategories ? (
                           <Dropdown.Item className="dropdown-item-custom text-center">
-                            <span className="dropdown-loading">Loading categories...</span>
+                            <span className="dropdown-loading">
+                              Loading categories...
+                            </span>
                           </Dropdown.Item>
                         ) : item.dropdown.length === 0 ? (
                           <Dropdown.Item className="dropdown-item-custom text-center">
-                            <span className="dropdown-error">No categories available</span>
+                            <span className="dropdown-error">
+                              No categories available
+                            </span>
                           </Dropdown.Item>
                         ) : (
                           item.dropdown.map((sub, i) => (
@@ -405,7 +391,9 @@ const Header = () => {
                             >
                               {sub.title}
                               {sub.productCount > 0 && (
-                                <span className="product-count">({sub.productCount})</span>
+                                <span className="product-count">
+                                  ({sub.productCount})
+                                </span>
                               )}
                             </Dropdown.Item>
                           ))
@@ -421,7 +409,6 @@ const Header = () => {
               ))}
             </Nav>
 
-            {/* ✅ Desktop Icons */}
             <div className="desktop-icons">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -433,11 +420,20 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* ✅ Desktop Cart Icon with Count */}
+              <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
+                <button type="button" className="cart-btn-with-badge">
+                  <HiOutlineHeart className="cart-icon" />
+                  {wishlistCount > 0 && (
+                    <span className="cart-badge">
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </span>
+                  )}
+                </button>
+              </NavLink>
+
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
-
                   {cartCount > 0 && (
                     <span className="cart-badge">
                       {cartCount > 99 ? "99+" : cartCount}
@@ -447,7 +443,6 @@ const Header = () => {
               </NavLink>
             </div>
 
-            {/* ✅ Mobile Right */}
             <div className="mobile-right">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -459,11 +454,20 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* ✅ Mobile Cart Icon with Count */}
+              <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
+                <button type="button" className="cart-btn-with-badge">
+                  <HiOutlineHeart className="cart-icon" />
+                  {wishlistCount > 0 && (
+                    <span className="cart-badge">
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </span>
+                  )}
+                </button>
+              </NavLink>
+
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
-
                   {cartCount > 0 && (
                     <span className="cart-badge">
                       {cartCount > 99 ? "99+" : cartCount}
@@ -479,7 +483,6 @@ const Header = () => {
           </Container>
         </Navbar>
 
-        {/* MOBILE MENU */}
         <Offcanvas
           show={showMenu}
           placement="end"
@@ -487,7 +490,11 @@ const Header = () => {
         >
           <Offcanvas.Header closeButton>
             <Offcanvas.Title>
-              <img src="/images/native.jpg" className="mobile-logo" alt="Native91" />
+              <img
+                src="/images/native.jpg"
+                className="mobile-logo"
+                alt="Native91"
+              />
             </Offcanvas.Title>
           </Offcanvas.Header>
 
@@ -500,16 +507,24 @@ const Header = () => {
                       <div className="mobile-link">
                         {item.title}
                         {loadingCategories && (
-                          <span className="ms-1" style={{ fontSize: '12px' }}>⏳</span>
+                          <span className="ms-1" style={{ fontSize: "12px" }}>
+                            ⏳
+                          </span>
                         )}
                       </div>
 
                       {loadingCategories ? (
-                        <div className="mobile-sublink text-muted" style={{ paddingLeft: '20px' }}>
+                        <div
+                          className="mobile-sublink text-muted"
+                          style={{ paddingLeft: "20px" }}
+                        >
                           Loading categories...
                         </div>
                       ) : item.dropdown.length === 0 ? (
-                        <div className="mobile-sublink text-danger" style={{ paddingLeft: '20px' }}>
+                        <div
+                          className="mobile-sublink text-danger"
+                          style={{ paddingLeft: "20px" }}
+                        >
                           No categories available
                         </div>
                       ) : (
@@ -522,7 +537,9 @@ const Header = () => {
                           >
                             {sub.title}
                             {sub.productCount > 0 && (
-                              <span className="product-count">({sub.productCount})</span>
+                              <span className="product-count">
+                                ({sub.productCount})
+                              </span>
                             )}
                           </NavLink>
                         ))
@@ -551,6 +568,16 @@ const Header = () => {
               >
                 <FiHeart />
                 <span>Wishlist</span>
+                {wishlistCount > 0 && (
+                  <Badge
+                    pill
+                    bg="danger"
+                    className="ms-1"
+                    style={{ fontSize: "10px" }}
+                  >
+                    {wishlistCount}
+                  </Badge>
+                )}
               </NavLink>
 
               <NavLink
@@ -565,7 +592,7 @@ const Header = () => {
                     pill
                     bg="danger"
                     className="ms-1"
-                    style={{ fontSize: '10px' }}
+                    style={{ fontSize: "10px" }}
                   >
                     {cartCount}
                   </Badge>
