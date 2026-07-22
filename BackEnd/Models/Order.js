@@ -1,4 +1,4 @@
-// Models/Order.js - Make sure company field exists
+// Models/Order.js - UPDATED WITH COUPON FIELDS
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -12,7 +12,7 @@ const orderSchema = new mongoose.Schema({
       quantity: Number,
       image: [String],
       vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
-      company: { type: String, default: "N/A" }, // ← ADD THIS FIELD
+      company: { type: String, default: "N/A" },
     },
   ],
   shippingAddress: {
@@ -26,9 +26,25 @@ const orderSchema = new mongoose.Schema({
     country: String,
   },
   paymentMethod: { type: String, default: "COD" },
+  
+  // ✅ ADD COUPON FIELDS HERE
+  coupon: {
+    code: { type: String, default: null },
+    discountType: { type: String, enum: ["percentage", "fixed"], default: null },
+    discountValue: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+    couponId: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
+  },
+  subtotal: { type: Number, default: 0 }, // ✅ Original price before discount
+  
   totalPrice: { type: Number, required: true },
-  orderStatus: { type: String, default: "Pending" },
-  createdAt: { type: Date, default: Date.now },
+  orderStatus: { 
+    type: String, 
+    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+    default: "Pending" 
+  },
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model("Order", orderSchema);

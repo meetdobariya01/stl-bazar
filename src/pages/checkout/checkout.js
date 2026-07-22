@@ -313,100 +313,30 @@ const Checkout = () => {
     }
   };
 
-  // ✅ FIX: Don't delete guestId after order
-  const placeOrder = async () => {
-    if (isProcessing) return;
+const placeOrder = async () => {
+  try {
+    // Get the applied coupon from your state/context
+    const appliedCoupon = useSelector(state => state.coupon?.appliedCoupon); // or from your state
     
-    try {
-      if (!guestId || cart.items.length === 0) {
-        alert("Cart is empty");
-        return;
-      }
+    const orderData = {
+      guestId: guestId,
+      shippingAddress: shippingAddress,
+      paymentMethod: paymentMethod,
+      couponCode: appliedCoupon?.code || null, // ✅ Make sure this is sent
+    };
 
-      const required = [
-        "name",
-        "phone",
-        "email",
-        "address",
-        "city",
-        "state",
-        "pincode",
-      ];
+    console.log('Sending couponCode:', orderData.couponCode); // ✅ Debug log
 
-      for (let field of required) {
-        if (!shipping[field]) {
-          alert(`Please fill ${field}`);
-          return;
-        }
-      }
+    const response = await axios.post(
+      `${API_URL}/api/orders/place`,
+      orderData
+    );
 
-      setIsProcessing(true);
-
-      if (saveAddressChecked) {
-        await saveAddressToDB();
-      }
-
-      const currentGuestId = localStorage.getItem("guestId");
-      // console.log("📦 Placing order with guestId:", currentGuestId);
-
-      const orderData = {
-        guestId: currentGuestId,
-        shippingAddress: shipping,
-        paymentMethod: payment,
-        shippingMethod: shippingMethod,
-        subtotal: subtotal,
-        couponDiscount: couponDiscount,
-        appliedCoupon: cart.appliedCoupon,
-        shippingCost: shippingCost,
-        total: total,
-      };
-
-      // console.log("Placing order with data:", orderData);
-
-      const res = await axios.post(`${API_URL}/order/place`, orderData);
-
-      console.log("Order response:", res.data);
-
-      if (res.data.success) {
-        sendOrderEmail(res.data.orderId).catch(err => {
-          console.error("Email sending error:", err);
-        });
-        
-        // ✅ FIX: DON'T DELETE guestId - Keep it for future orders
-        // localStorage.removeItem("guestId"); // ❌ REMOVED
-        
-        navigate("/order-complete", { 
-          state: { 
-            orderId: res.data.orderId,
-            orderDetails: {
-              items: cart.items,
-              subtotal: subtotal,
-              couponDiscount: couponDiscount,
-              appliedCoupon: cart.appliedCoupon,
-              shippingCost: shippingCost,
-              total: total,
-              shipping: shipping,
-              paymentMethod: payment,
-              shippingMethod: shippingMethod
-            }
-          } 
-        });
-      } else {
-        alert(res.data.message || "Failed to place order");
-        setIsProcessing(false);
-      }
-      
-    } catch (err) {
-      console.error("Order placement error:", err);
-      alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
-      setIsProcessing(false);
-    } finally {
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 3000);
-    }
-  };
-
+    console.log('Order response:', response.data);
+  } catch (error) {
+    console.error("Order placement error:", error);
+  }
+};
   return (
     <>
       <Header />
