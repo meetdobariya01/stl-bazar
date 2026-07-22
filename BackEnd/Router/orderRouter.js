@@ -1,10 +1,11 @@
-// Router/orderRouter.js - FIXED: Company now shows correctly
+// Router/orderRouter.js - UPDATED WITH COUPON SUPPORT
 const express = require("express");
 const router = express.Router();
 const Order = require("../Models/Order");
 const Cart = require("../Models/Cart");
 const Vendor = require("../Models/Vendor");
 const Product = require("../Models/Product");
+const Coupon = require("../Models/Coupon"); // ✅ Import Coupon model
 const axios = require("axios");
 const { 
   sendEmail, 
@@ -20,7 +21,7 @@ const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.
 // PLACE ORDER WITH EMAIL & VENDOR NOTIFICATIONS
 // ============================================
 router.post("/place", async (req, res) => {
-  const { guestId, shippingAddress, paymentMethod } = req.body;
+  const { guestId, shippingAddress, paymentMethod, couponCode } = req.body; // ✅ Added couponCode
 
   if (!guestId || !shippingAddress) {
     return res.status(400).json({ 
@@ -39,36 +40,64 @@ router.post("/place", async (req, res) => {
       });
     }
 
-    // ✅ FIX: Get full product details including vendor company
+    // Get full product details including vendor company and vendorId
     const itemsWithVendorInfo = await Promise.all(
       cart.items.map(async (item) => {
-        // Find product and populate vendor
-        const product = await Product.findById(item.productId).populate('vendorId', 'company name email');
+        const product = await Product.findById(item.productId)
+          .populate({
+            path: 'vendorId',
+            select: 'company name email _id'
+          });
         
-        // Get company from product or vendor
         let company = null;
+        let vendorId = null;
         
-        // First check if product has company field
-        if (product && product.company) {
-          company = product.company;
-        }
-        // Then check if vendor has company
-        else if (product && product.vendorId) {
-          // If vendor is populated, get company from vendor
-          if (product.vendorId.company) {
-            company = product.vendorId.company;
+        if (product?.vendorId) {
+          if (product.vendorId._id) {
+            vendorId = product.vendorId._id;
+          } else if (typeof product.vendorId === 'string' || product.vendorId instanceof mongoose.Types.ObjectId) {
+            vendorId = product.vendorId;
+          } else {
+            vendorId = product.vendorId;
           }
         }
         
-        // If still no company, try to get from vendor directly
-        if (!company && product && product.vendorId) {
-          const vendor = await Vendor.findById(product.vendorId._id || product.vendorId);
+        if (!vendorId && product?.vendor) {
+          vendorId = product.vendor;
+        }
+        
+        if (!vendorId && item.company) {
+          const vendorByCompany = await Vendor.findOne({ 
+            company: { $regex: new RegExp(`^${item.company}$`, "i") }
+          });
+          if (vendorByCompany) {
+            vendorId = vendorByCompany._id;
+          }
+        }
+        
+        if (product && product.company) {
+          company = product.company;
+        } else if (product && product.vendorId) {
+          if (product.vendorId.company) {
+            company = product.vendorId.company;
+          }
+        } else if (product && product.vendor) {
+          const vendorDoc = await Vendor.findById(product.vendor);
+          if (vendorDoc && vendorDoc.company) {
+            company = vendorDoc.company;
+          }
+        }
+        
+        if (!company && vendorId) {
+          const vendor = await Vendor.findById(vendorId);
           if (vendor && vendor.company) {
             company = vendor.company;
           }
         }
         
-        console.log(`Product: ${item.name}, Company: ${company}`); // Debug log
+        if (!company && item.company) {
+          company = item.company;
+        }
         
         return {
           productId: item.productId,
@@ -76,24 +105,94 @@ router.post("/place", async (req, res) => {
           price: item.price || product?.price || 0,
           quantity: item.quantity || 1,
           image: Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null),
-          vendorId: product?.vendorId?._id || product?.vendorId || null,
-          company: company || "N/A", // ← Set company
+          vendorId: vendorId,
+          company: company || "N/A",
         };
       })
     );
 
-    const totalPrice = cart.items.reduce(
+    // ✅ Calculate subtotal
+    let subtotal = cart.items.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0
     );
 
-    // Create order with company included
+    let totalPrice = subtotal;
+    let couponData = {
+      code: null,
+      discountType: null,
+      discountValue: 0,
+      discountAmount: 0,
+      couponId: null,
+    };
+
+    // ✅ APPLY COUPON IF PROVIDED
+    if (couponCode) {
+      try {
+        const coupon = await Coupon.findOne({
+          code: couponCode.toUpperCase(),
+          isActive: true,
+        });
+
+        if (coupon) {
+          // Check expiry
+          const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+          
+          // Check usage limit
+          const usageLimitReached = coupon.usageLimit && (coupon.usageCount || 0) >= coupon.usageLimit;
+          
+          // Check min order amount
+          const minOrderNotMet = coupon.minOrderAmount && subtotal < coupon.minOrderAmount;
+
+          if (!isExpired && !usageLimitReached && !minOrderNotMet) {
+            let discountAmount = 0;
+            
+            if (coupon.discountType === "percentage") {
+              discountAmount = (subtotal * coupon.discountValue) / 100;
+              if (coupon.maxDiscountAmount) {
+                discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+              }
+            } else {
+              discountAmount = Math.min(coupon.discountValue, subtotal);
+            }
+
+            totalPrice = subtotal - discountAmount;
+
+            couponData = {
+              code: coupon.code,
+              discountType: coupon.discountType,
+              discountValue: coupon.discountValue,
+              discountAmount: Number(discountAmount.toFixed(2)),
+              couponId: coupon._id,
+            };
+
+            // ✅ Increment coupon usage count
+            coupon.usageCount = (coupon.usageCount || 0) + 1;
+            await coupon.save();
+          } else {
+            console.log(`Coupon ${couponCode} validation failed:`, {
+              expired: isExpired,
+              usageLimitReached: usageLimitReached,
+              minOrderNotMet: minOrderNotMet
+            });
+          }
+        } else {
+          console.log(`Coupon ${couponCode} not found or inactive`);
+        }
+      } catch (couponError) {
+        console.error("Coupon validation error:", couponError);
+      }
+    }
+
+    // Create order with coupon data
     const order = new Order({
       guestId,
       items: itemsWithVendorInfo,
       shippingAddress,
       paymentMethod: paymentMethod || "COD",
-      totalPrice,
+      subtotal: subtotal,
+      totalPrice: totalPrice,
+      coupon: couponData,
       orderStatus: "Pending",
     });
 
@@ -175,12 +274,10 @@ router.post("/place", async (req, res) => {
         let vendorEmail = null;
         let vendorName = company;
         
-        // Search in vendors collection
         vendor = await Vendor.findOne({ 
           company: company
         }).select("email name company phone");
         
-        // Case insensitive
         if (!vendor) {
           vendor = await Vendor.findOne({ 
             company: { $regex: new RegExp(`^${company}$`, "i") }
@@ -278,12 +375,19 @@ router.post("/place", async (req, res) => {
     }
 
     // ============================================
-    // 6. RESPONSE
+    // 6. RESPONSE - Include coupon info
     // ============================================
     res.json({ 
       success: true,
       message: "Order placed successfully", 
       orderId: order._id,
+      order: {
+        _id: order._id,
+        subtotal: order.subtotal,
+        totalPrice: order.totalPrice,
+        coupon: order.coupon,
+        discountApplied: order.coupon.discountAmount > 0,
+      },
       emailResults: emailResults,
       notificationResults: notificationResults,
       vendorCount: vendorGroups.size,
@@ -339,6 +443,306 @@ router.get("/user/:userId", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ============================================
+// ADMIN: GET ORDER WITH COMMISSION CALCULATION
+// ============================================
+router.get("/admin/commission/:orderId", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    
+    if (!order) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Order not found" 
+      });
+    }
+
+    let totalAdminCommission = 0;
+    let totalVendorCommission = 0;
+    const vendorBreakdown = {};
+
+    for (const item of order.items) {
+      if (item.vendorId) {
+        const vendorIdStr = item.vendorId.toString();
+        const vendor = await Vendor.findById(item.vendorId).populate('planId');
+        
+        let commissionPercentage = 8;
+        if (vendor && vendor.planId) {
+          commissionPercentage = vendor.planId.commissionPercentage || 8;
+        }
+
+        const itemTotal = item.price * item.quantity;
+        const vendorCommission = (itemTotal * commissionPercentage) / 100;
+        const adminCommission = itemTotal - vendorCommission;
+
+        totalVendorCommission += vendorCommission;
+        totalAdminCommission += adminCommission;
+
+        if (!vendorBreakdown[vendorIdStr]) {
+          vendorBreakdown[vendorIdStr] = {
+            company: item.company || 'Unknown',
+            vendorId: item.vendorId,
+            vendorName: vendor?.name || 'Unknown',
+            vendorEmail: vendor?.email || 'N/A',
+            commissionPercentage: commissionPercentage,
+            items: [],
+            totalItemValue: 0,
+            totalVendorCommission: 0,
+            totalAdminCommission: 0,
+          };
+        }
+
+        vendorBreakdown[vendorIdStr].items.push({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          total: itemTotal,
+          vendorCommission: vendorCommission,
+          adminCommission: adminCommission,
+        });
+        
+        vendorBreakdown[vendorIdStr].totalItemValue += itemTotal;
+        vendorBreakdown[vendorIdStr].totalVendorCommission += vendorCommission;
+        vendorBreakdown[vendorIdStr].totalAdminCommission += adminCommission;
+      }
+    }
+
+    res.json({
+      success: true,
+      orderId: order._id,
+      orderStatus: order.orderStatus,
+      subtotal: order.subtotal || order.totalPrice,
+      totalPrice: order.totalPrice,
+      coupon: order.coupon || null,
+      createdAt: order.createdAt,
+      shippingAddress: order.shippingAddress,
+      paymentMethod: order.paymentMethod,
+      commissionSummary: {
+        totalAdminCommission: totalAdminCommission,
+        totalVendorCommission: totalVendorCommission,
+        platformCommissionRate: order.totalPrice > 0 ? 
+          ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' : 
+          '0%',
+        vendorCommissionRate: order.totalPrice > 0 ?
+          ((totalVendorCommission / order.totalPrice) * 100).toFixed(2) + '%' :
+          '0%',
+      },
+      vendorBreakdown: Object.values(vendorBreakdown),
+    });
+  } catch (err) {
+    console.error("Commission view error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error",
+      error: err.message 
+    });
+  }
+});
+
+// ============================================
+// ADMIN: GET ALL ORDERS WITH COMMISSIONS
+// ============================================
+router.get("/admin/commissions", async (req, res) => {
+  try {
+    const { startDate, endDate, vendorId, status } = req.query;
+    
+    let filter = {};
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+    
+    if (status) {
+      filter.orderStatus = status;
+    }
+    
+    const orders = await Order.find(filter)
+      .sort({ createdAt: -1 });
+
+    const orderSummaries = [];
+    let totalAdminCommission = 0;
+    let totalVendorCommission = 0;
+    let totalRevenue = 0;
+
+    for (const order of orders) {
+      let orderAdminCommission = 0;
+      let orderVendorCommission = 0;
+      const vendorSet = new Set();
+
+      for (const item of order.items) {
+        if (item.vendorId) {
+          vendorSet.add(item.vendorId.toString());
+          
+          const vendor = await Vendor.findById(item.vendorId).populate('planId');
+          
+          let commissionPercentage = 8;
+          if (vendor && vendor.planId) {
+            commissionPercentage = vendor.planId.commissionPercentage || 8;
+          }
+
+          const itemTotal = item.price * item.quantity;
+          const vendorCommission = (itemTotal * commissionPercentage) / 100;
+          const adminCommission = itemTotal - vendorCommission;
+
+          orderVendorCommission += vendorCommission;
+          orderAdminCommission += adminCommission;
+        }
+      }
+
+      totalAdminCommission += orderAdminCommission;
+      totalVendorCommission += orderVendorCommission;
+      totalRevenue += order.totalPrice || 0;
+
+      orderSummaries.push({
+        _id: order._id,
+        subtotal: order.subtotal || order.totalPrice,
+        totalPrice: order.totalPrice,
+        coupon: order.coupon || null,
+        orderStatus: order.orderStatus,
+        createdAt: order.createdAt,
+        vendorCount: vendorSet.size,
+        adminCommission: orderAdminCommission,
+        vendorCommission: orderVendorCommission,
+        platformCommissionRate: order.totalPrice > 0 ? 
+          ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' : 
+          '0%',
+      });
+    }
+
+    let filteredSummaries = orderSummaries;
+    if (vendorId) {
+      const filteredOrders = await Order.find({
+        ...filter,
+        'items.vendorId': vendorId
+      }).sort({ createdAt: -1 });
+      
+      const filteredResults = [];
+      let filteredAdminCommission = 0;
+      let filteredVendorCommission = 0;
+      let filteredRevenue = 0;
+      
+      for (const order of filteredOrders) {
+        let orderAdminCommission = 0;
+        let orderVendorCommission = 0;
+        const vendorSet = new Set();
+
+        for (const item of order.items) {
+          if (item.vendorId && item.vendorId.toString() === vendorId) {
+            vendorSet.add(item.vendorId.toString());
+            
+            const vendor = await Vendor.findById(item.vendorId).populate('planId');
+            let commissionPercentage = 8;
+            if (vendor && vendor.planId) {
+              commissionPercentage = vendor.planId.commissionPercentage || 8;
+            }
+
+            const itemTotal = item.price * item.quantity;
+            const vendorCommission = (itemTotal * commissionPercentage) / 100;
+            const adminCommission = itemTotal - vendorCommission;
+
+            orderVendorCommission += vendorCommission;
+            orderAdminCommission += adminCommission;
+          }
+        }
+
+        filteredAdminCommission += orderAdminCommission;
+        filteredVendorCommission += orderVendorCommission;
+        filteredRevenue += order.totalPrice || 0;
+
+        filteredResults.push({
+          _id: order._id,
+          subtotal: order.subtotal || order.totalPrice,
+          totalPrice: order.totalPrice,
+          coupon: order.coupon || null,
+          orderStatus: order.orderStatus,
+          createdAt: order.createdAt,
+          vendorCount: vendorSet.size,
+          adminCommission: orderAdminCommission,
+          vendorCommission: orderVendorCommission,
+          platformCommissionRate: order.totalPrice > 0 ? 
+            ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' : 
+            '0%',
+        });
+      }
+      
+      filteredSummaries = filteredResults;
+      totalAdminCommission = filteredAdminCommission;
+      totalVendorCommission = filteredVendorCommission;
+      totalRevenue = filteredRevenue;
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        totalOrders: filteredSummaries.length,
+        totalRevenue: totalRevenue,
+        totalAdminCommission: totalAdminCommission,
+        totalVendorCommission: totalVendorCommission,
+        platformCommissionRate: totalRevenue > 0 ? 
+          ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + '%' : 
+          '0%',
+      },
+      orders: filteredSummaries,
+    });
+  } catch (err) {
+    console.error("Admin commissions fetch error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error",
+      error: err.message 
+    });
+  }
+});
+
+// ============================================
+// ADMIN: UPDATE ORDER STATUS
+// ============================================
+router.put("/admin/status/:orderId", async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Allowed: Pending, Processing, Shipped, Delivered, Cancelled",
+      });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.orderId,
+      { orderStatus: status },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Order status updated successfully",
+      order: {
+        _id: order._id,
+        orderStatus: order.orderStatus,
+        updatedAt: order.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error("Order status update error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
   }
 });
 
