@@ -1,149 +1,319 @@
-.subscribe-section {
-  padding: 60px 0;
-  /* background: #f8f6f2; */
+.brand-banner-section {
+  /* background: #fff; */
+  overflow: hidden;
 }
 
-.subscribe-wrapper {
+/* .brand-banner-section .container-fluid {
+  max-width: 1800px;
+} */
+
+/*=========================================
+  Card
+==========================================*/
+
+.brand-card {
   position: relative;
+  height: 320px;
+  border-radius: 12px;
   overflow: hidden;
-  border-radius: 24px;
-  padding: 50px 60px;
-  background-image: url("https://images.unsplash.com/photo-1517705008128-361805f42e86?q=80&w=1400");
   background-size: cover;
   background-position: center;
-  animation: fadeUp 0.8s ease;
+  cursor: pointer;
+  transition: 0.45s ease;
+  /* box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08); */
 }
 
-.subscribe-wrapper::before {
+.brand-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(4, 43, 28, 0.95),
-    rgba(4, 43, 28, 0.7),
-    rgba(4, 43, 28, 0.3)
-  );
+  /* background: rgba(255, 248, 239, 0.72); */
+  transition: 0.4s;
 }
 
-.subscribe-content {
+.brand-card:hover {
+  transform: translateY(-8px);
+  /* box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15); */
+}
+
+.brand-card:hover::before {
+  /* background: rgba(255, 248, 239, 0.58); */
+}
+
+/*=========================================
+ Overlay
+==========================================*/
+
+.brand-overlay {
   position: relative;
   z-index: 2;
-  color: white;
-}
-
-.subscribe-content h2 {
-  font-size: 52px;
-  font-weight: 600;
-  margin-bottom: 14px;
-  color: #f2d18b;
-}
-
-.subscribe-content p {
-  font-size: 18px;
-  line-height: 1.7;
-  margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Form */
-.subscribe-form {
-  position: relative;
-  z-index: 2;
+  height: 100%;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  justify-content: flex-end;
+  padding: 45px;
 }
 
-.subscribe-form input {
-  height: 65px;
-  border-radius: 14px;
-  border: none;
-  padding: 0 24px;
-  font-size: 16px;
-  box-shadow: none !important;
-  width: 100%;
-  max-width: 520px;
+/*=========================================
+ Content
+==========================================*/
+
+.brand-content {
+  /* max-width: 58%; */
+  align-items: start;
 }
 
-.subscribe-form button {
-  height: 65px;
-  min-width: 180px;
-  border-radius: 14px;
-  border: none;
-  background: #d9a441;
-  color: white;
-  font-size: 18px;
+.brand-title {
+  font-size: 32px;
+  line-height: 1.15;
+  color: #2f2a23;
+  margin-bottom: 18px;
   font-weight: 600;
-  transition: 0.4s ease;
 }
 
-.subscribe-form button:hover {
-  background: #b8862f;
-  transform: translateY(-3px);
+.brand-description {
+  font-size: 15px;
+  line-height: 28px;
+  color: #575757;
+  margin-bottom: 28px;
 }
 
-/* Animation */
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
+/*=========================================
+ Button
+==========================================*/
+
+.brand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #1d1d1d;
+  letter-spacing: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: 0.35s;
+}
+
+.brand-btn svg {
+  transition: 0.35s;
+}
+
+.brand-btn:hover {
+  color: #8f7750;
+}
+
+.brand-btn:hover svg {
+  transform: translateX(8px);
+}
+
+/*=========================================
+ Logo
+==========================================*/
+
+.brand-logo-email-email {
+  width: 170px;
+  margin-bottom: 20px;
+  transition: 0.45s;
+}
+
+.brand-card:hover .brand-logo-email {
+  transform: scale(1.04);
+}
+
+/*=========================================
+ Right Image
+==========================================*/
+
+.brand-image-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.brand-image {
+  max-width: 210px;
+  transition: 0.6s ease;
+}
+
+.brand-card:hover .brand-image {
+  transform: scale(1.08) rotate(-2deg);
+}
+
+/*=========================================
+ Decorative Animation
+==========================================*/
+
+.brand-image {
+  animation: floatImage 5s ease-in-out infinite;
+}
+
+@keyframes floatImage {
+  0% {
+    transform: translateY(0px);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
   }
 }
 
-/* Tablet */
+/*=========================================
+ Shine Effect
+==========================================*/
+
+.brand-card::after {
+  content: "";
+  position: absolute;
+  top: -120%;
+  left: -50%;
+  width: 60%;
+  height: 250%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: rotate(25deg);
+  transition: 0.8s;
+}
+
+.brand-card:hover::after {
+  left: 140%;
+}
+
+/*=========================================
+ Tablet
+==========================================*/
+
 @media (max-width: 991px) {
-  .subscribe-wrapper {
-    padding: 40px 30px;
+  .brand-card {
+    height: 290px;
   }
 
-  .subscribe-content {
-    text-align: center;
-    margin-bottom: 25px;
+  .brand-overlay {
+    padding: 35px;
   }
 
-  .subscribe-content h2 {
-    font-size: 40px;
+  .brand-title {
+    font-size: 34px;
   }
 
-  .subscribe-form {
-    justify-content: center;
+  .brand-content {
+    max-width: 60%;
+  }
+
+  .brand-image {
+    max-width: 170px;
   }
 }
 
-/* Mobile */
-@media (max-width: 576px) {
-  .subscribe-wrapper {
-    padding: 35px 20px;
-    border-radius: 18px;
+/*=========================================
+ Mobile
+==========================================*/
+
+@media (max-width: 767px) {
+  .brand-card {
+    height: auto;
+    min-height: auto;
   }
 
-  .subscribe-content h2 {
-    font-size: 32px;
-  }
-
-  .subscribe-content p {
-    font-size: 15px;
-  }
-
-  .subscribe-form {
+  .brand-overlay {
     flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 35px 28px;
+    text-align: left;
   }
 
-  .subscribe-form input {
+  .brand-content {
     max-width: 100%;
-    height: 58px;
   }
 
-  .subscribe-form button {
+  .brand-title {
+    font-size: 34px;
+  }
+
+  .brand-description {
+    font-size: 14px;
+    line-height: 26px;
+  }
+
+  .brand-image-wrapper {
     width: 100%;
-    height: 58px;
-    min-width: auto;
+    justify-content: flex-end;
+    margin-top: 25px;
+  }
+
+  .brand-image {
+    max-width: 150px;
+  }
+
+  .brand-logo-email {
+    width: 140px;
+  }
+}
+
+/*=========================================
+ Small Mobile
+==========================================*/
+
+@media (max-width: 480px) {
+  .brand-card {
+    min-height: auto;
+    border-radius: 8px;
+  }
+
+  .brand-overlay {
+    padding: 25px;
+  }
+
+  .brand-title {
+    font-size: 28px;
+  }
+
+  .brand-description {
+    font-size: 13px;
+    line-height: 23px;
+  }
+
+  .brand-btn {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+  }
+
+  .brand-image {
+    max-width: 120px;
+  }
+
+  .brand-logo-email {
+    width: 120px;
+  }
+}
+
+/*=========================================
+ Large Desktop
+==========================================*/
+
+@media (min-width: 1600px) {
+  .brand-card {
+    height: 360px;
+  }
+
+  .brand-title {
+    font-size: 48px;
+  }
+
+  .brand-description {
     font-size: 16px;
+  }
+
+  .brand-image {
+    max-width: 240px;
+  }
+
+  .brand-logo-email {
+    width: 200px;
   }
 }
