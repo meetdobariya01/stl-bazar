@@ -1,372 +1,260 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Navbar, Container, Form, FormControl } from "react-bootstrap";
+import { useState } from "react";
 import {
-  FaHeart,
-  FaUser,
-  FaShoppingBag,
-  FaSearch,
-  FaTimes,
-  FaBars,
-} from "react-icons/fa";
+  Navbar,
+  Container,
+  Nav,
+  Offcanvas,
+  Form,
+  Button,
+  Dropdown,
+} from "react-bootstrap";
+import {
+  HiOutlineMenuAlt3,
+  HiOutlineSearch,
+  HiOutlineUser,
+} from "react-icons/hi";
+import { FiHeart, FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, NavLink } from "react-router-dom";
-import { useCart } from "../../context/CartContext";
-import Mainnavbar from "../navbar/navbar";
-import axios from "axios";
+import { NavLink } from "react-router-dom";
 import "./header.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
-
 const Header = () => {
-  const navigate = useNavigate();
-  const { showCart, setShowCart, cart } = useCart();
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const searchRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
-  const totalQty = cart.reduce((total, item) => total + item.quantity, 0);
-
-  // Fetch search suggestions - CHANGED to work with 1 character
-  useEffect(() => {
-    // console.log("Search value changed:", search);
-    // ✅ Changed from > 1 to > 0
-    if (search.trim().length > 0) {
-      const delayDebounce = setTimeout(() => {
-        // console.log("Fetching suggestions for:", search);
-        fetchSuggestions(search);
-      }, 300);
-      return () => clearTimeout(delayDebounce);
-    } else {
-      // console.log("Search empty, clearing suggestions");
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }, [search]);
-
-  // Close suggestions when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        // console.log("Clicked outside, closing suggestions");
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const fetchSuggestions = async (query) => {
-    try {
-      setLoading(true);
-      // console.log("Calling API:", `${API_URL}/search-suggestions?q=${query}`);
-      const response = await axios.get(
-        `${API_URL}/search-suggestions?q=${query}`,
-      );
-      // console.log("API Response:", response.data);
-      setSuggestions(response.data.products || []);
-      setShowSuggestions(true);
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (search.trim()) {
-      navigate(`/products?search=${encodeURIComponent(search.trim())}`);
-      setSearch("");
-      setShowSuggestions(false);
-      setShowMobileMenu(false);
-    }
-  };
-
-  const handleSuggestionClick = (productId) => {
-    console.log("Suggestion clicked, navigating to product:", productId);
-    navigate(`/product/${productId}`);
-    setSearch("");
-    setShowSuggestions(false);
-    setShowMobileMenu(false);
-  };
-
-  const getImageUrl = (image) => {
-    if (!image) return null;
-    let imagePath = Array.isArray(image) ? image[0] : image;
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return imagePath;
-    if (imagePath.startsWith("/images")) return imagePath;
-    if (imagePath.startsWith("/uploads")) return `${BACKEND_URL}${imagePath}`;
-    return `${BACKEND_URL}/uploads/${imagePath}`;
-  };
-
-  const formatPrice = (price) => {
-    return Number(price).toFixed(2);
-  };
-  const [categoryOpen, setCategoryOpen] = useState(false);
+  const menu = [
+    {
+      title: "Brands",
+      link: "/product",
+    },
+    {
+      title: "Category",
+      dropdown: [
+        {
+          title: "All Category",
+          link: "/category/men",
+        },
+        {
+          title: "Orgenic Food & Healthy Snacks",
+          link: "/category/women",
+        },
+        {
+          title: "Natural Skin Care & Wellness",
+          link: "/category/accessories",
+        },
+        {
+          title: "Gifts & Hamper",
+          link: "/category/shoes",
+        },
+        {
+          title: "Handmade Home Decor",
+          link: "/category/shoes",
+        },
+        {
+          title: "Sustainable Lifestyle",
+          link: "/category/shoes",
+        },
+        {
+          title: "Jewelry & Accessories",
+          link: "/category/shoes",
+        },
+      ],
+    },
+    {
+      title: "Sell With Us",
+      link: "/sell",
+    },
+    {
+      title: "About Us",
+      link: "/aboutus",
+    },
+  ];
 
   return (
     <>
-      {/* HEADER */}
-      <Navbar className="main-header">
-        <Container fluid className="header-wrapper">
-          <div
-            className="mobile-toggle"
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-          >
-            <FaBars />
-          </div>
+      <div className="lexend">
+        {/* SEARCH OVERLAY */}
 
-          <div className="logo-box" onClick={() => navigate("/")}>
-            <img src="/images/native.webp" alt="logo" />
-          </div>
-
-          {/* DESKTOP SEARCH WITH SUGGESTIONS */}
-          <div className="search-wrapper desktop-only" ref={searchRef}>
-            <Form className="search-form" onSubmit={handleSearch}>
-              <FormControl
-                type="search"
-                placeholder="Search products..."
-                className="search-input lexend"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => {
-                  if (suggestions.length > 0) {
-                    console.log("Input focused, showing suggestions");
-                    setShowSuggestions(true);
-                  }
-                }}
-              />
-              <button className="search-btn" type="submit">
-                <FaSearch />
-              </button>
-            </Form>
-
-            {/* Search Suggestions Dropdown */}
-            {showSuggestions && (
-              <div className="search-suggestions">
-                {loading ? (
-                  <div className="suggestion-loading">
-                    <div
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                    >
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <span>Searching...</span>
-                  </div>
-                ) : suggestions.length > 0 ? (
-                  <>
-                    {suggestions.map((product) => (
-                      <div
-                        key={product._id}
-                        className="suggestion-item"
-                        onClick={() => handleSuggestionClick(product._id)}
-                      >
-                        <div className="suggestion-image">
-                          <img
-                            src={
-                              getImageUrl(product.image) ||
-                              "/images/placeholder-product.jpg"
-                            }
-                            alt={product.name}
-                            onError={(e) => {
-                              e.target.src = "/images/placeholder-product.jpg";
-                            }}
-                          />
-                        </div>
-                        <div className="suggestion-info">
-                          <div className="suggestion-name">{product.name}</div>
-                          <div className="suggestion-price">
-                            ₹{formatPrice(product.price)}
-                          </div>
-                          <div className="suggestion-company">
-                            {product.company}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {/* <div
-                      className="view-all-results"
-                      onClick={handleSearch}
-                    >
-                      View all results for "{search}"
-                    </div> */}
-                  </>
-                ) : (
-                  <div className="no-suggestions">
-                    <p>No products found for "{search}"</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="icon-group">
-            <FaHeart onClick={() => navigate("/wishlist")} />
-            <FaUser onClick={() => navigate("/login")} />
-            <div className="cart-icon" onClick={() => setShowCart(true)}>
-              <FaShoppingBag />
-              {totalQty > 0 && <span className="cart-count">{totalQty}</span>}
-            </div>
-          </div>
-        </Container>
-      </Navbar>
-
-      {/* MOBILE MENU */}
-      <AnimatePresence>
-        {showMobileMenu && (
-          <motion.div
-            className="mobile-menu"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-          >
-            <Form className="search-form mobile-search" onSubmit={handleSearch}>
-              <FormControl
-                type="search"
-                placeholder="Search products..."
-                className="s lexend"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <button className="search-btn" type="submit">
-                <FaSearch />
-              </button>
-            </Form>
-
-            {/* ✅ Changed mobile search to work with 1 character */}
-            {search.trim().length > 0 && suggestions.length > 0 && (
-              <div className="mobile-search-results">
-                {suggestions.slice(0, 5).map((product) => (
-                  <div
-                    key={product._id}
-                    className="mobile-suggestion-item"
-                    onClick={() => handleSuggestionClick(product._id)}
-                  >
-                    <img
-                      src={
-                        getImageUrl(product.image) ||
-                        "/images/placeholder-product.jpg"
-                      }
-                      alt={product.name}
-                    />
-                    <div>
-                      <div className="name">{product.name}</div>
-                      <div className="price">₹{formatPrice(product.price)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mobile-links lexend">
-              {/* Shop by Category Dropdown */}
-              <div className="mobile-dropdown">
-                <div className="d-block">
-                  {" "}
-                  <span
-                    className="dropdown-title d-flex"
-                    onClick={() => setCategoryOpen(!categoryOpen)}
-                  >
-                    Shop by Category
-                    <span className={`arrow ${categoryOpen ? "open" : ""}`}>
-                      ▼
-                    </span>
-                  </span>
-                </div>
-
-                {categoryOpen && (
-                  <div className="dropdown-menu-navbar">
-                    <span onClick={() => navigate("/category/All")}>All Categories</span>
-                    <span onClick={() => navigate("/category/Jewellery")}>
-                      Orgenic Food & Healthy Snacks
-                    </span>
-                    <span onClick={() => navigate("/category/Accessories")}>
-                      Natural Skin Care & Wellness
-                    </span>
-                    <span onClick={() => navigate("/category/Bags")}>
-                      Gifts & Hamper
-                    </span>
-                    <span onClick={() => navigate("/category/Watches")}>
-                      Handmade Home Decor
-                    </span>
-                    <span onClick={() => navigate("/category/Watches")}>
-                      Sustainable Lifestyle
-                    </span>
-                    <span onClick={() => navigate("/category/Watches")}>
-                      Jewelry & Accessories
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <span onClick={() => navigate("/product")}>Brands</span>
-              <span onClick={() => navigate("/")}>Editorial</span>
-              <span onClick={() => navigate("/sell")}>Sell With Us</span>
-              <span onClick={() => navigate("/aboutus")}>About Us</span>
-              <span onClick={() => navigate("/contactus")}>Contact Us</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* CART DRAWER */}
-      <AnimatePresence>
-        {showCart && (
-          <motion.div
-            className="cart-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowCart(false)}
-          >
+        <AnimatePresence>
+          {showSearch && (
             <motion.div
-              className="cart-drawer"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.4 }}
-              onClick={(e) => e.stopPropagation()}
+              className="search-overlay"
+              initial={{ y: -120 }}
+              animate={{ y: 0 }}
+              exit={{ y: -120 }}
+              transition={{ duration: 0.35 }}
             >
-              <div className="cart-header">
-                <h5>Your Shopping Cart</h5>
-                <FaTimes onClick={() => setShowCart(false)} />
-              </div>
+              <Container>
+                <div className="search-box">
+                  <Form.Control placeholder="Search products..." />
 
-              {cart.length === 0 ? (
-                <p className="text-center mt-4">Your cart is empty</p>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.productId} className="cart-item">
-                    <span>{item.name}</span>
-                    <span>x {item.quantity}</span>
-                  </div>
-                ))
-              )}
-
-              <NavLink to="/checkout" className="checkout-btn">
-                Checkout
-              </NavLink>
-
-              <NavLink to="/cart" className="outline-btn">
-                View Cart
-              </NavLink>
-
-              <NavLink to="/" className="outline-btn">
-                Continue Shopping
-              </NavLink>
+                  <button
+                    className="close-search"
+                    onClick={() => setShowSearch(false)}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+              </Container>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
-      <Mainnavbar />
+        {/* HEADER */}
+
+        <Navbar expand="lg" className="premium-navbar" sticky="top">
+          <Container>
+            {/* Logo */}
+
+            <Navbar.Brand as={NavLink} to="/">
+              <img src="/images/native.jpg" alt="" className="logo" />
+            </Navbar.Brand>
+
+            {/* Desktop Menu */}
+
+            <Nav className="mx-auto desktop-menu">
+              {menu.map((item, index) => (
+                <motion.div key={index} whileHover={{ y: -3 }}>
+                  {item.dropdown ? (
+                    <Dropdown className="premium-dropdown">
+                      <Dropdown.Toggle
+                        as="div"
+                        className="premium-link dropdown-toggle-custom"
+                      >
+                        {item.title}
+                      </Dropdown.Toggle>
+
+                      <Dropdown.Menu>
+                        {item.dropdown.map((sub, i) => (
+                          <Dropdown.Item
+                            as={NavLink}
+                            to={sub.link}
+                            key={i}
+                            className="dropdown-item-custom"
+                          >
+                            {sub.title}
+                          </Dropdown.Item>
+                        ))}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  ) : (
+                    <NavLink to={item.link} className="nav-link premium-link">
+                      {item.title}
+                    </NavLink>
+                  )}
+                </motion.div>
+              ))}
+            </Nav>
+
+            {/* Desktop Icons */}
+
+            <div className="desktop-icons">
+              <button onClick={() => setShowSearch(true)}>
+                <HiOutlineSearch />
+              </button>
+
+              <NavLink to="/login" className="icon-link">
+                <button type="button">
+                  <HiOutlineUser />
+                </button>
+              </NavLink>
+
+              <NavLink to="/cart" className="icon-link">
+                <button type="button">
+                  <FiShoppingBag />
+                </button>
+              </NavLink>
+            </div>
+
+            {/* Mobile Right */}
+
+            <div className="mobile-right">
+              <button onClick={() => setShowSearch(true)}>
+                <HiOutlineSearch />
+              </button>
+
+              <NavLink to="/login" className="icon-link">
+                <button type="button">
+                  <HiOutlineUser />
+                </button>
+              </NavLink>
+
+              <button onClick={() => setShowMenu(true)}>
+                <HiOutlineMenuAlt3 />
+              </button>
+            </div>
+          </Container>
+        </Navbar>
+
+        {/* MOBILE MENU */}
+
+        <Offcanvas
+          show={showMenu}
+          placement="end"
+          onHide={() => setShowMenu(false)}
+        >
+          <Offcanvas.Header closeButton>
+            <Offcanvas.Title>
+              <img src="./images/native.jpg" className="mobile-logo" alt="" />
+            </Offcanvas.Title>
+          </Offcanvas.Header>
+
+          <Offcanvas.Body>
+            <Nav className="flex-column lexend">
+              {menu.map((item, index) => (
+                <div key={index}>
+                  {item.dropdown ? (
+                    <>
+                      <div className="mobile-link ">{item.title}</div>
+
+                      {item.dropdown.map((sub, i) => (
+                        <NavLink
+                          key={i}
+                          to={sub.link}
+                          className="mobile-sublink"
+                          onClick={() => setShowMenu(false)}
+                        >
+                          {sub.title}
+                        </NavLink>
+                      ))}
+                    </>
+                  ) : (
+                    <NavLink
+                      to={item.link}
+                      className="mobile-link"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      {item.title}
+                    </NavLink>
+                  )}
+                </div>
+              ))}
+            </Nav>
+
+            <hr />
+
+            <div className="mobile-bottom-icons lexend">
+              <NavLink
+                to="/wishlist"
+                className="mobile-icon-btn"
+                onClick={() => setShowMenu(false)}
+              >
+                <FiHeart />
+                <span>Wishlist</span>
+              </NavLink>
+
+              <NavLink
+                to="/cart"
+                className="mobile-icon-btn"
+                onClick={() => setShowMenu(false)}
+              >
+                <FiShoppingBag />
+                <span>Cart</span>
+              </NavLink>
+            </div>
+          </Offcanvas.Body>
+        </Offcanvas>
+      </div>
     </>
   );
 };

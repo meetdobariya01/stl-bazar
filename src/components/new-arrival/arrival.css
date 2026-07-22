@@ -49,7 +49,7 @@
 }
 
 .badge-premium {
-  color: #d4af37;
+  color: #c8a96b;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 3px;
@@ -66,7 +66,7 @@
 }
 
 .title-premium .gold-premium {
-  color: #d4af37;
+  color: #c8a96b;
   font-weight: 700;
   position: relative;
 }
@@ -78,7 +78,7 @@
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #d4af37, transparent);
+  background: linear-gradient(90deg, #c8a96b, transparent);
   border-radius: 2px;
   opacity: 0.3;
 }
@@ -92,7 +92,7 @@
 
 .view-premium {
   background: transparent;
-  color: #d4af37;
+  color: #c8a96b;
   border: 1px solid rgba(212, 175, 55, 0.15);
   padding: 8px 24px;
   border-radius: 50px;
@@ -105,7 +105,7 @@
 
 .view-premium:hover {
   background: rgba(212, 175, 55, 0.1);
-  border-color: #d4af37;
+  border-color: #c8a96b;
   color: #f4e6c4;
   transform: translateY(-2px);
   box-shadow: 0 4px 25px rgba(212, 175, 55, 0.1);
@@ -174,7 +174,7 @@
 
 .brand-premium:hover {
   transform: translateY(-6px);
-  border-color: #d4af37;
+  border-color: #c8a96b;
   box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -253,7 +253,7 @@
 /* Shop Button - Modern with Arrow */
 .shop-premium {
   background: transparent;
-  color: #d4af37 !important;
+  color: #c8a96b !important;
   padding: 0;
   border-radius: 0;
   font-size: 0.7rem;

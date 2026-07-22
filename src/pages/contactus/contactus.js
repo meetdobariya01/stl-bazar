@@ -122,8 +122,8 @@ const ContactUs = () => {
 
                   <div>
                     <h5 className="funnel-sans">Phone</h5>
-                    <a href="tel:+919824018555" className="email-link">
-                      +91 98240 18555
+                    <a href="tel:+919998323998" className="email-link">
+                      +91 99983 23998
                     </a>
                   </div>
                 </div>

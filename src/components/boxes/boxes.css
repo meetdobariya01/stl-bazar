@@ -20,6 +20,7 @@
 
 .promo-card:hover .overlay {
   background: rgba(0, 0, 0, 0.18);
+  color: #fff;
 }
 
 .promo-card:hover .promo-content {

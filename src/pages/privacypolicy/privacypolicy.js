@@ -1,4 +1,5 @@
-import React from "react";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Container, Row, Col, Card } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
@@ -167,7 +168,7 @@ const sections = [
           <strong>Your Store Name</strong>
         </p>
         <p>Email : support@native91.com</p>
-        <p>Phone : +91 70169 29807</p>
+        <p>Phone : +91 99983 23998</p>
         <p>Address : Ahmedabad, India</p>
       </>
     ),
@@ -175,6 +176,15 @@ const sections = [
 ];
 
 const PrivacyPolicy = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
   return (
     <>
       <div>
