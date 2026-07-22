@@ -170,14 +170,14 @@ router.post("/place", async (req, res) => {
             coupon.usageCount = (coupon.usageCount || 0) + 1;
             await coupon.save();
           } else {
-            console.log(`Coupon ${couponCode} validation failed:`, {
-              expired: isExpired,
-              usageLimitReached: usageLimitReached,
-              minOrderNotMet: minOrderNotMet
-            });
+            // console.log(`Coupon ${couponCode} validation failed:`, {
+            //   expired: isExpired,
+            //   usageLimitReached: usageLimitReached,
+            //   minOrderNotMet: minOrderNotMet
+            // });
           }
         } else {
-          console.log(`Coupon ${couponCode} not found or inactive`);
+          // console.log(`Coupon ${couponCode} not found or inactive`);
         }
       } catch (couponError) {
         console.error("Coupon validation error:", couponError);

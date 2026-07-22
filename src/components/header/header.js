@@ -1,4 +1,4 @@
-// Header.jsx - WITH SEARCH RECOMMENDATIONS/AUTOCOMPLETE (FIXED)
+// Header.jsx - WITH PROPER CART COUNT
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -8,7 +8,8 @@ import {
   Form,
   Button,
   Dropdown,
-  Spinner, // ✅ ADD THIS - was missing
+  Spinner,
+  Badge,
 } from "react-bootstrap";
 import {
   HiOutlineMenuAlt3,
@@ -19,6 +20,7 @@ import { FiHeart, FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { NavLink } from "react-router-dom";
 import axios from "axios";
+import { useCart } from "../../context/CartContext";
 import "./header.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
@@ -36,6 +38,9 @@ const Header = () => {
   const [isLoading, setIsLoading] = useState(false);
   const searchTimeout = useRef(null);
 
+  // ✅ Use Cart Context for cart count
+  const { cartCount, fetchCart } = useCart();
+
   // Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
@@ -46,7 +51,6 @@ const Header = () => {
         }
       } catch (error) {
         console.error("Error fetching categories:", error);
-        // Fallback categories if API fails
         setCategories([
           { _id: "1", name: "All Category" },
           { _id: "2", name: "Organic Food & Healthy Snacks" },
@@ -64,6 +68,22 @@ const Header = () => {
     fetchCategories();
   }, []);
 
+  // ✅ Fetch cart on mount and when cart changes
+  useEffect(() => {
+    fetchCart();
+
+    // Listen for cart changes from other components
+    const handleCartUpdate = () => {
+      fetchCart();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, [fetchCart]);
+
   // ✅ Fetch search recommendations as user types
   const fetchRecommendations = async (query) => {
     if (!query || query.trim().length < 2) {
@@ -77,14 +97,13 @@ const Header = () => {
       const response = await axios.get(`${API_URL}/search-suggestions`, {
         params: { q: query }
       });
-      
+
       if (response.data && response.data.products) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
-      // Fallback: try the products search endpoint
       try {
         const response = await axios.get(`${API_URL}/products/search`, {
           params: { keyword: query }
@@ -107,13 +126,11 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    
-    // Clear previous timeout
+
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
     }
-    
-    // Debounce API calls
+
     searchTimeout.current = setTimeout(() => {
       if (value.trim().length >= 2) {
         fetchRecommendations(value);
@@ -139,7 +156,6 @@ const Header = () => {
       setShowRecommendations(false);
     } catch (error) {
       console.error("Search error:", error);
-      // Fallback: try alternative endpoint
       try {
         const response = await axios.get(`${API_URL}/search`, {
           params: { keyword: searchQuery }
@@ -161,7 +177,6 @@ const Header = () => {
     setShowRecommendations(false);
     setSearchQuery("");
     setRecommendations([]);
-    // Navigate to product detail page using react-router
     window.location.href = `/product/${product._id}`;
   };
 
@@ -256,8 +271,8 @@ const Header = () => {
                           onClick={() => handleRecommendationClick(product)}
                         >
                           <div className="recommendation-img">
-                            <img 
-                              src={product.image?.[0] || "/images/placeholder.png"} 
+                            <img
+                              src={product.image?.[0] || "/images/placeholder.png"}
                               alt={product.name}
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -274,8 +289,8 @@ const Header = () => {
                       ))}
                       {recommendations.length > 0 && (
                         <div className="recommendations-footer">
-                          <Button 
-                            variant="link" 
+                          <Button
+                            variant="link"
                             onClick={handleSearch}
                             className="view-all-btn"
                           >
@@ -301,8 +316,8 @@ const Header = () => {
                           }}
                         >
                           <div className="search-result-img">
-                            <img 
-                              src={product.image?.[0] || "/images/placeholder.png"} 
+                            <img
+                              src={product.image?.[0] || "/images/placeholder.png"}
                               alt={product.name}
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -406,7 +421,7 @@ const Header = () => {
               ))}
             </Nav>
 
-            {/* Desktop Icons */}
+            {/* ✅ Desktop Icons */}
             <div className="desktop-icons">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -418,14 +433,21 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              <NavLink to="/cart" className="icon-link">
-                <button type="button">
-                  <FiShoppingBag />
+              {/* ✅ Desktop Cart Icon with Count */}
+              <NavLink to="/cart" className="icon-link cart-icon-wrapper">
+                <button type="button" className="cart-btn-with-badge">
+                  <FiShoppingBag className="cart-icon" />
+
+                  {cartCount > 0 && (
+                    <span className="cart-badge">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
                 </button>
               </NavLink>
             </div>
 
-            {/* Mobile Right */}
+            {/* ✅ Mobile Right */}
             <div className="mobile-right">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -434,6 +456,19 @@ const Header = () => {
               <NavLink to="/login" className="icon-link">
                 <button type="button">
                   <HiOutlineUser />
+                </button>
+              </NavLink>
+
+              {/* ✅ Mobile Cart Icon with Count */}
+              <NavLink to="/cart" className="icon-link cart-icon-wrapper">
+                <button type="button" className="cart-btn-with-badge">
+                  <FiShoppingBag className="cart-icon" />
+
+                  {cartCount > 0 && (
+                    <span className="cart-badge">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
                 </button>
               </NavLink>
 
@@ -525,6 +560,16 @@ const Header = () => {
               >
                 <FiShoppingBag />
                 <span>Cart</span>
+                {cartCount > 0 && (
+                  <Badge
+                    pill
+                    bg="danger"
+                    className="ms-1"
+                    style={{ fontSize: '10px' }}
+                  >
+                    {cartCount}
+                  </Badge>
+                )}
               </NavLink>
             </div>
           </Offcanvas.Body>

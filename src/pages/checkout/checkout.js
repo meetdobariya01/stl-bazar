@@ -362,15 +362,15 @@ const Checkout = () => {
         couponCode: appliedCoupon?.code || null,
       };
 
-      console.log('📦 Placing order with data:', orderData);
-      console.log('🎫 Coupon code being sent:', orderData.couponCode);
+      // console.log('📦 Placing order with data:', orderData);
+      // console.log('🎫 Coupon code being sent:', orderData.couponCode);
 
       const response = await axios.post(
         `${API_URL}/order/place`,
         orderData
       );
 
-      console.log('✅ Order response:', response.data);
+      // console.log('✅ Order response:', response.data);
 
       if (response.data.success) {
         // Send email notification
@@ -380,13 +380,13 @@ const Checkout = () => {
         try {
           // Use the existing clear endpoint from cartRouter
           await axios.delete(`${API_URL}/cart/clear/${guestId}`);
-          console.log('✅ Cart cleared successfully');
+          // console.log('✅ Cart cleared successfully');
         } catch (cartError) {
-          console.error("❌ Cart clear error:", cartError);
+          console.error("Cart clear error:", cartError);
           // Alternative: Try to clear via POST if DELETE fails
           try {
             await axios.post(`${API_URL}/cart/clear`, { guestId: guestId });
-            console.log('✅ Cart cleared via POST');
+            // console.log('✅ Cart cleared via POST');
           } catch (err) {
             console.error("❌ Alternative cart clear failed:", err);
             // If both fail, the cart will be cleared when the user refreshes

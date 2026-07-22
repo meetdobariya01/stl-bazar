@@ -14,7 +14,7 @@
     try {
       const { productId } = req.params;
       
-      console.log(`Fetching coupons for product: ${productId}`);
+      // console.log(`Fetching coupons for product: ${productId}`);
       
       // First, get the product to know its vendor/company
       const Product = require("../Models/Product");
@@ -49,7 +49,7 @@
       
       const coupons = await Coupon.find(query).sort({ createdAt: -1 });
 
-      console.log(`Found ${coupons.length} coupons specifically for product ${productId} from vendor ${vendorName}`);
+      // console.log(`Found ${coupons.length} coupons specifically for product ${productId} from vendor ${vendorName}`);
       
       res.json({
         success: true,
@@ -86,8 +86,8 @@
       const { companyName } = req.params;
       const { productId } = req.query; // Get productId from query params
       
-      console.log(`Fetching coupons for company: ${companyName}`);
-      console.log(`Product ID filter: ${productId || 'none'}`);
+      // console.log(`Fetching coupons for company: ${companyName}`);
+      // console.log(`Product ID filter: ${productId || 'none'}`);
       
       // Build the base query
       const baseQuery = {
@@ -116,7 +116,7 @@
           ]
         }).sort({ createdAt: -1 });
         
-        console.log(`Found ${coupons.length} coupons for company ${companyName} filtered by product`);
+        // console.log(`Found ${coupons.length} coupons for company ${companyName} filtered by product`);
         
         return res.json({
           success: true,
@@ -142,7 +142,7 @@
       // If no productId, return all company coupons
       const coupons = await Coupon.find(baseQuery).sort({ createdAt: -1 });
 
-      console.log(`Found ${coupons.length} coupons for company ${companyName}`);
+      // console.log(`Found ${coupons.length} coupons for company ${companyName}`);
       
       res.json({
         success: true,
@@ -175,14 +175,14 @@
   // Get all available coupons - Updated
   router.get("/public/all", async (req, res) => {
     try {
-      console.log("Fetching all available coupons");
+      // console.log("Fetching all available coupons");
       
       const coupons = await Coupon.find({
         isActive: true,
         expiryDate: { $gte: new Date() }
       }).sort({ createdAt: -1 });
 
-      console.log(`Found ${coupons.length} total coupons`);
+      // console.log(`Found ${coupons.length} total coupons`);
       
       res.json({
         success: true,
@@ -322,7 +322,7 @@
     try {
       const { guestId, code, productId } = req.body;
 
-      console.log(`Applying coupon ${code} for guest ${guestId}, product ${productId}`);
+      // console.log(`Applying coupon ${code} for guest ${guestId}, product ${productId}`);
 
       const cart = await Cart.findOne({ guestId });
 
