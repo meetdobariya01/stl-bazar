@@ -66,18 +66,18 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // ✅ Fetch products - Using only existing endpoints
+
   useEffect(() => {
     if (!decodedCategory) return;
 
     setLoading(true);
     
-    // ✅ If "All" categories, fetch all products
+
     if (decodedCategory === "All") {
       axios
         .get(`${API_URL}/products`)
         .then((res) => {
-          console.log("All products fetched:", res.data.length);
+          // console.log("All products fetched:", res.data.length);
           setProducts(res.data);
           setFilteredProducts(res.data);
         })
@@ -88,17 +88,16 @@ const CategoryProducts = () => {
         })
         .finally(() => setLoading(false));
     } else {
-      // ✅ Fetch all products and filter by category on frontend
-      // This avoids the 404 error completely
+   
       axios
         .get(`${API_URL}/products`)
         .then((res) => {
           const allProducts = res.data;
-          // ✅ Filter products by category (case insensitive)
+       
           const filtered = allProducts.filter(
             (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
           );
-          console.log(`Filtered ${filtered.length} products for category "${decodedCategory}"`);
+          // console.log(`Filtered ${filtered.length} products for category "${decodedCategory}"`);
           setProducts(filtered);
           setFilteredProducts(filtered);
         })
@@ -111,7 +110,7 @@ const CategoryProducts = () => {
     }
   }, [decodedCategory]);
 
-  // Fetch all categories for sidebar
+
   useEffect(() => {
     axios
       .get(`${API_URL}/categories`)
@@ -121,7 +120,7 @@ const CategoryProducts = () => {
       .catch((err) => console.error("Error fetching categories:", err));
   }, []);
 
-  // Apply filters
+
   useEffect(() => {
     let filtered = [...products];
 

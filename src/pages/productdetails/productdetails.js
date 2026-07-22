@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Container,
   Row,
@@ -30,6 +30,8 @@ import axios from "axios";
 
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
@@ -63,15 +65,20 @@ const Productdetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
 
+  // ✅ Use Cart and Wishlist Contexts
+  const { addToCart, setShowCart, fetchCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } = useWishlist();
+
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [error, setError] = useState(null);
-  const [wishlist, setWishlist] = useState(false);
-  const [allProducts, setAllProducts] = useState([]);
+  const [isInWishlistState, setIsInWishlistState] = useState(false);
   const [productImages, setProductImages] = useState([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
   // ================= COUPON STATES =================
   const [vendorCoupons, setVendorCoupons] = useState([]);
@@ -93,22 +100,31 @@ const Productdetails = () => {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Ref for mounted state
+  const isMounted = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // ================= COUPON FUNCTIONS =================
 
-  const calculateDiscountedPrice = (coupon) => {
+  const calculateDiscountedPrice = useCallback((coupon) => {
     if (!product || !coupon) return null;
 
     const originalPrice = parseFloat(product.price);
     let discountAmount = 0;
 
-    // Support both field name formats
     const discount = coupon.discount || coupon.discountValue || 0;
     const type = coupon.type || coupon.discountType || 'percentage';
     const maxDiscount = coupon.maxDiscount || 0;
 
     if (type === 'percentage') {
       discountAmount = (originalPrice * discount) / 100;
-      // Apply max discount if exists
       if (maxDiscount && discountAmount > maxDiscount) {
         discountAmount = maxDiscount;
       }
@@ -123,7 +139,7 @@ const Productdetails = () => {
       discountedPrice: newPrice,
       savingsPercentage: ((discountAmount / originalPrice) * 100).toFixed(0)
     };
-  };
+  }, [product]);
 
   const applyCoupon = async (coupon) => {
     try {
@@ -134,7 +150,6 @@ const Productdetails = () => {
         return;
       }
 
-      // CRITICAL: Check if coupon is valid for this specific product
       const couponProducts = coupon.products || coupon.productIds || [];
       if (couponProducts.length > 0) {
         const isProductValid = couponProducts.some(id => id.toString() === product._id.toString());
@@ -145,20 +160,17 @@ const Productdetails = () => {
         }
       }
 
-      // Save coupon in database with product context
       await axios.post(`${API_URL}/coupons/user/apply`, {
         guestId,
         code: coupon.code,
-        productId: product._id // Send product ID for validation
+        productId: product._id
       });
 
-      // Apply coupon locally
       const priceInfo = calculateDiscountedPrice(coupon);
 
       setAppliedCoupon(coupon);
       setDiscountedPrice(priceInfo);
 
-      // Store in localStorage
       localStorage.setItem("appliedCoupon", JSON.stringify(coupon));
       localStorage.setItem("discountedPrice", JSON.stringify(priceInfo));
       localStorage.setItem("appliedProductId", product._id);
@@ -195,29 +207,22 @@ const Productdetails = () => {
     }
   };
 
-  const fetchVendorCoupons = async () => {
+  const fetchVendorCoupons = useCallback(async () => {
+    if (!product?._id || !isMounted.current) {
+      setVendorCoupons([]);
+      return;
+    }
+
+    setCouponLoading(true);
+
     try {
-      setCouponLoading(true);
-
-      if (!product?._id) {
-        setVendorCoupons([]);
-        return;
-      }
-
       const productId = product._id;
       const companyName = product?.company || product?.vendor || product?.vendorName;
       
-      console.log("=== FETCHING COUPONS ===");
-      console.log("Product ID:", productId);
-      console.log("Company name:", companyName);
-
-      // Check if the applied coupon from localStorage is valid for this product
       const storedCoupon = localStorage.getItem("appliedCoupon");
       const storedProductId = localStorage.getItem("appliedProductId");
       
-      // If the stored coupon is for a different product, remove it
       if (storedProductId && storedProductId !== productId) {
-        console.log("⚠️ Stored coupon is for a different product. Removing...");
         localStorage.removeItem("appliedCoupon");
         localStorage.removeItem("discountedPrice");
         localStorage.removeItem("appliedProductId");
@@ -225,105 +230,37 @@ const Productdetails = () => {
         setDiscountedPrice(null);
       }
 
-      // FIRST: Try to get coupons specifically for this product
       try {
         const response = await axios.get(`${COUPON_API_URL}/coupons/public/product/${productId}`);
-        console.log("Product coupon response:", response.data);
         
-        if (response.data.success && response.data.coupons) {
-          console.log(`Found ${response.data.coupons.length} coupons from API`);
-          
-          // STRICT filtering - ONLY show coupons that explicitly include this product
+        if (response.data.success && response.data.coupons && isMounted.current) {
           const validCoupons = response.data.coupons.filter(coupon => {
             const couponProducts = coupon.products || coupon.productIds || [];
-            
-            console.log(`\n--- Checking coupon: ${coupon.code} ---`);
-            console.log(`Coupon products:`, couponProducts);
-            console.log(`Coupon products count: ${couponProducts.length}`);
-            
-            // If NO products specified → applies to ALL products
-            if (couponProducts.length === 0) {
-              console.log(`✅ ${coupon.code} applies to ALL products - SHOWING`);
-              return true;
-            }
-            
-            // Check if this product is in the coupon's products list
-            const isIncluded = couponProducts.some(id => {
-              const idStr = id ? id.toString() : '';
-              const productIdStr = productId.toString();
-              const matches = idStr === productIdStr;
-              if (matches) {
-                console.log(`✅ Product ${productIdStr} FOUND in coupon ${coupon.code}`);
-              }
-              return matches;
-            });
-            
-            if (isIncluded) {
-              console.log(`✅ ${coupon.code} INCLUDES this product - SHOWING`);
-              return true;
-            } else {
-              console.log(`❌ ${coupon.code} does NOT include product ${productId} - HIDING`);
-              return false;
-            }
+            if (couponProducts.length === 0) return true;
+            return couponProducts.some(id => id.toString() === productId.toString());
           });
           
-          console.log(`\n✅ After strict filtering: ${validCoupons.length} valid coupons`);
           setVendorCoupons(validCoupons);
-          
-          // If no valid coupons and there's a stored coupon, remove it
-          if (validCoupons.length === 0 && storedCoupon) {
-            console.log("⚠️ No valid coupons for this product. Removing stored coupon...");
-            localStorage.removeItem("appliedCoupon");
-            localStorage.removeItem("discountedPrice");
-            localStorage.removeItem("appliedProductId");
-            setAppliedCoupon(null);
-            setDiscountedPrice(null);
-          }
-          
           return;
         }
       } catch (err) {
         console.error("Product coupon fetch failed:", err);
       }
 
-      // SECOND: Try to get company coupons with product filter
-      if (companyName) {
+      if (companyName && isMounted.current) {
         try {
           const response = await axios.get(
             `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(companyName)}`,
-            { 
-              params: { productId: productId }
-            }
+            { params: { productId: productId } }
           );
-          console.log("Company coupon response:", response.data);
           
-          if (response.data.success && response.data.coupons) {
-            // STRICT filtering on company coupons too
+          if (response.data.success && response.data.coupons && isMounted.current) {
             const validCoupons = response.data.coupons.filter(coupon => {
               const couponProducts = coupon.products || coupon.productIds || [];
-              
-              // If no products specified → applies to ALL products
-              if (couponProducts.length === 0) {
-                return true;
-              }
-              
-              // Check if this product is in the list
+              if (couponProducts.length === 0) return true;
               return couponProducts.some(id => id.toString() === productId.toString());
             });
-            
-            console.log(`Found ${validCoupons.length} valid company coupons`);
             setVendorCoupons(validCoupons);
-            
-            // If no valid coupons and there's a stored coupon, remove it
-            if (validCoupons.length === 0 && storedCoupon) {
-              console.log("⚠️ No valid company coupons for this product. Removing stored coupon...");
-              localStorage.removeItem("appliedCoupon");
-              localStorage.removeItem("discountedPrice");
-              localStorage.removeItem("appliedProductId");
-              setAppliedCoupon(null);
-              setDiscountedPrice(null);
-            }
-            
             return;
           }
         } catch (err) {
@@ -331,29 +268,23 @@ const Productdetails = () => {
         }
       }
 
-      // No coupons found - clear any stored coupon
-      console.log("No coupons found for this product");
-      setVendorCoupons([]);
-      
-      // Clear stored coupon if it exists
-      if (storedCoupon) {
-        console.log("⚠️ No coupons available. Removing stored coupon...");
-        localStorage.removeItem("appliedCoupon");
-        localStorage.removeItem("discountedPrice");
-        localStorage.removeItem("appliedProductId");
-        setAppliedCoupon(null);
-        setDiscountedPrice(null);
+      if (isMounted.current) {
+        setVendorCoupons([]);
       }
     } catch (err) {
       console.error("Error in fetchVendorCoupons:", err);
-      setVendorCoupons([]);
+      if (isMounted.current) {
+        setVendorCoupons([]);
+      }
     } finally {
-      setCouponLoading(false);
+      if (isMounted.current) {
+        setCouponLoading(false);
+      }
     }
-  };
+  }, [product, COUPON_API_URL]);
 
   // Get image URL
-  const getImageUrl = (image) => {
+  const getImageUrl = useCallback((image) => {
     if (!image) return "/images/placeholder.png";
 
     let img = image;
@@ -365,33 +296,26 @@ const Productdetails = () => {
 
     const imgStr = String(img).trim();
 
-    // If it's already a full URL, return it
     if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
       return imgStr;
     }
 
-    // Check if this is a vendor uploaded image (starts with /uploads/)
     if (imgStr.startsWith("/uploads")) {
-      // Use the vendor API URL for vendor images
       return `https://api.brandelvendor.starlighttechlabsindia.com${imgStr}`;
     }
 
-    // Handle other image paths
     if (imgStr.startsWith("/images")) {
       return imgStr;
     }
 
-    // If no leading slash, try with both APIs
     if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
-      // Try vendor API first (for vendor images)
       return `https://api.brandelvendor.starlighttechlabsindia.com/uploads/${imgStr}`;
     }
 
-    // Fallback to local API
     return `${API_URL}${imgStr}`;
-  };
+  }, [API_URL]);
 
-  const getAllImagesFromProduct = (product) => {
+  const getAllImagesFromProduct = useCallback((product) => {
     if (!product) return ["/images/placeholder.png"];
 
     let images = [];
@@ -417,119 +341,123 @@ const Productdetails = () => {
     }
 
     return images;
-  };
+  }, [getImageUrl]);
 
-  // Fetch product by slug
+  // Fetch product by slug - FIXED
   useEffect(() => {
-    if (slug) {
-      fetchProductBySlug();
-    }
-  }, [slug]);
+    const fetchProduct = async () => {
+      if (!slug) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Check localStorage for applied coupon when product changes
-  useEffect(() => {
-    const coupon = localStorage.getItem("appliedCoupon");
-    const price = localStorage.getItem("discountedPrice");
-    const storedProductId = localStorage.getItem("appliedProductId");
+        const productName = decodeSlug(slug);
+        const response = await axios.get(`${API_URL}/products`);
+        
+        if (!isMounted.current) return;
+        
+        const products = response.data;
 
-    // Only apply stored coupon if it matches the current product
-    if (coupon && price && storedProductId && product?._id) {
-      if (storedProductId === product._id) {
-        setAppliedCoupon(JSON.parse(coupon));
-        setDiscountedPrice(JSON.parse(price));
-      } else {
-        // Stored coupon is for a different product - clear it
-        console.log("⚠️ Stored coupon is for a different product. Clearing...");
-        localStorage.removeItem("appliedCoupon");
-        localStorage.removeItem("discountedPrice");
-        localStorage.removeItem("appliedProductId");
-        setAppliedCoupon(null);
-        setDiscountedPrice(null);
-      }
-    }
-  }, [product]);
+        let foundProduct = null;
 
-  // Fetch coupons when product is loaded
-  useEffect(() => {
-    if (product) {
-      fetchVendorCoupons();
-    }
-  }, [product]);
-
-  const fetchProductBySlug = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const productName = decodeSlug(slug);
-
-      const response = await axios.get(`${API_URL}/products`);
-      const products = response.data;
-      setAllProducts(products);
-
-      let foundProduct = null;
-
-      foundProduct = products.find(
-        p => p.name && p.name.toLowerCase() === productName.toLowerCase()
-      );
-
-      if (!foundProduct) {
-        const productSlug = createSlug(productName);
         foundProduct = products.find(
-          p => p.name && createSlug(p.name) === productSlug
+          p => p.name && p.name.toLowerCase() === productName.toLowerCase()
         );
-      }
 
-      if (!foundProduct) {
-        const searchTerms = productName.toLowerCase().split(' ');
-        foundProduct = products.find(p => {
-          if (!p.name) return false;
-          const nameLower = p.name.toLowerCase();
-          return searchTerms.some(term => nameLower.includes(term));
-        });
-      }
+        if (!foundProduct) {
+          const productSlug = createSlug(productName);
+          foundProduct = products.find(
+            p => p.name && createSlug(p.name) === productSlug
+          );
+        }
 
-      if (!foundProduct && slug.length === 24) {
-        try {
-          const productResponse = await axios.get(`${API_URL}/product/${slug}`);
-          if (productResponse.data) {
-            foundProduct = productResponse.data;
+        if (!foundProduct) {
+          const searchTerms = productName.toLowerCase().split(' ');
+          foundProduct = products.find(p => {
+            if (!p.name) return false;
+            const nameLower = p.name.toLowerCase();
+            return searchTerms.some(term => nameLower.includes(term));
+          });
+        }
+
+        if (!foundProduct && slug.length === 24) {
+          try {
+            const productResponse = await axios.get(`${API_URL}/product/${slug}`);
+            if (productResponse.data) {
+              foundProduct = productResponse.data;
+            }
+          } catch (idErr) {
+            console.log("ID fallback failed");
           }
-        } catch (idErr) {
-          console.log("ID fallback failed");
+        }
+
+        if (!foundProduct) {
+          throw new Error(`Product "${productName}" not found`);
+        }
+
+        if (!isMounted.current) return;
+
+        setProduct(foundProduct);
+
+        const allImages = getAllImagesFromProduct(foundProduct);
+        setProductImages(allImages);
+
+        if (allImages.length > 0) {
+          setActiveImg(allImages[0]);
+          setCurrentImageIndex(0);
+        } else {
+          setActiveImg("/images/placeholder.png");
+        }
+
+        await fetchReviews(foundProduct._id);
+        
+        // ✅ Check wishlist status using context
+        const guestId = localStorage.getItem("guestId");
+        if (guestId) {
+          await fetchWishlist();
+          const inWishlist = await isInWishlist(foundProduct._id);
+          setIsInWishlistState(inWishlist);
+        }
+
+      } catch (err) {
+        console.error("Product fetch error:", err);
+        if (isMounted.current) {
+          setError(
+            err.response?.data?.message ||
+            err.message ||
+            "Failed to load product. Please try again later."
+          );
+        }
+      } finally {
+        if (isMounted.current) {
+          setLoading(false);
         }
       }
+    };
 
-      if (!foundProduct) {
-        throw new Error(`Product "${productName}" not found`);
+    fetchProduct();
+
+    return () => {
+      // Cleanup
+    };
+  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist]); // ✅ REMOVED isInWishlist from deps
+
+  // ✅ Check wishlist status when product changes
+  useEffect(() => {
+    const checkWishlist = async () => {
+      if (product?._id) {
+        try {
+          const inWishlist = await isInWishlist(product._id);
+          setIsInWishlistState(inWishlist);
+        } catch (error) {
+          console.error("Error checking wishlist:", error);
+        }
       }
-
-      setProduct(foundProduct);
-
-      const allImages = getAllImagesFromProduct(foundProduct);
-      setProductImages(allImages);
-
-      if (allImages.length > 0) {
-        setActiveImg(allImages[0]);
-        setCurrentImageIndex(0);
-      } else {
-        setActiveImg("/images/placeholder.png");
-      }
-
-      await fetchReviews(foundProduct._id);
-      await checkWishlistStatus(foundProduct._id);
-
-    } catch (err) {
-      console.error("Product fetch error:", err);
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to load product. Please try again later."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    checkWishlist();
+  }, [product, isInWishlist]);
 
   const fetchReviews = async (productId) => {
     try {
@@ -557,53 +485,42 @@ const Productdetails = () => {
     }
   };
 
-  const checkWishlistStatus = async (productId) => {
-    try {
-      const guestId = localStorage.getItem("guestId");
-      if (!guestId) return;
-
-      const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
-      const items = res.data.items || [];
-      const exists = items.some((item) => item.productId === productId);
-      setWishlist(exists);
-    } catch (err) {
-      console.error("Error checking wishlist:", err);
-    }
-  };
-
+  // ✅ Updated toggleWishlist using context
   const toggleWishlist = async () => {
+    if (!product || isTogglingWishlist) return;
+    
+    setIsTogglingWishlist(true);
+    
     try {
       let guestId = localStorage.getItem("guestId");
-
       if (!guestId) {
-        guestId = Date.now().toString();
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
-      if (wishlist) {
-        await axios.delete(`${API_URL}/wishlist/remove`, {
-          data: { guestId, productId: product._id },
-        });
-        setWishlist(false);
+      if (isInWishlistState) {
+        await removeFromWishlist(product._id);
+        setIsInWishlistState(false);
         alert("Removed from wishlist");
       } else {
-        await axios.post(`${API_URL}/wishlist/add`, {
-          guestId,
-          product: {
-            productId: product._id,
-            name: product.name,
-            price: product.price,
-            image: Array.isArray(product.image)
-              ? product.image[0]
-              : product.image,
-          },
+        await addToWishlist({
+          productId: product._id,
+          name: product.name,
+          price: product.price,
+          image: Array.isArray(product.image) ? product.image[0] : product.image,
+          company: product.company || "Native91",
         });
-        setWishlist(true);
-        navigate("/wishlist");
+        setIsInWishlistState(true);
+        alert("Added to wishlist!");
       }
-    } catch (err) {
-      console.error("Error toggling wishlist:", err);
-      alert("Something went wrong");
+      
+      window.dispatchEvent(new Event('wishlistUpdated'));
+
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsTogglingWishlist(false);
     }
   };
 
@@ -686,89 +603,75 @@ const Productdetails = () => {
     setActiveImg(productImages[newIndex]);
   };
 
-  // Add to Cart
-  const addToCart = async () => {
+  // ✅ Updated Add to Cart
+  const handleAddToCart = async () => {
+    if (!product) return;
+    
+    setIsAddingToCart(true);
+    
     try {
       let guestId = localStorage.getItem("guestId");
-
       if (!guestId) {
         guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
+      const primaryImage = Array.isArray(product.image) && product.image.length > 0
+        ? product.image[0]
+        : product.image || "";
 
-      const primaryImage =
-        Array.isArray(product.image) && product.image.length > 0
-          ? product.image[0]
-          : product.image || "";
-      const payload = {
-        guestId: String(guestId),
-        productId: String(product._id),
-        name: String(product.name),
-
+      await addToCart({
+        productId: product._id,
+        name: product.name,
         price: parseFloat(finalPrice),
-
         originalPrice: parseFloat(product.price),
-
-        discountAmount: discountedPrice
-          ? discountedPrice.discountAmount
-          : 0,
-
-        couponCode: appliedCoupon
-          ? appliedCoupon.code
-          : null,
-
-        image: String(primaryImage),
-
+        image: primaryImage,
         quantity: parseInt(qty),
-      };
-      const response = await axios.post(`${API_URL}/cart/add`, payload);
+        discountAmount: discountedPrice ? discountedPrice.discountAmount : 0,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+      });
 
-      if (response.data.success !== false) {
-        alert("Added to cart!");
-        navigate("/cart");
-      } else {
-        alert(response.data.message || "Failed to add to cart");
-      }
-    } catch (err) {
-      console.error("Add to cart error:", err);
-      alert("Failed to add to cart. Please try again.");
+      setShowCart(true);
+      window.dispatchEvent(new Event('cartUpdated'));
+
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert(error.response?.data?.message || "Failed to add to cart. Please try again.");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
-  // Buy Now
-  const buyNow = async () => {
+  // ✅ Updated Buy Now
+  const handleBuyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
-
       if (!guestId) {
         guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
+      const primaryImage = Array.isArray(product.image) && product.image.length > 0
+        ? product.image[0]
+        : product.image || "";
 
-      const primaryImage =
-        Array.isArray(product.image) && product.image.length > 0
-          ? product.image[0]
-          : product.image || "";
+      await addToCart({
+        productId: product._id,
+        name: product.name,
+        price: parseFloat(finalPrice),
+        originalPrice: parseFloat(product.price),
+        image: primaryImage,
+        quantity: parseInt(qty),
+        discountAmount: discountedPrice ? discountedPrice.discountAmount : 0,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+      });
 
-      const payload = {
-        guestId: String(guestId),
-        productId: String(product._id),
-        name: String(product.name || 'Product'),
-        price: parseFloat(finalPrice) || 0,
-        originalPrice: parseFloat(product.price) || 0,
-        image: String(primaryImage || ''),
-        quantity: parseInt(qty) || 1,
-        couponApplied: appliedCoupon ? String(appliedCoupon.code) : null,
-      };
-
-      await axios.post(`${API_URL}/cart/add`, payload);
       navigate("/checkout");
-    } catch (err) {
-      console.error("Buy Now error:", err);
+      
+    } catch (error) {
+      console.error("Buy Now error:", error);
       alert("Failed to proceed. Please try again.");
     }
   };
@@ -788,6 +691,33 @@ const Productdetails = () => {
       </div>
     );
   };
+
+  // Check localStorage for applied coupon when product changes
+  useEffect(() => {
+    const coupon = localStorage.getItem("appliedCoupon");
+    const price = localStorage.getItem("discountedPrice");
+    const storedProductId = localStorage.getItem("appliedProductId");
+
+    if (coupon && price && storedProductId && product?._id) {
+      if (storedProductId === product._id) {
+        setAppliedCoupon(JSON.parse(coupon));
+        setDiscountedPrice(JSON.parse(price));
+      } else {
+        localStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("discountedPrice");
+        localStorage.removeItem("appliedProductId");
+        setAppliedCoupon(null);
+        setDiscountedPrice(null);
+      }
+    }
+  }, [product]);
+
+  // Fetch coupons when product is loaded
+  useEffect(() => {
+    if (product) {
+      fetchVendorCoupons();
+    }
+  }, [product, fetchVendorCoupons]);
 
   if (loading) {
     return (
@@ -821,7 +751,7 @@ const Productdetails = () => {
               </Button>
               <Button
                 variant="outline-secondary"
-                onClick={fetchProductBySlug}
+                onClick={() => window.location.reload()}
                 className="ms-2"
               >
                 Try Again
@@ -858,7 +788,7 @@ const Productdetails = () => {
                   <div className="thumbnail-list">
                     {productImages.map((img, i) => (
                       <div
-                        key={i}
+                        key={`thumb-${i}`}
                         className={`thumb-box ${activeImg === img ? "active" : ""}`}
                         onClick={() => {
                           setActiveImg(img);
@@ -883,7 +813,7 @@ const Productdetails = () => {
                 >
                   <motion.div
                     className="main-image-box"
-                    key={activeImg}
+                    key={`main-img-${activeImg}`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
@@ -1030,7 +960,7 @@ const Productdetails = () => {
                   )}
                 </div>
 
-                {/* Applied Coupon Badge - Only show if coupon is valid for this product */}
+                {/* Applied Coupon Badge */}
                 {appliedCoupon && discountedPrice && (
                   <div className="applied-coupon-badge mt-2" style={{
                     background: '#d4edda',
@@ -1058,12 +988,20 @@ const Productdetails = () => {
                   </div>
                 )}
 
+                {/* ✅ Updated Wishlist Button */}
                 <p
-                  className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
+                  className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""}`}
                   onClick={toggleWishlist}
+                  style={{ cursor: isTogglingWishlist ? 'not-allowed' : 'pointer' }}
                 >
-                  <FaHeart className="wishlist-icon" />
-                  {wishlist ? "Go to Wishlist" : "Add to Wishlist"}
+                  {isTogglingWishlist ? (
+                    <Spinner animation="border" size="sm" className="me-2" />
+                  ) : (
+                    <FaHeart className="wishlist-icon" />
+                  )}
+                  {isTogglingWishlist 
+                    ? 'Processing...' 
+                    : (isInWishlistState ? "Go to Wishlist" : "Add to Wishlist")}
                 </p>
 
                 <p className="tax-text">
@@ -1074,7 +1012,7 @@ const Productdetails = () => {
                   {String(product.description || "A timeless piece to elevate your space.")}
                 </p>
 
-                {/* COUPONS SECTION - UPDATED WITH DOUBLE CHECK */}
+                {/* COUPONS SECTION */}
                 {vendorCoupons.length > 0 && !couponLoading && (
                   <div className="vendor-coupons-section mt-3 p-3 border rounded bg-light">
                     <div className="d-flex justify-content-between align-items-center mb-2">
@@ -1095,15 +1033,13 @@ const Productdetails = () => {
                       </Button>
                     </div>
 
-                    {showCoupons && (
+                    {showCoupons && vendorCoupons.length > 0 && (
                       <div className="coupon-list mt-2">
                         {vendorCoupons.map((coupon, index) => {
-                          // DOUBLE CHECK: Only show if coupon applies to this product
                           const couponProducts = coupon.products || coupon.productIds || [];
                           const shouldShow = couponProducts.length === 0 || 
                                             couponProducts.some(id => id.toString() === product._id.toString());
                           
-                          // Skip if coupon doesn't apply to this product
                           if (!shouldShow) {
                             return null;
                           }
@@ -1115,7 +1051,7 @@ const Productdetails = () => {
 
                           return (
                             <div
-                              key={coupon._id || index}
+                              key={coupon._id || `coupon-${index}`}
                               className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? 'border-success' : ''}`}
                               style={isApplied ? { background: '#f0fff4' } : {}}
                             >
@@ -1173,8 +1109,7 @@ const Productdetails = () => {
                                     Remove
                                   </Button>
                                 )}
-                                <Button
-                                  variant="outline-secondary"
+                                <Button                                  variant="outline-secondary"
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(String(coupon.code));
@@ -1212,11 +1147,24 @@ const Productdetails = () => {
                 </div>
 
                 <div className="action-buttons">
-                  <Button className="cart-btn" onClick={addToCart}>
-                    <FaShoppingCart /> Add to Cart
+                  <Button 
+                    className="cart-btn" 
+                    onClick={handleAddToCart}
+                    disabled={isAddingToCart}
+                  >
+                    {isAddingToCart ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <FaShoppingCart /> Add to Cart
+                      </>
+                    )}
                   </Button>
 
-                  <Button className="buy-btn-product-details" onClick={buyNow}>
+                  <Button className="buy-btn-product-details" onClick={handleBuyNow}>
                     Buy Now
                   </Button>
                 </div>
@@ -1298,7 +1246,7 @@ const Productdetails = () => {
                   const createdAt = review?.createdAt || new Date().toISOString();
 
                   return (
-                    <Col md={4} lg={3} key={review?._id || index}>
+                    <Col md={4} lg={3} key={review?._id || `review-${index}`}>
                       <div className="review-card p-3 border rounded h-100">
                         <div className="review-stars mb-2">
                           {renderStars(rating)}
@@ -1363,7 +1311,7 @@ const Productdetails = () => {
           )}
 
           <Form>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" key="review-name">
               <Form.Label>Your Name *</Form.Label>
               <Form.Control
                 type="text"
@@ -1375,7 +1323,7 @@ const Productdetails = () => {
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" key="review-rating">
               <Form.Label>Rating *</Form.Label>
               <div className="rating-input">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -1391,7 +1339,7 @@ const Productdetails = () => {
               </div>
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" key="review-text">
               <Form.Label>Your Review *</Form.Label>
               <Form.Control
                 as="textarea"
@@ -1430,15 +1378,28 @@ const Productdetails = () => {
       {/* Mobile Sticky Add To Cart */}
       <div className="mobile-sticky-cart">
         <button
-          className={`mobile-wishlist ${wishlist ? "active" : ""}`}
+          className={`mobile-wishlist ${isInWishlistState ? "active" : ""}`}
           onClick={toggleWishlist}
+          disabled={isTogglingWishlist}
         >
-          <FaHeart />
+          {isTogglingWishlist ? (
+            <Spinner animation="border" size="sm" />
+          ) : (
+            <FaHeart />
+          )}
         </button>
 
-        <button className="mobile-add-cart" onClick={addToCart}>
-          <FaShoppingBag className="me-2" />
-          {discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart'}
+        <button 
+          className="mobile-add-cart" 
+          onClick={handleAddToCart}
+          disabled={isAddingToCart}
+        >
+          {isAddingToCart ? (
+            <Spinner animation="border" size="sm" className="me-2" />
+          ) : (
+            <FaShoppingBag className="me-2" />
+          )}
+          {isAddingToCart ? 'Adding...' : (discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart')}
         </button>
       </div>
 
