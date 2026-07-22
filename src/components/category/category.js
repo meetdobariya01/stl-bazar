@@ -122,7 +122,7 @@ const CategoriesSection = () => {
   }
 
   return (
-    <Row className="g-4 justify-content-center container mx-auto lexend mt-5">
+    <Row className="g-4 justify-content-center container mx-auto lexend mt-2">
       <div className="category-heading text-start mt-5">
         <span>POPULAR CATEGORIES</span>
         <h2 className="funnel-sans category-title">Explore Our World</h2>
