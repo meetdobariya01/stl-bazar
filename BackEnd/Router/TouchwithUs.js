@@ -1,7 +1,22 @@
+// Router/TouchwithUs.js - UPDATED WITH HOSTINGER
 const express = require("express");
 const nodemailer = require("nodemailer");
 
 const router = express.Router();
+
+// ✅ USE HOSTINGER SMTP (NOT GMAIL)
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || "smtp.hostinger.com",
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER || "orders@native91.com",
+    pass: process.env.EMAIL_PASS || "",
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
 
 router.post("/TouchwithUs", async (req, res) => {
   try {
@@ -14,24 +29,12 @@ router.post("/TouchwithUs", async (req, res) => {
       message,
     } = req.body;
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     const mailOptions = {
-      from: process.env.EMAIL_USER,
-
-      to: process.env.EMAIL_USER,
-
+      from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
+      to: process.env.ADMIN_SUPPORT_EMAIL || "support@native91.com",
       subject: "New Contact Form Submission",
-
       html: `
         <h2>New Contact Form</h2>
-
         <p><b>First Name:</b> ${firstName}</p>
         <p><b>Last Name:</b> ${lastName}</p>
         <p><b>Email:</b> ${email}</p>
@@ -49,7 +52,6 @@ router.post("/TouchwithUs", async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
       message: "Failed to send mail",

@@ -63,9 +63,9 @@ const Checkout = () => {
   const [showSavedAddresses, setShowSavedAddresses] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
-  
+
   const [shippingMethod, setShippingMethod] = useState("standard");
-  
+
   const [addressSaveSuccess, setAddressSaveSuccess] = useState("");
   const [addressSaveError, setAddressSaveError] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
@@ -82,18 +82,18 @@ const Checkout = () => {
   });
 
   const [cart, setCart] = useState({ items: [], appliedCoupon: null });
-  
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+
   const guestId = localStorage.getItem("guestId");
-  
-  // ✅ FIX: Keep guestId persistent - Don't delete after order
+
+  // ✅ FIX: Keep guestId persistent
   useEffect(() => {
     let currentGuestId = localStorage.getItem("guestId");
-    // console.log("🔑 Checkout - Current guestId:", currentGuestId);
-    
     if (!currentGuestId) {
       const newGuestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
       localStorage.setItem("guestId", newGuestId);
-      // console.log("🆕 New guestId created:", newGuestId);
     }
   }, []);
 
@@ -122,7 +122,7 @@ const Checkout = () => {
     if (guestId) {
       fetchSavedAddresses();
     }
-  }, [guestId]);  
+  }, [guestId]);
 
   const fetchCart = async () => {
     if (!guestId) return;
@@ -130,6 +130,9 @@ const Checkout = () => {
     try {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
       setCart(res.data || { items: [], appliedCoupon: null });
+      if (res.data?.appliedCoupon) {
+        setAppliedCoupon(res.data.appliedCoupon);
+      }
     } catch (err) {
       console.error("Cart fetch error:", err);
     }
@@ -139,28 +142,15 @@ const Checkout = () => {
     fetchCart();
   }, [guestId]);
 
-  // ✅ FIX: Fetch addresses with current guestId
   const fetchSavedAddresses = async () => {
     const currentGuestId = localStorage.getItem("guestId");
-    // console.log("📦 Fetching addresses for guestId:", currentGuestId);
-    
-    if (!currentGuestId) {
-      // console.log("⚠️ No guestId found");
-      return;
-    }
-    
+    if (!currentGuestId) return;
+
     setLoadingAddresses(true);
     try {
       const res = await axios.get(`${API_URL}/addresses/${currentGuestId}`);
-      // console.log("📦 Addresses response:", res.data);
-      
       if (res.data.success) {
         setSavedAddresses(res.data.addresses || []);
-        if (res.data.addresses && res.data.addresses.length > 0) {
-          // console.log("✅ Found", res.data.addresses.length, "addresses");
-        } else {
-          // console.log("ℹ️ No saved addresses found");
-        }
       }
     } catch (err) {
       console.error("❌ Fetch addresses error:", err);
@@ -195,7 +185,7 @@ const Checkout = () => {
   const deleteSavedAddress = async (addressId, e) => {
     e.stopPropagation();
     if (!guestId) return;
-    
+
     if (window.confirm("Are you sure you want to delete this address?")) {
       try {
         await axios.delete(`${API_URL}/addresses/${guestId}/${addressId}`);
@@ -212,11 +202,11 @@ const Checkout = () => {
 
   const getShippingCost = (subtotalAfterDiscount, method) => {
     const FREE_SHIPPING_THRESHOLD = 1500;
-    
+
     if (method === "express") {
       return 199;
     }
-    
+
     if (subtotalAfterDiscount >= FREE_SHIPPING_THRESHOLD) {
       return 0;
     }
@@ -228,16 +218,56 @@ const Checkout = () => {
     0,
   );
 
-  const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
+  const couponDiscount = appliedCoupon?.discountAmount || 0;
   const discountedSubtotal = subtotal - couponDiscount;
   const shippingCost = getShippingCost(discountedSubtotal, shippingMethod);
   const total = discountedSubtotal + shippingCost;
 
-  // ✅ FIX: Save address with current guestId
+  // ✅ Apply coupon function
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+
+    try {
+      setCouponError("");
+      const response = await axios.post(`${API_URL}/coupons/validate`, {
+        code: couponCode,
+        cartTotal: subtotal,
+      });
+
+      if (response.data.success) {
+        setAppliedCoupon(response.data.coupon);
+        setCouponError("");
+
+        // Update cart with coupon
+        setCart(prev => ({
+          ...prev,
+          appliedCoupon: response.data.coupon
+        }));
+
+        alert(`✅ Coupon applied! You saved ₹${response.data.coupon.discountAmount}`);
+      }
+    } catch (error) {
+      setCouponError(error.response?.data?.message || "Invalid coupon code");
+      setAppliedCoupon(null);
+    }
+  };
+
+  // ✅ Remove coupon function
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCart(prev => ({
+      ...prev,
+      appliedCoupon: null
+    }));
+  };
+
+  // ✅ Save address function
   const saveAddressToDB = async () => {
     const currentGuestId = localStorage.getItem("guestId");
-    // console.log("📦 Saving address for guestId:", currentGuestId);
-    
     if (!currentGuestId) {
       setAddressSaveError("Unable to save address. Please refresh the page.");
       return;
@@ -266,9 +296,7 @@ const Checkout = () => {
           country: shipping.country
         }
       });
-      
-      // console.log("📦 Save address response:", response.data);
-      
+
       if (response.data.success) {
         setAddressSaveSuccess("✅ Address saved successfully!");
         await fetchSavedAddresses();
@@ -284,10 +312,11 @@ const Checkout = () => {
     }
   };
 
+  // ✅ Send order email function
   const sendOrderEmail = async (orderId) => {
     try {
       setEmailStatus("sending");
-      
+
       const emailData = {
         to: shipping.email,
         subject: `Order Confirmation - #${orderId}`,
@@ -305,105 +334,83 @@ const Checkout = () => {
       };
 
       await axios.post(`${API_URL}/order/send-confirmation`, emailData);
-      
+
       setEmailStatus("success");
     } catch (err) {
-      console.error("Email sending error:", err);
+      console.error("❌ Email sending error:", err);
       setEmailStatus("error");
     }
   };
 
-  // ✅ FIX: Don't delete guestId after order
+  // ✅ Place order function with proper cart clearing
   const placeOrder = async () => {
-    if (isProcessing) return;
-    
+    setIsProcessing(true);
+    setEmailStatus("");
+
     try {
-      if (!guestId || cart.items.length === 0) {
-        alert("Cart is empty");
+      // Validate shipping address
+      if (!shipping.name || !shipping.email || !shipping.phone || !shipping.address) {
+        alert("Please fill in all required shipping address fields");
+        setIsProcessing(false);
         return;
       }
 
-      const required = [
-        "name",
-        "phone",
-        "email",
-        "address",
-        "city",
-        "state",
-        "pincode",
-      ];
-
-      for (let field of required) {
-        if (!shipping[field]) {
-          alert(`Please fill ${field}`);
-          return;
-        }
-      }
-
-      setIsProcessing(true);
-
-      if (saveAddressChecked) {
-        await saveAddressToDB();
-      }
-
-      const currentGuestId = localStorage.getItem("guestId");
-      // console.log("📦 Placing order with guestId:", currentGuestId);
-
       const orderData = {
-        guestId: currentGuestId,
+        guestId: guestId,
         shippingAddress: shipping,
         paymentMethod: payment,
-        shippingMethod: shippingMethod,
-        subtotal: subtotal,
-        couponDiscount: couponDiscount,
-        appliedCoupon: cart.appliedCoupon,
-        shippingCost: shippingCost,
-        total: total,
+        couponCode: appliedCoupon?.code || null,
       };
 
-      // console.log("Placing order with data:", orderData);
+      // console.log('📦 Placing order with data:', orderData);
+      // console.log('🎫 Coupon code being sent:', orderData.couponCode);
 
-      const res = await axios.post(`${API_URL}/order/place`, orderData);
+      const response = await axios.post(
+        `${API_URL}/order/place`,
+        orderData
+      );
 
-      console.log("Order response:", res.data);
+      // console.log('✅ Order response:', response.data);
 
-      if (res.data.success) {
-        sendOrderEmail(res.data.orderId).catch(err => {
-          console.error("Email sending error:", err);
+      if (response.data.success) {
+        // Send email notification
+        await sendOrderEmail(response.data.orderId);
+
+        // ✅ FIX: Clear cart using the correct endpoint
+        try {
+          // Use the existing clear endpoint from cartRouter
+          await axios.delete(`${API_URL}/cart/clear/${guestId}`);
+          // console.log('✅ Cart cleared successfully');
+        } catch (cartError) {
+          console.error("Cart clear error:", cartError);
+          // Alternative: Try to clear via POST if DELETE fails
+          try {
+            await axios.post(`${API_URL}/cart/clear`, { guestId: guestId });
+            // console.log('✅ Cart cleared via POST');
+          } catch (err) {
+            console.error("❌ Alternative cart clear failed:", err);
+            // If both fail, the cart will be cleared when the user refreshes
+          }
+        }
+
+        // Clear coupon
+        setAppliedCoupon(null);
+        setCouponCode("");
+
+        navigate(`/order-complete`, {
+          state: {
+            order: response.data.order,
+            orderId: response.data.orderId,
+            message: "Your order has been placed successfully!"
+          }
         });
-        
-        // ✅ FIX: DON'T DELETE guestId - Keep it for future orders
-        // localStorage.removeItem("guestId"); // ❌ REMOVED
-        
-        navigate("/order-complete", { 
-          state: { 
-            orderId: res.data.orderId,
-            orderDetails: {
-              items: cart.items,
-              subtotal: subtotal,
-              couponDiscount: couponDiscount,
-              appliedCoupon: cart.appliedCoupon,
-              shippingCost: shippingCost,
-              total: total,
-              shipping: shipping,
-              paymentMethod: payment,
-              shippingMethod: shippingMethod
-            }
-          } 
-        });
-      } else {
-        alert(res.data.message || "Failed to place order");
-        setIsProcessing(false);
       }
-      
-    } catch (err) {
-      console.error("Order placement error:", err);
-      alert(err.response?.data?.message || err.message || "Failed to place order. Please try again.");
-      setIsProcessing(false);
+    } catch (error) {
+      console.error("❌ Order placement error:", error);
+      setEmailStatus("error");
+      alert(error.response?.data?.message || "Failed to place order. Please try again.");
     } finally {
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 3000);
+      setIsProcessing(false);
     }
   };
 
@@ -469,8 +476,8 @@ const Checkout = () => {
                       </h4>
                       <div className="d-flex gap-2">
                         {savedAddresses.length > 0 && (
-                          <Button 
-                            variant="outline-success" 
+                          <Button
+                            variant="outline-success"
                             size="sm"
                             onClick={() => setShowSavedAddresses(!showSavedAddresses)}
                             className="d-flex align-items-center gap-2"
@@ -479,8 +486,8 @@ const Checkout = () => {
                             {showSavedAddresses ? "Hide" : "My Addresses"} ({savedAddresses.length})
                           </Button>
                         )}
-                        <Button 
-                          variant="outline-dark" 
+                        <Button
+                          variant="outline-success"
                           size="sm"
                           onClick={saveAddressToDB}
                           className="d-flex align-items-center gap-2"
@@ -503,7 +510,7 @@ const Checkout = () => {
                           <Row className="g-2">
                             {savedAddresses.map((addr, idx) => (
                               <Col md={6} key={addr._id || idx}>
-                                <div 
+                                <div
                                   className="saved-address-card p-3 border rounded"
                                   style={{ cursor: "pointer", transition: "all 0.2s", position: "relative" }}
                                 >
@@ -515,8 +522,8 @@ const Checkout = () => {
                                       )}
                                     </div>
                                     <p className="mb-1 small mt-2">
-                                      {addr.address.address}<br/>
-                                      {addr.address.city}, {addr.address.state} - {addr.address.pincode}<br/>
+                                      {addr.address.address}<br />
+                                      {addr.address.city}, {addr.address.state} - {addr.address.pincode}<br />
                                       📞 {addr.address.phone}
                                     </p>
                                     <small className="text-muted">
@@ -773,8 +780,8 @@ const Checkout = () => {
                       </div>
                     </div>
 
-                    <Button 
-                      className="payment-btn" 
+                    <Button
+                      className="payment-btn"
                       onClick={placeOrder}
                       disabled={isProcessing}
                     >
@@ -813,7 +820,7 @@ const Checkout = () => {
                   <Card.Body>
                     <div className="summary-head">
                       <h3>Order Summary</h3>
-                      <span 
+                      <span
                         style={{ cursor: "pointer" }}
                         onClick={() => navigate("/cart")}
                       >
@@ -821,11 +828,58 @@ const Checkout = () => {
                       </span>
                     </div>
 
+                    {/* Coupon Input Section */}
+                    <div className="coupon-section mb-3">
+                      {!appliedCoupon ? (
+                        <div className="d-flex gap-2">
+                          <Form.Control
+                            type="text"
+                            placeholder="Enter coupon code"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            className="flex-grow-1"
+                            style={{ fontSize: "14px" }}
+                          />
+                          <Button
+                            variant="outline-dark"
+                            size="sm"
+                            onClick={handleApplyCoupon}
+                            disabled={isProcessing}
+                          >
+                            <FaTag /> Apply
+                          </Button>
+                        </div>
+                      ) : (
+                        <Alert variant="success" className="d-flex justify-content-between align-items-center mb-0 py-2">
+                          <div>
+                            <FaTag className="me-2" />
+                            <strong>{appliedCoupon.code}</strong>
+                            <br />
+                            <small>
+                              {appliedCoupon.discountType === "percentage"
+                                ? `${appliedCoupon.discountValue}% off`
+                                : `₹${appliedCoupon.discountValue} off`}
+                            </small>
+                          </div>
+                          <Button
+                            variant="link"
+                            className="text-danger p-0"
+                            onClick={handleRemoveCoupon}
+                          >
+                            <FaTrash size={14} />
+                          </Button>
+                        </Alert>
+                      )}
+                      {couponError && (
+                        <small className="text-danger">{couponError}</small>
+                      )}
+                    </div>
+
                     {cart.items.map((item) => (
                       <div key={item.productId} className="summary-item">
                         <div className="summary-img">
-                          <Image 
-                            src={formatImagePath(item.image)} 
+                          <Image
+                            src={formatImagePath(item.image)}
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = "/images/placeholder.png";
@@ -847,11 +901,11 @@ const Checkout = () => {
                       <span>₹{formatPrice(subtotal)}</span>
                     </div>
 
-                    {cart.appliedCoupon && couponDiscount > 0 && (
+                    {appliedCoupon && couponDiscount > 0 && (
                       <div className="summary-row coupon-discount">
                         <span>
                           <FaTag className="me-1" style={{ fontSize: "12px" }} />
-                          Coupon ({cart.appliedCoupon.code})
+                          Coupon ({appliedCoupon.code})
                         </span>
                         <span className="discount">
                           -₹{formatPrice(couponDiscount)}
@@ -865,13 +919,6 @@ const Checkout = () => {
                         {shippingCost === 0 ? "FREE" : `₹${formatPrice(shippingCost)}`}
                       </span>
                     </div>
-
-                    {couponDiscount > 0 && (
-                      <div className="summary-row subtotal-after-discount">
-                        <span>Subtotal after discount</span>
-                        <span>₹{formatPrice(discountedSubtotal)}</span>
-                      </div>
-                    )}
 
                     <div className="summary-total-checkout">
                       <div>
@@ -893,7 +940,7 @@ const Checkout = () => {
                       </div>
                     )}
 
-                    {cart.appliedCoupon && (
+                    {appliedCoupon && (
                       <div className="coupon-save-note">
                         🎟️ Coupon saved: ₹{formatPrice(couponDiscount)} off!
                       </div>

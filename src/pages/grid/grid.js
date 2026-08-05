@@ -23,6 +23,7 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import { createSlug } from "../../utils/slugUtils";
 import "./grid.css";
 import Details from "../../components/details/details";
@@ -57,14 +58,15 @@ const Grid = () => {
   const navigate = useNavigate();
 
   const { setShowCart, fetchCart } = useCart();
+  const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [qty, setQty] = useState({});
   const [sort, setSort] = useState("popular");
   const [loading, setLoading] = useState(true);
-  const [wishlist, setWishlist] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -100,10 +102,13 @@ const Grid = () => {
         setCategories(uniqueCategories);
         setMaterials(uniqueMaterials);
         setBrands(uniqueBrands);
+        
+        // Fetch wishlist to check status
+        fetchWishlist();
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [decodedName]);
+  }, [decodedName, fetchWishlist]);
 
   useEffect(() => {
     let filtered = [...products];
@@ -170,12 +175,32 @@ const Grid = () => {
     setShowCart(true);
   };
 
-  const toggleWishlist = (e, productId) => {
+  // ✅ Updated toggleWishlist using context
+  const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
-    if (wishlist.includes(productId)) {
-      setWishlist(wishlist.filter((id) => id !== productId));
-    } else {
-      setWishlist([...wishlist, productId]);
+    
+    setIsTogglingWishlist(prev => ({ ...prev, [productId]: true }));
+    
+    try {
+      const product = products.find(p => p._id === productId);
+      if (!product) return;
+      
+      await toggleWishlist({
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        image: Array.isArray(product.image) ? product.image[0] : product.image,
+        company: product.company || "Native91",
+      });
+      
+      // Refetch wishlist to update UI
+      await fetchWishlist();
+      
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsTogglingWishlist(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -241,6 +266,11 @@ const Grid = () => {
       rating: "Customer Rating",
     };
     return labels[sort] || "Popular";
+  };
+
+  // Check if product is in wishlist
+  const checkIsInWishlist = (productId) => {
+    return isInWishlist(productId);
   };
 
   return (
@@ -516,8 +546,9 @@ const Grid = () => {
               ) : (
                 <Row className="g-4 text-center">
                   {sortedProducts.map((item) => {
-                    const isInWishlist = wishlist.includes(item._id);
+                    const inWishlist = checkIsInWishlist(item._id);
                     const productSlug = createSlug(item.name);
+                    const isToggling = isTogglingWishlist[item._id] || false;
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3}>
@@ -539,9 +570,14 @@ const Grid = () => {
                               />
                               <div
                                 className="wishlist-btn-grid"
-                                onClick={(e) => toggleWishlist(e, item._id)}
+                                onClick={(e) => handleToggleWishlist(e, item._id)}
+                                style={{ cursor: isToggling ? 'not-allowed' : 'pointer' }}
                               >
-                                {isInWishlist ? (
+                                {isToggling ? (
+                                  <div className="spinner-border spinner-border-sm" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                  </div>
+                                ) : inWishlist ? (
                                   <FaHeart color="#e74c3c" />
                                 ) : (
                                   <FaRegHeart />

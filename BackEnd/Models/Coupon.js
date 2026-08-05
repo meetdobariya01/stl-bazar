@@ -46,10 +46,29 @@ const couponSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Vendor/Company information
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     default: null
+  },
+  company: {
+    type: String,
+    default: null
+  },
+  vendorName: {
+    type: String,
+    default: null
+  },
+  // Product-specific restrictions
+  productIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product"
+  }],
+  // Flag to indicate if coupon is for specific products only
+  isProductSpecific: {
+    type: Boolean,
+    default: false
   },
   isActive: {
     type: Boolean,

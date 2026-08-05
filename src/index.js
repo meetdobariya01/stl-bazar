@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext"; // ✅ Import WishlistProvider
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 
@@ -30,30 +31,32 @@ import Cookies from "./components/cookies/cookies";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/aboutus" element={<Aboutus />} />
-        <Route path="/contactus" element={<ContactUs />} />
-        <Route path="/product" element={<Product />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/wishlist" element={<Wishlist />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/company/:companyName" element={<Grid />} />
-        <Route path="/product/:slug" element={<Productdetails />} />
-        <Route path="/category/:categoryName" element={<CategoryProducts />} />
-        <Route path="/sell" element={<Sell />} />
-        <Route path="/Order-Complete" element={<Ordercomplate />} />
-        <Route path="/terms-and-conditions" element={<Condition />} />
-        <Route path="/shipping-policy" element={<Shipping />} />
-        <Route path="/return-policy" element={<Return />} />
-        <Route path="/privacypolicy" element={<Privacypolicy />} />
-        <Route path="/faqs" element={<Faqs />} />
-        <Route path="/orderhistory" element={<Orderhistory />} />
-      </Routes>
+    <WishlistProvider> {/* ✅ Wrap with WishlistProvider */}
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/aboutus" element={<Aboutus />} />
+          <Route path="/contactus" element={<ContactUs />} />
+          <Route path="/product" element={<Product />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/company/:companyName" element={<Grid />} />
+          <Route path="/product/:slug" element={<Productdetails />} />
+          <Route path="/category/:categoryName" element={<CategoryProducts />} />
+          <Route path="/sell" element={<Sell />} />
+          <Route path="/Order-Complete" element={<Ordercomplate />} />
+          <Route path="/terms-and-conditions" element={<Condition />} />
+          <Route path="/shipping-policy" element={<Shipping />} />
+          <Route path="/return-policy" element={<Return />} />
+          <Route path="/privacypolicy" element={<Privacypolicy />} />
+          <Route path="/faqs" element={<Faqs />} />
+          <Route path="/orderhistory" element={<Orderhistory />} />
+        </Routes>
       <Cookies />
-    </Router>
+      </Router>
+    </WishlistProvider>
   </CartProvider>,
 );

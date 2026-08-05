@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Container,
   Row,
@@ -30,10 +30,12 @@ import axios from "axios";
 
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BACKEND_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
+const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -63,15 +65,20 @@ const Productdetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
 
+  // ✅ Use Cart and Wishlist Contexts
+  const { addToCart, setShowCart, fetchCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } = useWishlist();
+
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [error, setError] = useState(null);
-  const [wishlist, setWishlist] = useState(false);
-  const [allProducts, setAllProducts] = useState([]);
+  const [isInWishlistState, setIsInWishlistState] = useState(false);
   const [productImages, setProductImages] = useState([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
   // ================= COUPON STATES =================
   const [vendorCoupons, setVendorCoupons] = useState([]);
@@ -79,7 +86,6 @@ const Productdetails = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-
   // Review states
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
@@ -94,23 +100,38 @@ const Productdetails = () => {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Ref for mounted state
+  const isMounted = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // ================= COUPON FUNCTIONS =================
-  
-  const calculateDiscountedPrice = (coupon) => {
+
+  const calculateDiscountedPrice = useCallback((coupon) => {
     if (!product || !coupon) return null;
-    
+
     const originalPrice = parseFloat(product.price);
     let discountAmount = 0;
-    
+
     const discount = coupon.discount || coupon.discountValue || 0;
     const type = coupon.type || coupon.discountType || 'percentage';
-    
+    const maxDiscount = coupon.maxDiscount || 0;
+
     if (type === 'percentage') {
       discountAmount = (originalPrice * discount) / 100;
+      if (maxDiscount && discountAmount > maxDiscount) {
+        discountAmount = maxDiscount;
+      }
     } else {
       discountAmount = Math.min(discount, originalPrice);
     }
-    
+
     const newPrice = originalPrice - discountAmount;
     return {
       originalPrice: originalPrice,
@@ -118,82 +139,152 @@ const Productdetails = () => {
       discountedPrice: newPrice,
       savingsPercentage: ((discountAmount / originalPrice) * 100).toFixed(0)
     };
-  };
+  }, [product]);
 
-  const applyCoupon = (coupon) => {
-    const priceInfo = calculateDiscountedPrice(coupon);
-    if (priceInfo) {
-      setAppliedCoupon(coupon);
-      setDiscountedPrice(priceInfo);
-      alert(`Coupon "${coupon.code}" applied! You saved ₹${priceInfo.discountAmount.toFixed(2)}`);
-    }
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setDiscountedPrice(null);
-  };
-
-  const fetchVendorCoupons = async () => {
+  const applyCoupon = async (coupon) => {
     try {
-      setCouponLoading(true);
-      
-      if (!product?._id) {
-        setVendorCoupons([]);
+      const guestId = localStorage.getItem("guestId");
+
+      if (!guestId) {
+        alert("Please add product to cart first.");
         return;
       }
 
-      const companyName = product?.company || product?.vendor || product?.vendorName;
-
-      try {
-        const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/product/${product._id}`);
-        if (response.data.success && response.data.coupons && response.data.coupons.length > 0) {
-          setVendorCoupons(response.data.coupons);
+      const couponProducts = coupon.products || coupon.productIds || [];
+      if (couponProducts.length > 0) {
+        const isProductValid = couponProducts.some(id => id.toString() === product._id.toString());
+        
+        if (!isProductValid) {
+          alert("This coupon is not valid for this product.");
           return;
         }
-      } catch (err) {
-        console.log("Product coupon fetch failed");
       }
 
-      if (companyName) {
-        try {
-          const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/company/${encodeURIComponent(companyName)}`);
-          if (response.data.success && response.data.coupons && response.data.coupons.length > 0) {
-            setVendorCoupons(response.data.coupons);
-            return;
-          }
-        } catch (err) {
-          console.log("Company coupon fetch failed");
-        }
-      }
+      await axios.post(`${API_URL}/coupons/user/apply`, {
+        guestId,
+        code: coupon.code,
+        productId: product._id
+      });
 
-      try {
-        const response = await axios.get(`${VENDOR_BACKEND_URL}/coupons/public/all`);
-        if (response.data.success && response.data.coupons) {
-          let filtered = response.data.coupons;
-          if (companyName) {
-            filtered = response.data.coupons.filter(c => 
-              !c.company || c.company.toLowerCase() === companyName.toLowerCase()
-            );
-          }
-          setVendorCoupons(filtered);
-          return;
-        }
-      } catch (err) {
-        console.log("All coupons fetch failed");
-      }
+      const priceInfo = calculateDiscountedPrice(coupon);
 
-      setVendorCoupons([]);
+      setAppliedCoupon(coupon);
+      setDiscountedPrice(priceInfo);
+
+      localStorage.setItem("appliedCoupon", JSON.stringify(coupon));
+      localStorage.setItem("discountedPrice", JSON.stringify(priceInfo));
+      localStorage.setItem("appliedProductId", product._id);
+
+      alert(`Coupon ${coupon.code} applied successfully`);
+
     } catch (err) {
-      console.error("Error fetching coupons:", err);
-      setVendorCoupons([]);
-    } finally {
-      setCouponLoading(false);
+      console.error(err);
+      alert(
+        err.response?.data?.message || "Failed to apply coupon"
+      );
     }
   };
 
+  const removeCoupon = async () => {
+    try {
+      const guestId = localStorage.getItem("guestId");
+
+      if (guestId) {
+        await axios.delete(
+          `${API_URL}/coupons/user/remove/${guestId}`
+        );
+      }
+
+      localStorage.removeItem("appliedCoupon");
+      localStorage.removeItem("discountedPrice");
+      localStorage.removeItem("appliedProductId");
+
+      setAppliedCoupon(null);
+      setDiscountedPrice(null);
+
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const fetchVendorCoupons = useCallback(async () => {
+    if (!product?._id || !isMounted.current) {
+      setVendorCoupons([]);
+      return;
+    }
+
+    setCouponLoading(true);
+
+    try {
+      const productId = product._id;
+      const companyName = product?.company || product?.vendor || product?.vendorName;
+      
+      const storedCoupon = localStorage.getItem("appliedCoupon");
+      const storedProductId = localStorage.getItem("appliedProductId");
+      
+      if (storedProductId && storedProductId !== productId) {
+        localStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("discountedPrice");
+        localStorage.removeItem("appliedProductId");
+        setAppliedCoupon(null);
+        setDiscountedPrice(null);
+      }
+
+      try {
+        const response = await axios.get(`${COUPON_API_URL}/coupons/public/product/${productId}`);
+        
+        if (response.data.success && response.data.coupons && isMounted.current) {
+          const validCoupons = response.data.coupons.filter(coupon => {
+            const couponProducts = coupon.products || coupon.productIds || [];
+            if (couponProducts.length === 0) return true;
+            return couponProducts.some(id => id.toString() === productId.toString());
+          });
+          
+          setVendorCoupons(validCoupons);
+          return;
+        }
+      } catch (err) {
+        console.error("Product coupon fetch failed:", err);
+      }
+
+      if (companyName && isMounted.current) {
+        try {
+          const response = await axios.get(
+            `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(companyName)}`,
+            { params: { productId: productId } }
+          );
+          
+          if (response.data.success && response.data.coupons && isMounted.current) {
+            const validCoupons = response.data.coupons.filter(coupon => {
+              const couponProducts = coupon.products || coupon.productIds || [];
+              if (couponProducts.length === 0) return true;
+              return couponProducts.some(id => id.toString() === productId.toString());
+            });
+            setVendorCoupons(validCoupons);
+            return;
+          }
+        } catch (err) {
+          console.error("Company coupon fetch failed:", err);
+        }
+      }
+
+      if (isMounted.current) {
+        setVendorCoupons([]);
+      }
+    } catch (err) {
+      console.error("Error in fetchVendorCoupons:", err);
+      if (isMounted.current) {
+        setVendorCoupons([]);
+      }
+    } finally {
+      if (isMounted.current) {
+        setCouponLoading(false);
+      }
+    }
+  }, [product, COUPON_API_URL]);
+
   // Get image URL
-  const getImageUrl = (image) => {
+  const getImageUrl = useCallback((image) => {
     if (!image) return "/images/placeholder.png";
 
     let img = image;
@@ -204,13 +295,13 @@ const Productdetails = () => {
     }
 
     const imgStr = String(img).trim();
-    
+
     if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
       return imgStr;
     }
 
     if (imgStr.startsWith("/uploads")) {
-      return `${VENDOR_BACKEND_URL}${imgStr}`;
+      return `https://api.brandelvendor.starlighttechlabsindia.com${imgStr}`;
     }
 
     if (imgStr.startsWith("/images")) {
@@ -218,18 +309,18 @@ const Productdetails = () => {
     }
 
     if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
-      return `${VENDOR_BACKEND_URL}/uploads/${imgStr}`;
+      return `https://api.brandelvendor.starlighttechlabsindia.com/uploads/${imgStr}`;
     }
 
-    return `${VENDOR_BACKEND_URL}${imgStr}`;
-  };
+    return `${API_URL}${imgStr}`;
+  }, [API_URL]);
 
-  const getAllImagesFromProduct = (product) => {
+  const getAllImagesFromProduct = useCallback((product) => {
     if (!product) return ["/images/placeholder.png"];
-    
+
     let images = [];
     const imageFields = ['images', 'image', 'productImages', 'gallery'];
-    
+
     for (const field of imageFields) {
       if (product[field]) {
         if (Array.isArray(product[field])) {
@@ -242,112 +333,138 @@ const Productdetails = () => {
         }
       }
     }
-    
+
     images = [...new Set(images)];
-    
+
     if (images.length === 0) {
       images = ["/images/placeholder.png"];
     }
-    
+
     return images;
-  };
+  }, [getImageUrl]);
 
-  // Fetch product by slug
+  // Fetch product by slug - FIXED
   useEffect(() => {
-    if (slug) {
-      fetchProductBySlug();
-    }
-  }, [slug]);
+    const fetchProduct = async () => {
+      if (!slug) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Fetch coupons when product is loaded
-  useEffect(() => {
-    if (product) {
-      fetchVendorCoupons();
-    }
-  }, [product]);
+        const productName = decodeSlug(slug);
+        const response = await axios.get(`${API_URL}/products`);
+        
+        if (!isMounted.current) return;
+        
+        const products = response.data;
 
-  const fetchProductBySlug = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+        let foundProduct = null;
 
-      const productName = decodeSlug(slug);
-
-      const response = await axios.get(`${API_URL}/products`);
-      const products = response.data;
-      setAllProducts(products);
-
-      let foundProduct = null;
-
-      foundProduct = products.find(
-        p => p.name && p.name.toLowerCase() === productName.toLowerCase()
-      );
-
-      if (!foundProduct) {
-        const productSlug = createSlug(productName);
         foundProduct = products.find(
-          p => p.name && createSlug(p.name) === productSlug
+          p => p.name && p.name.toLowerCase() === productName.toLowerCase()
         );
-      }
 
-      if (!foundProduct) {
-        const searchTerms = productName.toLowerCase().split(' ');
-        foundProduct = products.find(p => {
-          if (!p.name) return false;
-          const nameLower = p.name.toLowerCase();
-          return searchTerms.some(term => nameLower.includes(term));
-        });
-      }
+        if (!foundProduct) {
+          const productSlug = createSlug(productName);
+          foundProduct = products.find(
+            p => p.name && createSlug(p.name) === productSlug
+          );
+        }
 
-      if (!foundProduct && slug.length === 24) {
-        try {
-          const productResponse = await axios.get(`${API_URL}/product/${slug}`);
-          if (productResponse.data) {
-            foundProduct = productResponse.data;
+        if (!foundProduct) {
+          const searchTerms = productName.toLowerCase().split(' ');
+          foundProduct = products.find(p => {
+            if (!p.name) return false;
+            const nameLower = p.name.toLowerCase();
+            return searchTerms.some(term => nameLower.includes(term));
+          });
+        }
+
+        if (!foundProduct && slug.length === 24) {
+          try {
+            const productResponse = await axios.get(`${API_URL}/product/${slug}`);
+            if (productResponse.data) {
+              foundProduct = productResponse.data;
+            }
+          } catch (idErr) {
+            console.log("ID fallback failed");
           }
-        } catch (idErr) {
-          console.log("ID fallback failed");
+        }
+
+        if (!foundProduct) {
+          throw new Error(`Product "${productName}" not found`);
+        }
+
+        if (!isMounted.current) return;
+
+        setProduct(foundProduct);
+
+        const allImages = getAllImagesFromProduct(foundProduct);
+        setProductImages(allImages);
+
+        if (allImages.length > 0) {
+          setActiveImg(allImages[0]);
+          setCurrentImageIndex(0);
+        } else {
+          setActiveImg("/images/placeholder.png");
+        }
+
+        await fetchReviews(foundProduct._id);
+        
+        // ✅ Check wishlist status using context
+        const guestId = localStorage.getItem("guestId");
+        if (guestId) {
+          await fetchWishlist();
+          const inWishlist = await isInWishlist(foundProduct._id);
+          setIsInWishlistState(inWishlist);
+        }
+
+      } catch (err) {
+        console.error("Product fetch error:", err);
+        if (isMounted.current) {
+          setError(
+            err.response?.data?.message ||
+            err.message ||
+            "Failed to load product. Please try again later."
+          );
+        }
+      } finally {
+        if (isMounted.current) {
+          setLoading(false);
         }
       }
+    };
 
-      if (!foundProduct) {
-        throw new Error(`Product "${productName}" not found`);
+    fetchProduct();
+
+    return () => {
+      // Cleanup
+    };
+  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist]); // ✅ REMOVED isInWishlist from deps
+
+  // ✅ Check wishlist status when product changes
+  useEffect(() => {
+    const checkWishlist = async () => {
+      if (product?._id) {
+        try {
+          const inWishlist = await isInWishlist(product._id);
+          setIsInWishlistState(inWishlist);
+        } catch (error) {
+          console.error("Error checking wishlist:", error);
+        }
       }
-
-      setProduct(foundProduct);
-
-      const allImages = getAllImagesFromProduct(foundProduct);
-      setProductImages(allImages);
-      
-      if (allImages.length > 0) {
-        setActiveImg(allImages[0]);
-        setCurrentImageIndex(0);
-      } else {
-        setActiveImg("/images/placeholder.png");
-      }
-
-      await fetchReviews(foundProduct._id);
-      await checkWishlistStatus(foundProduct._id);
-
-    } catch (err) {
-      console.error("Product fetch error:", err);
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to load product. Please try again later."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    checkWishlist();
+  }, [product, isInWishlist]);
 
   const fetchReviews = async (productId) => {
     try {
       const id = productId || product?._id;
       if (!id) return;
       const response = await axios.get(`${API_URL}/products/${id}/reviews`);
-      
-      // ✅ SAFETY: Ensure reviews are properly sanitized
+
       const reviewsData = response.data.reviews || [];
       const sanitizedReviews = reviewsData.map(review => ({
         _id: String(review._id || ''),
@@ -356,7 +473,7 @@ const Productdetails = () => {
         review: String(review.review || ''),
         createdAt: review.createdAt || new Date().toISOString(),
       }));
-      
+
       setReviews(sanitizedReviews);
       setAverageRating(response.data.averageRating || 0);
       setTotalReviews(response.data.totalReviews || 0);
@@ -368,53 +485,42 @@ const Productdetails = () => {
     }
   };
 
-  const checkWishlistStatus = async (productId) => {
-    try {
-      const guestId = localStorage.getItem("guestId");
-      if (!guestId) return;
-
-      const res = await axios.get(`${API_URL}/wishlist/${guestId}`);
-      const items = res.data.items || [];
-      const exists = items.some((item) => item.productId === productId);
-      setWishlist(exists);
-    } catch (err) {
-      console.error("Error checking wishlist:", err);
-    }
-  };
-
+  // ✅ Updated toggleWishlist using context
   const toggleWishlist = async () => {
+    if (!product || isTogglingWishlist) return;
+    
+    setIsTogglingWishlist(true);
+    
     try {
       let guestId = localStorage.getItem("guestId");
-
       if (!guestId) {
-        guestId = Date.now().toString();
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
-      if (wishlist) {
-        await axios.delete(`${API_URL}/wishlist/remove`, {
-          data: { guestId, productId: product._id },
-        });
-        setWishlist(false);
+      if (isInWishlistState) {
+        await removeFromWishlist(product._id);
+        setIsInWishlistState(false);
         alert("Removed from wishlist");
       } else {
-        await axios.post(`${API_URL}/wishlist/add`, {
-          guestId,
-          product: {
-            productId: product._id,
-            name: product.name,
-            price: product.price,
-            image: Array.isArray(product.image)
-              ? product.image[0]
-              : product.image,
-          },
+        await addToWishlist({
+          productId: product._id,
+          name: product.name,
+          price: product.price,
+          image: Array.isArray(product.image) ? product.image[0] : product.image,
+          company: product.company || "Native91",
         });
-        setWishlist(true);
-        navigate("/wishlist");
+        setIsInWishlistState(true);
+        alert("Added to wishlist!");
       }
-    } catch (err) {
-      console.error("Error toggling wishlist:", err);
-      alert("Something went wrong");
+      
+      window.dispatchEvent(new Event('wishlistUpdated'));
+
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsTogglingWishlist(false);
     }
   };
 
@@ -497,86 +603,79 @@ const Productdetails = () => {
     setActiveImg(productImages[newIndex]);
   };
 
-  // Add to Cart
-  const addToCart = async () => {
+  // ✅ Updated Add to Cart
+  const handleAddToCart = async () => {
+    if (!product) return;
+    
+    setIsAddingToCart(true);
+    
     try {
       let guestId = localStorage.getItem("guestId");
-
       if (!guestId) {
         guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
+      const primaryImage = Array.isArray(product.image) && product.image.length > 0
+        ? product.image[0]
+        : product.image || "";
 
-      const primaryImage =
-        Array.isArray(product.image) && product.image.length > 0
-          ? product.image[0]
-          : product.image || "";
+      await addToCart({
+        productId: product._id,
+        name: product.name,
+        price: parseFloat(finalPrice),
+        originalPrice: parseFloat(product.price),
+        image: primaryImage,
+        quantity: parseInt(qty),
+        discountAmount: discountedPrice ? discountedPrice.discountAmount : 0,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+      });
 
-      // ✅ Clean payload - ONLY primitive values
-      const payload = {
-        guestId: String(guestId),
-        productId: String(product._id),
-        name: String(product.name || 'Product'),
-        price: parseFloat(finalPrice) || 0,
-        originalPrice: parseFloat(product.price) || 0,
-        image: String(primaryImage || ''),
-        quantity: parseInt(qty) || 1,
-        couponApplied: appliedCoupon ? String(appliedCoupon.code) : null,
-      };
+      setShowCart(true);
+      window.dispatchEvent(new Event('cartUpdated'));
 
-      const response = await axios.post(`${API_URL}/cart/add`, payload);
-
-      if (response.data.success !== false) {
-        alert("Added to cart!");
-        navigate("/cart");
-      } else {
-        alert(response.data.message || "Failed to add to cart");
-      }
-    } catch (err) {
-      console.error("Add to cart error:", err);
-      alert("Failed to add to cart. Please try again.");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert(error.response?.data?.message || "Failed to add to cart. Please try again.");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
-  // Buy Now
-  const buyNow = async () => {
+  // ✅ Updated Buy Now
+  const handleBuyNow = async () => {
     try {
       let guestId = localStorage.getItem("guestId");
-
       if (!guestId) {
         guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
       const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
+      const primaryImage = Array.isArray(product.image) && product.image.length > 0
+        ? product.image[0]
+        : product.image || "";
 
-      const primaryImage =
-        Array.isArray(product.image) && product.image.length > 0
-          ? product.image[0]
-          : product.image || "";
+      await addToCart({
+        productId: product._id,
+        name: product.name,
+        price: parseFloat(finalPrice),
+        originalPrice: parseFloat(product.price),
+        image: primaryImage,
+        quantity: parseInt(qty),
+        discountAmount: discountedPrice ? discountedPrice.discountAmount : 0,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+      });
 
-      const payload = {
-        guestId: String(guestId),
-        productId: String(product._id),
-        name: String(product.name || 'Product'),
-        price: parseFloat(finalPrice) || 0,
-        originalPrice: parseFloat(product.price) || 0,
-        image: String(primaryImage || ''),
-        quantity: parseInt(qty) || 1,
-        couponApplied: appliedCoupon ? String(appliedCoupon.code) : null,
-      };
-
-      await axios.post(`${API_URL}/cart/add`, payload);
       navigate("/checkout");
-    } catch (err) {
-      console.error("Buy Now error:", err);
+      
+    } catch (error) {
+      console.error("Buy Now error:", error);
       alert("Failed to proceed. Please try again.");
     }
   };
 
-  // ✅ SAFE renderStars function
   const renderStars = (rating) => {
     const numRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
     return (
@@ -592,6 +691,33 @@ const Productdetails = () => {
       </div>
     );
   };
+
+  // Check localStorage for applied coupon when product changes
+  useEffect(() => {
+    const coupon = localStorage.getItem("appliedCoupon");
+    const price = localStorage.getItem("discountedPrice");
+    const storedProductId = localStorage.getItem("appliedProductId");
+
+    if (coupon && price && storedProductId && product?._id) {
+      if (storedProductId === product._id) {
+        setAppliedCoupon(JSON.parse(coupon));
+        setDiscountedPrice(JSON.parse(price));
+      } else {
+        localStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("discountedPrice");
+        localStorage.removeItem("appliedProductId");
+        setAppliedCoupon(null);
+        setDiscountedPrice(null);
+      }
+    }
+  }, [product]);
+
+  // Fetch coupons when product is loaded
+  useEffect(() => {
+    if (product) {
+      fetchVendorCoupons();
+    }
+  }, [product, fetchVendorCoupons]);
 
   if (loading) {
     return (
@@ -625,7 +751,7 @@ const Productdetails = () => {
               </Button>
               <Button
                 variant="outline-secondary"
-                onClick={fetchProductBySlug}
+                onClick={() => window.location.reload()}
                 className="ms-2"
               >
                 Try Again
@@ -662,7 +788,7 @@ const Productdetails = () => {
                   <div className="thumbnail-list">
                     {productImages.map((img, i) => (
                       <div
-                        key={i}
+                        key={`thumb-${i}`}
                         className={`thumb-box ${activeImg === img ? "active" : ""}`}
                         onClick={() => {
                           setActiveImg(img);
@@ -687,7 +813,7 @@ const Productdetails = () => {
                 >
                   <motion.div
                     className="main-image-box"
-                    key={activeImg}
+                    key={`main-img-${activeImg}`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
@@ -701,7 +827,7 @@ const Productdetails = () => {
                       }}
                     />
                   </motion.div>
-                 
+
                   {hasMultipleImages && (
                     <>
                       <button
@@ -810,10 +936,10 @@ const Productdetails = () => {
                       <span className="discounted-price" style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '1.3em' }}>
                         ₹{formatPrice(displayPrice)}
                       </span>
-                      <span className="savings-badge" style={{ 
-                        background: '#e74c3c', 
-                        color: 'white', 
-                        padding: '2px 10px', 
+                      <span className="savings-badge" style={{
+                        background: '#e74c3c',
+                        color: 'white',
+                        padding: '2px 10px',
                         borderRadius: '20px',
                         fontSize: '12px',
                         marginLeft: '10px',
@@ -836,9 +962,9 @@ const Productdetails = () => {
 
                 {/* Applied Coupon Badge */}
                 {appliedCoupon && discountedPrice && (
-                  <div className="applied-coupon-badge mt-2" style={{ 
-                    background: '#d4edda', 
-                    padding: '8px 15px', 
+                  <div className="applied-coupon-badge mt-2" style={{
+                    background: '#d4edda',
+                    padding: '8px 15px',
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
@@ -851,9 +977,9 @@ const Productdetails = () => {
                         ₹{formatPrice(discountedPrice.discountAmount)} OFF applied!
                       </span>
                     </div>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
+                    <Button
+                      variant="link"
+                      size="sm"
                       className="text-danger p-0"
                       onClick={removeCoupon}
                     >
@@ -862,12 +988,20 @@ const Productdetails = () => {
                   </div>
                 )}
 
+                {/* ✅ Updated Wishlist Button */}
                 <p
-                  className={`wishlist-btn-product-details mt-2 ${wishlist ? "active" : ""}`}
+                  className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""}`}
                   onClick={toggleWishlist}
+                  style={{ cursor: isTogglingWishlist ? 'not-allowed' : 'pointer' }}
                 >
-                  <FaHeart className="wishlist-icon" />
-                  {wishlist ? "Go to Wishlist" : "Add to Wishlist"}
+                  {isTogglingWishlist ? (
+                    <Spinner animation="border" size="sm" className="me-2" />
+                  ) : (
+                    <FaHeart className="wishlist-icon" />
+                  )}
+                  {isTogglingWishlist 
+                    ? 'Processing...' 
+                    : (isInWishlistState ? "Go to Wishlist" : "Add to Wishlist")}
                 </p>
 
                 <p className="tax-text">
@@ -889,35 +1023,43 @@ const Productdetails = () => {
                           {vendorCoupons.length}
                         </Badge>
                       </h6>
-                      <Button 
-                        variant="link" 
-                        size="sm" 
+                      <Button
+                        variant="link"
+                        size="sm"
                         onClick={() => setShowCoupons(!showCoupons)}
                         className="text-decoration-none p-0"
                       >
                         {showCoupons ? 'Hide' : 'View All'}
                       </Button>
                     </div>
-                    
-                    {showCoupons && (
+
+                    {showCoupons && vendorCoupons.length > 0 && (
                       <div className="coupon-list mt-2">
                         {vendorCoupons.map((coupon, index) => {
+                          const couponProducts = coupon.products || coupon.productIds || [];
+                          const shouldShow = couponProducts.length === 0 || 
+                                            couponProducts.some(id => id.toString() === product._id.toString());
+                          
+                          if (!shouldShow) {
+                            return null;
+                          }
+
                           const isApplied = appliedCoupon && appliedCoupon.code === coupon.code;
                           const priceInfo = calculateDiscountedPrice(coupon);
                           const discount = coupon.discount || coupon.discountValue || 0;
                           const type = coupon.type || coupon.discountType || 'percentage';
-                          
+
                           return (
-                            <div 
-                              key={coupon._id || index} 
+                            <div
+                              key={coupon._id || `coupon-${index}`}
                               className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? 'border-success' : ''}`}
                               style={isApplied ? { background: '#f0fff4' } : {}}
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
                                   <span className="badge bg-success me-2">
-                                    {type === 'percentage' 
-                                      ? `${discount}% OFF` 
+                                    {type === 'percentage'
+                                      ? `${discount}% OFF`
                                       : `₹${discount} OFF`}
                                   </span>
                                   <strong className="text-primary">{String(coupon.code)}</strong>
@@ -949,8 +1091,8 @@ const Productdetails = () => {
                               </div>
                               <div className="d-flex flex-column gap-1">
                                 {!isApplied ? (
-                                  <Button 
-                                    variant="success" 
+                                  <Button
+                                    variant="success"
                                     size="sm"
                                     onClick={() => applyCoupon(coupon)}
                                     className="ms-2"
@@ -958,8 +1100,8 @@ const Productdetails = () => {
                                     Apply
                                   </Button>
                                 ) : (
-                                  <Button 
-                                    variant="outline-danger" 
+                                  <Button
+                                    variant="outline-danger"
                                     size="sm"
                                     onClick={removeCoupon}
                                     className="ms-2"
@@ -967,8 +1109,7 @@ const Productdetails = () => {
                                     Remove
                                   </Button>
                                 )}
-                                <Button 
-                                  variant="outline-secondary" 
+                                <Button                                  variant="outline-secondary"
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(String(coupon.code));
@@ -1006,11 +1147,24 @@ const Productdetails = () => {
                 </div>
 
                 <div className="action-buttons">
-                  <Button className="cart-btn" onClick={addToCart}>
-                    <FaShoppingCart /> Add to Cart
+                  <Button 
+                    className="cart-btn" 
+                    onClick={handleAddToCart}
+                    disabled={isAddingToCart}
+                  >
+                    {isAddingToCart ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <FaShoppingCart /> Add to Cart
+                      </>
+                    )}
                   </Button>
 
-                  <Button className="buy-btn-product-details" onClick={buyNow}>
+                  <Button className="buy-btn-product-details" onClick={handleBuyNow}>
                     Buy Now
                   </Button>
                 </div>
@@ -1059,7 +1213,7 @@ const Productdetails = () => {
             </details>
           </div>
 
-          {/* ========== REVIEWS SECTION - FIXED ========== */}
+          {/* REVIEWS SECTION */}
           <div className="reviews-section mt-5">
             <div className="reviews-header d-flex justify-content-between align-items-center mb-4">
               <h3 className="funnel-sans me-2">Customer Reviews</h3>
@@ -1086,19 +1240,17 @@ const Productdetails = () => {
             ) : (
               <Row className="g-4">
                 {reviews.map((review, index) => {
-                  // ✅ SAFETY: Extract primitive values only
                   const reviewText = String(review?.review || '');
                   const userName = String(review?.userName || 'Anonymous');
                   const rating = typeof review?.rating === 'number' ? review.rating : 0;
                   const createdAt = review?.createdAt || new Date().toISOString();
-                  
+
                   return (
-                    <Col md={4} lg={3} key={review?._id || index}>
+                    <Col md={4} lg={3} key={review?._id || `review-${index}`}>
                       <div className="review-card p-3 border rounded h-100">
                         <div className="review-stars mb-2">
                           {renderStars(rating)}
                         </div>
-                        {/* ✅ IMPORTANT: Using reviewText which is a string */}
                         <p className="review-text mt-3">{reviewText}</p>
                         <div className="review-meta mt-3">
                           <div className="reviewer-info d-flex align-items-center">
@@ -1159,7 +1311,7 @@ const Productdetails = () => {
           )}
 
           <Form>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" key="review-name">
               <Form.Label>Your Name *</Form.Label>
               <Form.Control
                 type="text"
@@ -1171,7 +1323,7 @@ const Productdetails = () => {
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" key="review-rating">
               <Form.Label>Rating *</Form.Label>
               <div className="rating-input">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -1187,7 +1339,7 @@ const Productdetails = () => {
               </div>
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" key="review-text">
               <Form.Label>Your Review *</Form.Label>
               <Form.Control
                 as="textarea"
@@ -1226,15 +1378,28 @@ const Productdetails = () => {
       {/* Mobile Sticky Add To Cart */}
       <div className="mobile-sticky-cart">
         <button
-          className={`mobile-wishlist ${wishlist ? "active" : ""}`}
+          className={`mobile-wishlist ${isInWishlistState ? "active" : ""}`}
           onClick={toggleWishlist}
+          disabled={isTogglingWishlist}
         >
-          <FaHeart />
+          {isTogglingWishlist ? (
+            <Spinner animation="border" size="sm" />
+          ) : (
+            <FaHeart />
+          )}
         </button>
 
-        <button className="mobile-add-cart" onClick={addToCart}>
-          <FaShoppingBag className="me-2" />
-          {discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart'}
+        <button 
+          className="mobile-add-cart" 
+          onClick={handleAddToCart}
+          disabled={isAddingToCart}
+        >
+          {isAddingToCart ? (
+            <Spinner animation="border" size="sm" className="me-2" />
+          ) : (
+            <FaShoppingBag className="me-2" />
+          )}
+          {isAddingToCart ? 'Adding...' : (discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart')}
         </button>
       </div>
 
