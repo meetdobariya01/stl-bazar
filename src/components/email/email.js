@@ -79,7 +79,7 @@ const Email = () => {
                           whileHover={{ scale: 1.05 }}
                           src={item.logo}
                           alt="Logo"
-                          className="brand-logo-email w-25 w-md-50"
+                          className="brand-logo-email w-25 w-md-50 w-lg-50"
                         />
                       )}
 

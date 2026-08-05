@@ -139,7 +139,7 @@ const Sell = () => {
               <FaCheckCircle
                 className="success-icon"
                 size={80}
-                color="#28a745"
+                color="#0f5132"
               />
               <h2 className="mt-4">Registration Successful!</h2>
               <p className="mt-3">
@@ -151,8 +151,8 @@ const Sell = () => {
                 further instructions.
               </p>
               <Button
-                variant="primary"
-                className="mt-3"
+                variant="dark"
+                className="mt-3 p-2"
                 onClick={() => window.location.reload()}
               >
                 Register Another Account

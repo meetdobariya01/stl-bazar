@@ -873,7 +873,7 @@ const Checkout = () => {
                       </div>
                     )}
 
-                    <div className="summary-total">
+                    <div className="summary-total-checkout">
                       <div>
                         <h4>Total</h4>
                         <p>Inclusive of all taxes</p>

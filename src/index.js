@@ -25,6 +25,7 @@ import Return from "./pages/returnpage/return";
 import Privacypolicy from "./pages/privacypolicy/privacypolicy";
 import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
+import Cookies from "./components/cookies/cookies";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -52,6 +53,7 @@ root.render(
         <Route path="/faqs" element={<Faqs />} />
         <Route path="/orderhistory" element={<Orderhistory />} />
       </Routes>
+      <Cookies />
     </Router>
   </CartProvider>,
 );

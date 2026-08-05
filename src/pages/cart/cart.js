@@ -599,6 +599,7 @@ const Cart = () => {
                     >
                       Proceed to Checkout
                     </Button>
+                    
 
                     <div className="secure-checkout">
                       <FaShieldAlt />
