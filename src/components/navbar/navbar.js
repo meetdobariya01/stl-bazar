@@ -17,7 +17,7 @@ const Mainnavbar = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch("http://localhost:9000/api/categories");
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/categories`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

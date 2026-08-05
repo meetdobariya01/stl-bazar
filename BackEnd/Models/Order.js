@@ -1,15 +1,18 @@
+// Models/Order.js - UPDATED WITH COUPON FIELDS
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
-  guestId: { type: String, required: true }, // For guest users
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // For registered users (optional)
+  guestId: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   items: [
     {
       productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
       name: String,
       price: Number,
       quantity: Number,
-      image: [String], // ✅ Changed from String to [String] to accept array
+      image: [String],
+      vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
+      company: { type: String, default: "N/A" },
     },
   ],
   shippingAddress: {
@@ -22,10 +25,26 @@ const orderSchema = new mongoose.Schema({
     pincode: String,
     country: String,
   },
-  paymentMethod: { type: String, default: "COD" }, // e.g., COD, UPI, Card
+  paymentMethod: { type: String, default: "COD" },
+  
+  // ✅ ADD COUPON FIELDS HERE
+  coupon: {
+    code: { type: String, default: null },
+    discountType: { type: String, enum: ["percentage", "fixed"], default: null },
+    discountValue: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+    couponId: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
+  },
+  subtotal: { type: Number, default: 0 }, // ✅ Original price before discount
+  
   totalPrice: { type: Number, required: true },
-  orderStatus: { type: String, default: "Pending" }, // Pending, Confirmed, Shipped, Delivered
-  createdAt: { type: Date, default: Date.now },
+  orderStatus: { 
+    type: String, 
+    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+    default: "Pending" 
+  },
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model("Order", orderSchema);

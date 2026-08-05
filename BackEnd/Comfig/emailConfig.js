@@ -1,201 +1,289 @@
+// Config/emailConfig.js - FINAL WORKING VERSION
 const nodemailer = require("nodemailer");
+require("dotenv").config();
 
 let transporter = null;
 let emailMode = "none";
 
-// Initialize email transporter
+// ============================================================
+// ADMIN EMAIL
+// ============================================================
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "orders@native91.com";
+
+// ============================================================
+// HARDCODED HOSTINGER SETTINGS - COMPLETELY IGNORES .env
+// ============================================================
+const HOSTINGER_CONFIG = {
+  host: "smtp.hostinger.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: "orders@native91.com",
+    pass: process.env.EMAIL_PASS || "Orders@&2026",
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+};
+
+// ============================================================
+// INITIALIZE EMAIL TRANSPORTER
+// ============================================================
 const initEmailTransporter = async () => {
-  // // console.log("📧 Initializing email service...");
+  console.log("📧 Configuring Hostinger Webmail...");
   
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const emailPass = process.env.EMAIL_PASS || "Orders@&2026";
   
-  // Check if we have real email credentials
-  if (emailUser && emailPass && emailUser !== "yourstore@gmail.com") {
-    try {
-      transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || "smtp.gmail.com",
-        port: parseInt(process.env.EMAIL_PORT) || 587,
-        secure: false,
-        auth: {
-          user: emailUser,
-          pass: emailPass,
-        },
-      });
-      
-      await transporter.verify();
-      emailMode = "smtp";
-      // console.log("✅ SMTP email configured successfully");
-      // console.log(`   Sending from: ${emailUser}`);
-      return true;
-    } catch (error) {
-      console.error("❌ SMTP configuration failed:", error.message);
-    }
-  }
+  // Update password in config
+  HOSTINGER_CONFIG.auth.pass = emailPass;
   
-  // Fallback to Ethereal for testing
   try {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
+    transporter = nodemailer.createTransport(HOSTINGER_CONFIG);
     
-    emailMode = "ethereal";
-    // console.log("✅ Ethereal email configured (TEST MODE)");
-    // console.log("   📧 Test Email Account:");
-    // console.log(`   Email: ${testAccount.user}`);
-    // console.log(`   Password: ${testAccount.pass}`);
-    // console.log("   View emails at: https://ethereal.email/login");
+    // Verify connection
+    await transporter.verify();
+    emailMode = "smtp";
+    console.log("✅ Hostinger SMTP configured successfully!");
+    console.log(`   Sending from: orders@native91.com`);
+    console.log(`   Host: smtp.hostinger.com:465`);
     return true;
   } catch (error) {
-    console.error("❌ Failed to configure email:", error.message);
-    emailMode = "none";
+    console.error("❌ SMTP configuration failed:", error.message);
+    console.log("   ⚠️ Please check your email password");
+    console.log("   💡 Try logging in at: https://webmail.native91.com");
+    console.log("   📧 Email mode set to CONSOLE (emails will be printed)");
+    emailMode = "console";
     return false;
   }
 };
 
-// Initialize email on startup
+// Initialize on startup
 initEmailTransporter();
 
-// Send email function
+// ============================================================
+// SEND EMAIL FUNCTION
+// ============================================================
 const sendEmail = async (to, subject, html) => {
-  if (!transporter || emailMode === "none") {
-    // console.log("⚠️ Email service not available. Email not sent.");
-    // console.log(`   Would have sent to: ${to}`);
-    // console.log(`   Subject: ${subject}`);
-    return { success: false, error: "No email service", previewUrl: null };
+  // Console mode
+  if (emailMode === "console" || !transporter) {
+    console.log("=========================================");
+    console.log("📧 EMAIL (CONSOLE MODE)");
+    console.log(`To: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`From: orders@native91.com`);
+    console.log("=========================================");
+    return { success: true, mode: "console" };
   }
-  
+
+  if (!to || !to.includes("@")) {
+    return { success: false, error: "Invalid email address" };
+  }
+
   try {
-    const info = await transporter.sendMail({
-      from: `"Gourment Bazar" <${emailMode === "smtp" ? process.env.EMAIL_USER : "noreply@ethereal.email"}>`,
-      to,
-      subject,
-      html,
-    });
-    
-    // console.log(`✅ Email sent to ${to}`);
-    
-    let previewUrl = null;
-    if (emailMode === "ethereal") {
-      previewUrl = nodemailer.getTestMessageUrl(info);
-    //   console.log(`   📧 Preview: ${previewUrl}`);
-    }
-    
-    return { success: true, info, previewUrl };
+    const mailOptions = {
+      from: `"Native91" <orders@native91.com>`,
+      to: to,
+      subject: subject,
+      html: html,
+      headers: {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        Importance: "high",
+      },
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to: ${to}`);
+    return { success: true, info, messageId: info.messageId };
   } catch (error) {
-    console.error(`❌ Failed to send email to ${to}:`, error.message);
-    return { success: false, error: error.message, previewUrl: null };
+    console.error(`❌ Failed to send to ${to}:`, error.message);
+    return { success: false, error: error.message };
   }
 };
 
-// Email Templates
-const getCustomerOrderEmail = (order, orderId) => {
-  const itemsList = (order.items || []).map(item => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">₹${item.price}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">₹${item.price * item.quantity}</td>
-    </tr>
-  `).join('');
+// ============================================================
+// CUSTOMER ORDER EMAIL
+// ============================================================
+// const getCustomerOrderEmail = (order, orderId) => {
+//   const itemsList = (order.items || []).map(item => `
+//     <tr>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price}</td>
+//       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+//     </tr>
+//   `).join("");
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px; }
-        .content { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th { background: #4CAF50; color: white; padding: 10px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
-        .total { font-size: 18px; font-weight: bold; text-align: right; margin-top: 20px; }
-        .footer { text-align: center; margin-top: 20px; padding: 20px; color: #777; font-size: 12px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>Order Confirmed! 🎉</h1>
-        </div>
-        <div class="content">
-          <h2>Thank you for your order!</h2>
-          <p>Dear ${order.shippingAddress?.name || "Customer"},</p>
-          <p>Your order has been successfully placed and confirmed.</p>
-          
-          <p><strong>Order ID:</strong> ${orderId}</p>
-          <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-          <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
-          
-          <h3>Order Items:</h3>
-          <table>
-            <thead>
-              <tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr>
-            </thead>
-            <tbody>${itemsList}</tbody>
-          </table>
-          
-          <div class="total">
-            <p><strong>Total Amount: ₹${order.totalPrice}</strong></p>
-          </div>
-          
-          <p>Thank you for shopping with Gourment Bazar!</p>
-        </div>
-        <div class="footer">
-          <p>This is an automated message, please do not reply.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-};
+//   const totalAmount = order.totalPrice || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+//   return `
+//     <!DOCTYPE html>
+//     <html>
+//     <head>
+//       <meta charset="UTF-8">
+//       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//       <title>Order Confirmation</title>
+//       <style>
+//         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; margin: 0; padding: 20px; }
+//         .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+//         .header { background: linear-gradient(135deg, #28a745, #218838); padding: 30px 20px; text-align: center; }
+//         .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+//         .header p { color: #e8f5e9; margin: 5px 0 0; }
+//         .content { padding: 20px; }
+//         .order-details { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; margin: 20px 0; }
+//         .order-details p { margin: 5px 0; }
+//         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+//         th { background: #28a745; color: white; padding: 12px; text-align: left; }
+//         td { padding: 10px; border-bottom: 1px solid #ddd; }
+//         .total-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #28a745; }
+//         .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 18px; font-weight: bold; }
+//         .total-amount { color: #28a745; font-size: 24px; }
+//         .shipping-info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+//         .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+//         .badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+//       </style>
+//     </head>
+//     <body>
+//       <div class="container">
+//         <div class="header">
+//           <h1>🎉 Order Confirmed!</h1>
+//           <p>Thank you for your order, ${order.shippingAddress?.name || "Customer"}!</p>
+//         </div>
+//         <div class="content">
+//           <div class="order-details">
+//             <p><strong>📋 Order #:</strong> ${orderId}</p>
+//             <p><strong>📅 Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+//             <p><strong>💳 Payment:</strong> ${order.paymentMethod || "COD"}</p>
+//             <p><strong>📦 Status:</strong> <span class="badge">${order.orderStatus || "Pending"}</span></p>
+//           </div>
+
+//           <h3>🛍️ Order Items</h3>
+//           <table>
+//             <thead>
+//               <tr><th>Product</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Price</th><th style="text-align: right;">Total</th></tr>
+//             </thead>
+//             <tbody>${itemsList}</tbody>
+//           </table>
+
+//           <div class="total-section">
+//             <div class="total-row">
+//               <span>Total</span>
+//               <span class="total-amount">₹${totalAmount.toFixed(2)}</span>
+//             </div>
+//           </div>
+
+//           <div class="shipping-info">
+//             <h4>📦 Shipping Address</h4>
+//             <p><strong>Name:</strong> ${order.shippingAddress?.name || "N/A"}</p>
+//             <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
+//             <p><strong>Address:</strong> ${order.shippingAddress?.address || "N/A"}</p>
+//             <p><strong>City:</strong> ${order.shippingAddress?.city || "N/A"}</p>
+//             <p><strong>State:</strong> ${order.shippingAddress?.state || "N/A"}</p>
+//             <p><strong>Pincode:</strong> ${order.shippingAddress?.pincode || "N/A"}</p>
+//           </div>
+//         </div>
+//         <div class="footer">
+//           <p>Thank you for shopping with Native91! 🛍️</p>
+//           <p style="font-size: 12px;">This is a system generated email. Please do not reply.</p>
+//         </div>
+//       </div>
+//     </body>
+//     </html>
+//   `;
+// };
+
+// ============================================================
+// ADMIN ORDER EMAIL
+// ============================================================
 const getAdminOrderEmail = (order, orderId) => {
   const itemsList = (order.items || []).map(item => `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${item.price}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${item.price * item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.company || "N/A"}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
-  `).join('');
+  `).join("");
+
+  const totalAmount = order.totalPrice || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   return `
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Order - Admin</title>
       <style>
-        body { font-family: Arial, sans-serif; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { background: #FF9800; color: white; padding: 20px; text-align: center; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+        .header p { color: #ffe0b2; margin: 5px 0 0; }
         .content { padding: 20px; }
+        .alert { background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 15px 0; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th { background: #FF9800; color: white; padding: 10px; text-align: left; }
+        th { background: #f7931e; color: white; padding: 12px; text-align: left; }
         td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .total-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #f7931e; }
+        .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 18px; font-weight: bold; }
+        .total-amount { color: #f7931e; font-size: 24px; }
+        .customer-info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+        .badge { display: inline-block; background: #ffc107; color: #333; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>New Order Received!</h1>
+          <h1>🛒 New Order Received!</h1>
+          <p>Order #${orderId}</p>
         </div>
         <div class="content">
-          <p><strong>Order ID:</strong> ${orderId}</p>
-          <p><strong>Customer:</strong> ${order.shippingAddress?.name || "N/A"}</p>
-          <p><strong>Email:</strong> ${order.shippingAddress?.email || "N/A"}</p>
-          <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
-          <p><strong>Total:</strong> ₹${order.totalPrice}</p>
-          <h3>Items:</h3>
-          <tr>${itemsList}</tr>
+          <div class="alert">
+            <strong>⚠️ New order alert!</strong> A new order has been placed and requires your attention.
+          </div>
+
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <div><strong>📅 Date:</strong> ${new Date(order.createdAt).toLocaleString()}</div>
+            <div><strong>💳 Payment:</strong> ${order.paymentMethod || "COD"}</div>
+            <div><strong>📦 Status:</strong> <span class="badge">${order.orderStatus || "Pending"}</span></div>
+          </div>
+
+          <h3>🛍️ Order Items</h3>
+          <table>
+            <thead>
+              <tr><th>Product</th><th>Company</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Price</th><th style="text-align: right;">Total</th></tr>
+            </thead>
+            <tbody>${itemsList}</tbody>
+          </table>
+
+          <div class="total-section">
+            <div class="total-row">
+              <span>Total</span>
+              <span class="total-amount">₹${totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="customer-info">
+            <h4>📦 Customer Details</h4>
+            <p><strong>Name:</strong> ${order.shippingAddress?.name || "N/A"}</p>
+            <p><strong>Email:</strong> ${order.shippingAddress?.email || "N/A"}</p>
+            <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
+            <p><strong>Address:</strong> ${order.shippingAddress?.address || "N/A"}</p>
+            <p><strong>City:</strong> ${order.shippingAddress?.city || "N/A"}, ${order.shippingAddress?.state || "N/A"} - ${order.shippingAddress?.pincode || "N/A"}</p>
+          </div>
+        </div>
+        <div class="footer">
+          <p>This is an automated notification from Native91.</p>
+          <p style="font-size: 12px;">Please login to the admin panel to process this order.</p>
         </div>
       </div>
     </body>
@@ -203,15 +291,18 @@ const getAdminOrderEmail = (order, orderId) => {
   `;
 };
 
+// ============================================================
+// VENDOR ORDER EMAIL
+// ============================================================
 const getVendorOrderEmail = (order, orderId, vendorItems, vendor) => {
   const itemsList = (vendorItems || []).map(item => `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${item.price}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">₹${item.price * item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
-  `).join('');
+  `).join("");
 
   const vendorTotal = (vendorItems || []).reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -219,31 +310,74 @@ const getVendorOrderEmail = (order, orderId, vendorItems, vendor) => {
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Order - Vendor</title>
       <style>
-        body { font-family: Arial, sans-serif; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { background: #2196F3; color: white; padding: 20px; text-align: center; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2196F3, #1976D2); padding: 30px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+        .header p { color: #e3f2fd; margin: 5px 0 0; }
         .content { padding: 20px; }
+        .order-info { background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; margin: 15px 0; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th { background: #2196F3; color: white; padding: 10px; text-align: left; }
+        th { background: #2196F3; color: white; padding: 12px; text-align: left; }
         td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .total-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #2196F3; }
+        .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 18px; font-weight: bold; }
+        .total-amount { color: #2196F3; font-size: 24px; }
+        .customer-info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+        .badge { display: inline-block; background: #2196F3; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>New Order Received!</h1>
+          <h1>📦 New Order Received!</h1>
+          <p>${vendor?.shopName || vendor?.name || "Vendor"}</p>
         </div>
         <div class="content">
-          <h2>Dear ${vendor?.shopName || vendor?.name || "Vendor"},</h2>
-          <p><strong>Order ID:</strong> ${orderId}</p>
-          <p><strong>Customer:</strong> ${order.shippingAddress?.name || "N/A"}</p>
-          <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
-          <p><strong>Address:</strong> ${order.shippingAddress?.address || "N/A"}</p>
-          <p><strong>Your Total:</strong> ₹${vendorTotal}</p>
-          <h3>Your Products:</h3>
-          <tr>${itemsList}</table>
-          <p>Please prepare these items for shipping.</p>
+          <div class="order-info">
+            <p><strong>📋 Order #:</strong> ${orderId}</p>
+            <p><strong>📅 Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+            <p><strong>📦 Status:</strong> <span class="badge">${order.orderStatus || "Pending"}</span></p>
+          </div>
+
+          <h3>🛍️ Your Products</h3>
+          <table>
+            <thead>
+              <tr><th>Product</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Price</th><th style="text-align: right;">Total</th></tr>
+            </thead>
+            <tbody>${itemsList}</tbody>
+          </table>
+
+          <div class="total-section">
+            <div class="total-row">
+              <span>Your Total</span>
+              <span class="total-amount">₹${vendorTotal.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="customer-info">
+            <h4>👤 Customer Details</h4>
+            <p><strong>Name:</strong> ${order.shippingAddress?.name || "N/A"}</p>
+            <p><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</p>
+            <p><strong>Address:</strong> ${order.shippingAddress?.address || "N/A"}</p>
+            <p><strong>City:</strong> ${order.shippingAddress?.city || "N/A"}</p>
+            <p><strong>State:</strong> ${order.shippingAddress?.state || "N/A"}</p>
+            <p><strong>Pincode:</strong> ${order.shippingAddress?.pincode || "N/A"}</p>
+          </div>
+
+          <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <strong>📌 Action Required:</strong>
+            <p style="margin: 5px 0 0;">Please prepare these items for shipping and update the order status.</p>
+          </div>
+        </div>
+        <div class="footer">
+          <p>This is an automated notification from Native91.</p>
+          <p style="font-size: 12px;">Please login to your vendor dashboard to manage this order.</p>
         </div>
       </div>
     </body>
@@ -251,10 +385,14 @@ const getVendorOrderEmail = (order, orderId, vendorItems, vendor) => {
   `;
 };
 
+// ============================================================
+// EXPORTS
+// ============================================================
 module.exports = {
   sendEmail,
-  getCustomerOrderEmail,
+  // getCustomerOrderEmail,
   getAdminOrderEmail,
   getVendorOrderEmail,
   emailMode,
+  ADMIN_EMAIL,
 };

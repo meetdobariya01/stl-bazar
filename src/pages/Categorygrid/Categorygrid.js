@@ -15,6 +15,7 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import Details from "../../components/details/details";
 import { createSlug } from "../../utils/slugUtils";
+import { useWishlist } from "../../context/WishlistContext";
 import "./categorygrid.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
@@ -52,12 +53,14 @@ const CategoryProducts = () => {
   const decodedCategory = decodeURIComponent(categoryName || "All");
   const navigate = useNavigate();
 
+  const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
+
   const [products, setProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [wishlist, setWishlist] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
@@ -66,20 +69,18 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // ✅ Fetch products - FIXED to properly filter by category
   useEffect(() => {
     if (!decodedCategory) return;
 
     setLoading(true);
     
-    // ✅ If "All" categories, fetch all products
     if (decodedCategory === "All") {
       axios
         .get(`${API_URL}/products`)
         .then((res) => {
-          console.log("All products fetched:", res.data.length);
           setProducts(res.data);
           setFilteredProducts(res.data);
+          fetchWishlist();
         })
         .catch((err) => {
           console.error("Error fetching all products:", err);
@@ -88,41 +89,26 @@ const CategoryProducts = () => {
         })
         .finally(() => setLoading(false));
     } else {
-      // ✅ Fetch products by category
-      // Try different API endpoints that might work
       axios
-        .get(`${API_URL}/products/category/${encodeURIComponent(decodedCategory)}`)
+        .get(`${API_URL}/products`)
         .then((res) => {
-          console.log(`Products for category "${decodedCategory}":`, res.data.length);
-          setProducts(res.data);
-          setFilteredProducts(res.data);
+          const allProducts = res.data;
+          const filtered = allProducts.filter(
+            (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
+          );
+          setProducts(filtered);
+          setFilteredProducts(filtered);
+          fetchWishlist();
         })
-        .catch((err) => {
-          // If category endpoint fails, try filtering all products
-          console.log("Category endpoint failed, trying alternative...");
-          axios
-            .get(`${API_URL}/products`)
-            .then((res) => {
-              const allProducts = res.data;
-              // ✅ Filter products by category (case insensitive)
-              const filtered = allProducts.filter(
-                (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
-              );
-              console.log(`Filtered ${filtered.length} products for category "${decodedCategory}"`);
-              setProducts(filtered);
-              setFilteredProducts(filtered);
-            })
-            .catch((err2) => {
-              console.error("Error fetching products:", err2);
-              setProducts([]);
-              setFilteredProducts([]);
-            })
-            .finally(() => setLoading(false));
-        });
+        .catch((err2) => {
+          console.error("Error fetching products:", err2);
+          setProducts([]);
+          setFilteredProducts([]);
+        })
+        .finally(() => setLoading(false));
     }
-  }, [decodedCategory]);
+  }, [decodedCategory, fetchWishlist]);
 
-  // Fetch all categories for sidebar
   useEffect(() => {
     axios
       .get(`${API_URL}/categories`)
@@ -132,7 +118,6 @@ const CategoryProducts = () => {
       .catch((err) => console.error("Error fetching categories:", err));
   }, []);
 
-  // Apply filters
   useEffect(() => {
     let filtered = [...products];
 
@@ -209,12 +194,32 @@ const CategoryProducts = () => {
     }
   };
 
-  const toggleWishlist = (e, productId) => {
+  // ✅ Updated toggleWishlist using context
+  const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
-    if (wishlist.includes(productId)) {
-      setWishlist(wishlist.filter((id) => id !== productId));
-    } else {
-      setWishlist([...wishlist, productId]);
+    
+    setIsTogglingWishlist(prev => ({ ...prev, [productId]: true }));
+    
+    try {
+      const product = products.find(p => p._id === productId);
+      if (!product) return;
+      
+      await toggleWishlist({
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        image: Array.isArray(product.image) ? product.image[0] : product.image,
+        company: product.company || "Native91",
+      });
+      
+      // Refetch wishlist to update UI
+      await fetchWishlist();
+      
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsTogglingWishlist(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -236,6 +241,11 @@ const CategoryProducts = () => {
   };
 
   const sortedProducts = getSortedProducts();
+
+  // Check if product is in wishlist
+  const checkIsInWishlist = (productId) => {
+    return isInWishlist(productId);
+  };
 
   if (loading) {
     return (
@@ -300,140 +310,6 @@ const CategoryProducts = () => {
           </div>
 
           <Row className="g-4">
-            {/* Filters Sidebar */}
-            <Col lg={3} className="d-none">
-              <div className="filters-sidebar">
-                <div className="filter-header">
-                  <h5>Filters</h5>
-                  <Button
-                    variant="link"
-                    onClick={clearFilters}
-                    className="clear-all-btn"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-
-                <div className="filter-group">
-                  <h6>Categories</h6>
-                  <div className="category-list">
-                    <div
-                      className={`category-item ${decodedCategory === "All" ? "active" : ""}`}
-                      onClick={() => handleCategorySelect("All")}
-                    >
-                      <span>All Categories</span>
-                      <FaChevronRight size={12} />
-                    </div>
-                    {allCategories.map((cat) => (
-                      <div
-                        key={cat._id}
-                        className={`category-item ${decodedCategory === cat.name ? "active" : ""}`}
-                        onClick={() => handleCategorySelect(cat.name)}
-                      >
-                        <span>{cat.name}</span>
-                        <FaChevronRight size={12} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <h6>Price</h6>
-                  <div className="price-options">
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="Under ₹500"
-                      checked={selectedPriceRange === "under-500"}
-                      onChange={() => setSelectedPriceRange("under-500")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="₹500 - ₹1,000"
-                      checked={selectedPriceRange === "500-1000"}
-                      onChange={() => setSelectedPriceRange("500-1000")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="₹1,000 - ₹2,000"
-                      checked={selectedPriceRange === "1000-2000"}
-                      onChange={() => setSelectedPriceRange("1000-2000")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="₹2,000 - ₹5,000"
-                      checked={selectedPriceRange === "2000-5000"}
-                      onChange={() => setSelectedPriceRange("2000-5000")}
-                    />
-                    <Form.Check
-                      type="radio"
-                      name="priceRange"
-                      label="Above ₹5,000"
-                      checked={selectedPriceRange === "above-5000"}
-                      onChange={() => setSelectedPriceRange("above-5000")}
-                    />
-                    <div className="custom-price">
-                      <div className="price-inputs">
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={priceMin}
-                          onChange={(e) => {
-                            setSelectedPriceRange("");
-                            setPriceMin(e.target.value);
-                          }}
-                        />
-                        <span>to</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={priceMax}
-                          onChange={(e) => {
-                            setSelectedPriceRange("");
-                            setPriceMax(e.target.value);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <h6>Rating</h6>
-                  <div className="rating-options">
-                    {[4, 3, 2, 1].map((rating) => (
-                      <Form.Check
-                        key={rating}
-                        type="radio"
-                        name="rating"
-                        label={
-                          <span className="rating-label">
-                            {[...Array(5)].map((_, i) => (
-                              <FaStar
-                                key={i}
-                                color={i < rating ? "#ffc107" : "#e4e5e9"}
-                                size={14}
-                              />
-                            ))}
-                            <span>& up</span>
-                          </span>
-                        }
-                        checked={selectedRating === rating}
-                        onChange={() =>
-                          setSelectedRating(
-                            rating === selectedRating ? 0 : rating,
-                          )
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Col>
-
             {showMobileFilters && (
               <div
                 className="mobile-filters-overlay"
@@ -541,9 +417,10 @@ const CategoryProducts = () => {
               ) : (
                 <Row className="g-4">
                   {sortedProducts.map((item) => {
-                    const isInWishlist = wishlist.includes(item._id);
+                    const inWishlist = checkIsInWishlist(item._id);
                     const imageUrl = formatImagePath(item.image);
                     const productSlug = createSlug(item.name);
+                    const isToggling = isTogglingWishlist[item._id] || false;
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3} className="text-center">
@@ -568,9 +445,14 @@ const CategoryProducts = () => {
                               />
                               <div
                                 className="wishlist-btn-category"
-                                onClick={(e) => toggleWishlist(e, item._id)}
+                                onClick={(e) => handleToggleWishlist(e, item._id)}
+                                style={{ cursor: isToggling ? 'not-allowed' : 'pointer' }}
                               >
-                                {isInWishlist ? (
+                                {isToggling ? (
+                                  <div className="spinner-border spinner-border-sm" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                  </div>
+                                ) : inWishlist ? (
                                   <FaHeart color="#e74c3c" />
                                 ) : (
                                   <FaRegHeart />

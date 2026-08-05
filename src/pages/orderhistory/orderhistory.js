@@ -31,7 +31,7 @@ import { useCart } from "../../context/CartContext";
 import "./orderhistory.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const BACKEND_URL = "http://localhost:9000";
+const BACKEND_URL = "https://api.gourmetbazar.starlighttechlabsindia.com";
 const VENDOR_BACKEND_URL =
   "https://api.brandelvendor.starlighttechlabsindia.com";
 

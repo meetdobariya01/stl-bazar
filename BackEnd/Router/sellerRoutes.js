@@ -1,14 +1,20 @@
+// Router/seller.js - UPDATED WITH HOSTINGER
 const express = require("express");
 const router = express.Router();
 const Seller = require("../Models/Seller");
 const nodemailer = require("nodemailer");
 
-// Email configuration
+// ✅ USE HOSTINGER SMTP (NOT GMAIL)
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: process.env.EMAIL_HOST || "smtp.hostinger.com",
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER || "orders@native91.com",
+    pass: process.env.EMAIL_PASS || "",
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
@@ -24,15 +30,13 @@ transporter.verify((error, success) => {
 // Send email function
 const sendSellerConfirmationEmail = async (sellerData) => {
   const mailOptions = {
-    from: `"Brandel" <${process.env.EMAIL_USER}>`,
+    from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
     to: sellerData.email,
-    subject: "Welcome to Brandel Seller Program!",
+    subject: "Welcome to Native91 Seller Program!",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #4a5568;">Welcome ${sellerData.fullName}! 🎉</h2>
-        
-        <p>Thank you for registering as a seller on <strong>Brandel</strong>.</p>
-        
+        <p>Thank you for registering as a seller on <strong>Native91</strong>.</p>
         <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #2d3748; margin-bottom: 15px;">Registration Details:</h3>
           <p><strong>Business Name:</strong> ${sellerData.businessName}</p>
@@ -41,26 +45,10 @@ const sendSellerConfirmationEmail = async (sellerData) => {
           <p><strong>Category:</strong> ${sellerData.category}</p>
           <p><strong>Status:</strong> Pending Approval</p>
         </div>
-        
-        <p>Our team will review your application within 24-48 hours. You will receive another email once your account is approved.</p>
-        
-        <div style="background-color: #e2e8f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h4 style="margin-top: 0;">Next Steps:</h4>
-          <ul>
-            <li>Our team will verify your business details</li>
-            <li>You'll receive login credentials after approval</li>
-            <li>Start listing your products and reach millions of customers</li>
-          </ul>
-        </div>
-        
+        <p>Our team will review your application within 24-48 hours.</p>
         <p>If you have any questions, feel free to contact our support team.</p>
-        
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-        
-        <p style="color: #718096; font-size: 12px;">
-          © 2024 Brandel. All rights reserved.<br>
-          This is an automated message, please do not reply.
-        </p>
+        <p style="color: #718096; font-size: 12px;">© 2024 Native91. All rights reserved.</p>
       </div>
     `,
   };
@@ -71,15 +59,13 @@ const sendSellerConfirmationEmail = async (sellerData) => {
 // Send admin notification email
 const sendAdminNotification = async (sellerData) => {
   const mailOptions = {
-    from: `"Brandel" <${process.env.EMAIL_USER}>`,
-    to: process.env.ADMIN_EMAIL || "admin@brandel.com",
+    from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
+    to: process.env.ADMIN_EMAIL || "orders@native91.com",
     subject: "New Seller Registration - Action Required",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #4a5568;">New Seller Registration</h2>
-        
-        <p>A new seller has registered on Brandel. Please review their application.</p>
-        
+        <p>A new seller has registered on Native91. Please review their application.</p>
         <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3>Seller Details:</h3>
           <p><strong>Name:</strong> ${sellerData.fullName}</p>
@@ -88,7 +74,6 @@ const sendAdminNotification = async (sellerData) => {
           <p><strong>Phone:</strong> ${sellerData.phoneNumber}</p>
           <p><strong>Category:</strong> ${sellerData.category}</p>
         </div>
-        
         <p>Please log in to the admin panel to approve or reject this application.</p>
       </div>
     `,
@@ -102,7 +87,6 @@ router.post("/register", async (req, res) => {
   try {
     const { fullName, email, phoneNumber, businessName, category } = req.body;
 
-    // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
       return res.status(400).json({
         success: false,
@@ -110,16 +94,14 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Check if seller already exists
     const existingSeller = await Seller.findOne({ email });
     if (existingSeller) {
       return res.status(400).json({
         success: false,
-        message: "This email is already registered. Please use a different email.",
+        message: "This email is already registered.",
       });
     }
 
-    // Create new seller
     const seller = new Seller({
       fullName,
       email,
@@ -130,19 +112,17 @@ router.post("/register", async (req, res) => {
 
     await seller.save();
 
-    // Send confirmation email to seller (don't wait for it)
     sendSellerConfirmationEmail(seller).catch(err => {
       console.error("Error sending seller email:", err);
     });
 
-    // Send notification to admin (don't wait for it)
     sendAdminNotification(seller).catch(err => {
       console.error("Error sending admin email:", err);
     });
 
     res.status(201).json({
       success: true,
-      message: "Registration successful! Please check your email for confirmation.",
+      message: "Registration successful! Please check your email.",
       data: {
         id: seller._id,
         fullName: seller.fullName,
@@ -162,7 +142,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Get all sellers (Admin only)
+// Get all sellers
 router.get("/all", async (req, res) => {
   try {
     const sellers = await Seller.find().sort({ registeredAt: -1 });
@@ -179,7 +159,7 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// Update seller status (Admin only)
+// Update seller status
 router.put("/:id/status", async (req, res) => {
   try {
     const { status } = req.body;
@@ -196,38 +176,26 @@ router.put("/:id/status", async (req, res) => {
       });
     }
 
-    // Send status update email
     const statusMailOptions = {
-      from: `"Brandel" <${process.env.EMAIL_USER}>`,
+      from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
       to: seller.email,
-      subject: `Your Brandel Seller Application - ${status.toUpperCase()}`,
+      subject: `Your Native91 Seller Application - ${status.toUpperCase()}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: ${status === 'approved' ? '#28a745' : '#dc3545'}">
             Application ${status === 'approved' ? 'Approved! 🎉' : 'Status Update'}
           </h2>
-          
           ${status === 'approved' ? `
             <p>Congratulations ${seller.fullName}!</p>
-            <p>Your seller application has been approved. You can now log in to your seller dashboard.</p>
-            <div style="background-color: #d4edda; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <h4>Next Steps:</h4>
-              <ol>
-                <li>Log in to your seller account</li>
-                <li>Complete your store profile</li>
-                <li>Start listing your products</li>
-              </ol>
-            </div>
+            <p>Your seller application has been approved.</p>
           ` : status === 'rejected' ? `
             <p>Dear ${seller.fullName},</p>
-            <p>We regret to inform you that your seller application has not been approved at this time.</p>
-            <p>Please contact our support team for more information.</p>
+            <p>We regret to inform you that your seller application has not been approved.</p>
           ` : `
             <p>Dear ${seller.fullName},</p>
-            <p>Your application is currently under review. We will notify you once a decision has been made.</p>
+            <p>Your application is currently under review.</p>
           `}
-          
-          <p>Thank you for choosing Brandel.</p>
+          <p>Thank you for choosing Native91.</p>
         </div>
       `,
     };
