@@ -133,3 +133,38 @@
     font-size: 14px;
   }
 }
+.swiper {
+  padding: 10px 5px 20px;
+}
+
+.swiper-slide {
+  height: auto;
+}
+
+.promo-card {
+  height: 420px;
+  border-radius: 18px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+@media (max-width: 991px) {
+  .promo-card {
+    height: 300px;
+  }
+}
+
+@media (max-width: 576px) {
+  .promo-card {
+    height: 250px;
+  }
+
+  .promo-content h3 {
+    font-size: 20px;
+  }
+
+  .promo-content p {
+    font-size: 14px;
+  }
+}
