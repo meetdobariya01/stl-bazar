@@ -1,3 +1,4 @@
+// Models/Cart.js - UPDATED WITH VENDOR AND STOCK FIELDS
 const mongoose = require("mongoose");
 
 const CartSchema = new mongoose.Schema(
@@ -8,34 +9,42 @@ const CartSchema = new mongoose.Schema(
       index: true
     },
 
-   items: [
-  {
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true
-    },
-    name: String,
-
-    // Current selling price
-    price: Number,
-
-    // Add these fields
-    originalPrice: Number,
-    discountAmount: {
-      type: Number,
-      default: 0
-    },
-    couponCode: String,
-
-    quantity: {
-      type: Number,
-      default: 1
-    },
-
-    image: [String]
-  }
-],
-
+    items: [
+      {
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          ref: "Product"
+        },
+        name: String,
+        price: Number,
+        originalPrice: Number,
+        discountAmount: {
+          type: Number,
+          default: 0
+        },
+        couponCode: String,
+        quantity: {
+          type: Number,
+          default: 1
+        },
+        image: [String],
+        
+        // ✅ ADD THESE FIELDS
+        vendorId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Vendor"
+        },
+        company: {
+          type: String,
+          default: "N/A"
+        },
+        stock: {
+          type: Number,
+          default: 0
+        }
+      }
+    ],
 
     appliedCoupon: {
       code: String,

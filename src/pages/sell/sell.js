@@ -1,3 +1,5 @@
+// pages/Sell.js - COMPLETE WITH APPLICATION TRACKING
+
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
@@ -18,6 +20,8 @@ import {
   FaShieldAlt,
   FaHeadset,
   FaCheckCircle,
+  FaClock,
+  FaEnvelope,
 } from "react-icons/fa";
 import axios from "axios";
 import Header from "../../components/header/header";
@@ -34,9 +38,10 @@ const Sell = () => {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant", // or "smooth"
+      behavior: "instant",
     });
   }, [pathname]);
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -50,6 +55,13 @@ const Sell = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
+  
+  // ✅ New state for tracking info
+  const [trackingInfo, setTrackingInfo] = useState({
+    trackingId: "",
+    email: "",
+    status: "",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -104,7 +116,6 @@ const Sell = () => {
     setError("");
 
     try {
-      // Updated endpoint: /api/sellers/register
       const response = await axios.post(`${API_URL}/sellers/register`, {
         fullName: formData.fullName,
         email: formData.email,
@@ -116,6 +127,12 @@ const Sell = () => {
       console.log("Response:", response.data);
 
       if (response.data.success) {
+        // ✅ Store tracking info
+        setTrackingInfo({
+          trackingId: response.data.data.trackingId || "",
+          email: formData.email,
+          status: response.data.data.status || "pending",
+        });
         setSuccess(true);
       }
     } catch (err) {
@@ -129,6 +146,7 @@ const Sell = () => {
     }
   };
 
+  // ✅ SUCCESS PAGE WITH TRACKING INFO
   if (success) {
     return (
       <div>
@@ -141,22 +159,50 @@ const Sell = () => {
                 size={80}
                 color="#28a745"
               />
-              <h2 className="mt-4">Registration Successful!</h2>
+              <h2 className="mt-4">Registration Successful! 🎉</h2>
               <p className="mt-3">
                 Thank you for registering as a seller on Native91.
               </p>
-              <p>
-                We have sent a confirmation email to{" "}
-                <strong>{formData.email}</strong>. Please check your inbox for
-                further instructions.
-              </p>
-              <Button
-                variant="primary"
-                className="mt-3"
-                onClick={() => window.location.reload()}
-              >
-                Register Another Account
-              </Button>
+              
+              <div className="tracking-info-box p-4 bg-light rounded mt-4 mx-auto" 
+                   style={{ maxWidth: "550px" }}>
+                <h5 className="mb-3">
+                  <FaEnvelope className="me-2" />
+                  Check Your Email
+                </h5>
+                <p>
+                  We have sent a <strong>tracking link</strong> to your email:
+                </p>
+                <p className="fw-bold text-primary">{trackingInfo.email}</p>
+                
+                <div className="tracking-id-box bg-white p-3 rounded border mt-3">
+                  <small className="text-muted">Your Application ID</small>
+                  <p className="h5 mb-0 text-dark">{trackingInfo.trackingId || "APP-XXXXX"}</p>
+                  <span className="badge bg-warning text-dark mt-2">
+                    <FaClock className="me-1" /> {trackingInfo.status || "Pending"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="whats-next-box mt-4 text-start" style={{ maxWidth: "550px", margin: "0 auto" }}>
+                <h6>📋 What happens next?</h6>
+                <ol className="mb-0">
+                  <li>Check your email for the tracking link</li>
+                  <li>Use the link to check your application status anytime</li>
+                  <li>Our team will review your application within 24-48 hours</li>
+                  <li>You'll receive login credentials upon approval</li>
+                </ol>
+              </div>
+
+              <div className="mt-4">
+                <Button
+                  variant="outline-primary"
+                  className="me-2"
+                  onClick={() => window.location.reload()}
+                >
+                  Register Another Account
+                </Button>
+              </div>
             </div>
           </Container>
         </div>
@@ -165,6 +211,7 @@ const Sell = () => {
     );
   }
 
+  // ✅ REGISTRATION FORM
   return (
     <div>
       <Header />
@@ -230,18 +277,6 @@ const Sell = () => {
                     <Form.Group className="mb-4">
                       <Form.Label>Phone Number *</Form.Label>
                       <div className="phone-input d-flex gap-2">
-                        {/* <Form.Select 
-                          name="countryCode"
-                          value={formData.countryCode}
-                          onChange={handleChange}
-                          style={{ width: "100px" }}
-                        >
-                          <option value="+91">+91 (IND)</option>
-                          <option value="+1">+1 (USA)</option>
-                          <option value="+44">+44 (UK)</option>
-                          <option value="+61">+61 (AUS)</option>
-                        </Form.Select> */}
-
                         <Form.Control
                           type="tel"
                           name="phoneNumber"
