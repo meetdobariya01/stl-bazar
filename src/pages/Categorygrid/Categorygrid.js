@@ -8,6 +8,7 @@ import {
   FaRegHeart,
   FaFilter,
   FaChevronRight,
+  FaShoppingCart,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -16,6 +17,7 @@ import Footer from "../../components/footer/footer";
 import Details from "../../components/details/details";
 import { createSlug } from "../../utils/slugUtils";
 import { useWishlist } from "../../context/WishlistContext";
+import { useCart } from "../../context/CartContext";
 import "./categorygrid.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
@@ -54,6 +56,7 @@ const CategoryProducts = () => {
   const navigate = useNavigate();
 
   const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
+  const { addToCart, setShowCart } = useCart();
 
   const [products, setProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
@@ -61,6 +64,7 @@ const CategoryProducts = () => {
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
+  const [isAddingToCart, setIsAddingToCart] = useState({});
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
@@ -194,7 +198,6 @@ const CategoryProducts = () => {
     }
   };
 
-  // ✅ Updated toggleWishlist using context
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
     
@@ -212,7 +215,6 @@ const CategoryProducts = () => {
         company: product.company || "Native91",
       });
       
-      // Refetch wishlist to update UI
       await fetchWishlist();
       
     } catch (error) {
@@ -220,6 +222,45 @@ const CategoryProducts = () => {
       alert("Something went wrong. Please try again.");
     } finally {
       setIsTogglingWishlist(prev => ({ ...prev, [productId]: false }));
+    }
+  };
+
+  // ✅ Add to Cart Handler
+  const handleAddToCart = async (e, item) => {
+    e.stopPropagation();
+    
+    setIsAddingToCart(prev => ({ ...prev, [item._id]: true }));
+    
+    try {
+      let guestId = localStorage.getItem("guestId");
+      if (!guestId) {
+        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("guestId", guestId);
+      }
+
+      const primaryImage = Array.isArray(item.image) && item.image.length > 0
+        ? item.image[0]
+        : item.image || "";
+
+      await addToCart({
+        productId: item._id,
+        name: item.name,
+        price: parseFloat(item.price),
+        originalPrice: parseFloat(item.price),
+        image: primaryImage,
+        quantity: 1,
+        discountAmount: 0,
+        couponCode: null,
+      });
+
+      setShowCart(true);
+      window.dispatchEvent(new Event('cartUpdated'));
+
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Failed to add to cart. Please try again.");
+    } finally {
+      setIsAddingToCart(prev => ({ ...prev, [item._id]: false }));
     }
   };
 
@@ -242,7 +283,6 @@ const CategoryProducts = () => {
 
   const sortedProducts = getSortedProducts();
 
-  // Check if product is in wishlist
   const checkIsInWishlist = (productId) => {
     return isInWishlist(productId);
   };
@@ -421,6 +461,7 @@ const CategoryProducts = () => {
                     const imageUrl = formatImagePath(item.image);
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
+                    const isAdding = isAddingToCart[item._id] || false;
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3} className="text-center">
@@ -483,8 +524,22 @@ const CategoryProducts = () => {
                               <div className="product-price">
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
-                              <Button className="view-details-btn">
-                                View Details
+                              {/* ✅ Add to Cart Button instead of View Details */}
+                              <Button 
+                                className="add-to-cart-btn-category"
+                                onClick={(e) => handleAddToCart(e, item)}
+                                disabled={isAdding}
+                              >
+                                {isAdding ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2" />
+                                    Adding...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaShoppingCart /> Add to Cart
+                                  </>
+                                )}
                               </Button>
                             </Card.Body>
                           </Card>
@@ -499,7 +554,7 @@ const CategoryProducts = () => {
         </Container>
       </div>
 
-      <Details />
+      {/* <Details /> */}
       <Footer />
     </>
   );

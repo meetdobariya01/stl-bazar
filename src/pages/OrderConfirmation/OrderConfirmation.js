@@ -10,13 +10,13 @@ import confetti from "canvas-confetti";
 import Footer from "../../components/footer/footer";
 import Header from "../../components/header/header";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000";
+const API_URL = process.env.REACT_APP_API_URL || "https://api.gourmetbazar.starlighttechlabsindia.com";
 
 // Helper to format image paths
-const BACKEND_URL = "http://localhost:9000";
+const BACKEND_URL = "https://api.gourmetbazar.starlighttechlabsindia.com";
 
 export const formatImagePath = (path) => {
-  const BACKEND_URL = "http://localhost:9000";
+  const BACKEND_URL = "https://api.gourmetbazar.starlighttechlabsindia.com";
 
   if (!path) return "/images/default-product.png";
 

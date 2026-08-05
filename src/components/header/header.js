@@ -1,3 +1,4 @@
+// Header.jsx - WITH CART & WISHLIST COUNTS
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -82,56 +83,61 @@ const Header = () => {
     };
   }, [fetchCart, fetchWishlist]);
 
-  const fetchRecommendations = async (query) => {
+  // 🔥 LIVE SEARCH: Fetch suggestions while typing
+  const fetchLiveSuggestions = async (query) => {
     if (!query || query.trim().length < 2) {
       setRecommendations([]);
       setShowRecommendations(false);
       return;
     }
 
-    setIsLoading(true);
     try {
       const response = await axios.get(`${API_URL}/search-suggestions`, {
         params: { q: query },
       });
-      if (response.data?.products) {
+
+      console.log("🔍 LIVE SEARCH API Response:", response.data);
+
+      // Only use API data, no fallback
+      if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
-      }
-    } catch {
-      try {
-        const response = await axios.get(`${API_URL}/products/search`, {
-          params: { keyword: query },
-        });
-        if (response.data?.products) {
-          setRecommendations(response.data.products.slice(0, 8));
-          setShowRecommendations(true);
-        }
-      } catch {
+      } else {
+        // API returned empty - show nothing
         setRecommendations([]);
         setShowRecommendations(false);
       }
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.log("❌ Live search error:", error);
+      // On error, show nothing (no fallback)
+      setRecommendations([]);
+      setShowRecommendations(false);
     }
   };
 
+  // 🔥 Handle search change with live suggestions
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
 
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
 
     searchTimeout.current = setTimeout(() => {
       if (value.trim().length >= 2) {
-        fetchRecommendations(value);
+        // Only fetch live suggestions from API
+        fetchLiveSuggestions(value);
       } else {
         setRecommendations([]);
+        setSearchResults([]);
         setShowRecommendations(false);
+        setShowSearchResults(false);
       }
     }, 300);
   };
 
+  // 🔥 Search on button click or Enter
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -202,6 +208,7 @@ const Header = () => {
   return (
     <>
       <div className="lexend">
+        {/* SEARCH OVERLAY */}
         <AnimatePresence>
           {showSearch && (
             <motion.div
@@ -231,11 +238,12 @@ const Header = () => {
                     </Button>
                   </Form>
 
+                  {/* 🔥 Live Recommendations from API while typing */}
                   {showRecommendations && recommendations.length > 0 && (
                     <div className="search-recommendations-dropdown">
                       <div className="recommendations-header">
-                        <span>Recommendations</span>
-                        <small>{recommendations.length} results</small>
+                        {/* <span>Live Recommendations</span> */}
+                        <small>{recommendations.length} products</small>
                       </div>
                       {recommendations.map((product) => (
                         <div
@@ -266,22 +274,21 @@ const Header = () => {
                           </div>
                         </div>
                       ))}
-                      {recommendations.length > 0 && (
-                        <div className="recommendations-footer">
-                          <Button
-                            variant="link"
-                            onClick={handleSearch}
-                            className="view-all-btn"
-                          >
-                            View all results for "{searchQuery}"
-                          </Button>
+                      <div className="recommendations-footer">
+                        <div className="view-all-text">
+                          {/* Showing live suggestions for "{searchQuery}" */}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
 
+                  {/* 🔥 Search Results after button click */}
                   {showSearchResults && searchResults.length > 0 && (
                     <div className="search-results-dropdown">
+                      <div className="recommendations-header">
+                        <span>Search Results</span>
+                        <small>{searchResults.length} products</small>
+                      </div>
                       {searchResults.map((product) => (
                         <NavLink
                           key={product._id}
@@ -326,6 +333,18 @@ const Header = () => {
                     </div>
                   )}
 
+                  {/* 🔥 No results message - Only from API */}
+                  {!isLoading && 
+                   searchQuery.length >= 2 && 
+                   !showRecommendations && 
+                   !showSearchResults && 
+                   recommendations.length === 0 && 
+                   searchResults.length === 0 && (
+                    <div className="search-no-results">
+                      <span>No products found for "{searchQuery}"</span>
+                    </div>
+                  )}
+
                   <button
                     className="close-search"
                     onClick={() => {
@@ -334,6 +353,7 @@ const Header = () => {
                       setShowRecommendations(false);
                       setSearchQuery("");
                       setRecommendations([]);
+                      setSearchResults([]);
                     }}
                   >
                     <FiX />
@@ -344,6 +364,7 @@ const Header = () => {
           )}
         </AnimatePresence>
 
+        {/* HEADER */}
         <Navbar expand="lg" className="premium-navbar" sticky="top">
           <Container>
             <Navbar.Brand as={NavLink} to="/">
@@ -362,7 +383,7 @@ const Header = () => {
                         {item.title}
                         {loadingCategories && (
                           <span className="ms-1" style={{ fontSize: "10px" }}>
-                            ⏳
+                            WITING...
                           </span>
                         )}
                       </Dropdown.Toggle>
@@ -409,6 +430,7 @@ const Header = () => {
               ))}
             </Nav>
 
+            {/* Desktop Icons */}
             <div className="desktop-icons">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -420,17 +442,19 @@ const Header = () => {
                 </button>
               </NavLink>
 
+              {/* Wishlist Icon with Count */}
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
                   {wishlistCount > 0 && (
-                    <span className="cart-badge">
+                    <span className="cart-badge wishlist-badge">
                       {wishlistCount > 99 ? "99+" : wishlistCount}
                     </span>
                   )}
                 </button>
               </NavLink>
 
+              {/* Cart Icon with Count */}
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -443,6 +467,7 @@ const Header = () => {
               </NavLink>
             </div>
 
+            {/* Mobile Right */}
             <div className="mobile-right">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -454,17 +479,19 @@ const Header = () => {
                 </button>
               </NavLink>
 
+              {/* Mobile Wishlist Icon with Count */}
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
                   {wishlistCount > 0 && (
-                    <span className="cart-badge">
+                    <span className="cart-badge wishlist-badge">
                       {wishlistCount > 99 ? "99+" : wishlistCount}
                     </span>
                   )}
                 </button>
               </NavLink>
 
+              {/* Mobile Cart Icon with Count */}
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -483,6 +510,7 @@ const Header = () => {
           </Container>
         </Navbar>
 
+        {/* MOBILE MENU */}
         <Offcanvas
           show={showMenu}
           placement="end"
@@ -508,7 +536,7 @@ const Header = () => {
                         {item.title}
                         {loadingCategories && (
                           <span className="ms-1" style={{ fontSize: "12px" }}>
-                            ⏳
+                            WITING...
                           </span>
                         )}
                       </div>
@@ -571,9 +599,9 @@ const Header = () => {
                 {wishlistCount > 0 && (
                   <Badge
                     pill
-                    bg="danger"
+                    bg=""
                     className="ms-1"
-                    style={{ fontSize: "10px" }}
+                    style={{ fontSize: "10px" ,backgroundColor: "#0f5132" }}
                   >
                     {wishlistCount}
                   </Badge>
@@ -590,9 +618,9 @@ const Header = () => {
                 {cartCount > 0 && (
                   <Badge
                     pill
-                    bg="danger"
+                    // bg="danger"
                     className="ms-1"
-                    style={{ fontSize: "10px" }}
+                    style={{ fontSize: "10px",backgroundColor: "#0f5132"  }}
                   >
                     {cartCount}
                   </Badge>

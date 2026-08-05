@@ -11,6 +11,7 @@ import {
   Form,
   Alert,
   Spinner,
+  Badge,
 } from "react-bootstrap";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -24,6 +25,9 @@ import {
   FaGift,
   FaSpinner,
   FaStore,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaBox,
 } from "react-icons/fa";
 import axios from "axios";
 import "./cart.css";
@@ -31,7 +35,6 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// ✅ USE VENDOR BACKEND URL FOR IMAGES
 const VENDOR_BACKEND_URL =
   "https://api.brandelvendor.starlighttechlabsindia.com";
 
@@ -42,7 +45,6 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
-// ✅ FIXED: Format image path using VENDOR backend
 const formatImagePath = (image) => {
   if (!image) {
     return "/images/placeholder.png";
@@ -80,6 +82,15 @@ const formatImagePath = (image) => {
   return `${VENDOR_BACKEND_URL}${imgPath}`;
 };
 
+// ✅ Stock status helper
+const getStockStatus = (stock) => {
+  if (!stock && stock !== 0) return { label: "In Stock", color: "success", icon: "✅" };
+  if (stock === 0) return { label: "Out of Stock", color: "danger", icon: "❌" };
+  if (stock <= 5) return { label: `Only ${stock} left!`, color: "warning", icon: "⚠️" };
+  if (stock <= 10) return { label: `${stock} in stock`, color: "info", icon: "📦" };
+  return { label: `${stock} in stock`, color: "success", icon: "✅" };
+};
+
 const Cart = () => {
   const [cart, setCart] = useState({ items: [], appliedCoupon: null });
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -87,15 +98,63 @@ const Cart = () => {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState({ type: "", text: "" });
   const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [productStock, setProductStock] = useState({});
+  const [stockLoading, setStockLoading] = useState({});
   const guestId = localStorage.getItem("guestId");
 
   const fetchCart = async () => {
     if (!guestId) return;
     try {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
-      setCart(res.data || { items: [], appliedCoupon: null });
+      const cartData = res.data || { items: [], appliedCoupon: null };
+      setCart(cartData);
+      
+      // ✅ Fetch stock for each item in cart
+      if (cartData.items && cartData.items.length > 0) {
+        fetchAllProductStocks(cartData.items);
+      }
     } catch (err) {
       console.error("Fetch cart error:", err.response?.data || err.message);
+    }
+  };
+
+  // ✅ Fetch stock for all products in cart
+  const fetchAllProductStocks = async (items) => {
+    const stockPromises = items.map(async (item) => {
+      try {
+        const response = await axios.get(`${API_URL}/product/${item.productId}`);
+        return { productId: item.productId, stock: response.data.stock || 0 };
+      } catch (err) {
+        console.error(`Failed to fetch stock for ${item.productId}:`, err);
+        return { productId: item.productId, stock: item.quantity || 0 };
+      }
+    });
+
+    try {
+      const results = await Promise.all(stockPromises);
+      const stockMap = {};
+      results.forEach(({ productId, stock }) => {
+        stockMap[productId] = stock;
+      });
+      setProductStock(stockMap);
+    } catch (err) {
+      console.error("Failed to fetch product stocks:", err);
+    }
+  };
+
+  // ✅ Fetch single product stock
+  const fetchProductStock = async (productId) => {
+    try {
+      setStockLoading(prev => ({ ...prev, [productId]: true }));
+      const response = await axios.get(`${API_URL}/product/${productId}`);
+      const stock = response.data.stock || 0;
+      setProductStock(prev => ({ ...prev, [productId]: stock }));
+      return stock;
+    } catch (err) {
+      console.error(`Failed to fetch stock for ${productId}:`, err);
+      return 0;
+    } finally {
+      setStockLoading(prev => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -103,9 +162,19 @@ const Cart = () => {
     fetchCart();
   }, [guestId]);
 
+  // ✅ Update quantity with stock validation
   const updateQty = async (productId, type) => {
     const item = cart.items.find((i) => i.productId === productId);
     if (!item) return;
+
+    // ✅ Check stock when adding
+    if (type === "inc") {
+      const stock = productStock[productId] !== undefined ? productStock[productId] : await fetchProductStock(productId);
+      if (item.quantity >= stock) {
+        alert(`❌ Only ${stock} items available in stock!`);
+        return;
+      }
+    }
 
     const newQuantity = type === "inc" ? item.quantity + 1 : item.quantity - 1;
 
@@ -131,6 +200,7 @@ const Cart = () => {
         "Update quantity error:",
         err.response?.data || err.message,
       );
+      alert("Failed to update quantity. Please try again.");
     }
   };
 
@@ -406,77 +476,132 @@ const Cart = () => {
                   </motion.div>
                 ) : (
                   <>
-                    {cart.items.map((item, index) => (
-                      <motion.div
-                        key={item.productId}
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="cart-card"
-                      >
-                        <Card className="border-0">
-                          <Card.Body>
-                            <Row className="align-items-center">
-                              <Col md={3} xs={4}>
-                                <div className="cart-img">
-                                  <img
-                                    src={formatImagePath(item.image)}
-                                    alt={item.name}
-                                    onError={(e) => {
-                                      e.target.onerror = null;
-                                      e.target.src = "/images/placeholder.png";
-                                    }}
-                                  />
-                                </div>
-                              </Col>
-                              <Col md={6} xs={8}>
-                                <div className="cart-info">
-                                  <h4>{item.name}</h4>
-                                  <h5 className="funnel-sans">
-                                    ₹{formatPrice(item.price)}
-                                  </h5>
-                                  <div className="product-meta">
-                                    <span>Qty: {item.quantity}</span>
+                    {cart.items.map((item, index) => {
+                      const stock = productStock[item.productId] !== undefined 
+                        ? productStock[item.productId] 
+                        : item.quantity;
+                      const stockStatus = getStockStatus(stock);
+                      const isLowStock = stock > 0 && stock <= 10;
+                      const isOutOfStock = stock === 0;
+                      
+                      return (
+                        <motion.div
+                          key={item.productId}
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="cart-card"
+                        >
+                          <Card className={`border-0 ${isOutOfStock ? 'opacity-50' : ''}`}>
+                            <Card.Body>
+                              <Row className="align-items-center">
+                                <Col md={3} xs={4}>
+                                  <div className="cart-img">
+                                    <img
+                                      src={formatImagePath(item.image)}
+                                      alt={item.name}
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = "/images/placeholder.png";
+                                      }}
+                                    />
                                   </div>
-                                  <div className="item-total">
-                                    <small>
-                                      Item Total: ₹
-                                      {formatPrice(item.price * item.quantity)}
-                                    </small>
+                                </Col>
+                                <Col md={6} xs={8}>
+                                  <div className="cart-info">
+                                    <h4>{item.name}</h4>
+                                    <h5 className="funnel-sans">
+                                      ₹{formatPrice(item.price)}
+                                    </h5>
+                                    
+                                    {/* ✅ Stock Status Badge */}
+                                    {stockLoading[item.productId] ? (
+                                      <Spinner animation="border" size="sm" className="mb-2" />
+                                    ) : (
+                                      <Badge 
+                                        bg={stockStatus.color}
+                                        className="mb-2 d-inline-block"
+                                        style={{ fontSize: '12px', padding: '5px 10px' }}
+                                      >
+                                        {stockStatus.icon} {stockStatus.label}
+                                      </Badge>
+                                    )}
+
+                                    {/* ✅ Low Stock Progress Bar */}
+                                    {isLowStock && !isOutOfStock && (
+                                      <div className="mt-1 mb-2" style={{ maxWidth: '150px' }}>
+                                        <div className="d-flex justify-content-between small">
+                                          <span className="text-muted">Stock</span>
+                                          <span className="text-muted">{stock} / 10</span>
+                                        </div>
+                                        <div className="progress" style={{ height: "4px" }}>
+                                          <div
+                                            className={`progress-bar bg-${stock <= 5 ? 'warning' : 'info'}`}
+                                            style={{ width: `${(stock / 10) * 100}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* ✅ Out of Stock Warning */}
+                                    {isOutOfStock && (
+                                      <div className="text-danger small mb-1">
+                                        <FaExclamationTriangle className="me-1" />
+                                        Out of Stock - Please remove from cart
+                                      </div>
+                                    )}
+
+                                    <div className="product-meta">
+                                      <span>Qty: {item.quantity}</span>
+                                    </div>
+                                    <div className="item-total">
+                                      <small>
+                                        Item Total: ₹
+                                        {formatPrice(item.price * item.quantity)}
+                                      </small>
+                                    </div>
+                                    <div className="cart-actions">
+                                      <button
+                                        onClick={() => removeItem(item.productId)}
+                                        disabled={isOutOfStock}
+                                      >
+                                        <FaTrash /> {isOutOfStock ? 'Remove' : 'Remove'}
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="cart-actions">
+                                </Col>
+                                <Col md={3} xs={12}>
+                                  <div className="qty-box">
                                     <button
-                                      onClick={() => removeItem(item.productId)}
+                                      onClick={() =>
+                                        updateQty(item.productId, "dec")
+                                      }
+                                      disabled={isOutOfStock}
                                     >
-                                      <FaTrash /> Remove
+                                      <FaMinus />
+                                    </button>
+                                    <span>{item.quantity}</span>
+                                    <button
+                                      onClick={() =>
+                                        updateQty(item.productId, "inc")
+                                      }
+                                      disabled={item.quantity >= stock || isOutOfStock}
+                                    >
+                                      <FaPlus />
                                     </button>
                                   </div>
-                                </div>
-                              </Col>
-                              <Col md={3} xs={12}>
-                                <div className="qty-box">
-                                  <button
-                                    onClick={() =>
-                                      updateQty(item.productId, "dec")
-                                    }
-                                  >
-                                    <FaMinus />
-                                  </button>
-                                  <span>{item.quantity}</span>
-                                  <button
-                                    onClick={() =>
-                                      updateQty(item.productId, "inc")
-                                    }
-                                  >
-                                    <FaPlus />
-                                  </button>
-                                </div>
-                              </Col>
-                            </Row>
-                          </Card.Body>
-                        </Card>
-                      </motion.div>
-                    ))}
+                                  {!isOutOfStock && stock > 0 && (
+                                    <small className="text-muted d-block text-center mt-1">
+                                      Max: {stock}
+                                    </small>
+                                  )}
+                                </Col>
+                              </Row>
+                            </Card.Body>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
 
                     <div className="shipping-box d-none d-md-block d-lg-block">
                       <div className="shipping-top">

@@ -26,7 +26,8 @@ import Return from "./pages/returnpage/return";
 import Privacypolicy from "./pages/privacypolicy/privacypolicy";
 import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
-
+import ApplicationStatus from "./pages/ApplicationStatus";
+import SellerApplications from '../src/pages/sellerApplications/SellerApplications'; 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
@@ -53,6 +54,9 @@ root.render(
           <Route path="/privacypolicy" element={<Privacypolicy />} />
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/orderhistory" element={<Orderhistory />} />
+          <Route path="/application-status/:trackingId" element={<ApplicationStatus />} />
+            {/* ✅ ADD SELLER APPLICATIONS ROUTE */}
+      {/* <Route path="/seller-applications" element={<SellerApplications />} /> */}
         </Routes>
       </Router>
     </WishlistProvider>

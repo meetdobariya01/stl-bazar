@@ -49,7 +49,7 @@ if (hasGoogleCredentials) {
     )
   );
   
-  console.log("✅ Google OAuth Strategy configured");
+  console.log("Google OAuth Strategy configured");
 } else {
   // console.log("⚠️ Google OAuth disabled - Missing credentials in .env file");
   // console.log("   Required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL");
