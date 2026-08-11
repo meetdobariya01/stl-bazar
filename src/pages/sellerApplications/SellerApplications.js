@@ -35,7 +35,7 @@ import axios from "axios";
 import Header from "../../components/header/header";
 import "./SellerApplications.css";
 
-const API_URL = "https://api.gourmetbazar.starlighttechlabsindia.com/api";
+const API_URL = process.env.REACT_APP_API_URL;
 
 const SellerApplications = () => {
   const [applications, setApplications] = useState([]);
@@ -62,7 +62,7 @@ const SellerApplications = () => {
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`https://api.gourmetbazar.starlighttechlabsindia.com/api/sellers/applications`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/sellers/applications`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setApplications(res.data.applications || []);

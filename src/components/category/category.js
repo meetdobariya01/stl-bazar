@@ -132,7 +132,7 @@ const CategoriesSection = () => {
         const imageUrl = getImageUrl(category.image);
 
         return (
-          <Col lg={4} md={4} sm={4} xs={4} key={category._id || index}>
+          <Col lg={3} md={3} sm={3} xs={3} key={category._id || index}>
             <motion.div
               className="premium-category-card"
               initial={{ opacity: 0, y: 40 }}

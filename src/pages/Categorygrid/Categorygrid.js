@@ -178,9 +178,22 @@ const CategoryProducts = () => {
     products,
   ]);
 
+  // ✅ UPDATED: getSortedProducts with Alphabetical Order
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
     switch (sortBy) {
+      case "alphabetical-a-z":
+        return sorted.sort((a, b) => {
+          const nameA = a.name?.toLowerCase() || '';
+          const nameB = b.name?.toLowerCase() || '';
+          return nameA.localeCompare(nameB);
+        });
+      case "alphabetical-z-a":
+        return sorted.sort((a, b) => {
+          const nameA = a.name?.toLowerCase() || '';
+          const nameB = b.name?.toLowerCase() || '';
+          return nameB.localeCompare(nameA);
+        });
       case "price-low-high":
         return sorted.sort((a, b) => a.price - b.price);
       case "price-high-low":
@@ -194,7 +207,12 @@ const CategoryProducts = () => {
           (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
         );
       default:
-        return sorted;
+        // ✅ Default: Alphabetical A-Z
+        return sorted.sort((a, b) => {
+          const nameA = a.name?.toLowerCase() || '';
+          const nameB = b.name?.toLowerCase() || '';
+          return nameA.localeCompare(nameB);
+        });
     }
   };
 
@@ -225,7 +243,6 @@ const CategoryProducts = () => {
     }
   };
 
-  // ✅ Add to Cart Handler
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
     
@@ -339,7 +356,8 @@ const CategoryProducts = () => {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <option value="featured">Featured</option>
+                  <option value="featured">Alphabetical (A-Z)</option>
+                  <option value="alphabetical-z-a">Alphabetical (Z-A)</option>
                   <option value="newest">Newest</option>
                   <option value="price-low-high">Price: Low to High</option>
                   <option value="price-high-low">Price: High to Low</option>
@@ -524,7 +542,6 @@ const CategoryProducts = () => {
                               <div className="product-price">
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
-                              {/* ✅ Add to Cart Button instead of View Details */}
                               <Button 
                                 className="add-to-cart-btn-category"
                                 onClick={(e) => handleAddToCart(e, item)}
@@ -554,7 +571,6 @@ const CategoryProducts = () => {
         </Container>
       </div>
 
-      {/* <Details /> */}
       <Footer />
     </>
   );
