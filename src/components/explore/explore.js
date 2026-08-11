@@ -56,7 +56,7 @@ const Explore = () => {
         <Container className="values-container">
           <Row className="g-0">
             {values.map((item, index) => (
-              <Col lg={true} md={4} xs={4} key={index}>
+              <Col lg={true} md={4} xs={true} key={index}>
                 <motion.div
                   className={`value-item ${index !== values.length - 1 ? "border-right" : ""}`}
                   initial={{ opacity: 0, y: 40 }}

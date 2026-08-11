@@ -168,7 +168,6 @@ const Footer = () => {
                   src="/images/india.png"
                   alt="Refresh"
                   className="footer-logo w-50"
-                  onClick={refreshPage}
                 />{" "}
                 {/* <img
                     src="/images/brandel.png"

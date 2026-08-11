@@ -841,7 +841,7 @@ const Checkout = () => {
                             style={{ fontSize: "14px" }}
                           />
                           <Button
-                            variant="outline-primary"
+                            variant="outline-dark"
                             size="sm"
                             onClick={handleApplyCoupon}
                             disabled={isProcessing}
@@ -920,7 +920,7 @@ const Checkout = () => {
                       </span>
                     </div>
 
-                    <div className="summary-total">
+                    <div className="summary-total-checkout">
                       <div>
                         <h4>Total</h4>
                         <p>Inclusive of all taxes</p>

@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
-import { WishlistProvider } from "./context/WishlistContext"; // ✅ Import WishlistProvider
+import { WishlistProvider } from "./context/WishlistContext";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 
@@ -26,12 +26,15 @@ import Return from "./pages/returnpage/return";
 import Privacypolicy from "./pages/privacypolicy/privacypolicy";
 import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
+import Cookies from "./components/cookies/cookies";
+
+// ✅ Import ApplicationStatus
 import ApplicationStatus from "./pages/ApplicationStatus";
-import SellerApplications from '../src/pages/sellerApplications/SellerApplications'; 
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
-    <WishlistProvider> {/* ✅ Wrap with WishlistProvider */}
+    <WishlistProvider>
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -55,9 +58,9 @@ root.render(
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/orderhistory" element={<Orderhistory />} />
           <Route path="/application-status/:trackingId" element={<ApplicationStatus />} />
-            {/* ✅ ADD SELLER APPLICATIONS ROUTE */}
-      {/* <Route path="/seller-applications" element={<SellerApplications />} /> */}
+          {/* <Route path="/seller-applications" element={<SellerApplications />} /> */}
         </Routes>
+        <Cookies />
       </Router>
     </WishlistProvider>
   </CartProvider>,

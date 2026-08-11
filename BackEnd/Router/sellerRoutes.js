@@ -1,4 +1,4 @@
-// Router/sellerRoutes.js - COMPLETE WITH FIXES
+// Router/sellerRoutes.js - UPDATED APPROVE ROUTE (NO CREDENTIALS EMAIL)
 
 const express = require("express");
 const router = express.Router();
@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const Seller = require("../Models/Seller");
 const Vendor = require("../Models/Vendor");
 const Company = require("../Models/Company");
+
 const nodemailer = require("nodemailer");
 
 // ============================================================
@@ -119,68 +120,14 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
 };
 
 // ============================================================
-// ✅ SEND STATUS UPDATE EMAIL
+// ✅ SEND REJECTION EMAIL ONLY (NO CREDENTIALS)
 // ============================================================
-const sendStatusUpdateEmail = async (sellerData, status, reason = null, loginUrl = null, tempPassword = null) => {
-  let subject, htmlContent;
-
-  if (status === 'approved') {
-    subject = "🎉 Your Native91 Seller Application is Approved!";
-    htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Application Approved</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb; }
-          .header { background: #27ae60; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .header h1 { color: white; margin: 0; }
-          .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
-          .button { display: inline-block; padding: 14px 35px; background: #27ae60; color: white !important; 
-                   text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold; }
-          .footer { margin-top: 20px; font-size: 12px; color: #999; text-align: center; }
-          .credentials { background: #f0f4f8; padding: 15px; border-radius: 8px; margin: 15px 0; }
-          .credentials code { background: #e2e8f0; padding: 4px 8px; border-radius: 4px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header"><h1>✅ Application Approved!</h1></div>
-          <div class="content">
-            <h2>Congratulations ${sellerData.fullName}! 🎉</h2>
-            <p>Your seller application has been <strong>approved</strong>!</p>
-            ${reason ? `<p><strong>Admin Note:</strong> ${reason}</p>` : ''}
-            
-            <p>Your vendor account has been created. You can now login to your dashboard:</p>
-            
-            <div class="credentials">
-              <p><strong>Login URL:</strong></p>
-              <p><a href="${loginUrl}">${loginUrl}</a></p>
-              <p><strong>Email:</strong> ${sellerData.email}</p>
-              <p><strong>Password:</strong> <code>${tempPassword}</code></p>
-              <p style="font-size: 14px; color: #e74c3c;">⚠️ Please change your password after first login.</p>
-            </div>
-
-            <div style="text-align: center;">
-              <a href="${loginUrl}" class="button">🚀 Go to Dashboard</a>
-            </div>
-
-            <p>Welcome to the Native91 seller community!</p>
-            <hr>
-            <p style="font-size: 14px;">Best regards,<br><strong>Native91 Team</strong></p>
-          </div>
-          <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} Native91. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  } else if (status === 'rejected') {
-    subject = "📋 Your Native91 Seller Application Status Update";
-    htmlContent = `
+const sendRejectionEmail = async (sellerData, reason) => {
+  const mailOptions = {
+    from: `"Native91" <${process.env.EMAIL_USER || "brands@native91.com"}>`,
+    to: sellerData.email,
+    subject: "📋 Your Native91 Seller Application Status Update",
+    html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -223,14 +170,7 @@ const sendStatusUpdateEmail = async (sellerData, status, reason = null, loginUrl
         </div>
       </body>
       </html>
-    `;
-  }
-
-  const mailOptions = {
-    from: `"Native91" <${process.env.EMAIL_USER || "brands@native91.com"}>`,
-    to: sellerData.email,
-    subject: subject,
-    html: htmlContent,
+    `,
   };
 
   return await transporter.sendMail(mailOptions);
@@ -447,7 +387,7 @@ router.get("/applications/:id", async (req, res) => {
 });
 
 // ============================================================
-// ✅ ADMIN: APPROVE APPLICATION
+// ✅ ADMIN: APPROVE APPLICATION - NO EMAIL (Frontend handles it)
 // ============================================================
 router.post("/applications/:id/approve", async (req, res) => {
   try {
@@ -478,7 +418,7 @@ router.post("/applications/:id/approve", async (req, res) => {
       });
     }
 
-    // Generate random password
+    // Generate random password for vendor account
     const tempPassword = crypto.randomBytes(10).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
@@ -507,14 +447,14 @@ router.post("/applications/:id/approve", async (req, res) => {
     application.vendorId = vendor._id;
     await application.save();
 
-    // Send approval email with login credentials
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/login`;
-    try {
-      await sendStatusUpdateEmail(application, 'approved', notes, loginUrl, tempPassword);
-      console.log(`✅ Approval email sent to ${application.email}`);
-    } catch (emailErr) {
-      console.error("❌ Approval email error:", emailErr);
-    }
+    // ========================================================
+    // ⚠️ IMPORTANT: NO EMAIL SENT HERE!
+    // The frontend will handle sending the approval email
+    // via /send-approval-email endpoint on port 5001
+    // ========================================================
+    console.log(`✅ Application approved for: ${application.email}`);
+    console.log(`✅ Vendor created: ${vendor._id}`);
+    console.log(`📧 NO EMAIL SENT - Frontend will handle it`);
 
     res.json({
       success: true,
@@ -523,6 +463,7 @@ router.post("/applications/:id/approve", async (req, res) => {
         vendorId: vendor._id,
         vendorEmail: vendor.email,
         vendorCompany: vendor.company,
+        trackingId: application.trackingId,
       },
     });
 
@@ -573,7 +514,7 @@ router.post("/applications/:id/reject", async (req, res) => {
 
     // Send rejection email
     try {
-      await sendStatusUpdateEmail(application, 'rejected', reason);
+      await sendRejectionEmail(application, reason);
       console.log(`✅ Rejection email sent to ${application.email}`);
     } catch (emailErr) {
       console.error("❌ Rejection email error:", emailErr);

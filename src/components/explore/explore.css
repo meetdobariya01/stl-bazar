@@ -72,6 +72,9 @@
 }
 
 @media (max-width: 767px) {
+  .values-section-explore {
+    padding: 30px 0 0 0;
+  }
   .value-item {
     padding: 0;
     margin-top: 20px;
@@ -81,12 +84,17 @@
   .border-right::after {
     display: none;
   }
+  .value-icon {
+    font-size: 30px;
+    margin-bottom: 15px;
+  }
 
   .value-item p {
     /* line-height: 32px; */
-    font-size: 10px;
+    font-size: 9px;
   }
   .value-item h4{
-    font-size: 11px;
+    font-size: 9px;
+    letter-spacing: 0px;
   }
 }

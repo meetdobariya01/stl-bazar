@@ -56,7 +56,7 @@ const Sell = () => {
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
   
-  // ✅ New state for tracking info
+  // ✅ Tracking info state
   const [trackingInfo, setTrackingInfo] = useState({
     trackingId: "",
     email: "",
@@ -129,9 +129,9 @@ const Sell = () => {
       if (response.data.success) {
         // ✅ Store tracking info
         setTrackingInfo({
-          trackingId: response.data.data.trackingId || "",
+          trackingId: response.data.data?.trackingId || "",
           email: formData.email,
-          status: response.data.data.status || "pending",
+          status: response.data.data?.status || "pending",
         });
         setSuccess(true);
       }
@@ -157,13 +157,14 @@ const Sell = () => {
               <FaCheckCircle
                 className="success-icon"
                 size={80}
-                color="#28a745"
+                color="#0f5132"
               />
               <h2 className="mt-4">Registration Successful! 🎉</h2>
               <p className="mt-3">
                 Thank you for registering as a seller on Native91.
               </p>
               
+              {/* ✅ Tracking Info Box */}
               <div className="tracking-info-box p-4 bg-light rounded mt-4 mx-auto" 
                    style={{ maxWidth: "550px" }}>
                 <h5 className="mb-3">
@@ -184,6 +185,7 @@ const Sell = () => {
                 </div>
               </div>
 
+              {/* ✅ What happens next */}
               <div className="whats-next-box mt-4 text-start" style={{ maxWidth: "550px", margin: "0 auto" }}>
                 <h6>📋 What happens next?</h6>
                 <ol className="mb-0">
