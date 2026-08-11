@@ -143,6 +143,11 @@ const Footer = () => {
                 </li>
               </ul>
             </Col>
+
+              <hr/>
+              <p className="text-center mb-0">
+                Copyright © 2026 Native91. All rights reserved.
+              </p>
           </Row>
 
           {/* MOBILE VIEW */}
@@ -273,6 +278,7 @@ const Footer = () => {
               </div>
             </Col>
           </Row>
+          
         </Container>
       </footer>
 
