@@ -27,6 +27,7 @@ import Privacypolicy from "./pages/privacypolicy/privacypolicy";
 import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
 import Cookies from "./components/cookies/cookies";
+import Socialimpact from "./pages/socialimpact/socialimpact";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -40,6 +41,7 @@ root.render(
           <Route path="/product" element={<Product />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/social-impact" element={<Socialimpact />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />

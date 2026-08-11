@@ -35,7 +35,8 @@ import { useWishlist } from "../../context/WishlistContext";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const COUPON_API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -46,19 +47,17 @@ const formatPrice = (price) => {
 
 // Helper to decode slug back to name
 const decodeSlug = (slug) => {
-  if (!slug) return '';
-  return slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase());
+  if (!slug) return "";
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
 // Helper to create slug from name
 const createSlug = (name) => {
-  if (!name) return '';
+  if (!name) return "";
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 };
 
 const Productdetails = () => {
@@ -67,7 +66,8 @@ const Productdetails = () => {
 
   // ✅ Use Cart and Wishlist Contexts
   const { addToCart, setShowCart, fetchCart } = useCart();
-  const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } = useWishlist();
+  const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } =
+    useWishlist();
 
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
@@ -113,33 +113,36 @@ const Productdetails = () => {
 
   // ================= COUPON FUNCTIONS =================
 
-  const calculateDiscountedPrice = useCallback((coupon) => {
-    if (!product || !coupon) return null;
+  const calculateDiscountedPrice = useCallback(
+    (coupon) => {
+      if (!product || !coupon) return null;
 
-    const originalPrice = parseFloat(product.price);
-    let discountAmount = 0;
+      const originalPrice = parseFloat(product.price);
+      let discountAmount = 0;
 
-    const discount = coupon.discount || coupon.discountValue || 0;
-    const type = coupon.type || coupon.discountType || 'percentage';
-    const maxDiscount = coupon.maxDiscount || 0;
+      const discount = coupon.discount || coupon.discountValue || 0;
+      const type = coupon.type || coupon.discountType || "percentage";
+      const maxDiscount = coupon.maxDiscount || 0;
 
-    if (type === 'percentage') {
-      discountAmount = (originalPrice * discount) / 100;
-      if (maxDiscount && discountAmount > maxDiscount) {
-        discountAmount = maxDiscount;
+      if (type === "percentage") {
+        discountAmount = (originalPrice * discount) / 100;
+        if (maxDiscount && discountAmount > maxDiscount) {
+          discountAmount = maxDiscount;
+        }
+      } else {
+        discountAmount = Math.min(discount, originalPrice);
       }
-    } else {
-      discountAmount = Math.min(discount, originalPrice);
-    }
 
-    const newPrice = originalPrice - discountAmount;
-    return {
-      originalPrice: originalPrice,
-      discountAmount: discountAmount,
-      discountedPrice: newPrice,
-      savingsPercentage: ((discountAmount / originalPrice) * 100).toFixed(0)
-    };
-  }, [product]);
+      const newPrice = originalPrice - discountAmount;
+      return {
+        originalPrice: originalPrice,
+        discountAmount: discountAmount,
+        discountedPrice: newPrice,
+        savingsPercentage: ((discountAmount / originalPrice) * 100).toFixed(0),
+      };
+    },
+    [product],
+  );
 
   const applyCoupon = async (coupon) => {
     try {
@@ -152,8 +155,10 @@ const Productdetails = () => {
 
       const couponProducts = coupon.products || coupon.productIds || [];
       if (couponProducts.length > 0) {
-        const isProductValid = couponProducts.some(id => id.toString() === product._id.toString());
-        
+        const isProductValid = couponProducts.some(
+          (id) => id.toString() === product._id.toString(),
+        );
+
         if (!isProductValid) {
           alert("This coupon is not valid for this product.");
           return;
@@ -163,7 +168,7 @@ const Productdetails = () => {
       await axios.post(`${API_URL}/coupons/user/apply`, {
         guestId,
         code: coupon.code,
-        productId: product._id
+        productId: product._id,
       });
 
       const priceInfo = calculateDiscountedPrice(coupon);
@@ -176,12 +181,9 @@ const Productdetails = () => {
       localStorage.setItem("appliedProductId", product._id);
 
       alert(`Coupon ${coupon.code} applied successfully`);
-
     } catch (err) {
       console.error(err);
-      alert(
-        err.response?.data?.message || "Failed to apply coupon"
-      );
+      alert(err.response?.data?.message || "Failed to apply coupon");
     }
   };
 
@@ -190,9 +192,7 @@ const Productdetails = () => {
       const guestId = localStorage.getItem("guestId");
 
       if (guestId) {
-        await axios.delete(
-          `${API_URL}/coupons/user/remove/${guestId}`
-        );
+        await axios.delete(`${API_URL}/coupons/user/remove/${guestId}`);
       }
 
       localStorage.removeItem("appliedCoupon");
@@ -201,7 +201,6 @@ const Productdetails = () => {
 
       setAppliedCoupon(null);
       setDiscountedPrice(null);
-
     } catch (err) {
       console.log(err);
     }
@@ -217,11 +216,12 @@ const Productdetails = () => {
 
     try {
       const productId = product._id;
-      const companyName = product?.company || product?.vendor || product?.vendorName;
-      
+      const companyName =
+        product?.company || product?.vendor || product?.vendorName;
+
       const storedCoupon = localStorage.getItem("appliedCoupon");
       const storedProductId = localStorage.getItem("appliedProductId");
-      
+
       if (storedProductId && storedProductId !== productId) {
         localStorage.removeItem("appliedCoupon");
         localStorage.removeItem("discountedPrice");
@@ -231,15 +231,23 @@ const Productdetails = () => {
       }
 
       try {
-        const response = await axios.get(`${COUPON_API_URL}/coupons/public/product/${productId}`);
-        
-        if (response.data.success && response.data.coupons && isMounted.current) {
-          const validCoupons = response.data.coupons.filter(coupon => {
+        const response = await axios.get(
+          `${COUPON_API_URL}/coupons/public/product/${productId}`,
+        );
+
+        if (
+          response.data.success &&
+          response.data.coupons &&
+          isMounted.current
+        ) {
+          const validCoupons = response.data.coupons.filter((coupon) => {
             const couponProducts = coupon.products || coupon.productIds || [];
             if (couponProducts.length === 0) return true;
-            return couponProducts.some(id => id.toString() === productId.toString());
+            return couponProducts.some(
+              (id) => id.toString() === productId.toString(),
+            );
           });
-          
+
           setVendorCoupons(validCoupons);
           return;
         }
@@ -251,14 +259,20 @@ const Productdetails = () => {
         try {
           const response = await axios.get(
             `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(companyName)}`,
-            { params: { productId: productId } }
+            { params: { productId: productId } },
           );
-          
-          if (response.data.success && response.data.coupons && isMounted.current) {
-            const validCoupons = response.data.coupons.filter(coupon => {
+
+          if (
+            response.data.success &&
+            response.data.coupons &&
+            isMounted.current
+          ) {
+            const validCoupons = response.data.coupons.filter((coupon) => {
               const couponProducts = coupon.products || coupon.productIds || [];
               if (couponProducts.length === 0) return true;
-              return couponProducts.some(id => id.toString() === productId.toString());
+              return couponProducts.some(
+                (id) => id.toString() === productId.toString(),
+              );
             });
             setVendorCoupons(validCoupons);
             return;
@@ -284,106 +298,117 @@ const Productdetails = () => {
   }, [product, COUPON_API_URL]);
 
   // Get image URL
-  const getImageUrl = useCallback((image) => {
-    if (!image) return "/images/placeholder.png";
+  const getImageUrl = useCallback(
+    (image) => {
+      if (!image) return "/images/placeholder.png";
 
-    let img = image;
+      let img = image;
 
-    if (Array.isArray(image)) {
-      if (image.length === 0) return "/images/placeholder.png";
-      img = image[0];
-    }
+      if (Array.isArray(image)) {
+        if (image.length === 0) return "/images/placeholder.png";
+        img = image[0];
+      }
 
-    const imgStr = String(img).trim();
+      const imgStr = String(img).trim();
 
-    if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
-      return imgStr;
-    }
+      if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
+        return imgStr;
+      }
 
-    if (imgStr.startsWith("/uploads")) {
-      return `https://api.brandelvendor.starlighttechlabsindia.com${imgStr}`;
-    }
+      if (imgStr.startsWith("/uploads")) {
+        return `https://api.brandelvendor.starlighttechlabsindia.com${imgStr}`;
+      }
 
-    if (imgStr.startsWith("/images")) {
-      return imgStr;
-    }
+      if (imgStr.startsWith("/images")) {
+        return imgStr;
+      }
 
-    if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
-      return `https://api.brandelvendor.starlighttechlabsindia.com/uploads/${imgStr}`;
-    }
+      if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
+        return `https://api.brandelvendor.starlighttechlabsindia.com/uploads/${imgStr}`;
+      }
 
-    return `${API_URL}${imgStr}`;
-  }, [API_URL]);
+      return `${API_URL}${imgStr}`;
+    },
+    [API_URL],
+  );
 
-  const getAllImagesFromProduct = useCallback((product) => {
-    if (!product) return ["/images/placeholder.png"];
+  const getAllImagesFromProduct = useCallback(
+    (product) => {
+      if (!product) return ["/images/placeholder.png"];
 
-    let images = [];
-    const imageFields = ['images', 'image', 'productImages', 'gallery'];
+      let images = [];
+      const imageFields = ["images", "image", "productImages", "gallery"];
 
-    for (const field of imageFields) {
-      if (product[field]) {
-        if (Array.isArray(product[field])) {
-          const validImages = product[field]
-            .filter(img => img && typeof img === 'string' && img.trim())
-            .map(img => getImageUrl(img));
-          images = [...images, ...validImages];
-        } else if (typeof product[field] === 'string' && product[field].trim()) {
-          images.push(getImageUrl(product[field]));
+      for (const field of imageFields) {
+        if (product[field]) {
+          if (Array.isArray(product[field])) {
+            const validImages = product[field]
+              .filter((img) => img && typeof img === "string" && img.trim())
+              .map((img) => getImageUrl(img));
+            images = [...images, ...validImages];
+          } else if (
+            typeof product[field] === "string" &&
+            product[field].trim()
+          ) {
+            images.push(getImageUrl(product[field]));
+          }
         }
       }
-    }
 
-    images = [...new Set(images)];
+      images = [...new Set(images)];
 
-    if (images.length === 0) {
-      images = ["/images/placeholder.png"];
-    }
+      if (images.length === 0) {
+        images = ["/images/placeholder.png"];
+      }
 
-    return images;
-  }, [getImageUrl]);
+      return images;
+    },
+    [getImageUrl],
+  );
 
   // Fetch product by slug - FIXED
   useEffect(() => {
     const fetchProduct = async () => {
       if (!slug) return;
-      
+
       try {
         setLoading(true);
         setError(null);
 
         const productName = decodeSlug(slug);
         const response = await axios.get(`${API_URL}/products`);
-        
+
         if (!isMounted.current) return;
-        
+
         const products = response.data;
 
         let foundProduct = null;
 
         foundProduct = products.find(
-          p => p.name && p.name.toLowerCase() === productName.toLowerCase()
+          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase(),
         );
 
         if (!foundProduct) {
           const productSlug = createSlug(productName);
           foundProduct = products.find(
-            p => p.name && createSlug(p.name) === productSlug
+            (p) => p.name && createSlug(p.name) === productSlug,
           );
         }
 
         if (!foundProduct) {
-          const searchTerms = productName.toLowerCase().split(' ');
-          foundProduct = products.find(p => {
+          const searchTerms = productName.toLowerCase().split(" ");
+          foundProduct = products.find((p) => {
             if (!p.name) return false;
             const nameLower = p.name.toLowerCase();
-            return searchTerms.some(term => nameLower.includes(term));
+            return searchTerms.some((term) => nameLower.includes(term));
           });
         }
 
         if (!foundProduct && slug.length === 24) {
           try {
-            const productResponse = await axios.get(`${API_URL}/product/${slug}`);
+            const productResponse = await axios.get(
+              `${API_URL}/product/${slug}`,
+            );
             if (productResponse.data) {
               foundProduct = productResponse.data;
             }
@@ -411,7 +436,7 @@ const Productdetails = () => {
         }
 
         await fetchReviews(foundProduct._id);
-        
+
         // ✅ Check wishlist status using context
         const guestId = localStorage.getItem("guestId");
         if (guestId) {
@@ -419,14 +444,13 @@ const Productdetails = () => {
           const inWishlist = await isInWishlist(foundProduct._id);
           setIsInWishlistState(inWishlist);
         }
-
       } catch (err) {
         console.error("Product fetch error:", err);
         if (isMounted.current) {
           setError(
             err.response?.data?.message ||
-            err.message ||
-            "Failed to load product. Please try again later."
+              err.message ||
+              "Failed to load product. Please try again later.",
           );
         }
       } finally {
@@ -455,7 +479,7 @@ const Productdetails = () => {
         }
       }
     };
-    
+
     checkWishlist();
   }, [product, isInWishlist]);
 
@@ -466,11 +490,11 @@ const Productdetails = () => {
       const response = await axios.get(`${API_URL}/products/${id}/reviews`);
 
       const reviewsData = response.data.reviews || [];
-      const sanitizedReviews = reviewsData.map(review => ({
-        _id: String(review._id || ''),
-        userName: String(review.userName || 'Anonymous'),
-        rating: typeof review.rating === 'number' ? review.rating : 0,
-        review: String(review.review || ''),
+      const sanitizedReviews = reviewsData.map((review) => ({
+        _id: String(review._id || ""),
+        userName: String(review.userName || "Anonymous"),
+        rating: typeof review.rating === "number" ? review.rating : 0,
+        review: String(review.review || ""),
         createdAt: review.createdAt || new Date().toISOString(),
       }));
 
@@ -488,13 +512,14 @@ const Productdetails = () => {
   // ✅ Updated toggleWishlist using context
   const toggleWishlist = async () => {
     if (!product || isTogglingWishlist) return;
-    
+
     setIsTogglingWishlist(true);
-    
+
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
-        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        guestId =
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -507,15 +532,16 @@ const Productdetails = () => {
           productId: product._id,
           name: product.name,
           price: product.price,
-          image: Array.isArray(product.image) ? product.image[0] : product.image,
+          image: Array.isArray(product.image)
+            ? product.image[0]
+            : product.image,
           company: product.company || "Native91",
         });
         setIsInWishlistState(true);
         alert("Added to wishlist!");
       }
-      
-      window.dispatchEvent(new Event('wishlistUpdated'));
 
+      window.dispatchEvent(new Event("wishlistUpdated"));
     } catch (error) {
       console.error("Error toggling wishlist:", error);
       alert("Something went wrong. Please try again.");
@@ -557,11 +583,14 @@ const Productdetails = () => {
     setReviewError("");
 
     try {
-      const response = await axios.post(`${API_URL}/products/${product._id}/review`, {
-        rating: reviewData.rating,
-        review: reviewData.review,
-        userName: reviewData.userName,
-      });
+      const response = await axios.post(
+        `${API_URL}/products/${product._id}/review`,
+        {
+          rating: reviewData.rating,
+          review: reviewData.review,
+          userName: reviewData.userName,
+        },
+      );
 
       if (response.data.message) {
         setReviewSuccess("Thank you for your review!");
@@ -582,7 +611,7 @@ const Productdetails = () => {
       console.error("Error submitting review:", err);
       setReviewError(
         err.response?.data?.message ||
-        "Failed to submit review. Please try again."
+          "Failed to submit review. Please try again.",
       );
     } finally {
       setSubmitting(false);
@@ -598,7 +627,8 @@ const Productdetails = () => {
 
   const prevImage = () => {
     if (productImages.length <= 1) return;
-    const newIndex = (currentImageIndex - 1 + productImages.length) % productImages.length;
+    const newIndex =
+      (currentImageIndex - 1 + productImages.length) % productImages.length;
     setCurrentImageIndex(newIndex);
     setActiveImg(productImages[newIndex]);
   };
@@ -606,20 +636,24 @@ const Productdetails = () => {
   // ✅ Updated Add to Cart
   const handleAddToCart = async () => {
     if (!product) return;
-    
+
     setIsAddingToCart(true);
-    
+
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
-        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        guestId =
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
-      const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
-      const primaryImage = Array.isArray(product.image) && product.image.length > 0
-        ? product.image[0]
-        : product.image || "";
+      const finalPrice = discountedPrice
+        ? discountedPrice.discountedPrice
+        : product.price;
+      const primaryImage =
+        Array.isArray(product.image) && product.image.length > 0
+          ? product.image[0]
+          : product.image || "";
 
       await addToCart({
         productId: product._id,
@@ -633,11 +667,13 @@ const Productdetails = () => {
       });
 
       setShowCart(true);
-      window.dispatchEvent(new Event('cartUpdated'));
-
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert(error.response?.data?.message || "Failed to add to cart. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Failed to add to cart. Please try again.",
+      );
     } finally {
       setIsAddingToCart(false);
     }
@@ -648,14 +684,18 @@ const Productdetails = () => {
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
-        guestId = "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        guestId =
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
-      const finalPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
-      const primaryImage = Array.isArray(product.image) && product.image.length > 0
-        ? product.image[0]
-        : product.image || "";
+      const finalPrice = discountedPrice
+        ? discountedPrice.discountedPrice
+        : product.price;
+      const primaryImage =
+        Array.isArray(product.image) && product.image.length > 0
+          ? product.image[0]
+          : product.image || "";
 
       await addToCart({
         productId: product._id,
@@ -669,7 +709,6 @@ const Productdetails = () => {
       });
 
       navigate("/checkout");
-      
     } catch (error) {
       console.error("Buy Now error:", error);
       alert("Failed to proceed. Please try again.");
@@ -677,7 +716,8 @@ const Productdetails = () => {
   };
 
   const renderStars = (rating) => {
-    const numRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
+    const numRating =
+      typeof rating === "number" ? rating : parseFloat(rating) || 0;
     return (
       <div className="stars-display">
         {[...Array(5)].map((_, i) => (
@@ -771,7 +811,9 @@ const Productdetails = () => {
   }
 
   const hasMultipleImages = productImages.length > 1;
-  const displayPrice = discountedPrice ? discountedPrice.discountedPrice : product.price;
+  const displayPrice = discountedPrice
+    ? discountedPrice.discountedPrice
+    : product.price;
   const originalPrice = product.price;
 
   return (
@@ -819,7 +861,11 @@ const Productdetails = () => {
                     transition={{ duration: 0.5 }}
                   >
                     <img
-                      src={activeImg || productImages[0] || "/images/placeholder.png"}
+                      src={
+                        activeImg ||
+                        productImages[0] ||
+                        "/images/placeholder.png"
+                      }
                       alt={product.name}
                       className="main-product-image"
                       onError={(e) => {
@@ -930,51 +976,84 @@ const Productdetails = () => {
                 <div className="price-box funnel-sans">
                   {discountedPrice ? (
                     <>
-                      <span className="original-price" style={{ textDecoration: 'line-through', color: '#999', marginRight: '10px' }}>
+                      <span
+                        className="original-price"
+                        style={{
+                          textDecoration: "line-through",
+                          color: "#999",
+                          marginRight: "10px",
+                        }}
+                      >
                         ₹{formatPrice(originalPrice)}
                       </span>
-                      <span className="discounted-price" style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '1.3em' }}>
+                      <span
+                        className="discounted-price"
+                        style={{
+                          color: "#e74c3c",
+                          fontWeight: "bold",
+                          fontSize: "1.3em",
+                        }}
+                      >
                         ₹{formatPrice(displayPrice)}
                       </span>
-                      <span className="savings-badge" style={{
-                        background: '#e74c3c',
-                        color: 'white',
-                        padding: '2px 10px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        marginLeft: '10px',
-                        fontWeight: 'bold'
-                      }}>
-                        Save ₹{formatPrice(discountedPrice.discountAmount)} ({discountedPrice.savingsPercentage}% OFF)
+                      <span
+                        className="savings-badge"
+                        style={{
+                          background: "#e74c3c",
+                          color: "white",
+                          padding: "2px 10px",
+                          borderRadius: "20px",
+                          fontSize: "12px",
+                          marginLeft: "10px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Save ₹{formatPrice(discountedPrice.discountAmount)} (
+                        {discountedPrice.savingsPercentage}% OFF)
                       </span>
                     </>
                   ) : (
                     <>
                       ₹{formatPrice(originalPrice)}
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="original-price" style={{ textDecoration: 'line-through', color: '#999', marginLeft: '10px', fontSize: '0.8em' }}>
-                          ₹{formatPrice(product.originalPrice)}
-                        </span>
-                      )}
+                      {product.originalPrice &&
+                        product.originalPrice > product.price && (
+                          <span
+                            className="original-price"
+                            style={{
+                              textDecoration: "line-through",
+                              color: "#999",
+                              marginLeft: "10px",
+                              fontSize: "0.8em",
+                            }}
+                          >
+                            ₹{formatPrice(product.originalPrice)}
+                          </span>
+                        )}
                     </>
                   )}
                 </div>
 
                 {/* Applied Coupon Badge */}
                 {appliedCoupon && discountedPrice && (
-                  <div className="applied-coupon-badge mt-2" style={{
-                    background: '#d4edda',
-                    padding: '8px 15px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
+                  <div
+                    className="applied-coupon-badge mt-2"
+                    style={{
+                      background: "#d4edda",
+                      padding: "8px 15px",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <div>
                       <FaCheckCircle className="text-success me-2" />
-                      <span style={{ fontWeight: 'bold' }}>{String(appliedCoupon.code)}</span>
+                      <span style={{ fontWeight: "bold" }}>
+                        {String(appliedCoupon.code)}
+                      </span>
                       <span className="ms-2 text-success">
-                        ₹{formatPrice(discountedPrice.discountAmount)} OFF applied!
+                        ₹{formatPrice(discountedPrice.discountAmount)} OFF
+                        applied!
                       </span>
                     </div>
                     <Button
@@ -992,16 +1071,20 @@ const Productdetails = () => {
                 <p
                   className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""}`}
                   onClick={toggleWishlist}
-                  style={{ cursor: isTogglingWishlist ? 'not-allowed' : 'pointer' }}
+                  style={{
+                    cursor: isTogglingWishlist ? "not-allowed" : "pointer",
+                  }}
                 >
                   {isTogglingWishlist ? (
                     <Spinner animation="border" size="sm" className="me-2" />
                   ) : (
                     <FaHeart className="wishlist-icon" />
                   )}
-                  {isTogglingWishlist 
-                    ? 'Processing...' 
-                    : (isInWishlistState ? "Go to Wishlist" : "Add to Wishlist")}
+                  {isTogglingWishlist
+                    ? "Processing..."
+                    : isInWishlistState
+                      ? "Go to Wishlist"
+                      : "Add to Wishlist"}
                 </p>
 
                 <p className="tax-text">
@@ -1009,7 +1092,10 @@ const Productdetails = () => {
                 </p>
 
                 <p className="description-text">
-                  {String(product.description || "A timeless piece to elevate your space.")}
+                  {String(
+                    product.description ||
+                      "A timeless piece to elevate your space.",
+                  )}
                 </p>
 
                 {/* COUPONS SECTION */}
@@ -1029,40 +1115,49 @@ const Productdetails = () => {
                         onClick={() => setShowCoupons(!showCoupons)}
                         className="text-decoration-none p-0"
                       >
-                        {showCoupons ? 'Hide' : 'View All'}
+                        {showCoupons ? "Hide" : "View All"}
                       </Button>
                     </div>
 
                     {showCoupons && vendorCoupons.length > 0 && (
                       <div className="coupon-list mt-2">
                         {vendorCoupons.map((coupon, index) => {
-                          const couponProducts = coupon.products || coupon.productIds || [];
-                          const shouldShow = couponProducts.length === 0 || 
-                                            couponProducts.some(id => id.toString() === product._id.toString());
-                          
+                          const couponProducts =
+                            coupon.products || coupon.productIds || [];
+                          const shouldShow =
+                            couponProducts.length === 0 ||
+                            couponProducts.some(
+                              (id) => id.toString() === product._id.toString(),
+                            );
+
                           if (!shouldShow) {
                             return null;
                           }
 
-                          const isApplied = appliedCoupon && appliedCoupon.code === coupon.code;
+                          const isApplied =
+                            appliedCoupon && appliedCoupon.code === coupon.code;
                           const priceInfo = calculateDiscountedPrice(coupon);
-                          const discount = coupon.discount || coupon.discountValue || 0;
-                          const type = coupon.type || coupon.discountType || 'percentage';
+                          const discount =
+                            coupon.discount || coupon.discountValue || 0;
+                          const type =
+                            coupon.type || coupon.discountType || "percentage";
 
                           return (
                             <div
                               key={coupon._id || `coupon-${index}`}
-                              className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? 'border-success' : ''}`}
-                              style={isApplied ? { background: '#f0fff4' } : {}}
+                              className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? "border-success" : ""}`}
+                              style={isApplied ? { background: "#f0fff4" } : {}}
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
                                   <span className="badge bg-success me-2">
-                                    {type === 'percentage'
+                                    {type === "percentage"
                                       ? `${discount}% OFF`
                                       : `₹${discount} OFF`}
                                   </span>
-                                  <strong className="text-primary">{String(coupon.code)}</strong>
+                                  <strong className="text-primary">
+                                    {String(coupon.code)}
+                                  </strong>
                                   {isApplied && (
                                     <Badge bg="success" className="ms-2">
                                       <FaCheckCircle className="me-1" /> Applied
@@ -1070,12 +1165,17 @@ const Productdetails = () => {
                                   )}
                                 </div>
                                 <p className="mb-0 small text-muted">
-                                  {String(coupon.description || `${type === 'percentage' ? discount + '%' : '₹' + discount} off`)}
+                                  {String(
+                                    coupon.description ||
+                                      `${type === "percentage" ? discount + "%" : "₹" + discount} off`,
+                                  )}
                                 </p>
                                 {priceInfo && (
                                   <small className="text-success">
-                                    New price: ₹{formatPrice(priceInfo.discountedPrice)}
-                                    {' '}(Save ₹{formatPrice(priceInfo.discountAmount)})
+                                    New price: ₹
+                                    {formatPrice(priceInfo.discountedPrice)}{" "}
+                                    (Save ₹
+                                    {formatPrice(priceInfo.discountAmount)})
                                   </small>
                                 )}
                                 {coupon.company && (
@@ -1085,7 +1185,10 @@ const Productdetails = () => {
                                 )}
                                 {coupon.expiryDate && (
                                   <small className="text-muted ms-2">
-                                    Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
+                                    Expires:{" "}
+                                    {new Date(
+                                      coupon.expiryDate,
+                                    ).toLocaleDateString()}
                                   </small>
                                 )}
                               </div>
@@ -1109,11 +1212,16 @@ const Productdetails = () => {
                                     Remove
                                   </Button>
                                 )}
-                                <Button                                  variant="outline-secondary"
+                                <Button
+                                  variant="outline-secondary"
                                   size="sm"
                                   onClick={() => {
-                                    navigator.clipboard.writeText(String(coupon.code));
-                                    alert(`Coupon code "${coupon.code}" copied!`);
+                                    navigator.clipboard.writeText(
+                                      String(coupon.code),
+                                    );
+                                    alert(
+                                      `Coupon code "${coupon.code}" copied!`,
+                                    );
                                   }}
                                   className="ms-2"
                                 >
@@ -1147,14 +1255,18 @@ const Productdetails = () => {
                 </div>
 
                 <div className="action-buttons">
-                  <Button 
-                    className="cart-btn" 
+                  <Button
+                    className="cart-btn"
                     onClick={handleAddToCart}
                     disabled={isAddingToCart}
                   >
                     {isAddingToCart ? (
                       <>
-                        <Spinner animation="border" size="sm" className="me-2" />
+                        <Spinner
+                          animation="border"
+                          size="sm"
+                          className="me-2"
+                        />
                         Adding...
                       </>
                     ) : (
@@ -1164,7 +1276,10 @@ const Productdetails = () => {
                     )}
                   </Button>
 
-                  <Button className="buy-btn-product-details" onClick={handleBuyNow}>
+                  <Button
+                    className="buy-btn-product-details"
+                    onClick={handleBuyNow}
+                  >
                     Buy Now
                   </Button>
                 </div>
@@ -1195,20 +1310,36 @@ const Productdetails = () => {
               <p>{String(product.description)}</p>
             </details>
             <details>
-              <summary className="funnel-sans">Materials & Care</summary>
+              <summary className="funnel-sans">Why Native91?</summary>
               <p>
-                Clean gently using a dry cloth. Avoid direct sunlight and
-                moisture.
+                Native91 helps local businesses grow by providing a modern
+                platform that delivers quality products with convenience and
+                trust.
               </p>
             </details>
             <details>
               <summary className="funnel-sans">Shipping & Returns</summary>
-              <p>Free shipping above ₹1499. Easy 7-day returns available.</p>
+              <p>
+                Free shipping above ₹1499. Easy 7-day returns available.{" "}
+                <a
+                  href="/shipping-policy"
+                  className="text-decoration-none text-dark"
+                >
+                  Click here
+                </a>{" "}
+                to learn more.
+              </p>
             </details>
             <details>
               <summary className="funnel-sans">About the Brand</summary>
               <p>
-                Native91 focuses on timeless handcrafted products made with love.
+                Native91 focuses on timeless handcrafted products made with
+                love.{" "}
+                <a href="/aboutus" className="text-decoration-none text-dark">
+                  {" "}
+                  Click here
+                </a>{" "}
+                to learn more about our story.
               </p>
             </details>
           </div>
@@ -1231,7 +1362,7 @@ const Productdetails = () => {
                   No reviews yet. Be the first to review this product!
                 </p>
                 <Button
-                  variant="dark"
+                  variant="outline-dark"
                   onClick={() => setShowReviewModal(true)}
                 >
                   Write a Review
@@ -1240,10 +1371,12 @@ const Productdetails = () => {
             ) : (
               <Row className="g-4">
                 {reviews.map((review, index) => {
-                  const reviewText = String(review?.review || '');
-                  const userName = String(review?.userName || 'Anonymous');
-                  const rating = typeof review?.rating === 'number' ? review.rating : 0;
-                  const createdAt = review?.createdAt || new Date().toISOString();
+                  const reviewText = String(review?.review || "");
+                  const userName = String(review?.userName || "Anonymous");
+                  const rating =
+                    typeof review?.rating === "number" ? review.rating : 0;
+                  const createdAt =
+                    review?.createdAt || new Date().toISOString();
 
                   return (
                     <Col md={4} lg={3} key={review?._id || `review-${index}`}>
@@ -1259,7 +1392,10 @@ const Productdetails = () => {
                           </div>
                           {createdAt && (
                             <div className="review-date mt-1">
-                              <FaCalendarAlt className="me-1 text-muted" size={12} />
+                              <FaCalendarAlt
+                                className="me-1 text-muted"
+                                size={12}
+                              />
                               <small className="text-muted">
                                 {new Date(createdAt).toLocaleDateString()}
                               </small>
@@ -1389,8 +1525,8 @@ const Productdetails = () => {
           )}
         </button>
 
-        <button 
-          className="mobile-add-cart" 
+        <button
+          className="mobile-add-cart"
           onClick={handleAddToCart}
           disabled={isAddingToCart}
         >
@@ -1399,7 +1535,11 @@ const Productdetails = () => {
           ) : (
             <FaShoppingBag className="me-2" />
           )}
-          {isAddingToCart ? 'Adding...' : (discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart')}
+          {isAddingToCart
+            ? "Adding..."
+            : discountedPrice
+              ? `₹${formatPrice(displayPrice)}`
+              : "Add to Cart"}
         </button>
       </div>
 
