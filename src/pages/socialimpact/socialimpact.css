@@ -556,7 +556,8 @@
 
 .si-btn-gold:hover {
   background: #08281f;
-  color: #fff;
+  border: 1px solid #c8a96b;
+  color: #c8a96b;
   box-shadow: 0 4px 15px rgba(8, 40, 31, 0.3);
   transform: translateY(-2px);
 }
