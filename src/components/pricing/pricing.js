@@ -132,7 +132,8 @@ const Pricing = () => {
               </span>
             </h3>
             <h4 className="pricing-subtitle">
-              100% Free for all Founding Brands
+              Exclusive Founding Brand Offer: 100% Free in September &
+              October
             </h4>
 
             {/* <p className="pricing-subtitle">Curated • Premium • Seller First</p> */}
