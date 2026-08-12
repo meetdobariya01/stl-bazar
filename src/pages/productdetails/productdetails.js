@@ -350,7 +350,7 @@ const Productdetails = () => {
       }
 
       if (imgStr.startsWith("/uploads")) {
-        return `https://api-admin.native91.com${imgStr}`;
+        return `https://api-vendor.native91.com${imgStr}`;
       }
 
       if (imgStr.startsWith("/images")) {
@@ -358,7 +358,7 @@ const Productdetails = () => {
       }
 
       if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
-        return `https://api-admin.native91.com/uploads/${imgStr}`;
+        return `https://api-vendor.native91.com/uploads/${imgStr}`;
       }
 
       return `${API_URL}${imgStr}`;
