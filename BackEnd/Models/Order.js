@@ -1,4 +1,4 @@
-// Models/Order.js - UPDATED WITH COUPON FIELDS
+// Models/Order.js - UPDATED WITH COUPON FIELDS & STOCK SNAPSHOT
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -10,6 +10,7 @@ const orderSchema = new mongoose.Schema({
       name: String,
       price: Number,
       quantity: Number,
+      stockAtPurchase: { type: Number, default: 0 }, // ✅ Stock snapshot at time of purchase
       image: [String],
       vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
       company: { type: String, default: "N/A" },
@@ -27,7 +28,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: { type: String, default: "COD" },
   
-  // ✅ ADD COUPON FIELDS HERE
+  // Coupon fields
   coupon: {
     code: { type: String, default: null },
     discountType: { type: String, enum: ["percentage", "fixed"], default: null },
@@ -35,8 +36,7 @@ const orderSchema = new mongoose.Schema({
     discountAmount: { type: Number, default: 0 },
     couponId: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
   },
-  subtotal: { type: Number, default: 0 }, // ✅ Original price before discount
-  
+  subtotal: { type: Number, default: 0 },
   totalPrice: { type: Number, required: true },
   orderStatus: { 
     type: String, 

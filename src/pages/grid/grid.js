@@ -623,7 +623,7 @@ const Grid = () => {
           </Row>
         </Container>
       </div>
-      <Details />
+      {/* <Details /> */}
       <Footer />
     </>
   );

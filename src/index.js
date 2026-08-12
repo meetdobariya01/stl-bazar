@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
-import { WishlistProvider } from "./context/WishlistContext"; // ✅ Import WishlistProvider
+import { WishlistProvider } from "./context/WishlistContext";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 
@@ -28,12 +28,11 @@ import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
 import Cookies from "./components/cookies/cookies";
 import Socialimpact from "./pages/socialimpact/socialimpact";
-import FoundingBrandFAQ from "./pages/questions/que";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
-    <WishlistProvider> {/* ✅ Wrap with WishlistProvider */}
+    <WishlistProvider>
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -57,9 +56,8 @@ root.render(
           <Route path="/privacypolicy" element={<Privacypolicy />} />
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/orderhistory" element={<Orderhistory />} />
-          <Route path="/questions" element={<FoundingBrandFAQ />} />
         </Routes>
-      <Cookies />
+        <Cookies />
       </Router>
     </WishlistProvider>
   </CartProvider>,

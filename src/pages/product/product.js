@@ -1,5 +1,7 @@
+// pages/Product/Product.js - FIXED
+
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col } from "react-bootstrap";
+import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
 import { motion } from "framer-motion";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
@@ -7,7 +9,7 @@ import { NavLink } from "react-router-dom";
 import axios from "axios";
 import "./product.css";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
 
 const fadeLeft = {
   hidden: { opacity: 0, x: -50 },
@@ -20,6 +22,8 @@ const fadeRight = {
 
 const Product = () => {
   const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // ---------------- IMAGE HELPER ----------------
   const getImageUrl = (logo) => {
@@ -42,11 +46,82 @@ const Product = () => {
   };
 
   useEffect(() => {
-    axios
-      .get(`${API_URL}/companies`)
-      .then((res) => setCompanies(res.data))
-      .catch((err) => console.error("Company fetch error", err));
+    const fetchCompanies = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API_URL}/companies`);
+        
+        console.log("Companies API Response:", response.data);
+
+        // ✅ Handle different response formats
+        let companiesData = [];
+        
+        if (response.data && response.data.success) {
+          // ✅ New format: { success: true, companies: [...] }
+          companiesData = response.data.companies || [];
+        } else if (Array.isArray(response.data)) {
+          // ✅ Old format: direct array
+          companiesData = response.data;
+        } else if (response.data && Array.isArray(response.data.companies)) {
+          // ✅ Alternative format: { companies: [...] }
+          companiesData = response.data.companies;
+        } else {
+          companiesData = [];
+          console.warn("Unexpected API response format:", response.data);
+        }
+
+        console.log("✅ Companies loaded:", companiesData.length);
+        setCompanies(companiesData);
+        setError("");
+      } catch (err) {
+        console.error("Company fetch error:", err);
+        setError("Failed to load companies. Please try again.");
+        setCompanies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanies();
   }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <Header />
+        <Container className="py-5 text-center">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-3">Loading brands...</p>
+        </Container>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header />
+        <Container className="py-5">
+          <Alert variant="danger">{error}</Alert>
+        </Container>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (companies.length === 0) {
+    return (
+      <div>
+        <Header />
+        <Container className="py-5 text-center">
+          <h4>No brands available</h4>
+          <p className="text-muted">Check back soon for new brands.</p>
+        </Container>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -64,9 +139,13 @@ const Product = () => {
         />
         <Container>
           <h2 className="text-center funnel-sans my-5 display-2">Our Brands</h2>
+          <p className="text-center text-muted mb-5">
+            {companies.length} brands available
+          </p>
+          
           {companies.map((item, index) => (
             <Row
-              key={item._id}
+              key={item._id || index}
               className={`align-items-center value-row ${
                 index % 2 !== 0 ? "flex-row-reverse" : ""
               }`}

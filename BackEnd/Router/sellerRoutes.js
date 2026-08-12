@@ -1,16 +1,24 @@
-// Router/seller.js - UPDATED WITH HOSTINGER
+// Router/sellerRoutes.js - UPDATED APPROVE ROUTE (NO CREDENTIALS EMAIL)
+
 const express = require("express");
 const router = express.Router();
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const Seller = require("../Models/Seller");
+const Vendor = require("../Models/Vendor");
+const Company = require("../Models/Company");
+
 const nodemailer = require("nodemailer");
 
-// ✅ USE HOSTINGER SMTP (NOT GMAIL)
+// ============================================================
+// EMAIL CONFIGURATION
+// ============================================================
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.hostinger.com",
   port: parseInt(process.env.EMAIL_PORT) || 465,
   secure: true,
   auth: {
-    user: process.env.EMAIL_USER || "orders@native91.com",
+    user: process.env.EMAIL_USER || "brands@native91.com",
     pass: process.env.EMAIL_PASS || "",
   },
   tls: {
@@ -18,71 +26,159 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Verify email configuration
 transporter.verify((error, success) => {
   if (error) {
     console.error("Email configuration error:", error);
   } else {
-    console.log("Email server is ready to send messages");
+    console.log("✅ Email server is ready to send messages");
   }
 });
 
-// Send email function
-const sendSellerConfirmationEmail = async (sellerData) => {
+// ============================================================
+// ✅ SEND TRACKING EMAIL
+// ============================================================
+const sendTrackingEmail = async (sellerData, trackingUrl) => {
   const mailOptions = {
-    from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
+    from: `"Native91" <${process.env.EMAIL_USER || "brands@native91.com"}>`,
     to: sellerData.email,
-    subject: "Welcome to Native91 Seller Program!",
+    subject: "Your Native91 Seller Application - Tracking Link",
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #4a5568;">Welcome ${sellerData.fullName}! 🎉</h2>
-        <p>Thank you for registering as a seller on <strong>Native91</strong>.</p>
-        <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #2d3748; margin-bottom: 15px;">Registration Details:</h3>
-          <p><strong>Business Name:</strong> ${sellerData.businessName}</p>
-          <p><strong>Email:</strong> ${sellerData.email}</p>
-          <p><strong>Phone:</strong> ${sellerData.phoneNumber}</p>
-          <p><strong>Category:</strong> ${sellerData.category}</p>
-          <p><strong>Status:</strong> Pending Approval</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb; }
+          .header { background: #2c3e50; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header h1 { color: white; margin: 0; font-size: 28px; }
+          .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
+          .tracking-box { background: #f0f4f8; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+          .tracking-id { font-size: 24px; font-weight: bold; color: #2c3e50; letter-spacing: 2px; }
+          .button { display: inline-block; padding: 14px 35px; background: #2c3e50; color: white !important; 
+                   text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold; }
+          .button:hover { background: #1a252f; }
+          .footer { margin-top: 20px; font-size: 12px; color: #999; text-align: center; }
+          .status-badge { display: inline-block; padding: 6px 20px; background: #f39c12; color: white; border-radius: 20px; font-weight: bold; }
+          hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📦 Application Received</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${sellerData.fullName},</h2>
+            <p>Thank you for applying to become a seller on <strong>Native91</strong>.</p>
+            
+            <div class="tracking-box">
+              <p style="margin: 0; color: #666;">Your Application ID</p>
+              <div class="tracking-id">${sellerData.trackingId}</div>
+              <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+                <span class="status-badge">${sellerData.status.toUpperCase()}</span>
+              </p>
+            </div>
+
+            <p>Track your application status anytime using the link below:</p>
+            
+            <div style="text-align: center;">
+              <a href="${trackingUrl}" class="button">📊 Track Application Status</a>
+            </div>
+
+            <p style="text-align: center; color: #666; font-size: 14px;">
+              Or copy and paste this link:<br>
+              <span style="word-break: break-all; color: #2c3e50;">${trackingUrl}</span>
+            </p>
+
+            <p><strong>Application Details:</strong></p>
+            <ul>
+              <li><strong>Business Name:</strong> ${sellerData.businessName}</li>
+              <li><strong>Email:</strong> ${sellerData.email}</li>
+              <li><strong>Phone:</strong> ${sellerData.phoneNumber}</li>
+              <li><strong>Category:</strong> ${sellerData.category}</li>
+            </ul>
+
+            <hr>
+            <p style="font-size: 14px;">Our team will review your application within 24-48 hours.</p>
+            <p style="font-size: 14px;">You will receive an email notification once your application is reviewed.</p>
+            <hr>
+            <p style="font-size: 14px;">Best regards,<br><strong>Native91 Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} Native91. All rights reserved.</p>
+          </div>
         </div>
-        <p>Our team will review your application within 24-48 hours.</p>
-        <p>If you have any questions, feel free to contact our support team.</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-        <p style="color: #718096; font-size: 12px;">© 2024 Native91. All rights reserved.</p>
-      </div>
+      </body>
+      </html>
     `,
   };
 
   return await transporter.sendMail(mailOptions);
 };
 
-// Send admin notification email
-const sendAdminNotification = async (sellerData) => {
+// ============================================================
+// ✅ SEND REJECTION EMAIL ONLY (NO CREDENTIALS)
+// ============================================================
+const sendRejectionEmail = async (sellerData, reason) => {
   const mailOptions = {
-    from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
-    to: process.env.ADMIN_EMAIL || "orders@native91.com",
-    subject: "New Seller Registration - Action Required",
+    from: `"Native91" <${process.env.EMAIL_USER || "brands@native91.com"}>`,
+    to: sellerData.email,
+    subject: "📋 Your Native91 Seller Application Status Update",
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #4a5568;">New Seller Registration</h2>
-        <p>A new seller has registered on Native91. Please review their application.</p>
-        <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3>Seller Details:</h3>
-          <p><strong>Name:</strong> ${sellerData.fullName}</p>
-          <p><strong>Business:</strong> ${sellerData.businessName}</p>
-          <p><strong>Email:</strong> ${sellerData.email}</p>
-          <p><strong>Phone:</strong> ${sellerData.phoneNumber}</p>
-          <p><strong>Category:</strong> ${sellerData.category}</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Application Status Update</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb; }
+          .header { background: #e74c3c; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header h1 { color: white; margin: 0; }
+          .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
+          .reason-box { background: #fdf0f0; border-left: 4px solid #e74c3c; padding: 15px; margin: 15px 0; }
+          .footer { margin-top: 20px; font-size: 12px; color: #999; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header"><h1>📋 Application Status Update</h1></div>
+          <div class="content">
+            <h2>Hello ${sellerData.fullName},</h2>
+            <p>We have reviewed your seller application for <strong>Native91</strong>.</p>
+            
+            <p style="font-size: 18px; color: #e74c3c; font-weight: bold;">Status: Rejected</p>
+            
+            ${reason ? `
+              <div class="reason-box">
+                <p><strong>Reason for rejection:</strong></p>
+                <p>${reason}</p>
+              </div>
+            ` : ''}
+
+            <p>We appreciate your interest in joining Native91.</p>
+            <p>You can reapply after 30 days if you wish.</p>
+            <hr>
+            <p style="font-size: 14px;">Best regards,<br><strong>Native91 Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Native91. All rights reserved.</p>
+          </div>
         </div>
-        <p>Please log in to the admin panel to approve or reject this application.</p>
-      </div>
+      </body>
+      </html>
     `,
   };
 
   return await transporter.sendMail(mailOptions);
 };
 
-// Register seller
+// ============================================================
+// ✅ REGISTER SELLER (with tracking)
+// ============================================================
 router.post("/register", async (req, res) => {
   try {
     const { fullName, email, phoneNumber, businessName, category } = req.body;
@@ -102,33 +198,44 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    // Generate tracking token
+    const trackingToken = crypto.randomBytes(32).toString('hex');
+    const trackingTokenExpires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+
     const seller = new Seller({
       fullName,
       email,
       phoneNumber,
       businessName,
       category,
+      status: 'pending',
+      trackingToken,
+      trackingTokenExpires,
     });
 
     await seller.save();
 
-    sendSellerConfirmationEmail(seller).catch(err => {
-      console.error("Error sending seller email:", err);
-    });
+    // Generate tracking URL
+    const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${trackingToken}`;
 
-    sendAdminNotification(seller).catch(err => {
-      console.error("Error sending admin email:", err);
-    });
+    // Send tracking email
+    try {
+      await sendTrackingEmail(seller, trackingUrl);
+      console.log(`✅ Tracking email sent to ${seller.email}`);
+    } catch (emailErr) {
+      console.error("❌ Email error:", emailErr);
+    }
 
     res.status(201).json({
       success: true,
-      message: "Registration successful! Please check your email.",
+      message: "Registration successful! Please check your email for tracking link.",
       data: {
         id: seller._id,
         fullName: seller.fullName,
         email: seller.email,
         businessName: seller.businessName,
         status: seller.status,
+        trackingId: seller.trackingId,
       },
     });
   } catch (error) {
@@ -142,81 +249,322 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Get all sellers
-router.get("/all", async (req, res) => {
+// ============================================================
+// ✅ PUBLIC: CHECK APPLICATION STATUS
+// ============================================================
+router.get("/status/:trackingId", async (req, res) => {
   try {
-    const sellers = await Seller.find().sort({ registeredAt: -1 });
-    res.json({
-      success: true,
-      data: sellers,
-    });
-  } catch (error) {
-    console.error("Error fetching sellers:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch sellers",
-    });
-  }
-});
+    const { trackingId } = req.params;
+    const { token } = req.query;
 
-// Update seller status
-router.put("/:id/status", async (req, res) => {
-  try {
-    const { status } = req.body;
-    const seller = await Seller.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    console.log(`🔍 Status check request:`);
+    console.log(`   Tracking ID: ${trackingId}`);
+    console.log(`   Token: ${token ? 'Present' : 'Missing'}`);
 
-    if (!seller) {
-      return res.status(404).json({
+    if (!token) {
+      console.log("❌ Token missing in request");
+      return res.status(400).json({
         success: false,
-        message: "Seller not found",
+        message: "Tracking token is required",
       });
     }
 
-    const statusMailOptions = {
-      from: `"Native91" <${process.env.EMAIL_USER || "orders@native91.com"}>`,
-      to: seller.email,
-      subject: `Your Native91 Seller Application - ${status.toUpperCase()}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: ${status === 'approved' ? '#28a745' : '#dc3545'}">
-            Application ${status === 'approved' ? 'Approved! 🎉' : 'Status Update'}
-          </h2>
-          ${status === 'approved' ? `
-            <p>Congratulations ${seller.fullName}!</p>
-            <p>Your seller application has been approved.</p>
-          ` : status === 'rejected' ? `
-            <p>Dear ${seller.fullName},</p>
-            <p>We regret to inform you that your seller application has not been approved.</p>
-          ` : `
-            <p>Dear ${seller.fullName},</p>
-            <p>Your application is currently under review.</p>
-          `}
-          <p>Thank you for choosing Native91.</p>
-        </div>
-      `,
+    const seller = await Seller.findOne({
+      trackingId: trackingId,
+      trackingToken: token,
+    });
+
+    if (!seller) {
+      console.log(`❌ Seller not found for trackingId: ${trackingId}`);
+      return res.status(404).json({
+        success: false,
+        message: "Invalid tracking ID or token",
+      });
+    }
+
+    console.log(`✅ Seller found: ${seller.email}, Status: ${seller.status}`);
+
+    if (seller.trackingTokenExpires && new Date(seller.trackingTokenExpires) < new Date()) {
+      console.log(`❌ Token expired for: ${seller.email}`);
+      return res.status(400).json({
+        success: false,
+        message: "Tracking link has expired. Please contact support.",
+      });
+    }
+
+    const response = {
+      success: true,
+      data: {
+        trackingId: seller.trackingId,
+        fullName: seller.fullName,
+        businessName: seller.businessName,
+        email: seller.email,
+        phoneNumber: seller.phoneNumber,
+        status: seller.status,
+        registeredAt: seller.registeredAt,
+        updatedAt: seller.updatedAt,
+      },
     };
 
-    await transporter.sendMail(statusMailOptions);
+    if (seller.status === 'rejected' && seller.rejectionReason) {
+      response.data.rejectionReason = seller.rejectionReason;
+    }
 
-    res.json({
-      success: true,
-      message: `Seller application ${status}`,
-      data: seller,
-    });
+    if (seller.status === 'approved' && seller.vendorId) {
+      const vendor = await Vendor.findById(seller.vendorId).select('company status');
+      if (vendor) {
+        response.data.vendor = {
+          company: vendor.company,
+          status: vendor.status,
+        };
+      }
+    }
+
+    if (seller.status !== 'pending' && seller.adminNotes) {
+      response.data.adminNotes = seller.adminNotes;
+    }
+
+    console.log(`✅ Status response sent for: ${seller.email}`);
+    res.json(response);
+
   } catch (error) {
-    console.error("Error updating seller status:", error);
+    console.error("❌ Status check error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update seller status",
+      message: "Failed to check application status",
     });
   }
 });
 
-// Test route
+// ============================================================
+// ✅ ADMIN: GET ALL APPLICATIONS
+// ============================================================
+router.get("/applications", async (req, res) => {
+  try {
+    const applications = await Seller.find()
+      .sort({ registeredAt: -1 })
+      .select('-trackingToken -trackingTokenExpires');
+
+    res.json({
+      success: true,
+      applications,
+    });
+  } catch (error) {
+    console.error("Fetch applications error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch applications",
+    });
+  }
+});
+
+// ============================================================
+// ✅ ADMIN: GET SINGLE APPLICATION
+// ============================================================
+router.get("/applications/:id", async (req, res) => {
+  try {
+    const application = await Seller.findById(req.params.id)
+      .select('-trackingToken -trackingTokenExpires');
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      application,
+    });
+  } catch (error) {
+    console.error("Fetch application error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch application",
+    });
+  }
+});
+
+// ============================================================
+// ✅ ADMIN: APPROVE APPLICATION - NO EMAIL (Frontend handles it)
+// ============================================================
+router.post("/applications/:id/approve", async (req, res) => {
+  try {
+    const { notes } = req.body;
+    const application = await Seller.findById(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Application is already ${application.status}`,
+      });
+    }
+
+    // Create or get company
+    let company = await Company.findOne({ name: application.businessName });
+    if (!company) {
+      company = await Company.create({
+        name: application.businessName,
+        description: `Company for ${application.businessName}`,
+        status: 'active',
+      });
+    }
+
+    // Generate random password for vendor account
+    const tempPassword = crypto.randomBytes(10).toString('hex');
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    // Create vendor account
+    const vendor = new Vendor({
+      name: application.fullName,
+      email: application.email,
+      password: hashedPassword,
+      role: 'vendor',
+      phone: application.phoneNumber,
+      company: application.businessName,
+      status: 'active',
+      plan: 'founding',
+      planName: 'Founding 100',
+      commissionRate: 0,
+      planUpdatedAt: new Date(),
+      totalOrders: 0,
+    });
+
+    await vendor.save();
+
+    // Update application
+    application.status = 'approved';
+    application.reviewedAt = new Date();
+    application.adminNotes = notes || 'Application approved';
+    application.vendorId = vendor._id;
+    await application.save();
+
+    // ========================================================
+    // ⚠️ IMPORTANT: NO EMAIL SENT HERE!
+    // The frontend will handle sending the approval email
+    // via /send-approval-email endpoint on port 5001
+    // ========================================================
+    console.log(`✅ Application approved for: ${application.email}`);
+    console.log(`✅ Vendor created: ${vendor._id}`);
+    console.log(`📧 NO EMAIL SENT - Frontend will handle it`);
+
+    res.json({
+      success: true,
+      message: "Application approved and vendor account created!",
+      data: {
+        vendorId: vendor._id,
+        vendorEmail: vendor.email,
+        vendorCompany: vendor.company,
+        trackingId: application.trackingId,
+      },
+    });
+
+  } catch (error) {
+    console.error("Approve application error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to approve application",
+    });
+  }
+});
+
+// ============================================================
+// ✅ ADMIN: REJECT APPLICATION
+// ============================================================
+router.post("/applications/:id/reject", async (req, res) => {
+  try {
+    const { reason, notes } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Rejection reason is required",
+      });
+    }
+
+    const application = await Seller.findById(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    if (application.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Application is already ${application.status}`,
+      });
+    }
+
+    application.status = 'rejected';
+    application.reviewedAt = new Date();
+    application.rejectionReason = reason;
+    application.adminNotes = notes || reason;
+    await application.save();
+
+    // Send rejection email
+    try {
+      await sendRejectionEmail(application, reason);
+      console.log(`✅ Rejection email sent to ${application.email}`);
+    } catch (emailErr) {
+      console.error("❌ Rejection email error:", emailErr);
+    }
+
+    res.json({
+      success: true,
+      message: "Application rejected successfully",
+    });
+
+  } catch (error) {
+    console.error("Reject application error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to reject application",
+    });
+  }
+});
+
+// ============================================================
+// ✅ GET STATISTICS
+// ============================================================
+router.get("/stats", async (req, res) => {
+  try {
+    const total = await Seller.countDocuments();
+    const pending = await Seller.countDocuments({ status: 'pending' });
+    const approved = await Seller.countDocuments({ status: 'approved' });
+    const rejected = await Seller.countDocuments({ status: 'rejected' });
+
+    res.json({
+      success: true,
+      stats: {
+        total,
+        pending,
+        approved,
+        rejected,
+      },
+    });
+  } catch (error) {
+    console.error("Stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch statistics",
+    });
+  }
+});
+
+// ============================================================
+// ✅ TEST ROUTE
+// ============================================================
 router.get("/test", (req, res) => {
   res.json({ message: "Seller routes are working!" });
 });
