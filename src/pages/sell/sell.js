@@ -273,6 +273,26 @@ const Sell = () => {
                       </Form.Control.Feedback>
                     </Form.Group>
 
+                    <Form.Group className="mb-4 website-input">
+                      <Form.Label>Website / Social Media Links *</Form.Label>
+                      <p>
+                        If you don’t have a website or social media presence,
+                        please share a Google Drive link containing photos of
+                        your bestselling products.
+                      </p>
+                      <Form.Control
+                        type="text"
+                        name="website"
+                        value={formData.website}
+                        onChange={handleChange}
+                        placeholder="Enter your website or social media links"
+                        isInvalid={!!validationErrors.website}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {validationErrors.website}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+
                     <Form.Group className="mb-4">
                       <div className="d-flex justify-content-between align-items-center mb-2">
                         <Form.Label className="mb-0">Pricing Plan *</Form.Label>

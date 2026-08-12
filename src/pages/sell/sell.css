@@ -286,6 +286,10 @@
   color: #8f7045;
   text-decoration: none;
 }
+.website-input p{
+  margin-bottom: 15px;
+  font-size: 13px;
+}
 /* ANIMATIONS */
 
 @keyframes fadeLeft {
