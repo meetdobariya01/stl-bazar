@@ -28,6 +28,7 @@ import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
 import Cookies from "./components/cookies/cookies";
 import Socialimpact from "./pages/socialimpact/socialimpact";
+import FoundingBrandFAQ from "./pages/questions/que";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -56,6 +57,7 @@ root.render(
           <Route path="/privacypolicy" element={<Privacypolicy />} />
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/orderhistory" element={<Orderhistory />} />
+          <Route path="/questions" element={<FoundingBrandFAQ />} />
         </Routes>
       <Cookies />
       </Router>
