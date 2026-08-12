@@ -67,9 +67,9 @@ const Carouselhero = () => {
 
                 <p>{slide.desc}</p>
 
-                <NavLink to={slide.link}>
+                {/* <NavLink to={slide.link}>
                   <button className="shop-btn-carousel">{slide.btn}</button>
-                </NavLink>
+                </NavLink> */}
               </div>
             </div>
           </Carousel.Item>

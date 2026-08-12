@@ -87,7 +87,7 @@ const Footer = () => {
               <h5 className="lexend">OUR PROGRAMS</h5>
               <ul>
                 <li className="footer-links">
-                  <NavLink to="/category/Gifts%20%26%20Hamper">
+                  <NavLink to="#">
                     {" "}
                     E-Gift Voucher
                   </NavLink>
@@ -123,26 +123,35 @@ const Footer = () => {
                 <li>{/* <NavLink to="/disclaimer">Disclaimer</NavLink> */}</li>
 
                 <li>
-                  <NavLink to="/terms-and-conditions">
+                  <NavLink to="#">
                     Terms & Conditions
                   </NavLink>
                 </li>
 
                 <li>
-                  <NavLink to="/shipping-policy">Shipping Policy</NavLink>
+                  <NavLink to="#">
+                    Shipping Policy
+                  </NavLink>
                 </li>
 
                 <li>
-                  <NavLink to="/return-policy">
+                  <NavLink to="#">
                     Return, Refund & Cancellation
                   </NavLink>
                 </li>
 
                 <li>
-                  <NavLink to="/privacypolicy">Privacy Policy</NavLink>
+                  <NavLink to="#">
+                    Privacy Policy
+                  </NavLink>
                 </li>
               </ul>
             </Col>
+
+              <hr/>
+              <p className="text-center mb-0">
+                Copyright © 2026 Native91. All rights reserved.
+              </p>
           </Row>
 
           {/* MOBILE VIEW */}
@@ -206,7 +215,7 @@ const Footer = () => {
                   <summary>OUR PROGRAMS</summary>
                   <ul>
                     <li className="footer-links">
-                      <NavLink to="/category/Gifts%20%26%20Hamper">
+                      <NavLink to="#">
                         {" "}
                         E-Gift Voucher
                       </NavLink>
@@ -223,23 +232,23 @@ const Footer = () => {
                       </li>
 
                       <li>
-                        <NavLink to="/terms-and-conditions">
+                        <NavLink to="#">
                           Terms & Conditions
                         </NavLink>
                       </li>
 
                       <li>
-                        <NavLink to="/shipping-policy">Shipping Policy</NavLink>
+                        <NavLink to="#">Shipping Policy</NavLink>
                       </li>
 
                       <li>
-                        <NavLink to="/return-policy">
+                        <NavLink to="#">
                           Return, Refund & Cancellation
                         </NavLink>
                       </li>
 
                       <li>
-                        <NavLink to="/privacypolicy">Privacy Policy</NavLink>
+                        <NavLink to="#">Privacy Policy</NavLink>
                       </li>
                     </ul>
                   </div>
@@ -273,6 +282,7 @@ const Footer = () => {
               </div>
             </Col>
           </Row>
+          
         </Container>
       </footer>
 

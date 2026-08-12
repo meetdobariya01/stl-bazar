@@ -1,6 +1,4 @@
-// pages/Sell.js - COMPLETE WITH APPLICATION TRACKING
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import {
@@ -33,6 +31,7 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const Sell = () => {
   const { pathname } = useLocation();
+  const pricingRef = useRef(null);
 
   useEffect(() => {
     window.scrollTo({
@@ -310,6 +309,39 @@ const Sell = () => {
                     </Form.Group>
 
                     <Form.Group className="mb-4">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <Form.Label className="mb-0">Pricing Plan *</Form.Label>
+
+                        <button
+                          type="button"
+                          className="view-plan-btn"
+                          onClick={() => {
+                            pricingRef.current?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }}
+                        >
+                          View Plan
+                        </button>
+                      </div>
+                      <Form.Select
+                        name="category"
+                        value={formData.category}
+                        onChange={handleChange}
+                        isInvalid={!!validationErrors.category}
+                      >
+                        <option value="">Select your Pricing Plan</option>
+                        <option value="STARTER">STARTER</option>
+                        <option value="GROWTH">GROWTH</option>
+                        <option value="PREMIUM">PREMIUM</option>
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {validationErrors.category}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+
+                    <Form.Group className="mb-4">
                       <Form.Label>What do you sell? *</Form.Label>
                       <Form.Select
                         name="category"
@@ -436,7 +468,9 @@ const Sell = () => {
         </Container>
       </section>
 
-      <Pricing />
+      <div ref={pricingRef}>
+        <Pricing />
+      </div>
 
       <Footer />
     </div>

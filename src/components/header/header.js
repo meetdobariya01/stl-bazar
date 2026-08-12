@@ -201,6 +201,7 @@ const Header = () => {
         productCount: cat.productCount || 0,
       })),
     },
+      { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
     { title: "About Us", link: "/aboutus" },
   ];
