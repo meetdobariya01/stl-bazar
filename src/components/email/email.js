@@ -32,7 +32,7 @@ const bannerData = [
     button: "",
     link: "/",
     bgImage: "./images/email-box-3.webp",
-    logo: "/images/native-bg.png",
+    logo: "/images/native.png",
     image: "/images/plant.png",
   },
 ];

@@ -196,7 +196,7 @@ const Aboutus = () => {
               viewport={{ once: true }}
             >
               <div className="brand-logo">
-                <img src="./images/native.webp" className="img-fluid" alt="" />
+                <img src="./images/native.png" className="w-50" alt="" />
               </div>
             </motion.div>
 
