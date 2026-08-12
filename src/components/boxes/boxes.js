@@ -14,7 +14,7 @@ const bannerData = [
     desc: "Bright & natural essentials for your home.",
     button: "Shop Now",
     image: "./images/box1.webp",
-    link: "/category/Handmade%20Home%20Decor",
+    // link: "/category/Handmade%20Home%20Decor",
   },
   {
     subtitle: "Gift Guide",
@@ -22,7 +22,7 @@ const bannerData = [
     desc: "For every occasion.",
     button: "Explore Gifts",
     image: "./images/box2.webp",
-    link: "/category/Gifts%20%26%20Hamper",
+    // link: "/category/Gifts%20%26%20Hamper",
   },
   {
     subtitle: "Brand Spotlight",
@@ -30,7 +30,7 @@ const bannerData = [
     desc: "Support independent artisans & brands.",
     button: "Discover Brands",
     image: "./images/box3.webp",
-    link: "/category/Sustainable%20Lifestyle",
+    // link: "/category/Sustainable%20Lifestyle",
   },
   {
     subtitle: "Limited Drops",
@@ -38,7 +38,7 @@ const bannerData = [
     desc: "Limited stock unique finds.",
     button: "Shop Now",
     image: "./images/box4.webp",
-    link: "/category/Jewelry%20%26%20Accessories",
+    // link: "/category/Jewelry%20%26%20Accessories",
   },
 ];
 

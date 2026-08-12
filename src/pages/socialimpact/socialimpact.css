@@ -1,0 +1,616 @@
+.social-impact-page {
+  background: #fdf7f1;
+  color: #222;
+  overflow-x: hidden;
+}
+
+/* Hero Section */
+.si-hero {
+  background: linear-gradient(135deg, #061c16 0%, #0d2c21 100%);
+  color: #fff;
+  padding: 120px 0 90px;
+  position: relative;
+  overflow: hidden;
+}
+
+.si-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 80% 20%, rgba(200, 169, 107, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.si-hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.si-badge {
+  display: inline-block;
+  background: rgba(200, 169, 107, 0.2);
+  color: #e5c583;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 25px;
+  border: 1px solid rgba(200, 169, 107, 0.3);
+}
+
+.si-hero h1 {
+  font-family: Georgia, Times New Roman, serif;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 1.15;
+  margin-bottom: 15px;
+  color: #fff;
+}
+
+.si-hero h2 {
+  font-family: "Lexend", sans-serif;
+  font-size: clamp(1.25rem, 2.5vw, 2.25rem);
+  font-weight: 300;
+  color: #c8a96b;
+  margin-bottom: 35px;
+}
+
+.si-gold-divider {
+  width: 80px;
+  height: 3px;
+  background: #c8a96b;
+  margin: 30px auto;
+  border-radius: 2px;
+}
+
+.si-hero-desc {
+  font-size: 18px;
+  line-height: 1.8;
+  color: #ddd;
+  margin-bottom: 40px;
+}
+
+.si-hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Why Section */
+.si-why-section {
+  padding: 100px 0;
+  background: #faf6ef;
+}
+
+.si-section-header {
+  margin-bottom: 60px;
+}
+
+.si-section-header h6 {
+  color: #c8a96b;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.si-section-header h2 {
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  color: #08281f;
+  margin-bottom: 20px;
+}
+
+.si-why-text {
+  font-size: 17px;
+  line-height: 1.85;
+  color: #444;
+}
+
+.si-highlight-quote {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+  color: #08281f;
+  border-left: 4px solid #c8a96b;
+  padding-left: 25px;
+  margin: 35px 0;
+  line-height: 1.5;
+}
+
+/* Provide Cards */
+.si-provides-section {
+  padding: 100px 0;
+  background: #fcfcfc;
+}
+
+.si-provide-card {
+  background: #fff;
+  border: 1px solid #eee;
+  padding: 40px 30px;
+  border-radius: 12px;
+  height: 100%;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.02);
+  transition: all 0.4s ease;
+  position: relative;
+}
+
+.si-provide-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(8, 40, 31, 0.08);
+  border-color: rgba(200, 169, 107, 0.3);
+}
+
+.si-card-num {
+  font-size: 36px;
+  font-weight: 700;
+  color: rgba(200, 169, 107, 0.3);
+  margin-bottom: 20px;
+  font-family: "Lexend", sans-serif;
+  transition: color 0.4s ease;
+}
+
+.si-provide-card:hover .si-card-num {
+  color: #c8a96b;
+}
+
+.si-provide-card h4 {
+  font-family: "Lexend", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #08281f;
+  margin-bottom: 15px;
+}
+
+.si-provide-card p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 0;
+}
+
+/* Commitment Stat Section */
+.si-commitment-section {
+  background: #08281f;
+  color: #fff;
+  padding: 100px 0;
+  position: relative;
+}
+
+.si-commitment-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.si-stat-large {
+  font-size: clamp(5rem, 10vw, 8rem);
+  font-weight: 800;
+  color: #c8a96b;
+  line-height: 1;
+  margin-bottom: 10px;
+  font-family: "Lexend", sans-serif;
+}
+
+.si-stat-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #fff;
+  margin-bottom: 15px;
+}
+
+.si-stat-desc {
+  font-size: 16px;
+  color: #ccc;
+  max-width: 600px;
+  margin: 0 auto 20px;
+  line-height: 1.7;
+}
+
+.si-stat-disclaimer {
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+}
+
+/* Timeline / How it works */
+.si-how-section {
+  padding: 100px 0;
+  background: #faf6ef;
+}
+
+.si-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 50px;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.si-timeline-item {
+  flex: 1;
+  min-width: 220px;
+  padding: 0 20px;
+  text-align: center;
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.si-step-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #c8a96b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 25px;
+  font-family: "Lexend", sans-serif;
+  font-weight: 700;
+  color: #08281f;
+  font-size: 15px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.si-timeline-item:hover .si-step-circle {
+  background: #c8a96b;
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 10px 25px rgba(200, 169, 107, 0.4);
+}
+
+.si-step-title {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  color: #08281f;
+  margin-bottom: 15px;
+}
+
+.si-timeline-item p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+}
+
+/* Who Can Participate & Categories */
+.si-criteria-section {
+  padding: 100px 0;
+  background: #fff;
+}
+
+.si-criteria-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.si-criteria-list li {
+  font-size: 16px;
+  color: #444;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+}
+
+.si-criteria-list li::before {
+  content: "✓";
+  color: #c8a96b;
+  font-weight: 700;
+  margin-right: 15px;
+  font-size: 18px;
+}
+
+.si-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.si-category-card {
+  background: #faf6ef;
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(200, 169, 107, 0.15);
+}
+
+.si-category-card:hover {
+  background: #08281f;
+  color: #fff;
+  transform: translateY(-5px);
+  border-color: #08281f;
+}
+
+.si-category-icon {
+  font-size: 30px;
+  color: #c8a96b;
+  margin-bottom: 15px;
+  transition: color 0.3s ease;
+}
+
+.si-category-card:hover .si-category-icon {
+  color: #fff;
+}
+
+.si-category-card h5 {
+  font-family: "Lexend", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.si-category-card p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 0;
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.si-category-card:hover p {
+  color: #ccc;
+}
+
+/* Quote separator section */
+.si-quote-section {
+  background: linear-gradient(rgba(8, 40, 31, 0.85), rgba(8, 40, 31, 0.85)), url("../../../public/images/aboutus.webp") center/cover no-repeat fixed;
+  color: #fff;
+  padding: 120px 0;
+  text-align: center;
+}
+
+.si-quote-box {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.si-quote-box blockquote {
+  font-family: Georgia, serif;
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1.5;
+  margin-bottom: 30px;
+  font-weight: 300;
+}
+
+.si-quote-box blockquote span {
+  color: #c8a96b;
+}
+
+.si-quote-box p {
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ccc;
+}
+
+/* FAQ Section */
+.si-faq-section {
+  padding: 100px 0;
+  background: #faf6ef;
+}
+
+.si-faq-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.si-faq-item {
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border: 1px solid #eaeaea;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.si-faq-item.active {
+  border-color: rgba(200, 169, 107, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+
+.si-faq-header {
+  padding: 22px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-family: "Lexend", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #08281f;
+  transition: color 0.3s ease;
+}
+
+.si-faq-header:hover {
+  color: #c8a96b;
+}
+
+.si-faq-toggle {
+  font-size: 18px;
+  color: #c8a96b;
+  transition: transform 0.3s ease;
+}
+
+.si-faq-item.active .si-faq-toggle {
+  transform: rotate(45deg);
+}
+
+.si-faq-body {
+  padding: 0 25px 22px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #555;
+  border-top: 1px solid #f9f9f9;
+}
+
+/* Form registration section */
+.si-form-section {
+  padding: 100px 0;
+  background: #fff;
+  scroll-margin-top: 100px;
+}
+
+.si-form-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #faf6ef;
+  border-radius: 20px;
+  padding: 50px;
+  border: 1px solid rgba(200, 169, 107, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+}
+
+.si-form-container h3 {
+  font-family: Georgia, serif;
+  font-size: 32px;
+  color: #08281f;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.si-form-container p {
+  text-align: center;
+  color: #666;
+  margin-bottom: 40px;
+}
+
+.si-form-group {
+  margin-bottom: 25px;
+}
+
+.si-form-label {
+  font-family: "Lexend", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #222;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.si-form-input {
+  border: 1px solid #e0d9cd;
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px 20px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.si-form-input:focus {
+  border-color: #c8a96b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 169, 107, 0.15);
+}
+
+.si-form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8a96b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 20px center;
+  background-size: 15px;
+}
+
+.si-form-error {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.si-btn {
+  font-family: "Lexend", sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border: none;
+  border-radius: 30px;
+  padding: 15px 40px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.si-btn-gold {
+  background: #c8a96b;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(200, 169, 107, 0.3);
+}
+
+.si-btn-gold:hover {
+  background: #08281f;
+  border: 1px solid #c8a96b;
+  color: #c8a96b;
+  box-shadow: 0 4px 15px rgba(8, 40, 31, 0.3);
+  transform: translateY(-2px);
+}
+
+.si-btn-outline {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.si-btn-outline:hover {
+  background: #fff;
+  color: #08281f;
+  border-color: #fff;
+  transform: translateY(-2px);
+}
+
+.si-success-box {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.si-success-icon {
+  font-size: 70px;
+  color: #c8a96b;
+  margin-bottom: 25px;
+}
+
+/* Responsive Overrides */
+@media (max-width: 991px) {
+  .si-timeline-row::before {
+    display: none;
+  }
+  .si-timeline-item {
+    flex: 0 0 50%;
+  }
+  .si-form-container {
+    padding: 30px 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .si-timeline-item {
+    flex: 0 0 100%;
+    padding: 0;
+  }
+  .si-hero-actions {
+    flex-direction: column;
+  }
+  .si-hero-actions .si-btn {
+    width: 100%;
+  }
+  .si-form-container {
+    padding: 25px 15px;
+  }
+}
