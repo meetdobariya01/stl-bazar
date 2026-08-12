@@ -39,8 +39,7 @@ import { useWishlist } from "../../context/WishlistContext";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const COUPON_API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -351,7 +350,7 @@ const Productdetails = () => {
       }
 
       if (imgStr.startsWith("/uploads")) {
-        return `https://api.brandelvendor.starlighttechlabsindia.com${imgStr}`;
+        return `https://api-admin.native91.com${imgStr}`;
       }
 
       if (imgStr.startsWith("/images")) {
@@ -359,7 +358,7 @@ const Productdetails = () => {
       }
 
       if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
-        return `https://api.brandelvendor.starlighttechlabsindia.com/uploads/${imgStr}`;
+        return `https://api-admin.native91.com/uploads/${imgStr}`;
       }
 
       return `${API_URL}${imgStr}`;

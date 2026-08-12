@@ -21,7 +21,7 @@ import { useCart } from "../../context/CartContext";
 import "./categorygrid.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
+const VENDOR_BEND_URL = "https://api-admin.native91.com";
 
 const formatImagePath = (image) => {
   if (!image) return "/images/placeholder.png";

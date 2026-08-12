@@ -38,7 +38,7 @@ const Product = () => {
 
     // uploaded backend images
     if (image.includes("Screenshot") || image.includes("-")) {
-      return `https://api.brandelsuperadmin.starlighttechlabsindia.com${image}`;
+      return `https://api-admin.native91.com${image}`;
     }
 
     // old frontend/public images
