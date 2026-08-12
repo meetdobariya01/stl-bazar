@@ -369,7 +369,7 @@ const Header = () => {
         <Navbar expand="lg" className="premium-navbar" sticky="top">
           <Container>
             <Navbar.Brand as={NavLink} to="/">
-              <img src="/images/native.jpg" alt="Native91" className="logo" />
+              <img src="/images/native.png" alt="Native91" className="logo" />
             </Navbar.Brand>
 
             <Nav className="mx-auto desktop-menu">
@@ -520,7 +520,7 @@ const Header = () => {
           <Offcanvas.Header closeButton>
             <Offcanvas.Title>
               <img
-                src="/images/native.jpg"
+                src="/images/native.png"
                 className="mobile-logo"
                 alt="Native91"
               />

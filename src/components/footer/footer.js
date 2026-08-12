@@ -34,7 +34,7 @@ const Footer = () => {
                 transition={{ duration: 0.6 }}
               >
                 <img
-                  src="/images/native.jpg"
+                  src="/images/native.png"
                   alt="Refresh"
                   className="footer-logo"
                   onClick={refreshPage}
@@ -160,7 +160,7 @@ const Footer = () => {
             <Col>
               {/* LOGO */}
               <img
-                src="/images/native.jpg"
+                src="/images/native.png"
                 alt="Refresh"
                 className="footer-logo w-25"
                 onClick={refreshPage}
