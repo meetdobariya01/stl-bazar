@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
-const Address = require("../models/Address");
+const Address = require("../Models/Address");
 
 // ================= SAVE ADDRESS =================
 router.post("/", async (req, res) => {
