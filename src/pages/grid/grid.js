@@ -29,7 +29,7 @@ import "./grid.css";
 import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
-const VENDOR_BACKEND_URL = "https://api.brandelvendor.starlighttechlabsindia.com";
+const VENDOR_BACKEND_URL = "https://api-admin.native91.com";
 
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
