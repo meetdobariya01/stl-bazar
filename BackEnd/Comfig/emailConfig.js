@@ -36,7 +36,7 @@ const HOSTINGER_CONFIG = {
 // INITIALIZE EMAIL TRANSPORTER
 // ============================================================
 const initEmailTransporter = async () => {
-  console.log("📧 Configuring Hostinger Webmail...");
+  console.log("Configuring Hostinger Webmail...");
   
   const emailPass = process.env.EMAIL_PASS || "Orders@&2026";
   
@@ -49,15 +49,15 @@ const initEmailTransporter = async () => {
     // Verify connection
     await transporter.verify();
     emailMode = "smtp";
-    console.log("✅ Hostinger SMTP configured successfully!");
-    console.log(`   Sending from: orders@native91.com`);
-    console.log(`   Host: smtp.hostinger.com:465`);
+    // console.log("Hostinger SMTP configured successfully!");
+    // console.log(`   Sending from: orders@native91.com`);
+    // console.log(`   Host: smtp.hostinger.com:465`);
     return true;
   } catch (error) {
-    console.error("❌ SMTP configuration failed:", error.message);
-    console.log("   ⚠️ Please check your email password");
-    console.log("   💡 Try logging in at: https://webmail.native91.com");
-    console.log("   📧 Email mode set to CONSOLE (emails will be printed)");
+    console.error("SMTP configuration failed:", error.message);
+    // console.log("   Please check your email password");
+    // console.log("   Try logging in at: https://webmail.native91.com");
+    // console.log("   Email mode set to CONSOLE (emails will be printed)");
     emailMode = "console";
     return false;
   }
@@ -73,7 +73,7 @@ const sendEmail = async (to, subject, html) => {
   // Console mode
   if (emailMode === "console" || !transporter) {
     console.log("=========================================");
-    console.log("📧 EMAIL (CONSOLE MODE)");
+    console.log("EMAIL (CONSOLE MODE)");
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`From: orders@native91.com`);
@@ -99,10 +99,10 @@ const sendEmail = async (to, subject, html) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to: ${to}`);
+    console.log(`Email sent to: ${to}`);
     return { success: true, info, messageId: info.messageId };
   } catch (error) {
-    console.error(`❌ Failed to send to ${to}:`, error.message);
+    console.error(`Failed to send to ${to}:`, error.message);
     return { success: false, error: error.message };
   }
 };

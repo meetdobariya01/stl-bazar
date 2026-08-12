@@ -1,3 +1,4 @@
+// pages/Productdetails/Productdetails.js - WITH SIZE/WEIGHT DISPLAY
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Container,
@@ -24,6 +25,9 @@ import {
   FaTicketAlt,
   FaCopy,
   FaCheckCircle,
+  FaWeight,
+  FaRulerCombined,
+  FaTag,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -45,6 +49,41 @@ const formatPrice = (price) => {
   return numPrice.toFixed(2);
 };
 
+// ✅ Stock status helper
+const getStockStatus = (stock) => {
+  if (!stock && stock !== 0) return { label: "In Stock", color: "success", icon: "✅", canAdd: true };
+  if (stock === 0) return { label: "Out of Stock", color: "danger", icon: "❌", canAdd: false };
+  if (stock <= 5) return { label: `Only ${stock} left! Hurry!`, color: "warning", icon: "⚠️", canAdd: true };
+  if (stock <= 10) return { label: `Only ${stock} left`, color: "info", icon: "📦", canAdd: true };
+  return { label: `${stock} in stock`, color: "success", icon: "✅", canAdd: true };
+};
+
+// ✅ Format size/weight display
+const formatSizeWeight = (product) => {
+  if (!product) return null;
+  
+  const parts = [];
+  
+  if (product.size) {
+    parts.push(`Size: ${product.size}`);
+  }
+  
+  if (product.weight && product.weight > 0) {
+    const unit = product.weightUnit || '';
+    parts.push(`Weight: ${product.weight}${unit}`);
+  }
+  
+  if (product.sku) {
+    parts.push(`SKU: ${product.sku}`);
+  }
+  
+  if (product.variant) {
+    parts.push(`Variant: ${product.variant}`);
+  }
+  
+  return parts.length > 0 ? parts : null;
+};
+
 // Helper to decode slug back to name
 const decodeSlug = (slug) => {
   if (!slug) return "";
@@ -64,7 +103,6 @@ const Productdetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
 
-  // ✅ Use Cart and Wishlist Contexts
   const { addToCart, setShowCart, fetchCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } =
     useWishlist();
@@ -79,13 +117,15 @@ const Productdetails = () => {
   const [productImages, setProductImages] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
+  const [stock, setStock] = useState(0);
 
-  // ================= COUPON STATES =================
+  // Coupon states
   const [vendorCoupons, setVendorCoupons] = useState([]);
   const [showCoupons, setShowCoupons] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountedPrice, setDiscountedPrice] = useState(null);
+  
   // Review states
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
@@ -100,18 +140,14 @@ const Productdetails = () => {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Ref for mounted state
   const isMounted = useRef(true);
 
-  // Cleanup on unmount
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
   }, []);
-
-  // ================= COUPON FUNCTIONS =================
 
   const calculateDiscountedPrice = useCallback(
     (coupon) => {
@@ -298,9 +334,8 @@ const Productdetails = () => {
   }, [product, COUPON_API_URL]);
 
   // Get image URL
-  const getImageUrl = useCallback(
-    (image) => {
-      if (!image) return "/images/placeholder.png";
+  const getImageUrl = useCallback((image) => {
+    if (!image) return "/images/placeholder.png";
 
       let img = image;
 
@@ -366,7 +401,6 @@ const Productdetails = () => {
     [getImageUrl],
   );
 
-  // Fetch product by slug - FIXED
   useEffect(() => {
     const fetchProduct = async () => {
       if (!slug) return;
@@ -424,6 +458,7 @@ const Productdetails = () => {
         if (!isMounted.current) return;
 
         setProduct(foundProduct);
+        setStock(foundProduct.stock || 0);
 
         const allImages = getAllImagesFromProduct(foundProduct);
         setProductImages(allImages);
@@ -436,7 +471,7 @@ const Productdetails = () => {
         }
 
         await fetchReviews(foundProduct._id);
-
+        
         // ✅ Check wishlist status using context
         const guestId = localStorage.getItem("guestId");
         if (guestId) {
@@ -462,12 +497,9 @@ const Productdetails = () => {
 
     fetchProduct();
 
-    return () => {
-      // Cleanup
-    };
-  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist]); // ✅ REMOVED isInWishlist from deps
+    return () => {};
+  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist]);
 
-  // ✅ Check wishlist status when product changes
   useEffect(() => {
     const checkWishlist = async () => {
       if (product?._id) {
@@ -509,7 +541,6 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ Updated toggleWishlist using context
   const toggleWishlist = async () => {
     if (!product || isTogglingWishlist) return;
 
@@ -633,10 +664,9 @@ const Productdetails = () => {
     setActiveImg(productImages[newIndex]);
   };
 
-  // ✅ Updated Add to Cart
   const handleAddToCart = async () => {
     if (!product) return;
-
+    
     setIsAddingToCart(true);
 
     try {
@@ -664,6 +694,12 @@ const Productdetails = () => {
         quantity: parseInt(qty),
         discountAmount: discountedPrice ? discountedPrice.discountAmount : 0,
         couponCode: appliedCoupon ? appliedCoupon.code : null,
+        stock: stock,
+        size: product.size || "",
+        weight: product.weight || 0,
+        weightUnit: product.weightUnit || "",
+        sku: product.sku || "",
+        variant: product.variant || "",
       });
 
       setShowCart(true);
@@ -679,8 +715,12 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ Updated Buy Now
   const handleBuyNow = async () => {
+    if (stock === 0) {
+      alert("Sorry, this product is out of stock!");
+      return;
+    }
+    
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
@@ -706,6 +746,12 @@ const Productdetails = () => {
         quantity: parseInt(qty),
         discountAmount: discountedPrice ? discountedPrice.discountAmount : 0,
         couponCode: appliedCoupon ? appliedCoupon.code : null,
+        stock: stock,
+        size: product.size || "",
+        weight: product.weight || 0,
+        weightUnit: product.weightUnit || "",
+        sku: product.sku || "",
+        variant: product.variant || "",
       });
 
       navigate("/checkout");
@@ -732,7 +778,6 @@ const Productdetails = () => {
     );
   };
 
-  // Check localStorage for applied coupon when product changes
   useEffect(() => {
     const coupon = localStorage.getItem("appliedCoupon");
     const price = localStorage.getItem("discountedPrice");
@@ -752,7 +797,6 @@ const Productdetails = () => {
     }
   }, [product]);
 
-  // Fetch coupons when product is loaded
   useEffect(() => {
     if (product) {
       fetchVendorCoupons();
@@ -815,6 +859,8 @@ const Productdetails = () => {
     ? discountedPrice.discountedPrice
     : product.price;
   const originalPrice = product.price;
+  const stockStatus = getStockStatus(stock);
+  const sizeWeightInfo = formatSizeWeight(product);
 
   return (
     <>
@@ -972,6 +1018,71 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
+                {/* ✅ SIZE/WEIGHT INFO DISPLAY */}
+                {sizeWeightInfo && sizeWeightInfo.length > 0 && (
+                  <div className="size-weight-info mt-3 p-3 bg-light rounded">
+                    <div className="d-flex flex-wrap gap-3">
+                      {product.size && (
+                        <div className="d-flex align-items-center">
+                          <FaTag className="me-1 text-muted" />
+                          <span><strong>Size:</strong> {product.size}</span>
+                        </div>
+                      )}
+                      {product.weight > 0 && (
+                        <div className="d-flex align-items-center">
+                          <FaWeight className="me-1 text-muted" />
+                          <span><strong>Weight:</strong> {product.weight} {product.weightUnit || ''}</span>
+                        </div>
+                      )}
+                      {product.sku && (
+                        <div className="d-flex align-items-center">
+                          <FaTag className="me-1 text-muted" />
+                          <span><strong>SKU:</strong> {product.sku}</span>
+                        </div>
+                      )}
+                      {product.variant && (
+                        <div className="d-flex align-items-center">
+                          <FaRulerCombined className="me-1 text-muted" />
+                          <span><strong>Variant:</strong> {product.variant}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Dimensions */}
+                    {product.dimensions && (
+                      (product.dimensions.length > 0 || product.dimensions.width > 0 || product.dimensions.height > 0) && (
+                        <div className="mt-2 small text-muted">
+                          <FaRulerCombined className="me-1" />
+                          Dimensions: {product.dimensions.length} × {product.dimensions.width} × {product.dimensions.height} {product.dimensions.unit || 'cm'}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* ✅ STOCK STATUS DISPLAY */}
+                <div className="stock-status mt-3">
+                  <Badge 
+                    bg={stockStatus.color}
+                    style={{ fontSize: '16px', padding: '8px 16px' }}
+                  >
+                    {stockStatus.icon} {stockStatus.label}
+                  </Badge>
+                  {stock > 0 && stock <= 10 && (
+                    <div className="mt-2">
+                      <div className="d-flex justify-content-between small">
+                        <span>Stock Availability</span>
+                        <span>{stock} / 10</span>
+                      </div>
+                      <div className="progress" style={{ height: "6px" }}>
+                        <div
+                          className={`progress-bar bg-${stock <= 5 ? 'warning' : 'info'}`}
+                          style={{ width: `${(stock / 10) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* PRICE DISPLAY */}
                 <div className="price-box funnel-sans">
                   {discountedPrice ? (
@@ -1067,7 +1178,6 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* ✅ Updated Wishlist Button */}
                 <p
                   className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""}`}
                   onClick={toggleWishlist}
@@ -1243,22 +1353,37 @@ const Productdetails = () => {
                   </div>
                 )}
 
+                {/* ✅ QUANTITY SECTION WITH STOCK LIMIT */}
                 <div className="quantity-section">
                   <span>Quantity</span>
                   <div className="qty-box-product-details">
-                    <button onClick={() => setQty(qty > 1 ? qty - 1 : 1)}>
+                    <button 
+                      onClick={() => setQty(qty > 1 ? qty - 1 : 1)}
+                      disabled={stock === 0}
+                    >
                       −
                     </button>
                     <input value={qty} readOnly />
-                    <button onClick={() => setQty(qty + 1)}>+</button>
+                    <button 
+                      onClick={() => setQty(Math.min(qty + 1, stock))}
+                      disabled={qty >= stock || stock === 0}
+                    >
+                      +
+                    </button>
                   </div>
+                  {stock > 0 && (
+                    <small className="text-muted ms-3">
+                      Max: {stock} available
+                    </small>
+                  )}
                 </div>
 
+                {/* ✅ ACTION BUTTONS WITH STOCK CHECK */}
                 <div className="action-buttons">
                   <Button
                     className="cart-btn"
                     onClick={handleAddToCart}
-                    disabled={isAddingToCart}
+                    disabled={isAddingToCart || stock === 0}
                   >
                     {isAddingToCart ? (
                       <>
@@ -1269,6 +1394,10 @@ const Productdetails = () => {
                         />
                         Adding...
                       </>
+                    ) : stock === 0 ? (
+                      <>
+                        <FaShoppingCart /> Out of Stock
+                      </>
                     ) : (
                       <>
                         <FaShoppingCart /> Add to Cart
@@ -1276,10 +1405,7 @@ const Productdetails = () => {
                     )}
                   </Button>
 
-                  <Button
-                    className="buy-btn-product-details"
-                    onClick={handleBuyNow}
-                  >
+                  <Button className="buy-btn-product-details" onClick={handleBuyNow}>
                     Buy Now
                   </Button>
                 </div>
@@ -1308,6 +1434,13 @@ const Productdetails = () => {
             <details open>
               <summary className="funnel-sans">Product Details</summary>
               <p>{String(product.description)}</p>
+              {sizeWeightInfo && sizeWeightInfo.length > 0 && (
+                <ul className="mt-2">
+                  {sizeWeightInfo.map((info, idx) => (
+                    <li key={idx}>{info}</li>
+                  ))}
+                </ul>
+              )}
             </details>
             <details>
               <summary className="funnel-sans">Why Native91?</summary>
@@ -1511,7 +1644,7 @@ const Productdetails = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Mobile Sticky Add To Cart */}
+      {/* ✅ MOBILE STICKY CART WITH STOCK CHECK */}
       <div className="mobile-sticky-cart">
         <button
           className={`mobile-wishlist ${isInWishlistState ? "active" : ""}`}
@@ -1528,18 +1661,16 @@ const Productdetails = () => {
         <button
           className="mobile-add-cart"
           onClick={handleAddToCart}
-          disabled={isAddingToCart}
+          disabled={isAddingToCart || stock === 0}
         >
           {isAddingToCart ? (
             <Spinner animation="border" size="sm" className="me-2" />
+          ) : stock === 0 ? (
+            'Out of Stock'
           ) : (
             <FaShoppingBag className="me-2" />
           )}
-          {isAddingToCart
-            ? "Adding..."
-            : discountedPrice
-              ? `₹${formatPrice(displayPrice)}`
-              : "Add to Cart"}
+          {isAddingToCart ? 'Adding...' : (discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart')}
         </button>
       </div>
 

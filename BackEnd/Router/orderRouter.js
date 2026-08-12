@@ -1,11 +1,12 @@
-// Router/orderRouter.js - UPDATED WITH COUPON SUPPORT
+// Router/orderRouter.js - UPDATED WITH STOCK MANAGEMENT
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Order = require("../Models/Order");
 const Cart = require("../Models/Cart");
 const Vendor = require("../Models/Vendor");
 const Product = require("../Models/Product");
-const Coupon = require("../Models/Coupon"); // ✅ Import Coupon model
+const Coupon = require("../Models/Coupon");
 const axios = require("axios");
 const { 
   sendEmail, 
@@ -21,7 +22,7 @@ const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.
 // PLACE ORDER WITH EMAIL & VENDOR NOTIFICATIONS
 // ============================================
 router.post("/place", async (req, res) => {
-  const { guestId, shippingAddress, paymentMethod, couponCode } = req.body; // ✅ Added couponCode
+  const { guestId, shippingAddress, paymentMethod, couponCode } = req.body;
 
   if (!guestId || !shippingAddress) {
     return res.status(400).json({ 
@@ -99,11 +100,13 @@ router.post("/place", async (req, res) => {
           company = item.company;
         }
         
+        // ✅ Return with stock information
         return {
           productId: item.productId,
           name: item.name || product?.name || "Unknown Product",
           price: item.price || product?.price || 0,
           quantity: item.quantity || 1,
+          stock: product?.stock || 0, // ✅ Add current stock
           image: Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null),
           vendorId: vendorId,
           company: company || "N/A",
@@ -111,7 +114,28 @@ router.post("/place", async (req, res) => {
       })
     );
 
-    // ✅ Calculate subtotal
+    // ============================================
+    // ✅ CHECK PRODUCT STOCK BEFORE ORDER
+    // ============================================
+    for (const item of itemsWithVendorInfo) {
+      const product = await Product.findById(item.productId);
+      
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: `Product not found: ${item.name}`
+        });
+      }
+
+      if (product.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${product.name}. Available stock: ${product.stock}`
+        });
+      }
+    }
+
+    // Calculate subtotal
     let subtotal = cart.items.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0
@@ -126,7 +150,7 @@ router.post("/place", async (req, res) => {
       couponId: null,
     };
 
-    // ✅ APPLY COUPON IF PROVIDED
+    // APPLY COUPON IF PROVIDED
     if (couponCode) {
       try {
         const coupon = await Coupon.findOne({
@@ -135,13 +159,8 @@ router.post("/place", async (req, res) => {
         });
 
         if (coupon) {
-          // Check expiry
           const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
-          
-          // Check usage limit
           const usageLimitReached = coupon.usageLimit && (coupon.usageCount || 0) >= coupon.usageLimit;
-          
-          // Check min order amount
           const minOrderNotMet = coupon.minOrderAmount && subtotal < coupon.minOrderAmount;
 
           if (!isExpired && !usageLimitReached && !minOrderNotMet) {
@@ -166,28 +185,28 @@ router.post("/place", async (req, res) => {
               couponId: coupon._id,
             };
 
-            // ✅ Increment coupon usage count
             coupon.usageCount = (coupon.usageCount || 0) + 1;
             await coupon.save();
-          } else {
-            // console.log(`Coupon ${couponCode} validation failed:`, {
-            //   expired: isExpired,
-            //   usageLimitReached: usageLimitReached,
-            //   minOrderNotMet: minOrderNotMet
-            // });
           }
-        } else {
-          // console.log(`Coupon ${couponCode} not found or inactive`);
         }
       } catch (couponError) {
         console.error("Coupon validation error:", couponError);
       }
     }
 
-    // Create order with coupon data
+    // ✅ Create order with stock snapshot
     const order = new Order({
       guestId,
-      items: itemsWithVendorInfo,
+      items: itemsWithVendorInfo.map(item => ({
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        stockAtPurchase: item.stock, // ✅ Save stock at purchase time
+        image: item.image ? [item.image] : [],
+        vendorId: item.vendorId,
+        company: item.company,
+      })),
       shippingAddress,
       paymentMethod: paymentMethod || "COD",
       subtotal: subtotal,
@@ -197,6 +216,24 @@ router.post("/place", async (req, res) => {
     });
 
     await order.save();
+
+    // ============================================
+    // ✅ UPDATE PRODUCT STOCK AFTER ORDER SAVE
+    // ============================================
+    for (const item of itemsWithVendorInfo) {
+      await Product.findByIdAndUpdate(
+        item.productId,
+        {
+          $inc: {
+            stock: -item.quantity
+          }
+        }
+      );
+    }
+
+    // ============================================
+    // ✅ DELETE CART AFTER STOCK UPDATE
+    // ============================================
     await Cart.findOneAndDelete({ guestId });
 
     const orderId = order._id;
@@ -210,9 +247,7 @@ router.post("/place", async (req, res) => {
       vendors: []
     };
     
-    // ============================================
     // 1. SEND EMAIL TO CUSTOMER
-    // ============================================
     const customerEmail = shippingAddress.email;
     if (customerEmail) {
       try {
@@ -228,9 +263,7 @@ router.post("/place", async (req, res) => {
       }
     }
     
-    // ============================================
     // 2. SEND EMAIL TO ADMIN
-    // ============================================
     const adminEmail = process.env.ADMIN_EMAIL || "orders@native91.com";
     if (adminEmail) {
       try {
@@ -246,9 +279,7 @@ router.post("/place", async (req, res) => {
       }
     }
     
-    // ============================================
-    // 3. GROUP ITEMS BY VENDOR (Company wise)
-    // ============================================
+    // 3. GROUP ITEMS BY VENDOR
     const vendorGroups = new Map();
     
     for (const item of itemsWithVendorInfo) {
@@ -265,9 +296,7 @@ router.post("/place", async (req, res) => {
       }
     }
     
-    // ============================================
     // 4. SEND EMAIL TO EACH VENDOR
-    // ============================================
     for (const [company, vendorData] of vendorGroups) {
       try {
         let vendor = null;
@@ -326,9 +355,7 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    // ============================================
     // 5. CREATE VENDOR NOTIFICATIONS
-    // ============================================
     const notificationResults = [];
     
     for (const [company, vendorData] of vendorGroups) {
@@ -374,9 +401,7 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    // ============================================
-    // 6. RESPONSE - Include coupon info
-    // ============================================
+    // 6. RESPONSE
     res.json({ 
       success: true,
       message: "Order placed successfully", 
