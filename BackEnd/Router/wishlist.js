@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Wishlist = require("../models/Wishlist");
+const Wishlist = require("../Models/Wishlist");
 
 // GET wishlist by guestId
 router.get("/:guestId", async (req, res) => {

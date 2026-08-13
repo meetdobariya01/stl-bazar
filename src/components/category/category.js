@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./category.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://api.gourmetbazar.starlighttechlabsindia.com/api";
-const ADMIN_BACKEND_URL = "https://api.brandelsuperadmin.starlighttechlabsindia.com";
+const API_URL = process.env.REACT_APP_API_URL;
+const ADMIN_BACKEND_URL = "https://api-admin.native91.com";
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
