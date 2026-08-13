@@ -201,8 +201,9 @@ const Header = () => {
         productCount: cat.productCount || 0,
       })),
     },
-      { title: "Social Impact", link: "/social-impact" },
+    { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
+    { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
 
@@ -235,7 +236,11 @@ const Header = () => {
                       className="ms-2"
                       disabled={isLoading}
                     >
-                      {isLoading ? <Spinner animation="border" size="sm" /> : "Search"}
+                      {isLoading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        "Search"
+                      )}
                     </Button>
                   </Form>
 
@@ -254,7 +259,9 @@ const Header = () => {
                         >
                           <div className="recommendation-img">
                             <img
-                              src={product.image?.[0] || "/images/placeholder.png"}
+                              src={
+                                product.image?.[0] || "/images/placeholder.png"
+                              }
                               alt={product.name}
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -303,7 +310,9 @@ const Header = () => {
                         >
                           <div className="search-result-img">
                             <img
-                              src={product.image?.[0] || "/images/placeholder.png"}
+                              src={
+                                product.image?.[0] || "/images/placeholder.png"
+                              }
                               alt={product.name}
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -335,16 +344,16 @@ const Header = () => {
                   )}
 
                   {/* 🔥 No results message - Only from API */}
-                  {!isLoading && 
-                   searchQuery.length >= 2 && 
-                   !showRecommendations && 
-                   !showSearchResults && 
-                   recommendations.length === 0 && 
-                   searchResults.length === 0 && (
-                    <div className="search-no-results">
-                      <span>No products found for "{searchQuery}"</span>
-                    </div>
-                  )}
+                  {!isLoading &&
+                    searchQuery.length >= 2 &&
+                    !showRecommendations &&
+                    !showSearchResults &&
+                    recommendations.length === 0 &&
+                    searchResults.length === 0 && (
+                      <div className="search-no-results">
+                        <span>No products found for "{searchQuery}"</span>
+                      </div>
+                    )}
 
                   <button
                     className="close-search"
@@ -602,7 +611,7 @@ const Header = () => {
                     pill
                     bg=""
                     className="ms-1"
-                    style={{ fontSize: "10px" ,backgroundColor: "#0f5132" }}
+                    style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
                   >
                     {wishlistCount}
                   </Badge>
@@ -621,7 +630,7 @@ const Header = () => {
                     pill
                     // bg="danger"
                     className="ms-1"
-                    style={{ fontSize: "10px",backgroundColor: "#0f5132"  }}
+                    style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
                   >
                     {cartCount}
                   </Badge>
