@@ -199,7 +199,7 @@
   background: #b68b3f;
 }
 
-.heading-center {
+.heading-center-pricing {
   text-align: center;
 }
 
@@ -217,15 +217,15 @@
   margin-bottom: 12px;
 }
 
-.heading-center h2 {
+.heading-center-pricing h2 {
   color: #b08d57;
   font-weight: 700;
   letter-spacing: 1px;
   font-size: 34px;
 }
 
-.heading-center p {
-  color: #fff;
+.heading-center-pricing p {
+  /* color: #fff; */
   letter-spacing: 3px;
   margin: 0;
 }
@@ -277,7 +277,7 @@
     padding: 35px 25px;
   }
 
-  .heading-center h2 {
+  .heading-center-pricing h2 {
     font-size: 28px;
   }
 
@@ -316,12 +316,12 @@
     font-size: 24px;
   }
 
-  .heading-center h2 {
+  .heading-center-pricing h2 {
     font-size: 22px;
     line-height: 1.4;
   }
 
-  .heading-center p {
+  .heading-center-pricing p {
     font-size: 14px;
   }
 

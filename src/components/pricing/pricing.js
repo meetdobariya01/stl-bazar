@@ -208,7 +208,7 @@ const Pricing = () => {
             <div className="benefits-heading">
               <div className="line"></div>
 
-              <div className="heading-center">
+              <div className="heading-center-pricing">
                 <div className="heading-icon">
                   <FaMedal />
                 </div>

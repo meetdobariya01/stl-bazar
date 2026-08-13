@@ -1,87 +1,101 @@
-import React, { useState } from "react";
+// Signup.js
+import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaGoogle, FaUser } from "react-icons/fa";
-import "./signup.css";
-import Footer from "../../components/footer/footer";
-import Header from "../../components/header/header";
+import {
+  FaEnvelope,
+  FaLock,
+  FaGoogle,
+  FaEye,
+  FaEyeSlash,
+} from "react-icons/fa";
+import { FaCircleUser } from "react-icons/fa6";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; // <-- import useNavigate
+import "./signup.css";
+import "../login/login.css";
+import Header from "../../components/header/header";
+import Footer from "../../components/footer/footer";
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); // <-- initialize navigate
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  }, [pathname]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Use the API URL from frontend .env
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/register`,
         { name, email, password }
       );
 
-      setLoading(false);
-      alert(response.data.message); // e.g., "User registered successfully 🎉"
-      
-      // Optionally, reset form
-      setName("");
-      setEmail("");
-      setPassword("");
-
-      // Redirect to login page after signup
-      navigate("/login"); // <-- redirect to login page
-
+      alert("Account created successfully!");
+      navigate("/login");
     } catch (error) {
+      const message = error.response?.data?.message || "Registration failed. Please try again.";
+      alert(message);
+    } finally {
       setLoading(false);
-      if (error.response && error.response.data.message) {
-        alert(error.response.data.message); // backend error message
-      } else {
-        alert("Something went wrong! Try again.");
-      }
     }
   };
 
+  const handleGoogleSignup = () => {
+    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+  };
+
   return (
-    <section className="signup-section">
+    <section className="login-section">
       <Header />
+
       <Container>
-        <Row className="justify-content-center align-items-center min-vh-100">
-          <Col xs={12} sm={10} md={7} lg={5}>
-            <motion.div
-              initial={{ opacity: 0, y: 60 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-            >
-              <Card className="signup-card">
-                <h3 className="text-center mb-3 lexend">Create Account 🚀</h3>
-                <p className="text-center text-muted mb-4 funnel-sans">
-                  Join us and start shopping smarter
+        <Row className="justify-content-center align-items-center min-vh-100 py-5 lexend">
+          <Col lg={10}>
+            <div className="login-container">
+              <Card className="login-card border-0">
+                <h3 className="text-center mb-3 lexend">Welcome</h3>
+                <p className="text-center text-muted mb-3">
+                  Signup to continue shopping
                 </p>
+
                 <Button
                   variant="outline-dark"
-                  className="w-100 mt-3"
-                  onClick={() =>
-                    (window.location.href = "https://accounts.google.com")
-                  }
+                  className="w-100 mt-3 google-login-btn"
+                  onClick={handleGoogleSignup}
+                  disabled={googleLoading}
                 >
-                  <FaGoogle className="me-2" /> Login with Google
+                  <FaGoogle className="me-2" />
+                  {googleLoading ? "Loading..." : "Sign up with Google"}
                 </Button>
+
                 <div className="divider funnel-sans">OR</div>
-                <Form className="lexend" onSubmit={handleSubmit}>
+
+                <Form onSubmit={handleSubmit}>
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <Form.Group className="mb-3 input-group-custom underline-input">
-                      <FaUser />
+                    <Form.Group className="mb-3 input-group-custom lexend underline-input">
+                      <FaCircleUser />
                       <Form.Control
+                        className="form-control-custom"
                         type="text"
                         placeholder="Full Name"
                         value={name}
@@ -92,15 +106,16 @@ const Signup = () => {
                   </motion.div>
 
                   <motion.div
-                    initial={{ opacity: 0, x: 30 }}
+                    initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 }}
                   >
-                    <Form.Group className="mb-3 input-group-custom underline-input">
+                    <Form.Group className="mb-3 input-group-custom lexend underline-input">
                       <FaEnvelope />
                       <Form.Control
+                        className="form-control-custom"
                         type="email"
-                        placeholder="Email Address"
+                        placeholder="Email address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -109,19 +124,34 @@ const Signup = () => {
                   </motion.div>
 
                   <motion.div
-                    initial={{ opacity: 0, x: -30 }}
+                    initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <Form.Group className="mb-3 input-group-custom underline-input">
+                    <Form.Group className="mb-3 input-group-custom lexend underline-input position-relative">
                       <FaLock />
                       <Form.Control
-                        type="password"
+                        className="form-control-custom pe-5"
+                        type={showPassword ? "text" : "password"}
                         placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                       />
+                      <span
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: "absolute",
+                          right: "15px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          cursor: "pointer",
+                          color: "#888",
+                          zIndex: 10,
+                        }}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </span>
                     </Form.Group>
                   </motion.div>
 
@@ -131,7 +161,7 @@ const Signup = () => {
                   >
                     <Button
                       type="submit"
-                      className="signup-btn w-100"
+                      className="login-btn w-100 mb-3 lexend"
                       disabled={loading}
                     >
                       {loading ? "Creating Account..." : "Sign Up"}
@@ -143,15 +173,28 @@ const Signup = () => {
                   <span className="text-muted funnel-sans">
                     Already have an account?
                   </span>
-                  <a href="/login" className="ms-1 login-link lexend">
-                    Login
-                  </a>
+                  <button
+                    type="button"
+                    className="ms-1 register-link lexend border-0 bg-transparent p-0"
+                    onClick={() => navigate("/login")}
+                  >
+                    Log In
+                  </button>
                 </div>
               </Card>
-            </motion.div>
+
+              <div className="login-image-wrapper d-none d-sm-block">
+                <img
+                  src="/images/login.webp"
+                  alt="Premium Grocery"
+                  className="login-side-image"
+                />
+              </div>
+            </div>
           </Col>
         </Row>
       </Container>
+
       <Footer />
     </section>
   );

@@ -18,6 +18,7 @@ import {
   FaShieldAlt,
   FaHeadset,
   FaCheckCircle,
+  FaQuestion,
 } from "react-icons/fa";
 import axios from "axios";
 import Header from "../../components/header/header";
@@ -334,15 +335,23 @@ const Sell = () => {
                         onChange={handleChange}
                         isInvalid={!!validationErrors.category}
                       >
-                        <option value="">
-                          Select your Product Category
+                        <option value="">Select your Product Category</option>
+                        <option value="Organic Food & Healthy Snacks">
+                          Organic Food & Healthy Snacks
                         </option>
-                        <option value="Organic Food & Healthy Snacks">Organic Food & Healthy Snacks</option>
-                        <option value="Natural Skin Care & Wellness">Natural Skin Care & Wellness</option>
+                        <option value="Natural Skin Care & Wellness">
+                          Natural Skin Care & Wellness
+                        </option>
                         <option value="Gifts & Hamper">Gifts & Hamper</option>
-                        <option value="Handmade Home Decor">Handmade Home Decor</option>
-                        <option value="Sustainable Lifestyle">Sustainable Lifestyle</option>
-                        <option value="Jewelry & Accessories">Jewelry & Accessories</option>
+                        <option value="Handmade Home Decor">
+                          Handmade Home Decor
+                        </option>
+                        <option value="Sustainable Lifestyle">
+                          Sustainable Lifestyle
+                        </option>
+                        <option value="Jewelry & Accessories">
+                          Jewelry & Accessories
+                        </option>
                         <option value="Pet Care">Pet Care</option>
                         {/* <option value="Other">Other</option> */}
                       </Form.Select>
@@ -444,6 +453,17 @@ const Sell = () => {
                       <h5>Need help getting started?</h5>
                       <p>Our team is here for you.</p>
                       <a href="/contactus">Contact Support →</a>
+                    </div>
+                  </div>
+
+                  <div className="support-card d-flex gap-3 p-3 bg-light rounded mt-4">
+                    <FaQuestion size={30} />
+                    <div>
+                      <h5>Frequently Asked Questions for Sellers</h5>
+                      {/* <p>Our team is here for you.</p> */}
+                      <a href=" https://faqs.native91.com " target="_blank" rel="noopener noreferrer">
+                        FAQs for Seller →
+                      </a>
                     </div>
                   </div>
                 </div>
