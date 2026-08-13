@@ -132,7 +132,15 @@
   }
 
   .featureCard {
-    padding: 25px 10px;
+    padding: 0px 0px;
+  }
+  .featureCard h5 {
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+  .featureCard p {
+    font-size: 14px;
+    line-height: 21px;
   }
 }
 .small-title {
@@ -249,5 +257,26 @@
   .cta-section button {
     width: 100%;
     margin: 10px 0;
+  }
+}
+@media (max-width: 576px) {
+  .value-card {
+    padding: 0px 0px;
+  }
+.value-card h5 {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .value-card p {
+    font-size: 12px;
+  }
+  .icon {
+    font-size: 36px;
+    margin-bottom: 15px;
+  }
+
+  .value-heading {
+    letter-spacing: 3px;
+    margin-bottom: 15px;
   }
 }

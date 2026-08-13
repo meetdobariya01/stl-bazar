@@ -151,7 +151,7 @@ const Aboutus = () => {
                     delay: index * 0.15,
                   }}
                   viewport={{ once: true }}
-                  className="col-lg col-md-4 col-6"
+                  className="col-lg col-md-4 col-4"
                 >
                   <div className="featureCard">
                     <div className="icon">{item.icon}</div>
@@ -310,7 +310,7 @@ const Aboutus = () => {
             {values.map((item, index) => (
               <motion.div
                 key={index}
-                className="col-lg col-md-4 col-6 mb-4"
+                className="col-lg col-md-4 col-4 mb-4"
                 initial={{ opacity: 0, y: 60 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -318,7 +318,7 @@ const Aboutus = () => {
                 <div className="value-card">
                   <div className="icon">{item.icon}</div>
 
-                  <h5 className=" text-uppercase">{item.title}</h5>
+                  <h5 className=" text-uppercase ">{item.title}</h5>
 
                   <p>{item.text}</p>
                 </div>
