@@ -12,9 +12,9 @@
   justify-content: center;
   align-items: center;
   padding: 1rem;
-  background: #fff;
+  /* background: #fff; */
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  /* box-shadow: 0 10px 30px rgba(0,0,0,0.1); */
   transition: transform 0.3s ease;
 }
 
@@ -92,7 +92,7 @@
 }
 
 .company-name-text {
-  font-size: 1rem;
+  font-size: 60px;
   font-weight: 500;
   color: #666;
   text-align: center;
@@ -132,12 +132,4 @@
   width: 100%;
 }
 
-.value-image {
-  width: 100%;
-  max-width: 280px; /* Match placeholder size */
-  height: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
+
