@@ -6,7 +6,7 @@ const Company = require("../Models/Company");
 const Product = require("../Models/Product");
 const Vendor = require("../Models/Vendor");
 const StockService = require("../Comfig/stockService");
-
+const SellerDocument = require("../Models/SellerDocument");
 router.get("/search-suggestions", async (req, res) => {
   try {
     const { q } = req.query;
@@ -77,25 +77,34 @@ router.get("/search-suggestions", async (req, res) => {
 
 router.get("/companies", async (req, res) => {
   try {
-    // ✅ Get all active companies from Vendor model
-    const activeVendors = await Vendor.find({ 
-      status: 'active',
-      role: 'vendor'
-    }).select('company');
-    
-    const activeCompanyNames = activeVendors.map(v => v.company);
+    // Get all verified sellers from SellerDocument with logo and brand description
+    const verifiedSellers = await SellerDocument.find({ 
+      status: 'verified' 
+    }).select('company logo brand.description email');
 
-    const companies = await Company.find({
-      name: { $in: activeCompanyNames }
-    }).sort({ createdAt: -1 });
-    
-    res.json(companies);
+    // Format the response for the frontend
+    const companies = verifiedSellers.map(seller => ({
+      _id: seller._id,
+      name: seller.company,
+      description: seller.brand?.description || 'A trusted brand on our platform.',
+      logo: seller.logo?.image || null,
+      email: seller.email,
+    }));
+
+    console.log(`✅ Found ${companies.length} verified vendors with logos and descriptions`);
+
+    res.json({
+      success: true,
+      companies: companies
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch companies" });
+    console.error("Error fetching companies:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch companies" 
+    });
   }
 });
-
 
 router.post("/company", async (req, res) => {
   try {
