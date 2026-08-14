@@ -153,7 +153,7 @@ router.get("/google", passport.authenticate("google", {
 }));
 
 // ============================================
-// GOOGLE LOGIN - Callback
+// GOOGLE LOGIN - Callback (Direct Home Page)
 // ============================================
 router.get(
   "/google/callback",
@@ -165,7 +165,9 @@ router.get(
     try {
       const { token } = req.user;
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-      res.redirect(`${clientUrl}/oauth-success?token=${token}`);
+      
+      // DIRECT HOME PAGE REDIRECT WITH TOKEN
+      res.redirect(`${clientUrl}/?token=${token}`);
     } catch (error) {
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
       res.redirect(`${clientUrl}/login?error=auth_failed`);
