@@ -10,7 +10,7 @@ import axios from "axios";
 import "./product.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
-
+const API_BASE ="https://api-vendor.native91.com"; 
 const fadeLeft = {
   hidden: { opacity: 0, x: -50 },
   visible: { opacity: 1, x: 0 },
@@ -27,24 +27,29 @@ const Product = () => {
   const [imageErrors, setImageErrors] = useState({});
 
   // ---------------- IMAGE HELPER ----------------
-  const getImageUrl = (logo) => {
-    if (!logo) return null;
+const getImageUrl = (logo) => {
+  if (!logo) return null;
 
-    const image = Array.isArray(logo) ? logo[0] : logo;
+  const image = Array.isArray(logo) ? logo[0] : logo;
 
-    // already full URL
-    if (image.startsWith("http")) { 
-      return image;
-    }
-
-    // uploaded backend images
-    if (image.includes("Screenshot") || image.includes("-")) {
-      return `https://api-vendor.native91.com${image}`;
-    }
-
-    // old frontend/public images
+  // Already full URL
+  if (image.startsWith("http")) { 
     return image;
-  };
+  }
+
+  // ✅ Handle uploaded backend images (from SellerDocument)
+  if (image.startsWith("/uploads")) {
+    return `${API_BASE}${image}`;
+  }
+
+  // Uploaded backend images (alternative format)
+  if (image.includes("Screenshot") || image.includes("-")) {
+    return `https://api-vendor.native91.com${image}`;
+  }
+
+  // Old frontend/public images
+  return image;
+};
 
   // Handle image load error
   const handleImageError = (companyId) => {
@@ -162,7 +167,7 @@ const Product = () => {
                 }`}
               >
                 {/* IMAGE */}
-                <Col md={4}>
+                <Col md={3}>
                   <motion.div
                     className="value-image-wrapper"
                     variants={index % 2 === 0 ? fadeLeft : fadeRight}
@@ -188,7 +193,7 @@ const Product = () => {
                 </Col>
 
                 {/* CONTENT */}
-                <Col md={8}>
+                <Col md={9}>
                   <motion.div
                     className="value-content light mt-2 mt-md-0"
                     variants={index % 2 === 0 ? fadeRight : fadeLeft}
