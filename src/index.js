@@ -28,7 +28,7 @@ import Faqs from "./pages/faqs/faqs";
 import Orderhistory from "./pages/orderhistory/orderhistory";
 import Cookies from "./components/cookies/cookies";
 import Socialimpact from "./pages/socialimpact/socialimpact";
-
+import OAuthSuccess from "./pages/login/OAuthSuccess";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
@@ -40,6 +40,7 @@ root.render(
           <Route path="/contactus" element={<ContactUs />} />
           <Route path="/product" element={<Product />} />
           <Route path="/login" element={<Login />} />
+<Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/social-impact" element={<Socialimpact />} />
           <Route path="/wishlist" element={<Wishlist />} />
