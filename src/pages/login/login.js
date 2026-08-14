@@ -20,18 +20,24 @@ const Login = () => {
 
   // Check for Google OAuth callback
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const token = params.get('token');
-    const error = params.get('error');
+  const params = new URLSearchParams(location.search);
+  const token = params.get("token");
+  const error = params.get("error");
 
-    if (token) {
-      localStorage.setItem("token", token);
-      navigate("/");
-    } else if (error) {
-      alert("Google login failed. Please try again.");
-    }
-  }, [location, navigate]);
+  if (token) {
+    // Save Google token
+    localStorage.setItem("token", token);
 
+    // Immediately go to home page and remove token from URL
+    window.history.replaceState({}, document.title, "/");
+
+    navigate("/", { replace: true });
+  }
+
+  if (error) {
+    alert("Google login failed. Please try again.");
+  }
+}, [location.search, navigate]);
 // Login.js - Updated handleSubmit
 const handleSubmit = async (e) => {
   e.preventDefault();
