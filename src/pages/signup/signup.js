@@ -1,3 +1,4 @@
+// Signup.js
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
 import { motion } from "framer-motion";
@@ -10,7 +11,7 @@ import {
 } from "react-icons/fa";
 import { FaCircleUser } from "react-icons/fa6";
 import { useNavigate, useLocation } from "react-router-dom";
-
+import axios from "axios";
 import "./signup.css";
 import "../login/login.css";
 import Header from "../../components/header/header";
@@ -25,8 +26,8 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Scroll to top when page changes
   useEffect(() => {
     window.scrollTo({
       top: 0,
@@ -35,26 +36,28 @@ const Signup = () => {
     });
   }, [pathname]);
 
-  // Frontend-only signup
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
 
-    // Frontend-only demo
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/register`,
+        { name, email, password }
+      );
 
       alert("Account created successfully!");
-
-      // Redirect to login page
       navigate("/login");
-    }, 1000);
+    } catch (error) {
+      const message = error.response?.data?.message || "Registration failed. Please try again.";
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Google button - frontend only
-  const handleGoogleLogin = () => {
-    alert("Google login will be available soon.");
+  const handleGoogleSignup = () => {
+    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
   };
 
   return (
@@ -65,30 +68,25 @@ const Signup = () => {
         <Row className="justify-content-center align-items-center min-vh-100 py-5 lexend">
           <Col lg={10}>
             <div className="login-container">
-              {/* Signup Form */}
               <Card className="login-card border-0">
                 <h3 className="text-center mb-3 lexend">Welcome</h3>
-
                 <p className="text-center text-muted mb-3">
                   Signup to continue shopping
                 </p>
 
-                {/* Google Login */}
                 <Button
                   variant="outline-dark"
                   className="w-100 mt-3 google-login-btn"
-                  onClick={handleGoogleLogin}
-                  type="button"
+                  onClick={handleGoogleSignup}
+                  disabled={googleLoading}
                 >
                   <FaGoogle className="me-2" />
-                  Sign up with Google
+                  {googleLoading ? "Loading..." : "Sign up with Google"}
                 </Button>
 
-                {/* Divider */}
                 <div className="divider funnel-sans">OR</div>
 
                 <Form onSubmit={handleSubmit}>
-                  {/* Full Name */}
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -96,7 +94,6 @@ const Signup = () => {
                   >
                     <Form.Group className="mb-3 input-group-custom lexend underline-input">
                       <FaCircleUser />
-
                       <Form.Control
                         className="form-control-custom"
                         type="text"
@@ -108,7 +105,6 @@ const Signup = () => {
                     </Form.Group>
                   </motion.div>
 
-                  {/* Email */}
                   <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -116,7 +112,6 @@ const Signup = () => {
                   >
                     <Form.Group className="mb-3 input-group-custom lexend underline-input">
                       <FaEnvelope />
-
                       <Form.Control
                         className="form-control-custom"
                         type="email"
@@ -128,7 +123,6 @@ const Signup = () => {
                     </Form.Group>
                   </motion.div>
 
-                  {/* Password */}
                   <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -136,7 +130,6 @@ const Signup = () => {
                   >
                     <Form.Group className="mb-3 input-group-custom lexend underline-input position-relative">
                       <FaLock />
-
                       <Form.Control
                         className="form-control-custom pe-5"
                         type={showPassword ? "text" : "password"}
@@ -145,7 +138,6 @@ const Signup = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                       />
-
                       <span
                         onClick={() => setShowPassword(!showPassword)}
                         style={{
@@ -163,7 +155,6 @@ const Signup = () => {
                     </Form.Group>
                   </motion.div>
 
-                  {/* Signup Button */}
                   <motion.div
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.95 }}
@@ -178,12 +169,10 @@ const Signup = () => {
                   </motion.div>
                 </Form>
 
-                {/* Login Link */}
                 <div className="text-center mt-4">
                   <span className="text-muted funnel-sans">
                     Already have an account?
                   </span>
-
                   <button
                     type="button"
                     className="ms-1 register-link lexend border-0 bg-transparent p-0"
@@ -194,7 +183,6 @@ const Signup = () => {
                 </div>
               </Card>
 
-              {/* Left Image */}
               <div className="login-image-wrapper d-none d-sm-block">
                 <img
                   src="/images/login.webp"
