@@ -1062,7 +1062,7 @@ const Productdetails = () => {
                 <div className="stock-status mt-3">
                   <Badge 
                     bg={stockStatus.color}
-                    style={{ fontSize: '16px', padding: '8px 16px' }}
+                    style={{ fontSize: '16px', padding: '8px 16px'   }}
                   >
                     {stockStatus.icon} {stockStatus.label}
                   </Badge>

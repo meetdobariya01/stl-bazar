@@ -468,7 +468,7 @@ const CategoryProducts = () => {
                 <div className="text-center py-5">
                   <h5>No products found in "{decodedCategory}"</h5>
                   <p className="text-muted">Try adjusting your filters or select another category</p>
-                  <Button variant="primary" onClick={() => navigate("/category/All")}>
+                  <Button variant="outline-dark" onClick={() => navigate("/category/All")}>
                     View All Products
                   </Button>
                 </div>
