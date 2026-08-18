@@ -1,4 +1,4 @@
-// pages/Product/Product.js - FIXED
+// pages/Product/Product.js - FIXED with minimalist placeholder
 
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
@@ -24,10 +24,11 @@ const Product = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageErrors, setImageErrors] = useState({});
 
   // ---------------- IMAGE HELPER ----------------
   const getImageUrl = (logo) => {
-    if (!logo) return "/images/default-company.png";
+    if (!logo) return null;
 
     const image = Array.isArray(logo) ? logo[0] : logo;
 
@@ -43,6 +44,11 @@ const Product = () => {
 
     // old frontend/public images
     return image;
+  };
+
+  // Handle image load error
+  const handleImageError = (companyId) => {
+    setImageErrors(prev => ({ ...prev, [companyId]: true }));
   };
 
   useEffect(() => {
@@ -143,62 +149,76 @@ const Product = () => {
             {companies.length} brands available
           </p>
           
-          {companies.map((item, index) => (
-            <Row
-              key={item._id || index}
-              className={`align-items-center value-row ${
-                index % 2 !== 0 ? "flex-row-reverse" : ""
-              }`}
-            >
-              {/* IMAGE */}
-              <Col md={4}>
-                <motion.div
-                  className="value-image-wrapper"
-                  variants={index % 2 === 0 ? fadeLeft : fadeRight}
-                  initial="hidden"
-                  whileInView="visible"
-                  transition={{ duration: 0.8 }}
-                  viewport={{ once: true }}
-                >
-                  <img
-                    src={getImageUrl(item.logo)}
-                    alt={item.name}
-                    className="value-image"
-                  />
-                </motion.div>
-              </Col>
+          {companies.map((item, index) => {
+            const imageUrl = getImageUrl(item.logo);
+            const hasError = imageErrors[item._id];
+            const showPlaceholder = !imageUrl || hasError;
 
-              {/* CONTENT */}
-              <Col md={8}>
-                <motion.div
-                  className="value-content light mt-2 mt-md-0"
-                  variants={index % 2 === 0 ? fadeRight : fadeLeft}
-                  initial="hidden"
-                  whileInView="visible"
-                  transition={{ duration: 0.8 }}
-                  viewport={{ once: true }}
-                >
-                  <h4 className="funnel-sans">{item.name}</h4>
-
-                  <p className="lexend">{item.description}</p>
-
-                  {/* BUY BUTTON */}
-                  <NavLink
-                    to={`/company/${encodeURIComponent(item.name)}`}
-                    className="nav-link p-0"
+            return (
+              <Row
+                key={item._id || index}
+                className={`align-items-center value-row ${
+                  index % 2 !== 0 ? "flex-row-reverse" : ""
+                }`}
+              >
+                {/* IMAGE */}
+                <Col md={4}>
+                  <motion.div
+                    className="value-image-wrapper"
+                    variants={index % 2 === 0 ? fadeLeft : fadeRight}
+                    initial="hidden"
+                    whileInView="visible"
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
                   >
-                    <motion.button
-                      className="buy-btn lexend"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                    {showPlaceholder ? (
+                      // Minimalist Company Name Placeholder with Border
+                      <div className="company-placeholder-minimal">
+                        <span className="company-name-text">{item.name}</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={imageUrl}
+                        alt={item.name}
+                        className="value-image"
+                        onError={() => handleImageError(item._id)}
+                      />
+                    )}
+                  </motion.div>
+                </Col>
+
+                {/* CONTENT */}
+                <Col md={8}>
+                  <motion.div
+                    className="value-content light mt-2 mt-md-0"
+                    variants={index % 2 === 0 ? fadeRight : fadeLeft}
+                    initial="hidden"
+                    whileInView="visible"
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                  >
+                    <h4 className="funnel-sans">{item.name}</h4>
+
+                    <p className="lexend">{item.description}</p>
+
+                    {/* BUY BUTTON */}
+                    <NavLink
+                      to={`/company/${encodeURIComponent(item.name)}`}
+                      className="nav-link p-0"
                     >
-                      Explore Brand
-                    </motion.button>
-                  </NavLink>
-                </motion.div>
-              </Col>
-            </Row>
-          ))}
+                      <motion.button
+                        className="buy-btn lexend"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Explore Brand
+                      </motion.button>
+                    </NavLink>
+                  </motion.div>
+                </Col>
+              </Row>
+            );
+          })}
         </Container>
       </section>
 
