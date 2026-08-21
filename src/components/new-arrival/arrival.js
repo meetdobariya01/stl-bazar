@@ -7,8 +7,8 @@ import "./arrival.css";
 
 const API_URL = process.env.REACT_APP_API_URL;
 // ✅ Image base URLs
-const OLD_IMAGE_BASE_URL = "https://gourmetbazar.starlighttechlabsindia.com";
-const ADMIN_IMAGE_BASE_URL = "https://api.brandelsuperadmin.starlighttechlabsindia.com";
+const OLD_IMAGE_BASE_URL = "https://native91.com";
+const ADMIN_IMAGE_BASE_URL = "https://api.native91.com";
 
 const Arrival = () => {
   const [brandSlides, setBrandSlides] = useState([]);
@@ -36,8 +36,6 @@ const Arrival = () => {
     let cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
     
     // ✅ Check if it's an admin uploaded image (has timestamp in filename)
-    // Admin images have format: images/company/1780477739752-Barenecessities.jpeg
-    // They contain numbers at the start of the filename
     const filename = cleanPath.includes('/') ? cleanPath.split('/').pop() : cleanPath;
     const hasTimestamp = /^\d+/.test(filename);
     
@@ -64,9 +62,12 @@ const Arrival = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/companies`);
-      const brands = response.data;
+      
+      // ✅ FIX: The response data is { companies: [...] }
+      const brands = response.data.companies || [];
       
       console.log("Brands fetched:", brands.length);
+      console.log("Full response:", response.data);
       
       // Log each brand's image path and generated URL
       brands.forEach(brand => {
@@ -118,6 +119,8 @@ const Arrival = () => {
       setBrandSlides(slides);
     } catch (error) {
       console.error("Error fetching brands:", error);
+      // ✅ Show error state
+      setBrandSlides([]);
     } finally {
       setLoading(false);
     }
@@ -151,6 +154,13 @@ const Arrival = () => {
         <Container fluid className="px-4">
           <div className="text-center py-5">
             <p className="text-light" style={{ fontSize: 16 }}>No brands available</p>
+            <Button 
+              variant="outline-light" 
+              onClick={fetchAllBrands}
+              className="mt-3"
+            >
+              Retry
+            </Button>
           </div>
         </Container>
       </section>

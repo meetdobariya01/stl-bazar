@@ -36,9 +36,10 @@ const Sell = () => {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant", // or "smooth"
+      behavior: "instant",
     });
   }, [pathname]);
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -46,6 +47,8 @@ const Sell = () => {
     countryCode: "+91",
     businessName: "",
     category: "",
+    website: "",
+    pricingPlan: "",      // ✅ MUST BE HERE
   });
 
   const [loading, setLoading] = useState(false);
@@ -91,6 +94,14 @@ const Sell = () => {
       errors.category = "Please select a product category";
     }
 
+    if (!formData.pricingPlan) {
+      errors.pricingPlan = "Please select a pricing plan";
+    }
+
+    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
+      errors.website = "Please enter a valid URL (include http:// or https://)";
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -106,22 +117,33 @@ const Sell = () => {
     setError("");
 
     try {
-      // Updated endpoint: /api/sellers/register
+      console.log("📤 Sending data:", {
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
+        businessName: formData.businessName,
+        category: formData.category,
+        website: formData.website || '',
+        pricingPlan: formData.pricingPlan || '',
+      });
+
       const response = await axios.post(`${API_URL}/sellers/register`, {
         fullName: formData.fullName,
         email: formData.email,
         phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
         businessName: formData.businessName,
         category: formData.category,
+        website: formData.website || '',
+        pricingPlan: formData.pricingPlan || '',
       });
 
-      console.log("Response:", response.data);
+      console.log("✅ Response:", response.data);
 
       if (response.data.success) {
         setSuccess(true);
       }
     } catch (err) {
-      console.error("Registration error:", err);
+      console.error("❌ Registration error:", err);
       console.error("Error response:", err.response?.data);
       setError(
         err.response?.data?.message || "Failed to register. Please try again.",
@@ -232,18 +254,6 @@ const Sell = () => {
                     <Form.Group className="mb-4">
                       <Form.Label>Phone Number *</Form.Label>
                       <div className="phone-input d-flex gap-2">
-                        {/* <Form.Select 
-                          name="countryCode"
-                          value={formData.countryCode}
-                          onChange={handleChange}
-                          style={{ width: "100px" }}
-                        >
-                          <option value="+91">+91 (IND)</option>
-                          <option value="+1">+1 (USA)</option>
-                          <option value="+44">+44 (UK)</option>
-                          <option value="+61">+61 (AUS)</option>
-                        </Form.Select> */}
-
                         <Form.Control
                           type="tel"
                           name="phoneNumber"
@@ -277,7 +287,7 @@ const Sell = () => {
                     <Form.Group className="mb-4 website-input">
                       <Form.Label>Website / Social Media Links *</Form.Label>
                       <p>
-                        If you don’t have a website or social media presence,
+                        If you don't have a website or social media presence,
                         please share a Google Drive link containing photos of
                         your bestselling products.
                       </p>
@@ -312,10 +322,10 @@ const Sell = () => {
                         </button>
                       </div>
                       <Form.Select
-                        name="category"
-                        value={formData.category}
+                        name="pricingPlan"
+                        value={formData.pricingPlan}
                         onChange={handleChange}
-                        isInvalid={!!validationErrors.category}
+                        isInvalid={!!validationErrors.pricingPlan}
                       >
                         <option value="">Select your Pricing Plan</option>
                         <option value="STARTER">STARTER</option>
@@ -323,7 +333,7 @@ const Sell = () => {
                         <option value="PREMIUM">PREMIUM</option>
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">
-                        {validationErrors.category}
+                        {validationErrors.pricingPlan}
                       </Form.Control.Feedback>
                     </Form.Group>
 
@@ -353,7 +363,6 @@ const Sell = () => {
                           Jewelry & Accessories
                         </option>
                         <option value="Pet Care">Pet Care</option>
-                        {/* <option value="Other">Other</option> */}
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">
                         {validationErrors.category}
@@ -460,7 +469,6 @@ const Sell = () => {
                     <FaQuestion size={30} />
                     <div>
                       <h5>Frequently Asked Questions for Sellers</h5>
-                      {/* <p>Our team is here for you.</p> */}
                       <a href=" https://faqs.native91.com " target="_blank" rel="noopener noreferrer">
                         FAQs for Seller →
                       </a>

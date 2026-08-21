@@ -46,430 +46,556 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Native91 - Application Under Review</title>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: #f4f3f0;
-    color: #101719;
-    font-family: Georgia, "Times New Roman", serif;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Native91 Application Status</title>
 
-  .email {
-    width: 100%;
-    max-width: 1024px;
-    margin: 0 auto;
-    background: #fff;
-    overflow: hidden;
-  }
+  <style>
+    /* =========================
+       EMAIL RESET
+    ========================== */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f2;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #30342f;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
 
-  .hero {
-    height: 200px;
-    background: #11231e;
-    color: #eee6d4;
-    position: relative;
-    overflow: hidden;
-    padding: 58px 70px;
-  }
+    table {
+      border-spacing: 0;
+      border-collapse: collapse;
+    }
 
-  .brand {
-    font-size: 58px;
-    line-height: 1;
-    letter-spacing: 7px;
-    font-weight: 500;
-    margin: 0;
-  }
+    img {
+      border: 0;
+      display: block;
+      max-width: 100%;
+    }
 
-  .tagline {
-    margin: 14px 0 0;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 15px;
-    letter-spacing: 4px;
-  }
+    a {
+      text-decoration: none;
+    }
 
-  .leaves {
-    position: absolute;
-    right: -5px;
-    top: -25px;
-    width: 230px;
-    height: 225px;
-    opacity: .42;
-  }
+    /* =========================
+       MAIN CONTAINER
+    ========================== */
+    .email-wrapper {
+      width: 100%;
+      padding: 30px 15px;
+      background-color: #f5f5f2;
+    }
 
-  .content {
-    padding: 64px 86px 40px;
-  }
+    .email-container {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border: 1px solid #e8e5dc;
+      border-radius: 8px;
+      overflow: hidden;
+    }
 
-  h1 {
-    font-size: 42px;
-    font-weight: 500;
-    margin: 0 0 30px;
-  }
+    /* =========================
+       HEADER
+    ========================== */
+    .header {
+      background-color: #073f31;
+      padding: 25px 20px;
+      text-align: center;
+      position: relative;
+    }
 
-  .intro {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 20px;
-    line-height: 1.8;
-    margin: 0 0 22px;
-  }
+    .brand-name {
+      color: #e5d6a5;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 23px;
+      letter-spacing: 5px;
+      margin: 0;
+      font-weight: normal;
+    }
 
-  .gold { color: #96783f; font-weight: 700; }
+    .brand-subtitle {
+      color: #ffffff;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
 
-  .details {
-    margin: 40px 0 48px;
-    padding: 40px 28px;
-    background: #faf8f4;
-    border-radius: 12px;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-  }
+    .leaf-decoration {
+      color: #b39b63;
+      font-size: 35px;
+      line-height: 20px;
+      text-align: right;
+      margin-top: -20px;
+      margin-right: 10px;
+    }
 
-  .detail {
-    text-align: center;
-    min-height: 145px;
-    padding: 0 18px;
-    border-right: 1px solid #e1ddd5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+    /* =========================
+       PROGRESS SECTION
+    ========================== */
+    .progress-section {
+      padding: 22px 30px 10px;
+      background-color: #ffffff;
+    }
 
-  .detail:last-child { border-right: 0; }
+    .progress-line {
+      height: 1px;
+      background-color: #d9d7cf;
+      position: relative;
+      top: 18px;
+    }
 
-  .icon {
-    width: 46px;
-    height: 46px;
-    margin-bottom: 16px;
-    color: #17312a;
-  }
+    .progress-item {
+      width: 33.33%;
+      text-align: center;
+      vertical-align: top;
+      position: relative;
+    }
 
-  .label {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 14px;
-    letter-spacing: .5px;
-    margin-bottom: 20px;
-  }
+    .progress-circle {
+      width: 36px;
+      height: 36px;
+      margin: 0 auto 7px;
+      border-radius: 50%;
+      background-color: #f7f7f3;
+      border: 1px solid #d5d2c8;
+      text-align: center;
+      line-height: 36px;
+      font-size: 17px;
+      color: #a7a79e;
+      position: relative;
+      z-index: 2;
+    }
 
-  .value {
-    font-size: 25px;
-    font-weight: 600;
-    line-height: 1.25;
-  }
+    .progress-circle.active {
+      background-color: #073f31;
+      border-color: #073f31;
+      color: #ffffff;
+    }
 
-  .value.status {
-    color: #96783f;
-    font-size: 21px;
-  }
+    .progress-label {
+      font-size: 10px;
+      color: #343833;
+      white-space: nowrap;
+    }
 
-  .next {
-    display: grid;
-    grid-template-columns: 110px 1fr;
-    gap: 28px;
-    align-items: center;
-    margin: 0 auto 44px;
-    max-width: 760px;
-  }
+    /* =========================
+       CONTENT
+    ========================== */
+    .content {
+      padding: 10px 35px 25px;
+    }
 
-  .people {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: #f5f0e7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+    .main-title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 25px;
+      line-height: 1.25;
+      font-weight: normal;
+      color: #26362f;
+      text-align: center;
+      margin: 5px 0 20px;
+    }
 
-  .next h2 {
-    margin: 0 0 10px;
-    color: #96783f;
-    font-size: 23px;
-    letter-spacing: .5px;
-  }
+    .greeting {
+      font-size: 13px;
+      color: #333631;
+      margin: 0 0 12px;
+    }
 
-  .next p {
-    margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 19px;
-    line-height: 1.6;
-  }
+    .paragraph {
+      font-size: 12px;
+      line-height: 1.65;
+      color: #50534e;
+      margin: 0 0 12px;
+    }
 
-  .track {
-    text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 19px;
-    line-height: 1.6;
-  }
+    .gold {
+      color: #987d4e;
+      font-weight: bold;
+    }
 
-  .button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 22px;
-    margin-top: 18px;
-    width: 415px;
-    max-width: 100%;
-    min-height: 70px;
-    background: #10231e;
-    color: white;
-    text-decoration: none;
-    border-radius: 7px;
-    font-size: 17px;
-    letter-spacing: 1px;
-  }
+    /* =========================
+       APPLICATION BOX
+    ========================== */
+    .application-box {
+      background-color: #faf9f5;
+      border: 1px solid #eeeae0;
+      border-radius: 7px;
+      padding: 16px 15px;
+      margin: 18px 0 15px;
+      text-align: center;
+    }
 
-  .arrow { font-size: 28px; line-height: 1; }
+    .application-label {
+      font-size: 9px;
+      color: #74766f;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
 
-  .divider {
-    width: 415px;
-    max-width: 100%;
-    margin: 13px auto 10px;
-    border-top: 1px solid #ded9cf;
-    position: relative;
-  }
+    .application-id {
+      font-size: 16px;
+      color: #333631;
+      font-weight: bold;
+      margin-bottom: 18px;
+    }
 
-  .divider span {
-    position: relative;
-    top: -12px;
-    padding: 0 12px;
-    background: #fff;
-    color: #96783f;
-    font-size: 25px;
-  }
+    .status-label {
+      font-size: 9px;
+      color: #74766f;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
 
-  .timing {
-    text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 19px;
-    line-height: 1.7;
-    margin: 0 auto 26px;
-  }
+    .status {
+      font-family: Georgia, "Times New Roman", serif;
+      color: #987d4e;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
 
-  .closing {
-    text-align: center;
-    color: #96783f;
-    font-size: 25px;
-    font-weight: 600;
-    margin: 0 0 48px;
-  }
+    /* =========================
+       TRACK BUTTON
+    ========================== */
+    .track-text {
+      text-align: center;
+      font-size: 10px;
+      color: #60625c;
+      margin: 12px 0;
+    }
 
-  .regards {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 18px;
-    line-height: 1.8;
-    margin-bottom: 8px;
-  }
+    .track-button {
+      display: inline-block;
+      background-color: #073f31;
+      color: #ffffff !important;
+      padding: 11px 20px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
 
-  .team {
-    font-weight: 700;
-    font-size: 20px;
-  }
+    .arrow {
+      color: #d8c48e;
+      font-size: 15px;
+      padding-left: 8px;
+    }
 
-  .reserved {
-    color: #96783f;
-    font-family: Georgia, serif;
-    font-style: italic;
-  }
+    /* =========================
+       SUPPORT
+    ========================== */
+    .support {
+      text-align: center;
+      margin-top: 17px;
+      padding-top: 15px;
+      border-top: 1px solid #eeeae0;
+    }
 
-  footer {
-    border-top: 1px solid #ddd;
-    text-align: center;
-    padding: 28px 20px 34px;
-    color: #6d6d6d;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 16px;
-  }
+    .support-title {
+      font-size: 10px;
+      color: #74766f;
+      margin-bottom: 5px;
+    }
 
-  .social {
-    display: inline-flex;
-    gap: 16px;
-    margin-left: 16px;
-    vertical-align: middle;
-  }
+    .support-email {
+      font-size: 11px;
+      color: #073f31;
+      font-weight: bold;
+    }
 
-  .social a {
-    width: 38px;
-    height: 38px;
-    border: 1px solid #9c9c9c;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #17312a;
-    text-decoration: none;
-  }
+    /* =========================
+       SOCIAL ICONS
+    ========================== */
+    .social-section {
+      text-align: center;
+      padding: 12px 0 5px;
+    }
 
-  @media (max-width: 700px) {
-    .hero { height: 160px; padding: 45px 28px; }
-    .brand { font-size: 38px; letter-spacing: 4px; }
-    .tagline { font-size: 10px; letter-spacing: 2.5px; }
-    .leaves { width: 150px; opacity: .25; }
-    .content { padding: 40px 24px 30px; }
-    h1 { font-size: 34px; }
-    .intro { font-size: 17px; }
-    .details { grid-template-columns: 1fr 1fr; gap: 30px 0; padding: 28px 10px; }
-    .detail:nth-child(2) { border-right: 0; }
-    .next { grid-template-columns: 1fr; text-align: center; }
-    .people { margin: 0 auto; }
-    .next h2 { font-size: 21px; }
-    .next p, .track, .timing { font-size: 16px; }
-    .closing { font-size: 21px; }
-    footer { font-size: 13px; }
-  }
+    .social-icon {
+      display: inline-block;
+      width: 25px;
+      height: 25px;
+      line-height: 25px;
+      border: 1px solid #d8d5cc;
+      border-radius: 50%;
+      color: #70736c;
+      font-size: 11px;
+      margin: 0 5px;
+      text-align: center;
+    }
 
-  @media (max-width: 430px) {
-    .details { grid-template-columns: 1fr; }
-    .detail { border-right: 0; border-bottom: 1px solid #e1ddd5; padding: 20px 10px; }
-    .detail:last-child { border-bottom: 0; }
-  }
-</style>
+    /* =========================
+       FOOTER
+    ========================== */
+    .footer {
+      text-align: center;
+      padding: 5px 25px 20px;
+      font-size: 9px;
+      color: #999b94;
+    }
+
+    /* =========================
+       MOBILE
+    ========================== */
+    @media only screen and (max-width: 600px) {
+
+      .email-wrapper {
+        padding: 10px 8px;
+      }
+
+      .email-container {
+        width: 100% !important;
+      }
+
+      .header {
+        padding: 22px 15px;
+      }
+
+      .brand-name {
+        font-size: 21px;
+      }
+
+      .content {
+        padding: 10px 22px 22px;
+      }
+
+      .main-title {
+        font-size: 23px;
+      }
+
+      .progress-section {
+        padding-left: 15px;
+        padding-right: 15px;
+      }
+
+      .progress-label {
+        font-size: 9px;
+      }
+
+      .application-box {
+        padding: 15px 10px;
+      }
+
+      .track-button {
+        padding: 11px 16px;
+      }
+    }
+  </style>
 </head>
 
 <body>
-<div class="email">
 
-  <header class="hero">
-    <div class="brand">NATIVE91</div>
-    <div class="tagline">RESERVED FOR THE REMARKABLE</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td class="email-wrapper">
 
-    <svg class="leaves" viewBox="0 0 230 225" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g stroke="#aa8d55" stroke-width="1.2">
-        <path d="M98 225C110 168 126 102 176 0"/>
-        <path d="M125 128C100 105 84 78 87 50C111 66 126 91 125 128Z"/>
-        <path d="M142 92C166 76 183 54 185 28C159 39 143 61 142 92Z"/>
-        <path d="M119 151C89 145 65 129 55 104C82 107 106 123 119 151Z"/>
-        <path d="M158 58C174 37 194 24 218 25C206 49 184 62 158 58Z"/>
-        <path d="M168 36C167 19 172 6 184 -8C193 12 188 29 168 36Z"/>
-        <path d="M147 99C173 99 197 90 211 71C185 68 162 77 147 99Z"/>
-        <path d="M126 176C153 168 177 151 185 128C158 132 138 148 126 176Z"/>
-        <path d="M108 199C82 194 60 181 48 159C73 160 95 174 108 199Z"/>
-      </g>
-    </svg>
-  </header>
+        <!-- MAIN EMAIL -->
+        <table
+          role="presentation"
+          class="email-container"
+          cellpadding="0"
+          cellspacing="0"
+          border="0"
+          align="center"
+        >
 
-  <main class="content">
-    <h1>Hello Nirzari,</h1>
+          <!-- ================= HEADER ================= -->
+          <tr>
+            <td class="header">
 
-    <p class="intro">
-      Thank you for your interest in becoming a
-      <span class="gold">Native91 Founding Brand.</span>
-    </p>
+              <div class="brand-name">
+                NATIVE91
+              </div>
 
-    <p class="intro">
-      We’ve received your application and our curation team will now review
-      your brand, products and overall fit with the Native91 community.
-    </p>
+              <div class="brand-subtitle">
+                RESERVED FOR THE REMARKABLE
+              </div>
 
-    <section class="details">
-      <div class="detail">
-        <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M13 5h16l10 10v28H13z"/>
-          <path d="M29 5v11h10M19 24h14M19 30h14M19 36h9"/>
-        </svg>
-        <div class="label">APPLICATION ID</div>
-        <div class="value">APP-53647</div>
-      </div>
+              <div class="leaf-decoration">
+                ❧
+              </div>
 
-      <div class="detail">
-        <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8">
-          <circle cx="24" cy="24" r="18"/>
-          <path d="M24 12v20M18 26l6 6 6-6"/>
-        </svg>
-        <div class="label">STATUS</div>
-        <div class="value status">UNDER REVIEW</div>
-      </div>
+            </td>
+          </tr>
 
-      <div class="detail">
-        <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M7 24l17-17h15v15L22 39z"/>
-          <circle cx="32" cy="15" r="2"/>
-        </svg>
-        <div class="label">BRAND</div>
-        <div class="value">Brandel</div>
-      </div>
 
-      <div class="detail">
-        <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8">
-          <rect x="7" y="7" width="14" height="14" rx="3"/>
-          <rect x="27" y="7" width="14" height="14" rx="3"/>
-          <rect x="7" y="27" width="14" height="14" rx="3"/>
-          <rect x="27" y="27" width="14" height="14" rx="3"/>
-        </svg>
-        <div class="label">CATEGORY</div>
-        <div class="value">Handmade<br>Home Decor</div>
-      </div>
-    </section>
+          <!-- ================= PROGRESS ================= -->
+          <tr>
+            <td class="progress-section">
 
-    <section class="next">
-      <div class="people">
-        <svg width="65" height="65" viewBox="0 0 65 65" fill="none" stroke="#17312a" stroke-width="1.7">
-          <circle cx="33" cy="21" r="8"/>
-          <path d="M18 48c0-9 6-15 15-15s15 6 15 15"/>
-          <circle cx="14" cy="27" r="6"/>
-          <path d="M3 48c0-7 4-12 11-12 4 0 7 2 9 5"/>
-          <circle cx="52" cy="27" r="6"/>
-          <path d="M62 48c0-7-4-12-11-12-4 0-7 2-9 5"/>
-        </svg>
-      </div>
+              <table
+                role="presentation"
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+              >
 
-      <div>
-        <h2>WHAT HAPPENS NEXT?</h2>
-        <p>Our team carefully reviews every application to maintain the quality and character of the Native91 marketplace.</p>
-      </div>
-    </section>
+                <tr>
 
-    <div class="track">
-      You can check your application status at any time.<br>
-      <a href="#" class="button">
-        TRACK APPLICATION STATUS
-        <span class="arrow">→</span>
-      </a>
-    </div>
+                  <!-- RECEIVED -->
+                  <td class="progress-item">
 
-    <div class="divider"><span>♧</span></div>
+                    <div class="progress-circle active">
+                      ✓
+                    </div>
 
-    <p class="timing">
-      Your review typically takes 24–48 hours. Once the review is complete,<br>
-      we’ll email you with the next steps.
-    </p>
+                    <div class="progress-label">
+                      Received
+                    </div>
 
-    <p class="closing">We’re excited to discover what you’ve created.</p>
+                  </td>
 
-    <div class="regards">
-      Warm regards,<br>
-      <span class="team">Team Native91</span><br>
-      <span class="reserved">Reserved for the Remarkable.</span>
-    </div>
-  </main>
 
-  <footer>
-    <div>This is an automated email. Please do not reply to this message.</div>
-    <div style="margin-top:22px;">
-      © 2026 Native91. All rights reserved.
-      <span style="margin:0 12px;">|</span>
-      <span class="social">
-        <a href="#" aria-label="Instagram">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-            <rect x="3" y="3" width="18" height="18" rx="5"/>
-            <circle cx="12" cy="12" r="4"/>
-            <circle cx="17.5" cy="6.5" r="1"/>
-          </svg>
-        </a>
-        <a href="#" aria-label="LinkedIn" style="font-family:Arial;font-weight:bold;font-size:16px;">in</a>
-        <a href="#" aria-label="Email">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-            <rect x="3" y="5" width="18" height="14" rx="2"/>
-            <path d="M4 7l8 6 8-6"/>
-          </svg>
-        </a>
-      </span>
-    </div>
-  </footer>
+                  <!-- UNDER REVIEW -->
+                  <td class="progress-item">
 
-</div>
+                    <div class="progress-circle">
+                      ♙
+                    </div>
+
+                    <div class="progress-label">
+                      Under Review
+                    </div>
+
+                  </td>
+
+
+                  <!-- DECISION -->
+                  <td class="progress-item">
+
+                    <div class="progress-circle">
+                      ◇
+                    </div>
+
+                    <div class="progress-label">
+                      Decision
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+
+          <!-- ================= CONTENT ================= -->
+          <tr>
+            <td class="content">
+
+              <h1 class="main-title">
+                Your Native91<br>
+                application is in.
+              </h1>
+
+
+              <p class="greeting">
+                Hello ${sellerData.fullName},
+              </p>
+
+
+              <p class="paragraph">
+                Thank you for your interest in becoming a
+                <span class="gold">Native91 Founding Brand.</span>
+              </p>
+
+
+              <p class="paragraph">
+                We've received your application and our
+                curation team will now review your brand,
+                products and overall fit with the Native91
+                community.
+              </p>
+
+
+              <!-- APPLICATION STATUS -->
+              <div class="application-box">
+
+                <div class="application-label">
+                  Application ID
+                </div>
+
+                <div class="application-id">
+                  ${sellerData.trackingId}
+                </div>
+
+                <div class="status-label">
+                  Status
+                </div>
+
+                <div class="status">
+                  UNDER REVIEW
+                </div>
+
+              </div>
+
+
+              <!-- TRACK STATUS -->
+              <p class="track-text">
+                You can track your application status anytime.
+              </p>
+
+
+              <div style="text-align:center;">
+
+                <a
+                  href="${trackingUrl}"
+                  class="track-button"
+                  target="_blank"
+                >
+                  Track Application Status
+                  <span class="arrow">→</span>
+                </a>
+
+              </div>
+
+
+             
+
+              <!-- SOCIAL -->
+              <div class="social-section">
+
+                <a href="#" class="social-icon">
+                  ◎
+                </a>
+
+                <a href="#" class="social-icon">
+                  in
+                </a>
+
+               
+
+              </div>
+
+            </td>
+          </tr>
+
+
+          <!-- ================= FOOTER ================= -->
+          <tr>
+            <td class="footer">
+              <div style="margin-bottom:4px;">
+                This is an automated email. Please do not reply to this message.
+              </div>
+              © ${new Date().getFullYear()} Native91. All rights reserved.
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>
     `,
@@ -477,7 +603,6 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
 
   return await transporter.sendMail(mailOptions);
 };
-
 // ============================================================
 // ✅ SEND REJECTION EMAIL ONLY (NO CREDENTIALS)
 // ============================================================
@@ -540,8 +665,17 @@ const sendRejectionEmail = async (sellerData, reason) => {
 // ============================================================
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, phoneNumber, businessName, category } = req.body;
+    const { 
+      fullName, 
+      email, 
+      phoneNumber, 
+      businessName, 
+      category,
+      website,        // ✅ NEW
+      pricingPlan     // ✅ NEW
+    } = req.body;
 
+    // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
       return res.status(400).json({
         success: false,
@@ -567,6 +701,8 @@ router.post("/register", async (req, res) => {
       phoneNumber,
       businessName,
       category,
+      website: website || '',           // ✅ NEW
+      pricingPlan: pricingPlan || '',   // ✅ NEW
       status: 'pending',
       trackingToken,
       trackingTokenExpires,
@@ -593,6 +729,8 @@ router.post("/register", async (req, res) => {
         fullName: seller.fullName,
         email: seller.email,
         businessName: seller.businessName,
+        website: seller.website,
+        pricingPlan: seller.pricingPlan,
         status: seller.status,
         trackingId: seller.trackingId,
       },
@@ -601,8 +739,8 @@ router.post("/register", async (req, res) => {
     console.error("Seller registration error:", error);
     res.status(500).json({
       success: false,
-      message: error.code === 11000 
-        ? "This email is already registered" 
+      message: error.code === 11000
+        ? "This email is already registered"
         : "Failed to register. Please try again.",
     });
   }
@@ -610,6 +748,9 @@ router.post("/register", async (req, res) => {
 
 // ============================================================
 // ✅ PUBLIC: CHECK APPLICATION STATUS
+// ============================================================
+// ============================================================
+// ✅ PUBLIC: CHECK APPLICATION STATUS - UPDATED
 // ============================================================
 router.get("/status/:trackingId", async (req, res) => {
   try {
@@ -659,6 +800,9 @@ router.get("/status/:trackingId", async (req, res) => {
         businessName: seller.businessName,
         email: seller.email,
         phoneNumber: seller.phoneNumber,
+        category: seller.category,
+        website: seller.website || '',           // ✅ NEW
+        pricingPlan: seller.pricingPlan || '',   // ✅ NEW
         status: seller.status,
         registeredAt: seller.registeredAt,
         updatedAt: seller.updatedAt,
