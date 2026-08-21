@@ -51,10 +51,10 @@ root.render(
           <Route path="/product/:slug" element={<Productdetails />} />
           <Route path="/category/:categoryName" element={<CategoryProducts />} />
           <Route path="/sell" element={<Sell />} />
-          <Route
-            path="/application-status/:trackingId"
-            element={<ApplicationStatus />}
-          />
+<Route
+  path="/application-status/:trackingId"
+  element={<ApplicationStatus />}
+/>
           <Route path="/Order-Complete" element={<Ordercomplate />} />
           <Route path="/terms-and-conditions" element={<Condition />} />
           <Route path="/shipping-policy" element={<Shipping />} />

@@ -292,7 +292,7 @@ const Sell = () => {
                         your bestselling products.
                       </p>
                       <Form.Control
-                        type="url"
+                        type="text"
                         name="website"
                         value={formData.website}
                         onChange={handleChange}
