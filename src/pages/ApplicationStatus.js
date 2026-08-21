@@ -1,4 +1,4 @@
-// pages/ApplicationStatus.js - UPDATED WITH BETTER DEBUGGING
+// pages/ApplicationStatus.js - UPDATED WITH WEBSITE & PRICING PLAN
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -24,6 +24,9 @@ import {
   FaUser,
   FaCalendarAlt,
   FaInfoCircle,
+  FaGlobe,
+  FaTag,
+  FaLeaf,
 } from "react-icons/fa";
 import axios from "axios";
 import Header from "../components/header/header";
@@ -39,21 +42,15 @@ const ApplicationStatus = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [application, setApplication] = useState(null);
-  const [debugInfo, setDebugInfo] = useState({});
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         console.log("🔍 ApplicationStatus Page Loaded");
         console.log("📌 Tracking ID:", trackingId);
-        console.log("🔗 Full URL:", window.location.href);
-        console.log("📝 Search Params:", window.location.search);
 
-        // Get token from URL
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
-
-        console.log("🔑 Token found:", token ? "YES" : "NO");
 
         if (!token) {
           setError("Invalid tracking link. Please check your email.");
@@ -80,7 +77,6 @@ const ApplicationStatus = () => {
         }
       } catch (err) {
         console.error("❌ Status fetch error:", err);
-        console.error("Response:", err.response?.data);
         setError(
           err.response?.data?.message || 
           "Failed to fetch application status. Please try again."
@@ -158,6 +154,19 @@ const ApplicationStatus = () => {
           color: "#6c757d"
         };
     }
+  };
+
+  const getCategoryIcon = (category) => {
+    const icons = {
+      "Organic Food & Healthy Snacks": "🍎",
+      "Natural Skin Care & Wellness": "🌿",
+      "Gifts & Hamper": "🎁",
+      "Handmade Home Decor": "🏠",
+      "Sustainable Lifestyle": "♻️",
+      "Jewelry & Accessories": "💎",
+      "Pet Care": "🐾",
+    };
+    return icons[category] || "📦";
   };
 
   if (loading) {
@@ -247,84 +256,137 @@ const ApplicationStatus = () => {
           <Row className="justify-content-center">
             <Col lg={8} xl={7}>
               <Card className="status-card shadow-lg border-0">
-                {/* Header */}
-                <Card.Header className="status-header">
+                <Card.Header className="status-header" style={{ background: '#11231e', color: '#fff' }}>
                   <div className="d-flex justify-content-between align-items-center flex-wrap">
                     <h4 className="mb-0 text-white">
                       <FaStore className="me-2" />
                       Application Status
                     </h4>
-                    <span className="application-id">
+                    <span className="application-id" style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
                       ID: {application.trackingId}
                     </span>
                   </div>
                 </Card.Header>
 
                 <Card.Body className="p-4">
-                  {/* Status Icon */}
                   <div className="text-center status-icon-container">
                     {getStatusIcon(application.status)}
                   </div>
 
-                  {/* Status Title */}
                   <h3 className="text-center mt-3" style={{ color: statusInfo.color }}>
                     {statusInfo.title}
                   </h3>
 
-                  {/* Status Badge */}
                   <div className="text-center mb-4">
                     {getStatusBadge(application.status)}
                   </div>
 
-                  {/* Status Description */}
                   <p className="text-center text-muted mb-4">
                     {statusInfo.description}
                   </p>
 
-                  {/* Applicant Info */}
                   <div className="applicant-info mb-4">
-                    <h6 className="mb-3 text-uppercase text-muted small fw-bold">
+                    <h6 className="mb-3 text-uppercase text-muted small fw-bold" style={{ borderBottom: '2px solid #f0f0f0', paddingBottom: '10px' }}>
                       <FaUser className="me-2" /> Application Details
                     </h6>
                     <Row>
                       <Col md={6}>
-                        <div className="info-item">
-                          <FaBuilding className="info-icon" />
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaUser className="info-icon" style={{ color: '#96783f' }} />
                           <div>
-                            <label>Business Name</label>
-                            <p className="mb-0">{application.businessName}</p>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>{application.fullName || 'N/A'}</p>
                           </div>
                         </div>
                       </Col>
+
                       <Col md={6}>
-                        <div className="info-item">
-                          <FaEnvelope className="info-icon" />
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaBuilding className="info-icon" style={{ color: '#96783f' }} />
                           <div>
-                            <label>Email</label>
-                            <p className="mb-0">{application.email}</p>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Business Name</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>{application.businessName || 'N/A'}</p>
                           </div>
                         </div>
                       </Col>
+
                       <Col md={6}>
-                        <div className="info-item">
-                          <FaPhone className="info-icon" />
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaEnvelope className="info-icon" style={{ color: '#96783f' }} />
                           <div>
-                            <label>Phone</label>
-                            <p className="mb-0">{application.phoneNumber || 'N/A'}</p>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email Address</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>{application.email || 'N/A'}</p>
                           </div>
                         </div>
                       </Col>
+
                       <Col md={6}>
-                        <div className="info-item">
-                          <FaCalendarAlt className="info-icon" />
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaPhone className="info-icon" style={{ color: '#96783f' }} />
                           <div>
-                            <label>Registered On</label>
-                            <p className="mb-0">
-                              {new Date(application.registeredAt).toLocaleDateString('en-IN', {
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone Number</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>{application.phoneNumber || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </Col>
+
+                      <Col md={12}>
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaTag className="info-icon" style={{ color: '#96783f' }} />
+                          <div>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Category</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>
+                              {getCategoryIcon(application.category)} {application.category || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </Col>
+
+                      {/* ✅ Website / Social Media */}
+                      <Col md={12}>
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaGlobe className="info-icon" style={{ color: '#96783f' }} />
+                          <div>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Website / Social Media</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>
+                              {application.website ? (
+                                <a href={application.website} target="_blank" rel="noopener noreferrer" style={{ color: '#96783f', textDecoration: 'none' }}>
+                                  {application.website}
+                                </a>
+                              ) : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </Col>
+
+                      {/* ✅ Pricing Plan */}
+                      <Col md={12}>
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px', marginBottom: '10px' }}>
+                          <FaLeaf className="info-icon" style={{ color: '#96783f' }} />
+                          <div>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pricing Plan</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>
+                              {application.pricingPlan ? (
+                                <Badge bg="success" style={{ fontSize: '13px' }}>{application.pricingPlan}</Badge>
+                              ) : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                      </Col>
+
+                      <Col md={12}>
+                        <div className="info-item" style={{ background: '#f8f9fa', padding: '12px 15px', borderRadius: '8px' }}>
+                          <FaCalendarAlt className="info-icon" style={{ color: '#96783f' }} />
+                          <div>
+                            <label style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registered On</label>
+                            <p className="mb-0" style={{ fontWeight: '600', color: '#1a1a1a' }}>
+                              {application.registeredAt ? new Date(application.registeredAt).toLocaleDateString('en-IN', {
                                 day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                              })}
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              }) : 'N/A'}
                             </p>
                           </div>
                         </div>
@@ -332,25 +394,22 @@ const ApplicationStatus = () => {
                     </Row>
                   </div>
 
-                  {/* Rejection Reason */}
                   {application.status === 'rejected' && application.rejectionReason && (
-                    <Alert variant="danger" className="mt-3">
+                    <Alert variant="danger" className="mt-3" style={{ borderLeft: '4px solid #dc3545' }}>
                       <h6 className="mb-2">📝 Reason for Rejection</h6>
                       <p className="mb-0">{application.rejectionReason}</p>
                     </Alert>
                   )}
 
-                  {/* Admin Notes */}
                   {application.adminNotes && application.status !== 'pending' && (
-                    <Alert variant="info" className="mt-3">
+                    <Alert variant="info" className="mt-3" style={{ borderLeft: '4px solid #17a2b8' }}>
                       <h6 className="mb-2">📌 Admin Notes</h6>
                       <p className="mb-0">{application.adminNotes}</p>
                     </Alert>
                   )}
 
-                  {/* Vendor Info (if approved) */}
                   {application.status === 'approved' && application.vendor && (
-                    <Alert variant="success" className="mt-3">
+                    <Alert variant="success" className="mt-3" style={{ borderLeft: '4px solid #28a745' }}>
                       <h6 className="mb-2">🏪 Vendor Account Created</h6>
                       <p className="mb-0">
                         <strong>Company:</strong> {application.vendor.company}
@@ -361,7 +420,6 @@ const ApplicationStatus = () => {
                     </Alert>
                   )}
 
-                  {/* Action Button */}
                   {application.status === 'approved' && (
                     <div className="text-center mt-4">
                       <Button 
@@ -377,10 +435,13 @@ const ApplicationStatus = () => {
                   )}
 
                   {application.status === 'pending' && (
-                    <div className="text-center mt-4 p-3 bg-light rounded">
+                    <div className="text-center mt-4 p-3 bg-light rounded" style={{ border: '1px dashed #ccc' }}>
                       <p className="text-muted mb-0">
-                        <FaClock className="me-2" />
+                        <FaClock className="me-2" style={{ color: '#f39c12' }} />
                         Your application is under review. We'll notify you via email once reviewed.
+                      </p>
+                      <p className="text-muted small mt-2 mb-0">
+                        Review typically takes 24-48 hours.
                       </p>
                     </div>
                   )}
@@ -398,18 +459,29 @@ const ApplicationStatus = () => {
                       </Button>
                     </div>
                   )}
+
+                  <div className="text-center mt-4">
+                    <Button 
+                      variant="outline-secondary" 
+                      size="sm"
+                      onClick={() => navigate('/sell')}
+                    >
+                      <FaArrowLeft className="me-2" />
+                      Back to Sell Page
+                    </Button>
+                  </div>
                 </Card.Body>
 
-                <Card.Footer className="text-muted text-center bg-light py-3">
+                <Card.Footer className="text-muted text-center bg-light py-3" style={{ borderTop: '1px solid #eee' }}>
                   <small>
                     <FaClock className="me-1" />
-                    Last updated: {new Date(application.updatedAt).toLocaleString('en-IN', {
+                    Last updated: {application.updatedAt ? new Date(application.updatedAt).toLocaleString('en-IN', {
                       day: '2-digit',
                       month: 'short',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
-                    })}
+                    }) : 'N/A'}
                   </small>
                 </Card.Footer>
               </Card>

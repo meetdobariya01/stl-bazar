@@ -36,7 +36,7 @@ import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BACKEND_URL =
-  "https://api.brandelvendor.starlighttechlabsindia.com";
+  "https://api-vendor.native91.com";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
