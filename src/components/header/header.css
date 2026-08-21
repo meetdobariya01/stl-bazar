@@ -7,7 +7,7 @@
 }
 
 .logo {
-  height: 100px;
+  height: 70px;
 }
 
 .desktop-menu {
@@ -530,7 +530,7 @@ background:#0f5132;
 
 @media (max-width: 576px) {
   .logo {
-    height: 70px;
+    height: 60px;
   }
 
   .mobile-right {
