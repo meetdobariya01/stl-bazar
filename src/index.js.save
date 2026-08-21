@@ -1,0 +1,67 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { CartProvider } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./index.css";
+
+import Home from "./pages/home/home";
+import Aboutus from "./pages/aboutus/aboutus";
+import ContactUs from "./pages/contactus/contactus";
+import Product from "./pages/product/product";
+import Login from "./pages/login/login";
+import Signup from "./pages/signup/signup";
+import Checkout from "./pages/checkout/checkout";
+import Cart from "./pages/cart/cart";
+import Wishlist from "./pages/wishlist/wishlist";
+import Grid from "./pages/grid/grid";
+import Productdetails from "./pages/productdetails/productdetails";
+import CategoryProducts from "./pages/Categorygrid/Categorygrid";
+import Sell from "./pages/sell/sell";
+import Ordercomplate from "./pages/thankyou/ordercomplate";
+import Condition from "./pages/termsandcondition/condition";
+import Shipping from "./pages/shipping/shipping";
+import Return from "./pages/returnpage/return";
+import Privacypolicy from "./pages/privacypolicy/privacypolicy";
+import Faqs from "./pages/faqs/faqs";
+import Orderhistory from "./pages/orderhistory/orderhistory";
+import Cookies from "./components/cookies/cookies";
+import ApplicationStatus from "./pages/applicationstatus/ApplicationStatus";
+import Socialimpact from "./pages/socialimpact/socialimpact";
+import OAuthSuccess from "./pages/login/OAuthSuccess";
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(
+  <CartProvider>
+    <WishlistProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/aboutus" element={<Aboutus />} />
+          <Route path="/contactus" element={<ContactUs />} />
+          <Route path="/product" element={<Product />} />
+          <Route path="/login" element={<Login />} />
+<Route path="/oauth-success" element={<OAuthSuccess />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/social-impact" element={<Socialimpact />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/company/:companyName" element={<Grid />} />
+          <Route path="/product/:slug" element={<Productdetails />} />
+          <Route path="/category/:categoryName" element={<CategoryProducts />} />
+          <Route path="/sell" element={<Sell />} />
+
+          <Route path="/Order-Complete" element={<Ordercomplate />} />
+          <Route path="/terms-and-conditions" element={<Condition />} />
+          <Route path="/shipping-policy" element={<Shipping />} />
+          <Route path="/return-policy" element={<Return />} />
+          <Route path="/privacypolicy" element={<Privacypolicy />} />
+          <Route path="/faqs" element={<Faqs />} />
+          <Route path="/orderhistory" element={<Orderhistory />} />
+        </Routes>
+        <Cookies />
+      </Router>
+    </WishlistProvider>
+  </CartProvider>,
+);

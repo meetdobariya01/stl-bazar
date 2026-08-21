@@ -1,4 +1,4 @@
-// Models/Seller.js - WITHOUT next() function
+// Models/Seller.js - WITH website and pricingPlan fields
 
 const mongoose = require("mongoose");
 
@@ -26,6 +26,17 @@ const SellerSchema = new mongoose.Schema({
     required: true,
   },
   
+  // ✅ NEW FIELDS - Website/Social Media & Pricing Plan
+  website: {
+    type: String,
+    default: '',
+  },
+  pricingPlan: {
+    type: String,
+    enum: ['STARTER', 'GROWTH', 'PREMIUM', ''],
+    default: '',
+  },
+  
   // Application Status
   status: {
     type: String,
@@ -33,7 +44,7 @@ const SellerSchema = new mongoose.Schema({
     default: 'pending',
   },
   
-  // ✅ TRACKING FIELDS
+  // TRACKING FIELDS
   trackingId: {
     type: String,
     unique: true,
@@ -45,7 +56,7 @@ const SellerSchema = new mongoose.Schema({
     type: Date,
   },
   
-  // ✅ ADMIN REVIEW FIELDS
+  // ADMIN REVIEW FIELDS
   reviewedBy: {
     type: String,
   },
@@ -59,7 +70,7 @@ const SellerSchema = new mongoose.Schema({
     type: String,
   },
   
-  // ✅ VENDOR ACCOUNT LINK
+  // VENDOR ACCOUNT LINK
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
@@ -76,16 +87,13 @@ const SellerSchema = new mongoose.Schema({
   },
 });
 
-// ✅ FIX: Using async function without next()
+// Generate tracking ID if not exists
 SellerSchema.pre('save', async function() {
-  // Generate tracking ID if not exists
   if (!this.trackingId) {
     const random = Math.floor(10000 + Math.random() * 90000);
     this.trackingId = `APP-${random}`;
   }
-  // Update updatedAt timestamp
   this.updatedAt = new Date();
-  // No next() needed - async function automatically continues
 });
 
 module.exports = mongoose.model('Seller', SellerSchema);

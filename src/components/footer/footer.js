@@ -4,11 +4,13 @@ import { NavLink } from "react-router-dom";
 import {
   FaFacebookF,
   FaPinterestP,
+  FaEnvelope,
   FaInstagram,
   FaYoutube,
   FaLinkedinIn,
   FaWhatsapp,
   FaArrowUp,
+  FaPhone,
 } from "react-icons/fa";
 import "./footer.css";
 
@@ -108,11 +110,11 @@ const Footer = () => {
                 >
                   <FaInstagram />
                 </a>
-                <a href="https://youtube.com" target="_blank">
-                  <FaYoutube />
+                <a href="mailto:support@native91.com" target="_blank">
+                  <FaEnvelope />
                 </a>
-                <a href="https://linkedin.com" target="_blank">
-                  <FaLinkedinIn />
+                <a href="tel:+919998323998" target="_blank">
+                  <FaPhone />
                 </a>
               </div>
             </Col>
