@@ -37,7 +37,8 @@ app.use("/images", express.static("D:/GourmentBazar/SuperAdmin/AdminFrontEnd/pub
 app.use(express.json());
 
 app.use(cors({
-  origin: ["http://localhost:3001","http://localhost:3000","https://www.native91.com", "https://native91.com","https://vendor.native91.com","https://api-admin.native91.com","https://api-vendor.native91.com","https://admin.native91.com"],
+  origin: [  "http://localhost:3000",
+    "http://localhost:3001","http://localhost:3002","https://www.native91.com", "https://native91.com","https://vendor.native91.com","https://api-admin.native91.com","https://api-vendor.native91.com","https://admin.native91.com"],
   credentials: true
 }));
 

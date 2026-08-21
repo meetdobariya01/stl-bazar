@@ -286,7 +286,7 @@
   color: #8f7045;
   text-decoration: none;
 }
-.website-input p{
+.website-input p {
   margin-bottom: 15px;
   font-size: 13px;
 }
@@ -356,4 +356,23 @@
   .support-card {
     flex-direction: column;
   }
+}
+/* sell.css */
+.category-checkbox-group .form-check-input {
+  border: 1.5px solid #b08d57;
+  cursor: pointer;
+}
+
+.category-checkbox-group .form-check-input:checked {
+  background-color: #b08d57;
+  border-color: #b08d57;
+}
+
+.category-checkbox-group .form-check-input:focus {
+  border-color: #b08d57;
+  box-shadow: 0 0 0 0.2rem rgba(176, 141, 87, 0.25);
+}
+
+.category-checkbox-group .form-check-label {
+  cursor: pointer;
 }
