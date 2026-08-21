@@ -98,10 +98,19 @@ const Sell = () => {
       errors.pricingPlan = "Please select a pricing plan";
     }
 
-    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
-      errors.website = "Please enter a valid URL (include http:// or https://)";
-    }
+   if (formData.website.trim()) {
+  try {
+    const website = formData.website.trim();
 
+    const url = website.startsWith("http://") || website.startsWith("https://")
+      ? website
+      : `https://${website}`;
+
+    new URL(url);
+  } catch (error) {
+    errors.website = "Please enter a valid website or social media URL";
+  }
+}
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
