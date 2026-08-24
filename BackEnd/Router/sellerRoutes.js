@@ -670,10 +670,14 @@ router.post("/register", async (req, res) => {
       email, 
       phoneNumber, 
       businessName, 
-      category,
-      website,        // ✅ NEW
-      pricingPlan     // ✅ NEW
+      category, 
+      website,
+      pricingPlan 
     } = req.body;
+
+    console.log('📝 Registration request received:', req.body);
+    console.log('📝 Category type:', typeof category);
+    console.log('📝 Category value:', category);
 
     // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
@@ -681,6 +685,13 @@ router.post("/register", async (req, res) => {
         success: false,
         message: "All fields are required",
       });
+    }
+
+    // ✅ Handle category - if array, convert to string
+    let categoryString = category;
+    if (Array.isArray(category)) {
+      categoryString = category.join(', ');
+      console.log('🔄 Category converted from array to string:', categoryString);
     }
 
     const existingSeller = await Seller.findOne({ email });
@@ -700,9 +711,9 @@ router.post("/register", async (req, res) => {
       email,
       phoneNumber,
       businessName,
-      category,
-      website: website || '',           // ✅ NEW
-      pricingPlan: pricingPlan || '',   // ✅ NEW
+      category: categoryString, // ✅ Now always a string
+      website: website || '',
+      pricingPlan: pricingPlan || '',
       status: 'pending',
       trackingToken,
       trackingTokenExpires,
@@ -729,6 +740,7 @@ router.post("/register", async (req, res) => {
         fullName: seller.fullName,
         email: seller.email,
         businessName: seller.businessName,
+        category: seller.category,
         website: seller.website,
         pricingPlan: seller.pricingPlan,
         status: seller.status,
@@ -742,16 +754,12 @@ router.post("/register", async (req, res) => {
       message: error.code === 11000
         ? "This email is already registered"
         : "Failed to register. Please try again.",
+      error: error.message,
     });
   }
 });
 
-// ============================================================
-// ✅ PUBLIC: CHECK APPLICATION STATUS
-// ============================================================
-// ============================================================
-// ✅ PUBLIC: CHECK APPLICATION STATUS - UPDATED
-// ============================================================
+
 router.get("/status/:trackingId", async (req, res) => {
   try {
     const { trackingId } = req.params;
