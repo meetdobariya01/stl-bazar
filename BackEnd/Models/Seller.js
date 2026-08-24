@@ -1,9 +1,7 @@
-// Models/Seller.js - WITH website and pricingPlan fields
-
+// Models/Seller.js - WITHOUT next() FUNCTION
 const mongoose = require("mongoose");
 
 const SellerSchema = new mongoose.Schema({
-  // Personal Information
   fullName: {
     type: String,
     required: true,
@@ -24,7 +22,10 @@ const SellerSchema = new mongoose.Schema({
    category: {
     type: String,
     required: true,
+<<<<<<< HEAD
     // ✅ This will automatically convert array to string
+=======
+>>>>>>> b07a079438e99d2e346233fc43159f8b20919e2e
     set: function(value) {
       if (Array.isArray(value)) {
         return value.join(', ');
@@ -32,8 +33,6 @@ const SellerSchema = new mongoose.Schema({
       return value;
     }
   },
-  
-  // ✅ NEW FIELDS - Website/Social Media & Pricing Plan
   website: {
     type: String,
     default: '',
@@ -43,15 +42,11 @@ const SellerSchema = new mongoose.Schema({
     enum: ['STARTER', 'GROWTH', 'PREMIUM', ''],
     default: '',
   },
-  
-  // Application Status
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
-  
-  // TRACKING FIELDS
   trackingId: {
     type: String,
     unique: true,
@@ -62,8 +57,6 @@ const SellerSchema = new mongoose.Schema({
   trackingTokenExpires: {
     type: Date,
   },
-  
-  // ADMIN REVIEW FIELDS
   reviewedBy: {
     type: String,
   },
@@ -76,14 +69,10 @@ const SellerSchema = new mongoose.Schema({
   adminNotes: {
     type: String,
   },
-  
-  // VENDOR ACCOUNT LINK
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
   },
-  
-  // Timestamps
   registeredAt: {
     type: Date,
     default: Date.now,
@@ -93,6 +82,7 @@ const SellerSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+<<<<<<< HEAD
 SellerSchema.pre('save', function(next) {
   // If category is an array, convert to string
   if (Array.isArray(this.category)) {
@@ -102,11 +92,23 @@ SellerSchema.pre('save', function(next) {
   next();
 });
 // Generate tracking ID if not exists
+=======
+
+// ✅ Using async/await - NO next() function
+>>>>>>> b07a079438e99d2e346233fc43159f8b20919e2e
 SellerSchema.pre('save', async function() {
+  // Convert category if it's an array
+  if (Array.isArray(this.category)) {
+    this.category = this.category.join(', ');
+  }
+  
+  // Generate tracking ID if not exists
   if (!this.trackingId) {
     const random = Math.floor(10000 + Math.random() * 90000);
     this.trackingId = `APP-${random}`;
   }
+  
+  // Update timestamp
   this.updatedAt = new Date();
 });
 

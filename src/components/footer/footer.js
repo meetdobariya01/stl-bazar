@@ -164,7 +164,7 @@ const Footer = () => {
               <img
                 src="/images/native.png"
                 alt="Refresh"
-                className="footer-logo w-25"
+                className="footer-logo w-75"
                 onClick={refreshPage}
               />
 
