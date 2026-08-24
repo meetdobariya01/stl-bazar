@@ -1,9 +1,7 @@
-// Models/Seller.js - WITH website and pricingPlan fields
-
+// Models/Seller.js - WITHOUT next() FUNCTION
 const mongoose = require("mongoose");
 
 const SellerSchema = new mongoose.Schema({
-  // Personal Information
   fullName: {
     type: String,
     required: true,
@@ -24,9 +22,13 @@ const SellerSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
+    set: function(value) {
+      if (Array.isArray(value)) {
+        return value.join(', ');
+      }
+      return value;
+    }
   },
-  
-  // ✅ NEW FIELDS - Website/Social Media & Pricing Plan
   website: {
     type: String,
     default: '',
@@ -36,15 +38,11 @@ const SellerSchema = new mongoose.Schema({
     enum: ['STARTER', 'GROWTH', 'PREMIUM', ''],
     default: '',
   },
-  
-  // Application Status
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
-  
-  // TRACKING FIELDS
   trackingId: {
     type: String,
     unique: true,
@@ -55,8 +53,6 @@ const SellerSchema = new mongoose.Schema({
   trackingTokenExpires: {
     type: Date,
   },
-  
-  // ADMIN REVIEW FIELDS
   reviewedBy: {
     type: String,
   },
@@ -69,14 +65,10 @@ const SellerSchema = new mongoose.Schema({
   adminNotes: {
     type: String,
   },
-  
-  // VENDOR ACCOUNT LINK
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
   },
-  
-  // Timestamps
   registeredAt: {
     type: Date,
     default: Date.now,
@@ -87,12 +79,20 @@ const SellerSchema = new mongoose.Schema({
   },
 });
 
-// Generate tracking ID if not exists
+// ✅ Using async/await - NO next() function
 SellerSchema.pre('save', async function() {
+  // Convert category if it's an array
+  if (Array.isArray(this.category)) {
+    this.category = this.category.join(', ');
+  }
+  
+  // Generate tracking ID if not exists
   if (!this.trackingId) {
     const random = Math.floor(10000 + Math.random() * 90000);
     this.trackingId = `APP-${random}`;
   }
+  
+  // Update timestamp
   this.updatedAt = new Date();
 });
 

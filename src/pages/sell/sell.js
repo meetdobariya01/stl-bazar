@@ -126,10 +126,19 @@ const Sell = () => {
       errors.pricingPlan = "Please select a pricing plan";
     }
 
-    if (!formData.category || formData.category.length === 0) {
-      errors.category = "Please select at least one product category";
-    }
+   if (formData.website.trim()) {
+  try {
+    const website = formData.website.trim();
 
+    const url = website.startsWith("http://") || website.startsWith("https://")
+      ? website
+      : `https://${website}`;
+
+    new URL(url);
+  } catch (error) {
+    errors.website = "Please enter a valid website or social media URL";
+  }
+}
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -323,7 +332,7 @@ const Sell = () => {
                         your bestselling products.
                       </p>
                       <Form.Control
-                        type="url"
+                        type="text"
                         name="website"
                         value={formData.website}
                         onChange={handleChange}
