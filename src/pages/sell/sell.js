@@ -28,6 +28,17 @@ import Pricing from "../../components/pricing/pricing";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
+// All available product categories a seller can offer
+const PRODUCT_CATEGORIES = [
+  "Organic Food & Healthy Snacks",
+  "Natural Skin Care & Wellness",
+  "Gifts & Hamper",
+  "Handmade Home Decor",
+  "Sustainable Lifestyle",
+  "Jewelry & Accessories",
+  "Pet Care",
+];
+
 const Sell = () => {
   const { pathname } = useLocation();
   const pricingRef = useRef(null);
@@ -36,19 +47,19 @@ const Sell = () => {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant",
+      behavior: "instant", // or "smooth"
     });
   }, [pathname]);
-  
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phoneNumber: "",
     countryCode: "+91",
     businessName: "",
-    category: "",
     website: "",
-    pricingPlan: "",      // ✅ MUST BE HERE
+    pricingPlan: "", // renamed from the duplicated "category" field
+    category: [], // now an array to support multiple selections
   });
 
   const [loading, setLoading] = useState(false);
@@ -56,6 +67,7 @@ const Sell = () => {
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Standard handler for text/select-one inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -64,6 +76,22 @@ const Sell = () => {
     }));
     if (validationErrors[name]) {
       setValidationErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  // Handler for the "What do you sell?" checkbox group (multi-select)
+  const handleCategoryToggle = (categoryValue) => {
+    setFormData((prev) => {
+      const alreadySelected = prev.category.includes(categoryValue);
+      const updatedCategories = alreadySelected
+        ? prev.category.filter((c) => c !== categoryValue)
+        : [...prev.category, categoryValue];
+
+      return { ...prev, category: updatedCategories };
+    });
+
+    if (validationErrors.category) {
+      setValidationErrors((prev) => ({ ...prev, category: "" }));
     }
   };
 
@@ -90,8 +118,8 @@ const Sell = () => {
       errors.businessName = "Business/Brand name is required";
     }
 
-    if (!formData.category) {
-      errors.category = "Please select a product category";
+    if (!formData.website.trim()) {
+      errors.website = "Website or social media link is required";
     }
 
     if (!formData.pricingPlan) {
@@ -126,33 +154,24 @@ const Sell = () => {
     setError("");
 
     try {
-      console.log("📤 Sending data:", {
-        fullName: formData.fullName,
-        email: formData.email,
-        phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
-        businessName: formData.businessName,
-        category: formData.category,
-        website: formData.website || '',
-        pricingPlan: formData.pricingPlan || '',
-      });
-
+      // Updated endpoint: /api/sellers/register
       const response = await axios.post(`${API_URL}/sellers/register`, {
         fullName: formData.fullName,
         email: formData.email,
         phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
         businessName: formData.businessName,
-        category: formData.category,
-        website: formData.website || '',
-        pricingPlan: formData.pricingPlan || '',
+        website: formData.website,
+        pricingPlan: formData.pricingPlan,
+        category: formData.category, // sent as an array; join(", ") here if backend expects a string
       });
 
-      console.log("✅ Response:", response.data);
+      console.log("Response:", response.data);
 
       if (response.data.success) {
         setSuccess(true);
       }
     } catch (err) {
-      console.error("❌ Registration error:", err);
+      console.error("Registration error:", err);
       console.error("Error response:", err.response?.data);
       setError(
         err.response?.data?.message || "Failed to register. Please try again.",
@@ -263,6 +282,18 @@ const Sell = () => {
                     <Form.Group className="mb-4">
                       <Form.Label>Phone Number *</Form.Label>
                       <div className="phone-input d-flex gap-2">
+                        {/* <Form.Select
+                          name="countryCode"
+                          value={formData.countryCode}
+                          onChange={handleChange}
+                          style={{ width: "100px" }}
+                        >
+                          <option value="+91">+91 (IND)</option>
+                          <option value="+1">+1 (USA)</option>
+                          <option value="+44">+44 (UK)</option>
+                          <option value="+61">+61 (AUS)</option>
+                        </Form.Select> */}
+
                         <Form.Control
                           type="tel"
                           name="phoneNumber"
@@ -296,12 +327,12 @@ const Sell = () => {
                     <Form.Group className="mb-4 website-input">
                       <Form.Label>Website / Social Media Links *</Form.Label>
                       <p>
-                        If you don't have a website or social media presence,
+                        If you don’t have a website or social media presence,
                         please share a Google Drive link containing photos of
                         your bestselling products.
                       </p>
                       <Form.Control
-                        type="text"
+                        type="url"
                         name="website"
                         value={formData.website}
                         onChange={handleChange}
@@ -346,36 +377,33 @@ const Sell = () => {
                       </Form.Control.Feedback>
                     </Form.Group>
 
+                    {/* Multi-select "What do you sell?" implemented as a checkbox group.
+                        Checkboxes are far more usable than a native <select multiple>,
+                        especially on mobile, where ctrl/cmd-click selection doesn't work. */}
                     <Form.Group className="mb-4">
                       <Form.Label>What do you sell? *</Form.Label>
-                      <Form.Select
-                        name="category"
-                        value={formData.category}
-                        onChange={handleChange}
-                        isInvalid={!!validationErrors.category}
+                      <div
+                        className={`category-checkbox-group${
+                          validationErrors.category ? " is-invalid" : ""
+                        }`}
                       >
-                        <option value="">Select your Product Category</option>
-                        <option value="Organic Food & Healthy Snacks">
-                          Organic Food & Healthy Snacks
-                        </option>
-                        <option value="Natural Skin Care & Wellness">
-                          Natural Skin Care & Wellness
-                        </option>
-                        <option value="Gifts & Hamper">Gifts & Hamper</option>
-                        <option value="Handmade Home Decor">
-                          Handmade Home Decor
-                        </option>
-                        <option value="Sustainable Lifestyle">
-                          Sustainable Lifestyle
-                        </option>
-                        <option value="Jewelry & Accessories">
-                          Jewelry & Accessories
-                        </option>
-                        <option value="Pet Care">Pet Care</option>
-                      </Form.Select>
-                      <Form.Control.Feedback type="invalid">
-                        {validationErrors.category}
-                      </Form.Control.Feedback>
+                        {PRODUCT_CATEGORIES.map((cat) => (
+                          <Form.Check
+                            key={cat}
+                            type="checkbox"
+                            id={`category-${cat}`}
+                            label={cat}
+                            checked={formData.category.includes(cat)}
+                            onChange={() => handleCategoryToggle(cat)}
+                            className="mb-2"
+                          />
+                        ))}
+                      </div>
+                      {validationErrors.category && (
+                        <div className="invalid-feedback d-block">
+                          {validationErrors.category}
+                        </div>
+                      )}
                     </Form.Group>
 
                     <div className="privacy-note d-flex align-items-center gap-2 mb-4">
@@ -478,7 +506,12 @@ const Sell = () => {
                     <FaQuestion size={30} />
                     <div>
                       <h5>Frequently Asked Questions for Sellers</h5>
-                      <a href=" https://faqs.native91.com " target="_blank" rel="noopener noreferrer">
+                      {/* <p>Our team is here for you.</p> */}
+                      <a
+                        href="https://faqs.native91.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         FAQs for Seller →
                       </a>
                     </div>
