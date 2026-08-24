@@ -23,37 +23,37 @@ const Arrival = () => {
   // ✅ Get image URL - check if it's an admin uploaded image
   const getImageUrl = (image) => {
     if (!image) return null;
-    
+
     let imagePath = Array.isArray(image) ? image[0] : image;
     if (!imagePath) return null;
-    
+
     // If it's already a full URL
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
-    
+
     // Clean the path - remove leading slash if present
     let cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-    
+
     // ✅ Check if it's an admin uploaded image (has timestamp in filename)
     const filename = cleanPath.includes('/') ? cleanPath.split('/').pop() : cleanPath;
     const hasTimestamp = /^\d+/.test(filename);
-    
+
     if (hasTimestamp) {
       // ✅ This is an admin uploaded image - use admin backend
       return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
     }
-    
+
     // ✅ If it starts with images/ - use old frontend URL
     if (cleanPath.startsWith('images/')) {
       return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
     }
-    
+
     // ✅ If it starts with uploads/ - use admin backend
     if (cleanPath.startsWith('uploads/')) {
       return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
     }
-    
+
     // Default: try old frontend
     return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
   };
@@ -62,13 +62,13 @@ const Arrival = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/companies`);
-      
+
       // ✅ FIX: The response data is { companies: [...] }
       const brands = response.data.companies || [];
-      
+
       console.log("Brands fetched:", brands.length);
       console.log("Full response:", response.data);
-      
+
       // Log each brand's image path and generated URL
       brands.forEach(brand => {
         const imageUrl = getImageUrl(brand.logo);
@@ -77,9 +77,9 @@ const Arrival = () => {
         console.log(`  Generated URL: ${imageUrl}`);
         console.log('---');
       });
-      
+
       const slides = [];
-      
+
       if (brands.length > 0) {
         const firstSlideBrands = brands.slice(0, 4);
         slides.push({
@@ -90,13 +90,14 @@ const Arrival = () => {
               id: brand._id,
               name: brand.name,
               description: brand.description || "Premium Brand",
-              logo: logoUrl || "https://via.placeholder.com/130/CCCCCC/FFFFFF?text=No+Logo",
+              logo: logoUrl || null,
               rawLogo: brand.logo,
+              firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
             };
           }),
           isFirst: true
         });
-        
+
         if (brands.length > 4) {
           const remainingBrands = brands.slice(4);
           slides.push({
@@ -107,15 +108,16 @@ const Arrival = () => {
                 id: brand._id,
                 name: brand.name,
                 description: brand.description || "Premium Brand",
-                logo: logoUrl || "https://via.placeholder.com/130/CCCCCC/FFFFFF?text=No+Logo",
+                logo: logoUrl || null,
                 rawLogo: brand.logo,
+                firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
               };
             }),
             isFirst: false
           });
         }
       }
-      
+
       setBrandSlides(slides);
     } catch (error) {
       console.error("Error fetching brands:", error);
@@ -154,8 +156,8 @@ const Arrival = () => {
         <Container fluid className="px-4">
           <div className="text-center py-5">
             <p className="text-light" style={{ fontSize: 16 }}>No brands available</p>
-            <Button 
-              variant="outline-light" 
+            <Button
+              variant="outline-light"
               onClick={fetchAllBrands}
               className="mt-3"
             >
@@ -179,7 +181,7 @@ const Arrival = () => {
             </h2>
             <p className="subtitle-premium">Handpicked collections from distinguished artisans</p>
           </div>
-          <Button 
+          <Button
             className="view-premium"
             onClick={() => navigate("/product")}
           >
@@ -205,29 +207,56 @@ const Arrival = () => {
               <Row className="g-3 brand-grid-premium">
                 {slide.brands.map((brand, index) => (
                   <Col xs={6} md={3} key={index}>
-                    <div 
+                    <div
                       className="brand-premium"
                       onClick={() => handleBrandClick(brand.name)}
                     >
                       <div className="logo-premium">
-                        <img
-                          src={brand.logo}
-                          alt={brand.name}
-                          onError={(e) => {
-                            console.error(`❌ Failed to load logo for: ${brand.name}`);
-                            console.error(`   Attempted URL: ${brand.logo}`);
-                            console.error(`   Raw logo: ${brand.rawLogo}`);
-                            e.target.onerror = null;
-                            // Show a clean placeholder
-                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='10' text-anchor='middle' dy='.3em' fill='%23999'%3ENo Logo%3C/text%3E%3C/svg%3E";
+                        {brand.logo ? (
+                          <img
+                            src={brand.logo}
+                            alt={brand.name}
+                            onError={(e) => {
+                              console.error(`❌ Failed to load logo for: ${brand.name}`);
+                              console.error(`   Attempted URL: ${brand.logo}`);
+                              console.error(`   Raw logo: ${brand.rawLogo}`);
+                              e.target.onerror = null;
+                              // ✅ Show first letter instead of placeholder
+                              e.target.style.display = 'none';
+                              const parent = e.target.parentElement;
+                              const fallback = parent.querySelector('.fallback-letter');
+                              if (fallback) {
+                                fallback.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        {/* ✅ Fallback: Show first letter of company name */}
+                        <div 
+                          className="fallback-letter"
+                          style={{
+                            display: brand.logo ? 'none' : 'flex',
+                            width: '100%',
+                            height: '100%',
+                            minHeight: '100px',
+                            backgroundColor: '#0D3B2E',
+                            color: '#FFFFFF',
+                            fontSize: '48px',
+                            fontWeight: 'bold',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '8px',
+                            fontFamily: 'Arial, sans-serif'
                           }}
-                        />
+                        >
+                          {brand.firstLetter}
+                        </div>
                       </div>
                       <div className="info-premium text-center">
                         <h6 className="name-premium">{brand.name}</h6>
                         <p className="desc-premium">{brand.description}</p>
-                        <Button 
-                          variant="link" 
+                        <Button
+                          variant="link"
                           className="shop-premium"
                           onClick={(e) => {
                             e.stopPropagation();
