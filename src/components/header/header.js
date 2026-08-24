@@ -28,6 +28,7 @@ import "./header.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -206,7 +207,19 @@ const Header = () => {
     { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 30);
+    };
 
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
   return (
     <>
       <div className="lexend">
@@ -375,7 +388,11 @@ const Header = () => {
         </AnimatePresence>
 
         {/* HEADER */}
-        <Navbar expand="lg" className="premium-navbar" sticky="top">
+        <Navbar
+          expand="lg"
+          className={`premium-navbar ${isScrolled ? "navbar-scrolled" : ""}`}
+          sticky="top"
+        >
           <Container>
             <Navbar.Brand as={NavLink} to="/">
               <img src="/images/native.png" alt="Native91" className="logo" />
