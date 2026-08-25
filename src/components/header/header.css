@@ -1,5 +1,5 @@
 .premium-navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
   width: 100%;
   background: rgba(255, 255, 255, 0.97);
@@ -966,7 +966,6 @@
     font-size: 18px;
   }
 }
-
 
 @media (prefers-reduced-motion: reduce) {
   .premium-navbar,
