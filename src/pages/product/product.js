@@ -1,4 +1,4 @@
-// pages/Product/Product.js - FIXED with minimalist placeholder
+// pages/Product/Product.js - FIXED with proper image/name display
 
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
@@ -10,12 +10,14 @@ import axios from "axios";
 import "./product.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
-// const API_BASE ="https://api-vendor.native91.com"; 
-const API_BASE ="http://localhost:5177"; // For local development
+// const API_BASE = "https://api-vendor.native91.com";
+const API_BASE = "http://localhost:5177"; // For local development
+
 const fadeLeft = {
   hidden: { opacity: 0, x: -50 },
   visible: { opacity: 1, x: 0 },
 };
+
 const fadeRight = {
   hidden: { opacity: 0, x: 50 },
   visible: { opacity: 1, x: 0 },
@@ -27,32 +29,36 @@ const Product = () => {
   const [error, setError] = useState("");
   const [imageErrors, setImageErrors] = useState({});
 
-  // ---------------- IMAGE HELPER ----------------
-const getImageUrl = (logo) => {
-  if (!logo) return null;
+  // ✅ UPDATED IMAGE HELPER - Admin/Vendor support
+  const getImageUrl = (logo) => {
+    if (!logo) return null;
 
-  const image = Array.isArray(logo) ? logo[0] : logo;
+    const image = Array.isArray(logo) ? logo[0] : logo;
 
-  // Already full URL
-  if (image.startsWith("http")) { 
+    // ✅ If it's already a full URL (Admin uploaded)
+    if (image.startsWith("http://") || image.startsWith("https://")) {
+      return image;
+    }
+
+    // ✅ If it's Admin uploaded image (starts with /images)
+    if (image.startsWith("/images")) {
+      return `https://api-admin.native91.com${image}`;
+    }
+
+    // ✅ If it's Vendor uploaded image (starts with /uploads)
+    if (image.startsWith("/uploads")) {
+      return `https://api-vendor.native91.com${image}`;
+    }
+
+    // ✅ Handle production API URL
+    if (image.includes("Screenshot") || image.includes("-")) {
+      return `https://api-vendor.native91.com${image}`;
+    }
+
+    // ✅ Final fallback - treat as relative path
     return image;
-  }
+  };
 
-  // ✅ Handle uploaded backend images (from SellerDocument)
-  if (image.startsWith("/uploads")) {
-    return `${API_BASE}${image}`;
-  }
-
-  // Uploaded backend images (alternative format)
-  if (image.includes("Screenshot") || image.includes("-")) {
-    return `https://api-vendor.native91.com${image}`;
-  }
-
-  // Old frontend/public images
-  return image;
-};
-
-  // Handle image load error
   const handleImageError = (companyId) => {
     setImageErrors(prev => ({ ...prev, [companyId]: true }));
   };
@@ -63,26 +69,18 @@ const getImageUrl = (logo) => {
         setLoading(true);
         const response = await axios.get(`${API_URL}/companies`);
         
-        console.log("Companies API Response:", response.data);
-
-        // ✅ Handle different response formats
         let companiesData = [];
         
         if (response.data && response.data.success) {
-          // ✅ New format: { success: true, companies: [...] }
           companiesData = response.data.companies || [];
         } else if (Array.isArray(response.data)) {
-          // ✅ Old format: direct array
           companiesData = response.data;
         } else if (response.data && Array.isArray(response.data.companies)) {
-          // ✅ Alternative format: { companies: [...] }
           companiesData = response.data.companies;
         } else {
           companiesData = [];
-          console.warn("Unexpected API response format:", response.data);
         }
 
-        console.log("✅ Companies loaded:", companiesData.length);
         setCompanies(companiesData);
         setError("");
       } catch (err) {
@@ -158,7 +156,7 @@ const getImageUrl = (logo) => {
           {companies.map((item, index) => {
             const imageUrl = getImageUrl(item.logo);
             const hasError = imageErrors[item._id];
-            const showPlaceholder = !imageUrl || hasError;
+            const showImage = imageUrl && !hasError;
 
             return (
               <Row
@@ -167,7 +165,7 @@ const getImageUrl = (logo) => {
                   index % 2 !== 0 ? "flex-row-reverse" : ""
                 }`}
               >
-                {/* IMAGE */}
+                {/* IMAGE SECTION */}
                 <Col md={3}>
                   <motion.div
                     className="value-image-wrapper"
@@ -177,23 +175,30 @@ const getImageUrl = (logo) => {
                     transition={{ duration: 0.8 }}
                     viewport={{ once: true }}
                   >
-                    {showPlaceholder ? (
-                      // Minimalist Company Name Placeholder with Border
-                      <div className="company-placeholder-minimal">
-                        <span className="company-name-text">{item.name}</span>
+                    {showImage ? (
+                      // Show Image
+                      <div className="brand-image-container">
+                        <img
+                          src={imageUrl}
+                          alt={item.name}
+                          className="brand-image"
+                          onError={() => handleImageError(item._id)}
+                          loading="lazy"
+                        />
                       </div>
                     ) : (
-                      <img
-                        src={imageUrl}
-                        alt={item.name}
-                        className="value-image"
-                        onError={() => handleImageError(item._id)}
-                      />
+                      // Show Name Placeholder (if no image)
+                      <div className="brand-placeholder">
+                        <span className="brand-initial">
+                          {item.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="brand-name-display">{item.name}</span>
+                      </div>
                     )}
                   </motion.div>
                 </Col>
 
-                {/* CONTENT */}
+                {/* CONTENT SECTION */}
                 <Col md={9}>
                   <motion.div
                     className="value-content light mt-2 mt-md-0"
@@ -204,16 +209,14 @@ const getImageUrl = (logo) => {
                     viewport={{ once: true }}
                   >
                     <h4 className="funnel-sans">{item.name}</h4>
-
-                    <p className="lexend">{item.description}</p>
-
-                    {/* BUY BUTTON */}
+                    <p className="lexend">{item.description || "No description available"}</p>
+                    
                     <NavLink
                       to={`/company/${encodeURIComponent(item.name)}`}
                       className="nav-link p-0"
                     >
                       <motion.button
-                        className="buy-btn lexend"
+                        className="explore-btn lexend"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >

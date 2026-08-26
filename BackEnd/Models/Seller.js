@@ -22,10 +22,6 @@ const SellerSchema = new mongoose.Schema({
    category: {
     type: String,
     required: true,
-<<<<<<< HEAD
-    // ✅ This will automatically convert array to string
-=======
->>>>>>> b07a079438e99d2e346233fc43159f8b20919e2e
     set: function(value) {
       if (Array.isArray(value)) {
         return value.join(', ');
@@ -82,7 +78,6 @@ const SellerSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
-<<<<<<< HEAD
 SellerSchema.pre('save', function(next) {
   // If category is an array, convert to string
   if (Array.isArray(this.category)) {
@@ -92,10 +87,6 @@ SellerSchema.pre('save', function(next) {
   next();
 });
 // Generate tracking ID if not exists
-=======
-
-// ✅ Using async/await - NO next() function
->>>>>>> b07a079438e99d2e346233fc43159f8b20919e2e
 SellerSchema.pre('save', async function() {
   // Convert category if it's an array
   if (Array.isArray(this.category)) {
