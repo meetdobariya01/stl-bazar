@@ -1019,7 +1019,7 @@ const Productdetails = () => {
 
                 {/* ✅ SIZE/WEIGHT INFO DISPLAY */}
                 {sizeWeightInfo && sizeWeightInfo.length > 0 && (
-                  <div className="size-weight-info mt-3 p-3 bg-light rounded">
+                  <div className="size-weight-info mt-3 py-3 bg-light rounded">
                     <div className="d-flex flex-wrap gap-3">
                       {product.size && (
                         <div className="d-flex align-items-center">
@@ -1029,7 +1029,7 @@ const Productdetails = () => {
                       )}
                       {product.weight > 0 && (
                         <div className="d-flex align-items-center">
-                          <FaWeight className="me-1 text-muted" />
+                          {/* <FaWeight className="me-1 text-muted" /> */}
                           <span><strong>Weight:</strong> {product.weight} {product.weightUnit || ''}</span>
                         </div>
                       )}

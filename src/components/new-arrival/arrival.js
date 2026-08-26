@@ -208,7 +208,7 @@ const Arrival = () => {
               </div>
               <Row className="g-3 brand-grid-premium">
                 {slide.brands.map((brand, index) => (
-                  <Col xs={6} md={3} key={index}>
+                  <Col xs={6} md={3} xl={2} key={index}>
                     <div
                       className="brand-premium"
                       onClick={() => handleBrandClick(brand.name)}

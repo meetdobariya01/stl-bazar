@@ -17,6 +17,7 @@ import Bestseller from "../../components/bestseller/bestseller";
 import Email from "../../components/email/email";
 import StatsSection from "../../components/details/details";
 import CTASection from "../../components/email/email";
+import NativeHero from "../../components/banner/banner";
 
 const Home = () => {
   return (
@@ -25,7 +26,8 @@ const Home = () => {
       <Header />
 
       {/* carousel */}
-      <Carouselhero />
+      {/* <Carouselhero /> */}
+      <NativeHero />
 
       {/* explore */}
       <Explore />
