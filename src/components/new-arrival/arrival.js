@@ -8,7 +8,7 @@ import "./arrival.css";
 const API_URL = process.env.REACT_APP_API_URL;
 // ✅ Image base URLs
 const OLD_IMAGE_BASE_URL = "https://native91.com";
-const ADMIN_IMAGE_BASE_URL = "https://api.native91.com";
+const ADMIN_IMAGE_BASE_URL = "https://api-vendor.native91.com";
 
 const Arrival = () => {
   const [brandSlides, setBrandSlides] = useState([]);
@@ -93,6 +93,7 @@ const Arrival = () => {
               logo: logoUrl || null,
               rawLogo: brand.logo,
               firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
+              hasValidLogo: !!logoUrl,
             };
           }),
           isFirst: true
@@ -111,6 +112,7 @@ const Arrival = () => {
                 logo: logoUrl || null,
                 rawLogo: brand.logo,
                 firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
+                hasValidLogo: !!logoUrl,
               };
             }),
             isFirst: false
@@ -212,44 +214,51 @@ const Arrival = () => {
                       onClick={() => handleBrandClick(brand.name)}
                     >
                       <div className="logo-premium">
-                        {brand.logo ? (
+                        {brand.hasValidLogo && brand.logo ? (
                           <img
                             src={brand.logo}
                             alt={brand.name}
+                            className="brand-logo-image"
                             onError={(e) => {
                               console.error(`❌ Failed to load logo for: ${brand.name}`);
                               console.error(`   Attempted URL: ${brand.logo}`);
                               console.error(`   Raw logo: ${brand.rawLogo}`);
-                              e.target.onerror = null;
-                              // ✅ Show first letter instead of placeholder
+                              // Hide image and show name fallback
                               e.target.style.display = 'none';
                               const parent = e.target.parentElement;
-                              const fallback = parent.querySelector('.fallback-letter');
+                              const fallback = parent.querySelector('.brand-name-fallback');
                               if (fallback) {
                                 fallback.style.display = 'flex';
                               }
                             }}
                           />
                         ) : null}
-                        {/* ✅ Fallback: Show first letter of company name */}
+                        {/* ✅ Brand Name Fallback */}
                         <div 
-                          className="fallback-letter"
+                          className="brand-name-fallback"
                           style={{
-                            display: brand.logo ? 'none' : 'flex',
+                            display: (brand.hasValidLogo && brand.logo) ? 'none' : 'flex',
                             width: '100%',
                             height: '100%',
-                            minHeight: '100px',
-                            backgroundColor: '#0D3B2E',
+                            minHeight: '140px',
+                            backgroundColor: 'linear-gradient(135deg, #1a1a2e 0%, #0D3B2E 100%)',
                             color: '#FFFFFF',
-                            fontSize: '48px',
-                            fontWeight: 'bold',
+                            fontSize: '20px',
+                            fontWeight: '600',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            borderRadius: '8px',
-                            fontFamily: 'Arial, sans-serif'
+                            borderRadius: '12px',
+                            fontFamily: "'Funnel Sans', 'Arial', sans-serif",
+                            padding: '16px',
+                            textAlign: 'center',
+                            letterSpacing: '0.5px',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                            transition: 'all 0.3s ease',
+                            border: '2px solid rgba(255,215,0,0.1)'
                           }}
+                          className="brand-name-fallback"
                         >
-                          {brand.firstLetter}
+                          {brand.name}
                         </div>
                       </div>
                       <div className="info-premium text-center">
