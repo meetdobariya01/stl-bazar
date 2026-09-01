@@ -7,6 +7,24 @@
   margin: 3rem 0;
 }
 
+.buy-btn {
+  background: #c8a96b;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.8rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+}
+
+
+.buy-btn:hover {
+  background: #b08a5c;
+}
+
+
 .value-image-wrapper {
   display: flex;
   justify-content: center;

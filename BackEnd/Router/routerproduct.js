@@ -5,8 +5,13 @@ const asyncHandler = require("../Comfig/authMiddleware/asyncHandler");
 const Company = require("../Models/Company");
 const Product = require("../Models/Product");
 const Vendor = require("../Models/Vendor");
+const VendorSetting = require("../Models/VendorSetting"); // ✅ Add this
 const StockService = require("../Comfig/stockService");
 const SellerDocument = require("../Models/SellerDocument");
+
+// ============================================================
+// SEARCH SUGGESTIONS
+// ============================================================
 router.get("/search-suggestions", async (req, res) => {
   try {
     const { q } = req.query;
@@ -18,7 +23,6 @@ router.get("/search-suggestions", async (req, res) => {
       });
     }
 
-    
     const products = await Product.find({
       $or: [
         { name: { $regex: q, $options: "i" } },
@@ -28,10 +32,8 @@ router.get("/search-suggestions", async (req, res) => {
     .limit(8)
     .select("name ProductName price image company vendorId _id stockQuantity stockStatus");
 
-    
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
     
-  
     let suspendedVendorIds = [];
     if (vendorIds.length > 0) {
       const suspendedVendors = await Vendor.find({
@@ -41,10 +43,9 @@ router.get("/search-suggestions", async (req, res) => {
       suspendedVendorIds = suspendedVendors.map(v => v._id.toString());
     }
 
- 
     const formattedProducts = products
       .filter(p => !suspendedVendorIds.includes(p.vendorId?.toString()))
-      .filter(p => p.stockQuantity > 0) 
+      .filter(p => p.stockQuantity > 0)
       .map(p => {
         const productObj = p.toObject ? p.toObject() : p;
         return {
@@ -74,38 +75,163 @@ router.get("/search-suggestions", async (req, res) => {
   }
 });
 
+// ============================================================
+// ✅ GET COMPANIES - UPDATED WITH VENDOR SETTINGS LOGO
+// ============================================================
+// In your routes file - UPDATED /companies endpoint
 
 router.get("/companies", async (req, res) => {
   try {
-    // Get all verified sellers from SellerDocument with logo and brand description
-    const verifiedSellers = await SellerDocument.find({ 
-      status: 'verified' 
-    }).select('company logo brand.description email');
+    // Get all active vendors
+    const activeVendors = await Vendor.find({ 
+      status: 'active',
+      role: 'vendor'
+    }).select('_id company name email');
 
-    // Format the response for the frontend
-    const companies = verifiedSellers.map(seller => ({
-      _id: seller._id,
-      name: seller.company,
-      description: seller.brand?.description || 'A trusted brand on our platform.',
-      logo: seller.logo?.image || null,
-      email: seller.email,
-    }));
+    const companies = [];
 
-    console.log(`✅ Found ${companies.length} verified vendors with logos and descriptions`);
+    for (const vendor of activeVendors) {
+      // ✅ Get Company data first
+      const companyData = await Company.findOne({ 
+        name: vendor.company || vendor.name 
+      });
+      
+      // ✅ Get Vendor Settings
+      const settings = await VendorSetting.findOne({ vendorId: vendor._id });
+      
+      let logo = null;
+      let description = '';
+      let companyName = vendor.company || vendor.name || 'N/A';
+
+      // ✅ 1. Get description from Company model FIRST
+      if (companyData) {
+        description = companyData.description || '';
+        // If Company has logo, use it
+        if (companyData.logo) {
+          logo = companyData.logo;
+        }
+      }
+
+      // ✅ 2. Get logo from settings (override if Company logo not found)
+      if (settings && !logo) {
+        logo = settings.logo || null;
+        if (settings.companyDescription) {
+          description = settings.companyDescription;
+        }
+      }
+
+      // ✅ 3. If no logo in settings, try SellerDocument
+      if (!logo) {
+        const doc = await SellerDocument.findOne({ 
+          email: vendor.email,
+          status: { $in: ['verified', 'submitted', 'pending_review'] }
+        });
+        
+        if (doc && doc.logo && doc.logo.image) {
+          logo = doc.logo.image;
+          description = doc.brand?.description || description;
+          
+          // Sync to VendorSettings
+          if (settings) {
+            settings.logo = logo;
+            if (doc.brand?.description) {
+              settings.companyDescription = doc.brand.description;
+            }
+            await settings.save();
+          }
+        }
+      }
+
+      // ✅ Only add if company name exists
+      if (companyName && companyName !== 'N/A') {
+        companies.push({
+          _id: vendor._id,
+          name: companyName,
+          description: description || `${companyName} - Premium brand on Native91`, // Fallback if no description
+          logo: logo,
+          email: vendor.email,
+          hasLogo: !!logo
+        });
+      }
+    }
+
+    console.log(`✅ Found ${companies.length} active companies`);
+    console.log(`📊 Companies with logos: ${companies.filter(c => c.hasLogo).length}`);
 
     res.json({
       success: true,
-      companies: companies
+      companies: companies,
+      stats: {
+        total: companies.length,
+        withLogo: companies.filter(c => c.hasLogo).length,
+        withoutLogo: companies.filter(c => !c.hasLogo).length
+      }
     });
   } catch (err) {
     console.error("Error fetching companies:", err);
     res.status(500).json({ 
       success: false, 
-      message: "Failed to fetch companies" 
+      message: "Failed to fetch companies",
+      error: err.message
+    });
+  }
+});
+// ============================================================
+// ✅ GET COMPANY BY ID - UPDATED
+// ============================================================
+router.get("/company/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const vendor = await Vendor.findById(id);
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found"
+      });
+    }
+
+    // Get settings
+    const settings = await VendorSetting.findOne({ vendorId: vendor._id });
+    
+    let logo = settings?.logo || null;
+    let description = settings?.companyDescription || '';
+
+    // If no logo, try documents
+    if (!logo) {
+      const doc = await SellerDocument.findOne({ 
+        email: vendor.email,
+        status: { $in: ['verified', 'submitted', 'pending_review'] }
+      });
+      if (doc && doc.logo && doc.logo.image) {
+        logo = doc.logo.image;
+        description = doc.brand?.description || description;
+      }
+    }
+
+    res.json({
+      success: true,
+      company: {
+        _id: vendor._id,
+        name: vendor.company || vendor.name,
+        description: description || `${vendor.company} - Premium brand`,
+        logo: logo,
+        email: vendor.email,
+        status: vendor.status
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching company:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message
     });
   }
 });
 
+// ============================================================
+// CREATE COMPANY (Admin only)
+// ============================================================
 router.post("/company", async (req, res) => {
   try {
     const { name, description, logo } = req.body;
@@ -123,7 +249,9 @@ router.post("/company", async (req, res) => {
   }
 });
 
-
+// ============================================================
+// GET PRODUCTS
+// ============================================================
 router.get("/products", async (req, res) => {
   try {
     const { company, category, search, inStock, minPrice, maxPrice } = req.query;
@@ -138,7 +266,6 @@ router.get("/products", async (req, res) => {
         { ProductName: { $regex: search, $options: "i" } }
       ];
     }
-    
 
     if (minPrice || maxPrice) {
       filter.price = {};
@@ -161,7 +288,6 @@ router.get("/products", async (req, res) => {
     products = products.filter(p => 
       !suspendedVendorIds.includes(p.vendorId?.toString())
     );
-    
 
     if (inStock === 'true') {
       products = products.filter(p => p.stockQuantity > 0);
@@ -184,12 +310,14 @@ router.get("/products", async (req, res) => {
   }
 });
 
+// ============================================================
+// GET PRODUCT BY ID
+// ============================================================
 router.get("/product/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
     
-
     if (product.vendorId) {
       const vendor = await Vendor.findById(product.vendorId);
       if (vendor && vendor.status === 'suspended') {
@@ -199,7 +327,6 @@ router.get("/product/:id", async (req, res) => {
         });
       }
     }
-    
    
     const productObj = product.toObject ? product.toObject() : product;
     const response = {
@@ -207,7 +334,6 @@ router.get("/product/:id", async (req, res) => {
       inStock: productObj.stockQuantity > 0,
       availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
       stockStatus: productObj.stockStatus || "out_of_stock",
-      
     };
     
     res.json(response);
@@ -217,9 +343,11 @@ router.get("/product/:id", async (req, res) => {
   }
 });
 
+// ============================================================
+// GET BEST SELLERS
+// ============================================================
 router.get("/best-sellers", async (req, res) => {
   try {
-  
     const activeVendors = await Vendor.find({ 
       status: 'active',
       role: 'vendor'
@@ -240,7 +368,6 @@ router.get("/best-sellers", async (req, res) => {
       }).sort({ createdAt: 1 });
       
       if (product) {
-       
         const vendor = await Vendor.findById(product.vendorId);
         if (vendor && vendor.status === 'active') {
           const productObj = product.toObject ? product.toObject() : product;
@@ -260,10 +387,11 @@ router.get("/best-sellers", async (req, res) => {
   }
 });
 
-
+// ============================================================
+// GET ARRIVAL BEST SELLERS
+// ============================================================
 router.get("/arrival-best-sellers", async (req, res) => {
   try {
-
     const activeVendors = await Vendor.find({ 
       status: 'active',
       role: 'vendor'
@@ -283,7 +411,6 @@ router.get("/arrival-best-sellers", async (req, res) => {
       }).sort({ createdAt: 1 });
       
       if (product) {
-
         const vendor = await Vendor.findById(product.vendorId);
         if (vendor && vendor.status === 'active') {
           const productObj = product.toObject ? product.toObject() : product;
@@ -331,7 +458,9 @@ router.get("/arrival-best-sellers", async (req, res) => {
   }
 });
 
-
+// ============================================================
+// SEARCH PRODUCTS
+// ============================================================
 router.get("/search", async (req, res) => {
   try {
     const keyword = req.query.keyword;
@@ -341,7 +470,6 @@ router.get("/search", async (req, res) => {
         { ProductName: { $regex: keyword, $options: "i" } }
       ]
     }).limit(8);
-
 
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
     let suspendedVendorIds = [];
@@ -356,7 +484,6 @@ router.get("/search", async (req, res) => {
     products = products.filter(p => 
       !suspendedVendorIds.includes(p.vendorId?.toString())
     );
-
 
     const formattedProducts = products.map(p => {
       const productObj = p.toObject ? p.toObject() : p;
@@ -380,12 +507,13 @@ router.get("/search", async (req, res) => {
   }
 });
 
-
+// ============================================================
+// GET PRODUCTS BY COMPANY NAME
+// ============================================================
 router.get("/products/company/:companyName", async (req, res) => {
   try {
     const { companyName } = req.params;
     
-
     const vendor = await Vendor.findOne({ 
       company: companyName,
       status: 'suspended'
@@ -400,7 +528,6 @@ router.get("/products/company/:companyName", async (req, res) => {
     
     const products = await Product.find({ company: companyName });
     
-    // ✅ Format with stock info
     const formattedProducts = products.map(p => {
       const productObj = p.toObject ? p.toObject() : p;
       return {
@@ -416,8 +543,100 @@ router.get("/products/company/:companyName", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch company products" });
   }
 });
-
-// ✅ NEW: Get active vendors list for user side
+// ============================================================
+// ✅ GET COMPANY DETAILS BY NAME - NEW ENDPOINT
+// ============================================================
+router.get("/company/details/:name", async (req, res) => {
+  try {
+    const { name } = req.params;
+    
+    console.log(`🔵 Fetching company details for: "${name}"`);
+    
+    // Try to find company by name (case insensitive)
+    let company = await Company.findOne({ 
+      name: { $regex: new RegExp(`^${name}$`, 'i') }
+    });
+    
+    console.log("🔵 Company found in Company model:", company);
+    
+    // If not found in Company, try Vendor
+    if (!company) {
+      const vendor = await Vendor.findOne({ 
+        company: { $regex: new RegExp(`^${name}$`, 'i') },
+        status: 'active'
+      });
+      
+      console.log("🔵 Vendor found:", vendor);
+      
+      if (vendor) {
+        // Check if there's a Company document for this vendor
+        company = await Company.findOne({ name: vendor.company });
+        
+        if (!company) {
+          // Return vendor data as fallback
+          return res.json({
+            success: true,
+            company: {
+              name: vendor.company || vendor.name,
+              description: vendor.description || `${vendor.company || vendor.name} - Premium brand on Native91`,
+              logo: null,
+              email: vendor.email,
+              status: vendor.status
+            }
+          });
+        }
+      }
+    }
+    
+    // If still not found, try VendorSetting
+    if (!company) {
+      const vendorSetting = await VendorSetting.findOne({ 
+        companyName: { $regex: new RegExp(`^${name}$`, 'i') }
+      });
+      
+      if (vendorSetting) {
+        return res.json({
+          success: true,
+          company: {
+            name: vendorSetting.companyName || name,
+            description: vendorSetting.companyDescription || `${name} - Premium brand on Native91`,
+            logo: vendorSetting.logo || null,
+            email: vendorSetting.email || null
+          }
+        });
+      }
+      
+      // Return 404 if nothing found
+      return res.status(404).json({
+        success: false,
+        message: `Company "${name}" not found`
+      });
+    }
+    
+    // Return company data from Company model
+    res.json({
+      success: true,
+      company: {
+        _id: company._id,
+        name: company.name,
+        description: company.description || `${company.name} - Premium brand on Native91`,
+        logo: company.logo || null,
+        status: company.status || 'Active',
+        email: company.email || null
+      }
+    });
+    
+  } catch (err) {
+    console.error("🔴 Error fetching company details:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
+// ============================================================
+// GET ACTIVE VENDORS
+// ============================================================
 router.get("/active-vendors", async (req, res) => {
   try {
     const vendors = await Vendor.find({ 
@@ -435,7 +654,9 @@ router.get("/active-vendors", async (req, res) => {
   }
 });
 
-// ✅ NEW: Get product stock for cart validation (user-side)
+// ============================================================
+// CART STOCK VALIDATION
+// ============================================================
 router.post("/cart/validate-stock", async (req, res) => {
   try {
     const { items } = req.body;
@@ -452,7 +673,7 @@ router.post("/cart/validate-stock", async (req, res) => {
     
     for (const item of items) {
       const product = await Product.findById(item.productId)
-        .select('name stockQuantity reservedStock stockStatus price');
+        .select('name stockQuantity reservedStock stockStatus price vendorId');
       
       if (!product) {
         stockValidation.push({
@@ -522,12 +743,13 @@ router.post("/cart/validate-stock", async (req, res) => {
   }
 });
 
-// ✅ NEW: Get low stock alerts (for frontend notifications)
+// ============================================================
+// GET LOW STOCK ALERTS
+// ============================================================
 router.get("/low-stock-alerts", async (req, res) => {
   try {
     const threshold = parseInt(req.query.threshold) || 5;
     
-    // Get active vendors
     const activeVendors = await Vendor.find({ 
       status: 'active',
       role: 'vendor'
@@ -551,7 +773,9 @@ router.get("/low-stock-alerts", async (req, res) => {
   }
 });
 
-// ✅ NEW: Get available stock for multiple products (bulk check)
+// ============================================================
+// BULK STOCK CHECK
+// ============================================================
 router.post("/products/stock/bulk", async (req, res) => {
   try {
     const { productIds } = req.body;

@@ -10,8 +10,8 @@ import axios from "axios";
 import "./product.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
-// const API_BASE = "https://api-vendor.native91.com";
-const API_BASE = "http://localhost:5177"; // For local development
+const API_BASE = "https://api-vendor.native91.com";
+//const API_BASE = "http://localhost:5177"; // For local development
 
 const fadeLeft = {
   hidden: { opacity: 0, x: -50 },
@@ -216,7 +216,7 @@ const Product = () => {
                       className="nav-link p-0"
                     >
                       <motion.button
-                        className="explore-btn lexend"
+                        className="buy-btn lexend"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >

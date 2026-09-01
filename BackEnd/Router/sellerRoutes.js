@@ -33,6 +33,119 @@ transporter.verify((error, success) => {
     console.log("✅ Email server is ready to send messages");
   }
 });
+const sendAdminNotificationEmail = async (sellerData) => {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@native91.com";
+  
+  const mailOptions = {
+    from: `"Native91" <${process.env.EMAIL_USER || "brands@native91.com"}>`,
+    to: adminEmail,
+    subject: `📋 New Seller Application - ${sellerData.businessName}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Seller Application</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f2; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header { background: #073f31; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
+    .header h1 { color: #e5d6a5; margin: 0; font-family: Georgia, serif; font-weight: normal; }
+    .content { padding: 25px; }
+    .field { margin-bottom: 12px; }
+    .label { font-weight: bold; color: #073f31; font-size: 13px; }
+    .value { font-size: 15px; color: #333; margin-top: 2px; padding: 8px 12px; background: #f9fafb; border-radius: 5px; }
+    .status-badge { display: inline-block; background: #f39c12; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .footer { text-align: center; padding: 20px; font-size: 12px; color: #999; border-top: 1px solid #eee; }
+    .button { display: inline-block; background: #073f31; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; }
+    .category-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .category-tag { background: #e8f0fe; padding: 3px 10px; border-radius: 15px; font-size: 12px; color: #073f31; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✦ Native91</h1>
+      <p style="color: white; margin: 5px 0 0; font-size: 14px;">New Seller Application</p>
+    </div>
+    
+    <div class="content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #073f31;">${sellerData.businessName}</h2>
+        <span class="status-badge">PENDING REVIEW</span>
+      </div>
+      
+      <div class="field">
+        <div class="label">📛 Full Name</div>
+        <div class="value">${sellerData.fullName}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">📧 Email Address</div>
+        <div class="value">${sellerData.email}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">📱 Phone Number</div>
+        <div class="value">${sellerData.phoneNumber}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">🏷️ Business / Brand Name</div>
+        <div class="value">${sellerData.businessName}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">🌐 Website / Social Media</div>
+        <div class="value">${sellerData.website || 'Not provided'}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">📦 Categories</div>
+        <div class="value">
+          <div class="category-list">
+            ${sellerData.category.split(',').map(cat => `<span class="category-tag">${cat.trim()}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+      
+      <div class="field">
+        <div class="label">💎 Pricing Plan</div>
+        <div class="value">${sellerData.pricingPlan || 'Not selected'}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">🆔 Tracking ID</div>
+        <div class="value">${sellerData.trackingId}</div>
+      </div>
+      
+      <div class="field">
+        <div class="label">📅 Registered At</div>
+        <div class="value">${new Date(sellerData.registeredAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+      </div>
+      
+      <hr style="margin: 20px 0; border-color: #eee;">
+      
+      <div style="text-align: center;">
+        <a href="${process.env.ADMIN_URL || 'https://admin.native91.com'}/seller-applications" class="button">
+          View All Applications →
+        </a>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>This is an automated notification. Please review the application in the admin panel.</p>
+      <p>&copy; ${new Date().getFullYear()} Native91. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+    `
+  };
+
+  return await transporter.sendMail(mailOptions);
+};
 
 // ============================================================
 // ✅ SEND TRACKING EMAIL
@@ -676,8 +789,6 @@ router.post("/register", async (req, res) => {
     } = req.body;
 
     console.log('📝 Registration request received:', req.body);
-    console.log('📝 Category type:', typeof category);
-    console.log('📝 Category value:', category);
 
     // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
@@ -687,7 +798,7 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // ✅ Handle category - if array, convert to string
+    // Handle category - if array, convert to string
     let categoryString = category;
     if (Array.isArray(category)) {
       categoryString = category.join(', ');
@@ -711,7 +822,7 @@ router.post("/register", async (req, res) => {
       email,
       phoneNumber,
       businessName,
-      category: categoryString, // ✅ Now always a string
+      category: categoryString,
       website: website || '',
       pricingPlan: pricingPlan || '',
       status: 'pending',
@@ -724,12 +835,25 @@ router.post("/register", async (req, res) => {
     // Generate tracking URL
     const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${trackingToken}`;
 
-    // Send tracking email
+    // ========================================================
+    // ✅ SEND EMAILS
+    // ========================================================
+    
+    // 1. Send tracking email to SELLER
     try {
       await sendTrackingEmail(seller, trackingUrl);
-      console.log(`✅ Tracking email sent to ${seller.email}`);
+      console.log(`✅ Tracking email sent to seller: ${seller.email}`);
     } catch (emailErr) {
-      console.error("❌ Email error:", emailErr);
+      console.error("❌ Seller email error:", emailErr);
+    }
+
+    // 2. ✅ Send notification email to ADMIN
+    try {
+      await sendAdminNotificationEmail(seller);
+      console.log(`✅ Admin notification email sent for: ${seller.businessName}`);
+      console.log(`📧 Admin email: ${process.env.ADMIN_EMAIL || 'admin@native91.com'}`);
+    } catch (adminEmailErr) {
+      console.error("❌ Admin email error:", adminEmailErr);
     }
 
     res.status(201).json({
@@ -759,7 +883,9 @@ router.post("/register", async (req, res) => {
   }
 });
 
-
+// ============================================================
+// ✅ STATUS CHECK
+// ============================================================
 router.get("/status/:trackingId", async (req, res) => {
   try {
     const { trackingId } = req.params;
@@ -809,8 +935,8 @@ router.get("/status/:trackingId", async (req, res) => {
         email: seller.email,
         phoneNumber: seller.phoneNumber,
         category: seller.category,
-        website: seller.website || '',           // ✅ NEW
-        pricingPlan: seller.pricingPlan || '',   // ✅ NEW
+        website: seller.website || '',
+        pricingPlan: seller.pricingPlan || '',
         status: seller.status,
         registeredAt: seller.registeredAt,
         updatedAt: seller.updatedAt,
@@ -898,7 +1024,7 @@ router.get("/applications/:id", async (req, res) => {
 });
 
 // ============================================================
-// ✅ ADMIN: APPROVE APPLICATION - NO EMAIL (Frontend handles it)
+// ✅ ADMIN: APPROVE APPLICATION
 // ============================================================
 router.post("/applications/:id/approve", async (req, res) => {
   try {
@@ -958,14 +1084,8 @@ router.post("/applications/:id/approve", async (req, res) => {
     application.vendorId = vendor._id;
     await application.save();
 
-    // ========================================================
-    // ⚠️ IMPORTANT: NO EMAIL SENT HERE!
-    // The frontend will handle sending the approval email
-    // via /send-approval-email endpoint on port 5001
-    // ========================================================
     console.log(`✅ Application approved for: ${application.email}`);
     console.log(`✅ Vendor created: ${vendor._id}`);
-    console.log(`📧 NO EMAIL SENT - Frontend will handle it`);
 
     res.json({
       success: true,

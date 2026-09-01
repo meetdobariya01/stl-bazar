@@ -8,7 +8,8 @@ import "./arrival.css";
 const API_URL = process.env.REACT_APP_API_URL;
 // ✅ Image base URLs
 const OLD_IMAGE_BASE_URL = "https://native91.com";
-const ADMIN_IMAGE_BASE_URL = "https://api-vendor.native91.com";
+const ADMIN_IMAGE_BASE_URL = "https://api-admin.native91.com";
+const VENDOR_IMAGE_BASE_URL = "https://api-vendor.native91.com";
 
 const Arrival = () => {
   const [brandSlides, setBrandSlides] = useState([]);
@@ -20,42 +21,35 @@ const Arrival = () => {
     fetchAllBrands();
   }, []);
 
-  // ✅ Get image URL - check if it's an admin uploaded image
-  const getImageUrl = (image) => {
+  // ✅ IMAGE HELPER - Clean and reliable
+  const getImageUrl = (logo) => {
+    if (!logo) return null;
+
+    const image = Array.isArray(logo) ? logo[0] : logo;
     if (!image) return null;
 
-    let imagePath = Array.isArray(image) ? image[0] : image;
-    if (!imagePath) return null;
-
-    // If it's already a full URL
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
+    // Already full URL
+    if (image.startsWith("http://") || image.startsWith("https://")) {
+      return image;
     }
 
-    // Clean the path - remove leading slash if present
-    let cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-
-    // ✅ Check if it's an admin uploaded image (has timestamp in filename)
-    const filename = cleanPath.includes('/') ? cleanPath.split('/').pop() : cleanPath;
-    const hasTimestamp = /^\d+/.test(filename);
-
-    if (hasTimestamp) {
-      // ✅ This is an admin uploaded image - use admin backend
-      return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
+    // Admin uploaded image (starts with /images)
+    if (image.startsWith("/images")) {
+      return `${ADMIN_IMAGE_BASE_URL}${image}`;
     }
 
-    // ✅ If it starts with images/ - use old frontend URL
-    if (cleanPath.startsWith('images/')) {
-      return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
+    // Vendor uploaded image (starts with /uploads)
+    if (image.startsWith("/uploads")) {
+      return `${VENDOR_IMAGE_BASE_URL}${image}`;
     }
 
-    // ✅ If it starts with uploads/ - use admin backend
-    if (cleanPath.startsWith('uploads/')) {
-      return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
+    // Old frontend images
+    if (image.startsWith("images/")) {
+      return `${OLD_IMAGE_BASE_URL}/${image}`;
     }
 
-    // Default: try old frontend
-    return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
+    // Fallback - treat as relative path
+    return image;
   };
 
   const fetchAllBrands = async () => {
@@ -63,19 +57,18 @@ const Arrival = () => {
       setLoading(true);
       const response = await axios.get(`${API_URL}/companies`);
 
-      // ✅ FIX: The response data is { companies: [...] }
       const brands = response.data.companies || [];
 
-      console.log("Brands fetched:", brands.length);
-      console.log("Full response:", response.data);
+      console.log("✅ Brands fetched:", brands.length);
 
-      // Log each brand's image path and generated URL
+      // Log each brand's image
       brands.forEach(brand => {
         const imageUrl = getImageUrl(brand.logo);
-        console.log(`Brand: ${brand.name}`);
-        console.log(`  Raw logo: ${brand.logo}`);
-        console.log(`  Generated URL: ${imageUrl}`);
-        console.log('---');
+        console.log(`📦 ${brand.name}:`, {
+          rawLogo: brand.logo,
+          imageUrl: imageUrl,
+          hasLogo: !!imageUrl
+        });
       });
 
       const slides = [];
@@ -89,7 +82,6 @@ const Arrival = () => {
             return {
               id: brand._id,
               name: brand.name,
-              description: brand.description || "Premium Brand",
               logo: logoUrl || null,
               rawLogo: brand.logo,
               firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
@@ -108,7 +100,6 @@ const Arrival = () => {
               return {
                 id: brand._id,
                 name: brand.name,
-                description: brand.description || "Premium Brand",
                 logo: logoUrl || null,
                 rawLogo: brand.logo,
                 firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
@@ -122,8 +113,7 @@ const Arrival = () => {
 
       setBrandSlides(slides);
     } catch (error) {
-      console.error("Error fetching brands:", error);
-      // ✅ Show error state
+      console.error("❌ Error fetching brands:", error);
       setBrandSlides([]);
     } finally {
       setLoading(false);
@@ -203,12 +193,9 @@ const Arrival = () => {
         >
           {brandSlides.map((slide, idx) => (
             <Carousel.Item key={idx}>
-              <div className="slide-label-premium">
-                {/* <span className="count-premium">{slide.brands.length} Brands</span> */}
-              </div>
               <Row className="g-3 brand-grid-premium">
                 {slide.brands.map((brand, index) => (
-                  <Col xs={6} md={3} key={index}>
+                  <Col xs={6} md={3} xl={2} key={index}>
                     <div
                       className="brand-premium"
                       onClick={() => handleBrandClick(brand.name)}
@@ -222,8 +209,6 @@ const Arrival = () => {
                             onError={(e) => {
                               console.error(`❌ Failed to load logo for: ${brand.name}`);
                               console.error(`   Attempted URL: ${brand.logo}`);
-                              console.error(`   Raw logo: ${brand.rawLogo}`);
-                              // Hide image and show name fallback
                               e.target.style.display = 'none';
                               const parent = e.target.parentElement;
                               const fallback = parent.querySelector('.brand-name-fallback');
@@ -233,7 +218,7 @@ const Arrival = () => {
                             }}
                           />
                         ) : null}
-                        {/* ✅ Brand Name Fallback */}
+                        {/* Brand Name Fallback */}
                         <div 
                           className="brand-name-fallback"
                           style={{
@@ -241,7 +226,7 @@ const Arrival = () => {
                             width: '100%',
                             height: '100%',
                             minHeight: '140px',
-                            backgroundColor: 'linear-gradient(135deg, #1a1a2e 0%, #0D3B2E 100%)',
+                            background: 'linear-gradient(135deg, #1a1a2e 0%, #0D3B2E 100%)',
                             color: '#FFFFFF',
                             fontSize: '20px',
                             fontWeight: '600',
@@ -256,14 +241,13 @@ const Arrival = () => {
                             transition: 'all 0.3s ease',
                             border: '2px solid rgba(255,215,0,0.1)'
                           }}
-                          className="brand-name-fallback"
                         >
                           {brand.name}
                         </div>
                       </div>
                       <div className="info-premium text-center">
                         <h6 className="name-premium">{brand.name}</h6>
-                        <p className="desc-premium">{brand.description}</p>
+                        {/* ❌ Description removed */}
                         <Button
                           variant="link"
                           className="shop-premium"
