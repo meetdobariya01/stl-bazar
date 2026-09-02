@@ -1,4 +1,5 @@
-// pages/Productdetails/Productdetails.js - WITH SIZE/WEIGHT DISPLAY
+// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Container,
@@ -118,6 +119,12 @@ const Productdetails = () => {
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   const [stock, setStock] = useState(0);
 
+  // ✅ Brand/Company states
+  const [brandDescription, setBrandDescription] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [brandLogo, setBrandLogo] = useState(null);
+  const [brandLoading, setBrandLoading] = useState(false);
+
   // Coupon states
   const [vendorCoupons, setVendorCoupons] = useState([]);
   const [showCoupons, setShowCoupons] = useState(false);
@@ -147,6 +154,42 @@ const Productdetails = () => {
       isMounted.current = false;
     };
   }, []);
+
+  // ✅ Fetch brand details from Company model
+  const fetchBrandDetails = useCallback(async (companyName) => {
+    if (!companyName) return;
+    
+    setBrandLoading(true);
+    
+    try {
+      console.log(`🟢 Fetching brand details for: ${companyName}`);
+      
+      // Try to get company details from the Company model
+      const response = await axios.get(`${API_URL}/company/details/${encodeURIComponent(companyName)}`);
+      
+      console.log("🟢 Brand response:", response.data);
+      
+      if (response.data && response.data.success) {
+        const company = response.data.company;
+        setBrandName(company.name || companyName);
+        setBrandDescription(company.description || `${company.name} - Premium brand on Native91`);
+        setBrandLogo(company.logo || null);
+      } else {
+        // Fallback: use product's company name
+        setBrandName(companyName);
+        setBrandDescription(`${companyName} - Premium brand on Native91`);
+        setBrandLogo(null);
+      }
+    } catch (err) {
+      console.error("🔴 Error fetching brand details:", err);
+      // Fallback
+      setBrandName(companyName);
+      setBrandDescription(`${companyName} - Premium brand on Native91`);
+      setBrandLogo(null);
+    } finally {
+      setBrandLoading(false);
+    }
+  }, [API_URL]);
 
   const calculateDiscountedPrice = useCallback(
     (coupon) => {
@@ -400,6 +443,7 @@ const Productdetails = () => {
     [getImageUrl],
   );
 
+  // ✅ FETCH PRODUCT - UPDATED with brand fetch
   useEffect(() => {
     const fetchProduct = async () => {
       if (!slug) return;
@@ -478,6 +522,13 @@ const Productdetails = () => {
           const inWishlist = await isInWishlist(foundProduct._id);
           setIsInWishlistState(inWishlist);
         }
+
+        // ✅ Fetch brand details
+        const companyName = foundProduct.company || foundProduct.vendor || foundProduct.vendorName;
+        if (companyName) {
+          await fetchBrandDetails(companyName);
+        }
+
       } catch (err) {
         console.error("Product fetch error:", err);
         if (isMounted.current) {
@@ -497,7 +548,7 @@ const Productdetails = () => {
     fetchProduct();
 
     return () => {};
-  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist]);
+  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist, fetchBrandDetails]);
 
   useEffect(() => {
     const checkWishlist = async () => {
@@ -1017,7 +1068,7 @@ const Productdetails = () => {
                   </Button>
                 </div>
 
-                {/* ✅ SIZE/WEIGHT INFO DISPLAY */}
+                {/* SIZE/WEIGHT INFO DISPLAY */}
                 {sizeWeightInfo && sizeWeightInfo.length > 0 && (
                   <div className="size-weight-info mt-3 py-3 bg-light rounded">
                     <div className="d-flex flex-wrap gap-3">
@@ -1029,7 +1080,6 @@ const Productdetails = () => {
                       )}
                       {product.weight > 0 && (
                         <div className="d-flex align-items-center">
-                          {/* <FaWeight className="me-1 text-muted" /> */}
                           <span><strong>Weight:</strong> {product.weight} {product.weightUnit || ''}</span>
                         </div>
                       )}
@@ -1058,7 +1108,7 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* ✅ STOCK STATUS DISPLAY */}
+                {/* STOCK STATUS DISPLAY */}
                 <div className="stock-status mt-3">
                   <Badge 
                     bg={stockStatus.color}
@@ -1352,7 +1402,7 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* ✅ QUANTITY SECTION WITH STOCK LIMIT */}
+                {/* QUANTITY SECTION WITH STOCK LIMIT */}
                 <div className="quantity-section">
                   <span>Quantity</span>
                   <div className="qty-box-product-details">
@@ -1377,7 +1427,7 @@ const Productdetails = () => {
                   )}
                 </div>
 
-                {/* ✅ ACTION BUTTONS WITH STOCK CHECK */}
+                {/* ACTION BUTTONS WITH STOCK CHECK */}
                 <div className="action-buttons">
                   <Button
                     className="cart-btn"
@@ -1441,6 +1491,7 @@ const Productdetails = () => {
                 </ul>
               )}
             </details>
+            
             <details>
               <summary className="funnel-sans">Why Native91?</summary>
               <p>
@@ -1449,6 +1500,7 @@ const Productdetails = () => {
                 trust.
               </p>
             </details>
+            
             <details>
               <summary className="funnel-sans">Shipping & Returns</summary>
               <p>
@@ -1462,17 +1514,62 @@ const Productdetails = () => {
                 to learn more.
               </p>
             </details>
+            
+            {/* ✅ UPDATED: About the Brand with Dynamic Content */}
             <details>
               <summary className="funnel-sans">About the Brand</summary>
-              <p>
-                Native91 focuses on timeless handcrafted products made with
-                love.{" "}
-                <a href="/aboutus" className="text-decoration-none text-dark">
-                  {" "}
-                  Click here
-                </a>{" "}
-                to learn more about our story.
-              </p>
+              <div className="brand-about-content">
+                {brandLoading ? (
+                  <div className="text-center py-3">
+                    <Spinner animation="border" size="sm" />
+                    <span className="ms-2">Loading brand details...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="d-flex align-items-center gap-3 mb-3">
+                      {brandLogo && (
+                        <img 
+                          src={brandLogo} 
+                          alt={brandName} 
+                          className="brand-logo-small"
+                          onError={(e) => e.target.style.display = 'none'}
+                          style={{ 
+                            width: '60px', 
+                            height: '60px', 
+                            objectFit: 'cover', 
+                            borderRadius: '12px',
+                            border: '1px solid #e9ecef'
+                          }}
+                        />
+                      )}
+                      <h5 className="brand-name mb-0">
+                        {brandName || product?.company || "Native91"}
+                      </h5>
+                    </div>
+                    
+                    <p className="brand-description">
+                      {brandDescription || 
+                       (product?.company ? `${product.company} - Premium brand on Native91` : 
+                        "Native91 focuses on timeless handcrafted products made with love.")}
+                    </p>
+                    
+                    <div className="brand-actions mt-3">
+                      {/* <a 
+                        href={`/company/${encodeURIComponent(product?.company || brandName || "Native91")}`} 
+                        className="text-decoration-none text-primary  "
+                      >
+                        View all products from this brand →
+                      </a> */}
+                      {/* <a 
+                        href="/aboutus" 
+                        className="text-decoration-none text-dark ms-3"
+                      >
+                        Learn more about Native91 →
+                      </a> */}
+                    </div>
+                  </>
+                )}
+              </div>
             </details>
           </div>
 
@@ -1643,7 +1740,7 @@ const Productdetails = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* ✅ MOBILE STICKY CART WITH STOCK CHECK */}
+      {/* MOBILE STICKY CART WITH STOCK CHECK */}
       <div className="mobile-sticky-cart">
         <button
           className={`mobile-wishlist ${isInWishlistState ? "active" : ""}`}

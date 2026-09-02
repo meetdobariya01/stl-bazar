@@ -78,6 +78,8 @@ router.get("/search-suggestions", async (req, res) => {
 // ============================================================
 // ✅ GET COMPANIES - UPDATED WITH VENDOR SETTINGS LOGO
 // ============================================================
+// In your routes file - UPDATED /companies endpoint
+
 router.get("/companies", async (req, res) => {
   try {
     // Get all active vendors
@@ -89,17 +91,33 @@ router.get("/companies", async (req, res) => {
     const companies = [];
 
     for (const vendor of activeVendors) {
-      // ✅ 1. Try to get logo from VendorSettings first
+      // ✅ Get Company data first
+      const companyData = await Company.findOne({ 
+        name: vendor.company || vendor.name 
+      });
+      
+      // ✅ Get Vendor Settings
       const settings = await VendorSetting.findOne({ vendorId: vendor._id });
       
       let logo = null;
       let description = '';
       let companyName = vendor.company || vendor.name || 'N/A';
 
-      // ✅ 2. Get logo from settings
-      if (settings) {
+      // ✅ 1. Get description from Company model FIRST
+      if (companyData) {
+        description = companyData.description || '';
+        // If Company has logo, use it
+        if (companyData.logo) {
+          logo = companyData.logo;
+        }
+      }
+
+      // ✅ 2. Get logo from settings (override if Company logo not found)
+      if (settings && !logo) {
         logo = settings.logo || null;
-        description = settings.companyDescription || '';
+        if (settings.companyDescription) {
+          description = settings.companyDescription;
+        }
       }
 
       // ✅ 3. If no logo in settings, try SellerDocument
@@ -113,7 +131,7 @@ router.get("/companies", async (req, res) => {
           logo = doc.logo.image;
           description = doc.brand?.description || description;
           
-          // ✅ Sync logo to VendorSettings for next time
+          // Sync to VendorSettings
           if (settings) {
             settings.logo = logo;
             if (doc.brand?.description) {
@@ -124,12 +142,12 @@ router.get("/companies", async (req, res) => {
         }
       }
 
-      // Only add if company name exists
+      // ✅ Only add if company name exists
       if (companyName && companyName !== 'N/A') {
         companies.push({
           _id: vendor._id,
           name: companyName,
-          description: description || `${companyName} - Premium brand on Native91`,
+          description: description || `${companyName} - Premium brand on Native91`, // Fallback if no description
           logo: logo,
           email: vendor.email,
           hasLogo: !!logo
@@ -158,7 +176,6 @@ router.get("/companies", async (req, res) => {
     });
   }
 });
-
 // ============================================================
 // ✅ GET COMPANY BY ID - UPDATED
 // ============================================================
@@ -526,7 +543,97 @@ router.get("/products/company/:companyName", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch company products" });
   }
 });
-
+// ============================================================
+// ✅ GET COMPANY DETAILS BY NAME - NEW ENDPOINT
+// ============================================================
+router.get("/company/details/:name", async (req, res) => {
+  try {
+    const { name } = req.params;
+    
+    console.log(`🔵 Fetching company details for: "${name}"`);
+    
+    // Try to find company by name (case insensitive)
+    let company = await Company.findOne({ 
+      name: { $regex: new RegExp(`^${name}$`, 'i') }
+    });
+    
+    console.log("🔵 Company found in Company model:", company);
+    
+    // If not found in Company, try Vendor
+    if (!company) {
+      const vendor = await Vendor.findOne({ 
+        company: { $regex: new RegExp(`^${name}$`, 'i') },
+        status: 'active'
+      });
+      
+      console.log("🔵 Vendor found:", vendor);
+      
+      if (vendor) {
+        // Check if there's a Company document for this vendor
+        company = await Company.findOne({ name: vendor.company });
+        
+        if (!company) {
+          // Return vendor data as fallback
+          return res.json({
+            success: true,
+            company: {
+              name: vendor.company || vendor.name,
+              description: vendor.description || `${vendor.company || vendor.name} - Premium brand on Native91`,
+              logo: null,
+              email: vendor.email,
+              status: vendor.status
+            }
+          });
+        }
+      }
+    }
+    
+    // If still not found, try VendorSetting
+    if (!company) {
+      const vendorSetting = await VendorSetting.findOne({ 
+        companyName: { $regex: new RegExp(`^${name}$`, 'i') }
+      });
+      
+      if (vendorSetting) {
+        return res.json({
+          success: true,
+          company: {
+            name: vendorSetting.companyName || name,
+            description: vendorSetting.companyDescription || `${name} - Premium brand on Native91`,
+            logo: vendorSetting.logo || null,
+            email: vendorSetting.email || null
+          }
+        });
+      }
+      
+      // Return 404 if nothing found
+      return res.status(404).json({
+        success: false,
+        message: `Company "${name}" not found`
+      });
+    }
+    
+    // Return company data from Company model
+    res.json({
+      success: true,
+      company: {
+        _id: company._id,
+        name: company.name,
+        description: company.description || `${company.name} - Premium brand on Native91`,
+        logo: company.logo || null,
+        status: company.status || 'Active',
+        email: company.email || null
+      }
+    });
+    
+  } catch (err) {
+    console.error("🔴 Error fetching company details:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
 // ============================================================
 // GET ACTIVE VENDORS
 // ============================================================

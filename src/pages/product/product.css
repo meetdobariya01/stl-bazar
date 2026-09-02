@@ -241,7 +241,22 @@
     font-size: 0.85rem;
   }
 }
+.buy-btn {
+  background: #c8a96b;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.8rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+}
 
+
+.buy-btn:hover {
+  background: #b08a5c;
+}
 /* ========== ALTERNATIVE: MINIMAL STYLE (optional) ========== */
 /* If you prefer the minimalist style, uncomment below */
 /*

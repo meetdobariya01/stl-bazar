@@ -17,9 +17,9 @@ const NativeHero = () => {
                 <span>ROOTED IN INDIA</span>
                 <span className="dot">•</span>
                 <span>MADE WITH PURPOSE</span>
-
+{/* 
                 <span className="line"></span>
-                <FaLeaf className="leaf-icon" />
+                <FaLeaf className="leaf-icon" /> */}
               </div>
 
               {/* Main Heading */}
@@ -31,8 +31,7 @@ const NativeHero = () => {
 
               {/* Description */}
               <p className="native-hero-description">
-                Explore homegrown brands, artisans, creators and purpose-driven
-                organisations from across India - all in one place.
+               Native91 brings together a carefully curated collection of homegrown Indian brands, thoughtfully selected for their products, design, craftsmanship and the stories behind them. From emerging names to brands you’ll soon wonder how you missed, this is where discovery begins.
               </p>
 
               {/* Buttons */}
@@ -46,8 +45,8 @@ const NativeHero = () => {
                 </NavLink>
 
                 <NavLink to="/sell" className="native-btn native-btn-outline">
-                  <span>Sell With Us</span>
-                  <FaArrowRight />
+                  <span>Start Discovering</span>
+                  {/* <FaArrowRight /> */}
                 </NavLink>
               </div>
 

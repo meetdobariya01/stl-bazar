@@ -46,7 +46,7 @@ vendorSettingSchema.pre('save', function(next) {
   next();
 });
 
-// ✅ Check if model exists before creating
+// ✅ Check if model exists before creatinga
 const VendorSetting = mongoose.models.VendorSetting || mongoose.model("VendorSetting", vendorSettingSchema);
 
 module.exports = VendorSetting;

@@ -1,4 +1,4 @@
-// Models/Order.js - UPDATED WITH COUPON FIELDS & STOCK SNAPSHOT
+// Models/Order.js - UPDATED WITH COUPON FIELDS, STOCK SNAPSHOT & SHIPROCKET
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -14,6 +14,7 @@ const orderSchema = new mongoose.Schema({
       image: [String],
       vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
       company: { type: String, default: "N/A" },
+      weight: { type: Number, default: 0.5 }, // ✅ Added weight for Shiprocket
     },
   ],
   shippingAddress: {
@@ -43,6 +44,36 @@ const orderSchema = new mongoose.Schema({
     enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
     default: "Pending" 
   },
+  
+  // ✅ SHIPROCKET SHIPMENTS
+  shipments: [
+    {
+      vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
+      company: String,
+      shipmentId: String,
+      orderId: String,
+      awbCode: String,
+      labelUrl: String,
+      status: {
+        type: String,
+        enum: ['created', 'pickup_scheduled', 'in_transit', 'delivered', 'cancelled'],
+        default: 'created'
+      },
+      trackingUrl: String,
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+  
+  // ✅ SHIPROCKET SYNC STATUS - FIXED ENUM
+  shiprocketSyncStatus: {
+    type: String,
+    enum: ['pending', 'synced', 'failed', 'partial', 'skipped', 'disabled'],
+    default: 'pending'
+  },
+  
+  // ✅ SHIPROCKET ERROR (if any)
+  shiprocketError: { type: String, default: null },
+
 }, {
   timestamps: true
 });
