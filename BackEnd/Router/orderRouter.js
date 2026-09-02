@@ -1,10 +1,11 @@
-// Router/orderRouter.js - UPDATED WITH STOCK MANAGEMENT
+// Router/orderRouter.js - COMPLETE FIXED VERSION WITH SELLERDOCUMENT SUPPORT
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const Order = require("../Models/Order");
 const Cart = require("../Models/Cart");
 const Vendor = require("../Models/Vendor");
+const SellerDocument = require("../Models/SellerDocument"); // ✅ ADDED
 const Product = require("../Models/Product");
 const Coupon = require("../Models/Coupon");
 const axios = require("axios");
@@ -16,10 +17,48 @@ const {
   emailMode 
 } = require("../Comfig/emailConfig");
 
+// ✅ FIXED: Correct path to shiprocketService
+const shiprocketService = require("../utils/shiprocketService"); // Updated path to shiprocketService
+
 const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
 
 // ============================================
-// PLACE ORDER WITH EMAIL & VENDOR NOTIFICATIONS
+// ✅ HELPER: Get complete vendor data from SellerDocument
+// ============================================
+async function getCompleteVendorData(vendorId) {
+  try {
+    // Get vendor basic info
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return null;
+
+    // Get seller document (includes address)
+    const sellerDoc = await SellerDocument.findOne({ vendorId: vendorId });
+    
+    // Build complete vendor data with address from SellerDocument
+    const vendorData = {
+      _id: vendor._id,
+      name: vendor.name || vendor.company,
+      company: vendor.company || "N/A",
+      email: vendor.email,
+      phone: vendor.phone || sellerDoc?.contact?.phone || '9876543210',
+      
+      // ✅ Address from SellerDocument.contact
+      address: sellerDoc?.contact?.address || 'Default Address',
+      city: sellerDoc?.contact?.city || 'Mumbai',
+      state: sellerDoc?.contact?.state || 'Maharashtra',
+      pincode: sellerDoc?.contact?.pincode || '400001',
+      country: sellerDoc?.contact?.country || 'India',
+    };
+
+    return vendorData;
+  } catch (error) {
+    console.error('Error fetching vendor data:', error.message);
+    return null;
+  }
+}
+
+// ============================================
+// PLACE ORDER WITH EMAIL, VENDOR NOTIFICATIONS & SHIPROCKET
 // ============================================
 router.post("/place", async (req, res) => {
   const { guestId, shippingAddress, paymentMethod, couponCode } = req.body;
@@ -100,16 +139,16 @@ router.post("/place", async (req, res) => {
           company = item.company;
         }
         
-        // ✅ Return with stock information
         return {
           productId: item.productId,
           name: item.name || product?.name || "Unknown Product",
           price: item.price || product?.price || 0,
           quantity: item.quantity || 1,
-          stock: product?.stock || 0, // ✅ Add current stock
+          stock: product?.stock || 0,
           image: Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null),
           vendorId: vendorId,
           company: company || "N/A",
+          weight: product?.weight || 0.5,
         };
       })
     );
@@ -202,10 +241,11 @@ router.post("/place", async (req, res) => {
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        stockAtPurchase: item.stock, // ✅ Save stock at purchase time
+        stockAtPurchase: item.stock,
         image: item.image ? [item.image] : [],
         vendorId: item.vendorId,
         company: item.company,
+        weight: item.weight || 0.5,
       })),
       shippingAddress,
       paymentMethod: paymentMethod || "COD",
@@ -238,6 +278,127 @@ router.post("/place", async (req, res) => {
 
     const orderId = order._id;
     
+    // ============================================
+    // ✅ SHIPROCKET INTEGRATION - CREATE SHIPMENTS
+    // ============================================
+    let shipmentResults = [];
+    let shiprocketSyncStatus = 'pending';
+
+    try {
+      // Check if Shiprocket is enabled
+      if (process.env.SHIPROCKET_ENABLED === 'true') {
+        console.log('🚀 Creating Shiprocket shipments for order:', orderId);
+        
+        // Group items by vendor
+        const vendorItemsMap = {};
+
+        for (const item of itemsWithVendorInfo) {
+          if (item.vendorId) {
+            const vendorId = item.vendorId.toString();
+            if (!vendorItemsMap[vendorId]) {
+              vendorItemsMap[vendorId] = [];
+            }
+            vendorItemsMap[vendorId].push({
+              ...item,
+              weight: item.weight || 0.5
+            });
+          }
+        }
+
+        const vendorIds = Object.keys(vendorItemsMap);
+        
+        if (vendorIds.length > 0) {
+          console.log(`📦 Creating shipments for ${vendorIds.length} vendor(s)`);
+          
+          // Create shipments for each vendor
+          for (const vendorId of vendorIds) {
+            try {
+              // ✅ Get complete vendor data (includes address from SellerDocument)
+              const vendorData = await getCompleteVendorData(vendorId);
+              
+              if (!vendorData) {
+                console.warn(`⚠️ Vendor ${vendorId} not found, skipping shipment`);
+                shipmentResults.push({
+                  vendorId,
+                  success: false,
+                  error: 'Vendor not found'
+                });
+                continue;
+              }
+
+              const vendorItems = vendorItemsMap[vendorId];
+
+              // Create shipment for this vendor
+              const result = await shiprocketService.createVendorShipment(
+                order,
+                vendorData,
+                vendorItems,
+                shippingAddress
+              );
+
+              shipmentResults.push(result);
+
+              if (result.success) {
+                console.log(`✅ Shipment created for ${vendorData.company}: ${result.shipmentId}`);
+              } else {
+                console.error(`❌ Failed to create shipment for ${vendorData.company}:`, result.error);
+              }
+
+            } catch (vendorError) {
+              console.error(`❌ Error processing vendor ${vendorId}:`, vendorError.message);
+              shipmentResults.push({
+                vendorId,
+                success: false,
+                error: vendorError.message
+              });
+            }
+          }
+
+          // Update order with shipment details
+          const successfulShipments = shipmentResults.filter(r => r.success);
+          order.shipments = successfulShipments.map(r => ({
+            vendorId: r.vendorId,
+            company: r.company,
+            shipmentId: r.shipmentId,
+            orderId: r.orderId,
+            awbCode: r.awbCode,
+            labelUrl: r.labelUrl,
+            status: 'created',
+            createdAt: new Date()
+          }));
+
+          // Update sync status
+          if (successfulShipments.length === shipmentResults.length) {
+            shiprocketSyncStatus = 'synced';
+          } else if (successfulShipments.length > 0) {
+            shiprocketSyncStatus = 'partial';
+          } else {
+            shiprocketSyncStatus = 'failed';
+            order.shiprocketError = 'All vendor shipments failed';
+          }
+
+          order.shiprocketSyncStatus = shiprocketSyncStatus;
+          await order.save();
+        } else {
+          console.log('ℹ️ No vendors found in order, skipping Shiprocket');
+          shiprocketSyncStatus = 'skipped';
+          order.shiprocketSyncStatus = 'skipped';
+          await order.save();
+        }
+      } else {
+        console.log('ℹ️ Shiprocket is disabled (SHIPROCKET_ENABLED=false)');
+        shiprocketSyncStatus = 'disabled';
+        order.shiprocketSyncStatus = 'disabled';
+        await order.save();
+      }
+    } catch (shiprocketError) {
+      console.error('❌ Shiprocket integration error:', shiprocketError.message);
+      shiprocketSyncStatus = 'failed';
+      order.shiprocketSyncStatus = 'failed';
+      order.shiprocketError = shiprocketError.message;
+      await order.save();
+    }
+
     // ============================================
     // EMAIL RESULTS
     // ============================================
@@ -365,6 +526,11 @@ router.post("/place", async (req, res) => {
           return sum + (item.price || 0) * (item.quantity || 1);
         }, 0);
 
+        // Find shipment for this vendor
+        const vendorShipment = shipmentResults.find(
+          s => s.company === company && s.success
+        );
+
         const notificationData = {
           company: company,
           title: "🛒 New Order Received!",
@@ -373,8 +539,11 @@ router.post("/place", async (req, res) => {
                    `Items: ${vendorItems.length} product(s)\n` +
                    `Customer: ${shippingAddress?.name || "Customer"}\n` +
                    `Phone: ${shippingAddress?.phone || "N/A"}\n` +
-                   `Order Date: ${new Date().toLocaleString()}\n\n` +
-                   `Please check and process the order.`,
+                   `Order Date: ${new Date().toLocaleString()}\n` +
+                   (vendorShipment ? `\n📦 Shipment Details:\n` +
+                   `AWB: ${vendorShipment.awbCode || 'N/A'}\n` +
+                   `Tracking: ${vendorShipment.shipmentId || 'N/A'}\n` : '') +
+                   `\nPlease check and process the order.`,
           read: false,
           orderId: orderId,
         };
@@ -401,7 +570,9 @@ router.post("/place", async (req, res) => {
       }
     }
 
+    // ============================================
     // 6. RESPONSE
+    // ============================================
     res.json({ 
       success: true,
       message: "Order placed successfully", 
@@ -413,6 +584,8 @@ router.post("/place", async (req, res) => {
         coupon: order.coupon,
         discountApplied: order.coupon.discountAmount > 0,
       },
+      shipments: shipmentResults,
+      shiprocketSyncStatus: shiprocketSyncStatus,
       emailResults: emailResults,
       notificationResults: notificationResults,
       vendorCount: vendorGroups.size,
@@ -535,6 +708,9 @@ router.get("/admin/commission/:orderId", async (req, res) => {
       }
     }
 
+    // ✅ Add shipment info to response
+    const shipmentInfo = order.shipments || [];
+
     res.json({
       success: true,
       orderId: order._id,
@@ -545,6 +721,9 @@ router.get("/admin/commission/:orderId", async (req, res) => {
       createdAt: order.createdAt,
       shippingAddress: order.shippingAddress,
       paymentMethod: order.paymentMethod,
+      shipments: shipmentInfo,
+      shiprocketSyncStatus: order.shiprocketSyncStatus,
+      shiprocketError: order.shiprocketError || null,
       commissionSummary: {
         totalAdminCommission: totalAdminCommission,
         totalVendorCommission: totalVendorCommission,
@@ -631,6 +810,8 @@ router.get("/admin/commissions", async (req, res) => {
         orderStatus: order.orderStatus,
         createdAt: order.createdAt,
         vendorCount: vendorSet.size,
+        shipmentCount: order.shipments?.length || 0,
+        shiprocketSyncStatus: order.shiprocketSyncStatus || 'pending',
         adminCommission: orderAdminCommission,
         vendorCommission: orderVendorCommission,
         platformCommissionRate: order.totalPrice > 0 ? 
@@ -687,6 +868,8 @@ router.get("/admin/commissions", async (req, res) => {
           orderStatus: order.orderStatus,
           createdAt: order.createdAt,
           vendorCount: vendorSet.size,
+          shipmentCount: order.shipments?.length || 0,
+          shiprocketSyncStatus: order.shiprocketSyncStatus || 'pending',
           adminCommission: orderAdminCommission,
           vendorCommission: orderVendorCommission,
           platformCommissionRate: order.totalPrice > 0 ? 
@@ -759,6 +942,8 @@ router.put("/admin/status/:orderId", async (req, res) => {
         _id: order._id,
         orderStatus: order.orderStatus,
         updatedAt: order.updatedAt,
+        shipments: order.shipments || [],
+        shiprocketSyncStatus: order.shiprocketSyncStatus,
       },
     });
   } catch (err) {

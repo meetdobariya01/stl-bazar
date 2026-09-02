@@ -1,9 +1,9 @@
 html,
 body,
-#root  {
+#root {
   overflow-x: hidden;
   background: #fdf7f1;
-  padding-top: 35px
+  padding-top: 35px;
 }
 @media (max-width: 991px) {
   html,

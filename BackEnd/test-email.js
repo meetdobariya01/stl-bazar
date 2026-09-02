@@ -1,46 +1,57 @@
-// test-email.js
+// test-shiprocket.js
+const axios = require('axios');
 require('dotenv').config();
-const nodemailer = require('nodemailer');
 
-async function testHostinger() {
-  console.log("Testing Hostinger Email...");
-  
-  const transporter = nodemailer.createTransport({
-    host: "smtp.hostinger.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
-
+async function testPickup() {
   try {
-    await transporter.verify();
-    console.log("Connection successful!");
+    // Login
+    const login = await axios.post(
+      'https://apiv2.shiprocket.in/v1/external/auth/login',
+      {
+        email: process.env.SHIPROCKET_EMAIL,
+        password: process.env.SHIPROCKET_PASSWORD
+      }
+    );
     
-    // CHANGE THIS TO YOUR EMAIL
-    const info = await transporter.sendMail({
-      from: `"Native91" <${process.env.EMAIL_USER}>`,
-      to: "YOUR_EMAIL_HERE@gmail.com", // ← PUT YOUR EMAIL
-      subject: "Hostinger Email Test",
-      html: `
-        <h1>Test Successful!</h1>
-        <p>Your Hostinger email is working!</p>
-        <p>From: ${process.env.EMAIL_USER}</p>
-        <p>Time: ${new Date().toLocaleString()}</p>
-      `,
-    });
+    const token = login.data.token;
+    console.log('✅ Login successful');
     
-    console.log("Email sent!");
-    console.log(`   Message ID: ${info.messageId}`);
+    // Test GET pickup locations
+    try {
+      const get = await axios.get(
+        'https://apiv2.shiprocket.in/v1/external/settings/pickup',
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      console.log('✅ GET pickup locations:', get.data);
+    } catch (e) {
+      console.log('❌ GET failed:', e.response?.status, e.response?.data);
+    }
+    
+    // Test POST pickup location
+    try {
+      const post = await axios.post(
+        'https://apiv2.shiprocket.in/v1/external/settings/pickup',
+        {
+          pickup_location: 'test-vendor-123',
+          name: 'Test Vendor',
+          email: 'test@example.com',
+          phone: '9876543210',
+          address: 'Test Address',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          country: 'India',
+          pincode: '400001'
+        },
+        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      );
+      console.log('✅ POST successful:', post.data);
+    } catch (e) {
+      console.log('❌ POST failed:', e.response?.status, e.response?.data);
+    }
     
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error('Login failed:', error.response?.data || error.message);
   }
 }
 
-testHostinger();
+testPickup();

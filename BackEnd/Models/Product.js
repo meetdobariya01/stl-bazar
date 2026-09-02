@@ -24,37 +24,32 @@ const ProductSchema = new mongoose.Schema(
       default: "FaBoxOpen" 
     },
 
-
     // Multiple images
     image: [{ 
       type: String 
     }],
 
-
     size: { 
       type: String 
     },
-
 
     company: { 
       type: String, 
       required: true 
     },
 
-
+    // ✅ FIXED: Reference Vendor model instead of User
     vendorId: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: "User" 
+      ref: "Vendor"  // ← CHANGED FROM "User" TO "Vendor"
     },
 
-
-    // ✅ ADD THIS FIELD
+    // ✅ Stock field
     stock: {
       type: Number,
       default: 0,
       min: 0
     },
-
 
     ratings: [
       {
@@ -77,7 +72,6 @@ const ProductSchema = new mongoose.Schema(
         }
       }
     ],
-
 
     averageRating: { 
       type: Number, 
