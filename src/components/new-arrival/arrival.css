@@ -138,6 +138,7 @@
 
 .brand-grid-premium {
   margin: 0 -6px;
+flex-wrap: nowrap;
 }
 
 /* Premium Card - Vertical Layout */

@@ -18,8 +18,6 @@ const NativeHero = () => {
                 <span className="dot">•</span>
                 <span>MADE WITH PURPOSE</span>
 
-                <span className="line"></span>
-                <FaLeaf className="leaf-icon" />
               </div>
 
               {/* Main Heading */}
@@ -40,12 +38,12 @@ const NativeHero = () => {
                   to="/sell"
                   className="native-btn native-btn-primary"
                 >
-                  <span>Start Discovering</span>
+                  <span>For Brands</span>
                   {/* <FaArrowRight /> */}
                 </NavLink>
 
                 <NavLink to="/category/All" className="native-btn native-btn-outline">
-                  <span>Let’s Explore </span>
+                  <span>Start Discovering</span>
                   {/* <FaArrowRight /> */}
                 </NavLink>
               </div>
