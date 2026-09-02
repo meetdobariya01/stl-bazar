@@ -586,7 +586,6 @@
   font-size: 14px;
 }
 
-
 .mobile-right {
   display: none;
   align-items: center;
@@ -784,6 +783,7 @@
     height: 36px;
     padding: 0;
     font-size: 21px;
+    color: #000;
   }
 
   .cart-icon {
@@ -833,6 +833,7 @@
   .mobile-right button {
     width: 34px;
     height: 34px;
+    color: #000;
     font-size: 19px;
   }
 
@@ -960,6 +961,7 @@
     width: 31px;
     height: 31px;
     font-size: 18px;
+    color: #000;
   }
 
   .cart-icon {

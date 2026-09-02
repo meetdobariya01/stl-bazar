@@ -71,4 +71,3 @@ root.render(
     </WishlistProvider>
   </CartProvider>,
 );
-

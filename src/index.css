@@ -1,9 +1,34 @@
 html,
 body,
-#root  {
+#root {
   overflow-x: hidden;
   background: #fdf7f1;
-  padding-top: 35px
+  padding-top: 35px;
+}
+@media (max-width: 991px) {
+  html,
+  body,
+  #root {
+    padding-top: 25px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    padding-top: 25px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  html,
+  body,
+  #root {
+    padding-top: 25px;
+  }
 }
 
 @import url("https://fonts.googleapis.com/css2?family=Funnel+Sans:ital,wght@0,300..800;1,300..800&display=swap");

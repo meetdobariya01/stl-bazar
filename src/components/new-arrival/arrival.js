@@ -197,18 +197,15 @@ const Arrival = () => {
           onSelect={handleSelect}
           indicators={false}
           controls={false}
-          interval={5000}
-          pause={false}
+          interval={1000}
+          pause="hover"
           className="carousel-premium"
         >
           {brandSlides.map((slide, idx) => (
             <Carousel.Item key={idx}>
-              <div className="slide-label-premium">
-                {/* <span className="count-premium">{slide.brands.length} Brands</span> */}
-              </div>
               <Row className="g-3 brand-grid-premium">
                 {slide.brands.map((brand, index) => (
-                  <Col xs={6} md={3} xl={4} key={index}>
+                  <Col xs={6} md={3} xl={3} key={index}>
                     <div
                       className="brand-premium"
                       onClick={() => handleBrandClick(brand.name)}
@@ -222,8 +219,6 @@ const Arrival = () => {
                             onError={(e) => {
                               console.error(`❌ Failed to load logo for: ${brand.name}`);
                               console.error(`   Attempted URL: ${brand.logo}`);
-                              console.error(`   Raw logo: ${brand.rawLogo}`);
-                              // Hide image and show name fallback
                               e.target.style.display = 'none';
                               const parent = e.target.parentElement;
                               const fallback = parent.querySelector('.brand-name-fallback');
@@ -233,7 +228,7 @@ const Arrival = () => {
                             }}
                           />
                         ) : null}
-                        {/* ✅ Brand Name Fallback */}
+                        {/* Brand Name Fallback */}
                         <div 
                           className="brand-name-fallback"
                           style={{
@@ -241,7 +236,7 @@ const Arrival = () => {
                             width: '100%',
                             height: '100%',
                             minHeight: '140px',
-                            backgroundColor: 'linear-gradient(135deg, #1a1a2e 0%, #0D3B2E 100%)',
+                            background: 'linear-gradient(135deg, #1a1a2e 0%, #0D3B2E 100%)',
                             color: '#FFFFFF',
                             fontSize: '20px',
                             fontWeight: '600',
@@ -256,14 +251,13 @@ const Arrival = () => {
                             transition: 'all 0.3s ease',
                             border: '2px solid rgba(255,215,0,0.1)'
                           }}
-                          className="brand-name-fallback"
                         >
                           {brand.name}
                         </div>
                       </div>
                       <div className="info-premium text-center">
                         <h6 className="name-premium">{brand.name}</h6>
-                        <p className="desc-premium">{brand.description}</p>
+                        {/* ❌ Description removed */}
                         <Button
                           variant="link"
                           className="shop-premium"
