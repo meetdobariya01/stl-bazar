@@ -187,15 +187,15 @@ const Arrival = () => {
           onSelect={handleSelect}
           indicators={false}
           controls={false}
-          interval={5000}
-          pause={false}
+          interval={1000}
+          pause="hover"
           className="carousel-premium"
         >
           {brandSlides.map((slide, idx) => (
             <Carousel.Item key={idx}>
               <Row className="g-3 brand-grid-premium">
                 {slide.brands.map((brand, index) => (
-                  <Col xs={6} md={3} xl={2} key={index}>
+                  <Col xs={6} md={3} xl={3} key={index}>
                     <div
                       className="brand-premium"
                       onClick={() => handleBrandClick(brand.name)}

@@ -5,11 +5,11 @@ import "./banner.css";
 
 const NativeHero = () => {
   return (
-    <section className="native-hero">
+    <section className="native-hero lexend">
       <div className="native-hero-overlay"></div>
 
       <div className="container h-100">
-        <div className="row vh-100 banner-height align-items-center">
+        <div className="row vh-100 banner-height ">
           <div className="col-12 col-lg-6">
             <div className="native-hero-content">
               {/* Top Label */}
@@ -18,8 +18,8 @@ const NativeHero = () => {
                 <span className="dot">•</span>
                 <span>MADE WITH PURPOSE</span>
 
-                <span className="line"></span>
-                <FaLeaf className="leaf-icon" />
+                {/* <span className="line"></span>
+                <FaLeaf className="leaf-icon" /> */}
               </div>
 
               {/* Main Heading */}
@@ -30,7 +30,7 @@ const NativeHero = () => {
               </h1>
 
               {/* Description */}
-              <p className="native-hero-description">
+              <p className="native-hero-description ">
                   Native91 brings together a carefully curated collection of homegrown Indian brands, thoughtfully selected for their products, design, craftsmanship and the stories behind them. From emerging names to brands you’ll soon wonder how you missed, this is where discovery begins.
               </p>
 
@@ -40,12 +40,12 @@ const NativeHero = () => {
                   to="/sell"
                   className="native-btn native-btn-primary"
                 >
-                  <span>Start Discovering</span>
+                  <span>For Brands</span>
                   {/* <FaArrowRight /> */}
                 </NavLink>
 
                 <NavLink to="/category/All" className="native-btn native-btn-outline">
-                  <span>Let’s Explore </span>
+                  <span>Start Exploring </span>
                   {/* <FaArrowRight /> */}
                 </NavLink>
               </div>
