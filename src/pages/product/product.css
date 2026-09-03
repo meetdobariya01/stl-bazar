@@ -1,113 +1,4 @@
-/* product.css - Enhanced with proper image and placeholder styling */
-
 .values-section {
-
-  background-color: #faf8f4;
-  padding-bottom: 4rem;
-}
-
-.value-row {
-  margin: 4rem 0;
-}
-
-/* ========== IMAGE WRAPPER ========== */
-.value-image-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  padding: 0.5rem;
-}
-
-/* ========== BRAND IMAGE CONTAINER ========== */
-.brand-image-container {
-  width: 100%;
-  max-width: 280px;
-  aspect-ratio: 1 / 1;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-image-container:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-}
-
-.brand-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-
-.brand-image-container:hover .brand-image {
-  transform: scale(1.05);
-}
-
-/* ========== BRAND PLACEHOLDER (when no image) ========== */
-.brand-placeholder {
-  width: 100%;
-  max-width: 280px;
-  aspect-ratio: 1 / 1;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #ffffff, #f5f3ee);
-  border: 2px dashed #d4c9b8;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  transition: all 0.4s ease;
-  position: relative;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-}
-
-.brand-placeholder:hover {
-  transform: translateY(-8px) scale(1.02);
-  border-color: #c8a96b;
-  border-style: solid;
-  background: linear-gradient(145deg, #faf8f4, #f0ede8);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-}
-
-.brand-initial {
-  font-size: 4rem;
-  font-weight: 700;
-  color: #c8a96b;
-  font-family: 'Playfair Display', serif;
-  margin-bottom: 0.5rem;
-  line-height: 1;
-}
-
-.brand-name-display {
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: #4a4a4a;
-  text-align: center;
-  font-family: 'Lexend', sans-serif;
-  letter-spacing: 0.5px;
-  word-break: break-word;
-  max-width: 90%;
-}
-
-/* ========== CONTENT CARD ========== */
-.value-content {
-  background: #ffffff;
-  padding: 2.5rem 3rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-
   /* padding: 4rem 0; */
   background-color: #faf8f4;
 }
@@ -115,7 +6,6 @@
 .value-row {
   margin: 3rem 0;
 }
-
 
 .buy-btn {
   background: #c8a96b;
@@ -133,7 +23,6 @@
 .buy-btn:hover {
   background: #b08a5c;
 }
-
 
 
 .value-image-wrapper {
@@ -163,7 +52,6 @@
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.05);
   transition: transform 0.3s ease;
-
 }
 
 .value-content:hover {
@@ -190,7 +78,6 @@
   padding: 0.75rem 1.8rem;
   border-radius: 12px;
   font-weight: 600;
-  font-size: 0.95rem;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
   transition: all 0.3s ease;
@@ -243,30 +130,6 @@
   .company-name-text {
     font-size: 0.9rem;
   }
-  
-  .value-content h4 {
-    font-size: 1.4rem;
-  }
-  
-  .brand-initial {
-    font-size: 3rem;
-  }
-  
-  .brand-name-display {
-    font-size: 1rem;
-  }
-  
-  .explore-btn {
-    padding: 0.7rem 1.8rem;
-    font-size: 0.9rem;
-    width: 100%;
-    max-width: 250px;
-  }
-  
-  .value-content .nav-link {
-    display: flex;
-    justify-content: center;
-  }
 }
 
 @media (max-width: 576px) {
@@ -286,5 +149,3 @@
   align-items: center;
   width: 100%;
 }
-
-

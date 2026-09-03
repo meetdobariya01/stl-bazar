@@ -5,116 +5,142 @@ import { FaArrowRight } from "react-icons/fa";
 import axios from "axios";
 import "./arrival.css";
 
-const API_URL = process.env.REACT_APP_API_URL;
-// ✅ Image base URLs
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
+
+// ✅ IMAGE BASE URLS
+const VENDOR_API_URL = "https://api-vendor.native91.com";
+const ADMIN_API_URL = "https://api-admin.native91.com";
 const OLD_IMAGE_BASE_URL = "https://native91.com";
-const ADMIN_IMAGE_BASE_URL = "https://api-vendor.native91.com";
 
 const Arrival = () => {
   const [brandSlides, setBrandSlides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
+  const [imageErrors, setImageErrors] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAllBrands();
   }, []);
 
-  // ✅ Get image URL - check if it's an admin uploaded image
-  const getImageUrl = (image) => {
-    if (!image) return null;
+  // ✅ FIXED: IMAGE URL GENERATOR
+  const getImageUrl = (logo) => {
+    if (!logo) return null;
 
-    let imagePath = Array.isArray(image) ? image[0] : image;
-    if (!imagePath) return null;
+    // Handle array
+    let imagePath = Array.isArray(logo) ? logo[0] : logo;
+    
+    // Handle non-string
+    if (!imagePath || typeof imagePath !== 'string') return null;
 
-    // If it's already a full URL
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
+    // Clean the path
+    let cleanPath = imagePath.trim();
+
+    // ✅ If already full URL
+    if (cleanPath.startsWith("http://") || cleanPath.startsWith("https://")) {
+      return cleanPath;
     }
 
-    // Clean the path - remove leading slash if present
-    let cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+    // ✅ Remove leading slash if present
+    if (cleanPath.startsWith("/")) {
+      cleanPath = cleanPath.slice(1);
+    }
 
     // ✅ Check if it's an admin uploaded image (has timestamp in filename)
     const filename = cleanPath.includes('/') ? cleanPath.split('/').pop() : cleanPath;
     const hasTimestamp = /^\d+/.test(filename);
 
+    // ✅ If it starts with images/
+    if (cleanPath.startsWith("images/")) {
+      return `${ADMIN_API_URL}/${cleanPath}`;
+    }
+    
+    // ✅ If it starts with uploads/
+    if (cleanPath.startsWith("uploads/")) {
+      return `${VENDOR_API_URL}/${cleanPath}`;
+    }
+
+    // ✅ If it has timestamp, it's from admin
     if (hasTimestamp) {
-      // ✅ This is an admin uploaded image - use admin backend
-      return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
+      return `${ADMIN_API_URL}/${cleanPath}`;
     }
 
-    // ✅ If it starts with images/ - use old frontend URL
-    if (cleanPath.startsWith('images/')) {
-      return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
-    }
+    // ✅ Default: try admin API
+    return `${ADMIN_API_URL}/${cleanPath}`;
+  };
 
-    // ✅ If it starts with uploads/ - use admin backend
-    if (cleanPath.startsWith('uploads/')) {
-      return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
-    }
-
-    // Default: try old frontend
-    return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
+  const handleImageError = (brandId) => {
+    setImageErrors(prev => ({ ...prev, [brandId]: true }));
   };
 
   const fetchAllBrands = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/companies`);
-
-      // ✅ FIX: The response data is { companies: [...] }
-      const brands = response.data.companies || [];
-
-      console.log("Brands fetched:", brands.length);
-      console.log("Full response:", response.data);
-
-      // Log each brand's image path and generated URL
-      brands.forEach(brand => {
-        const imageUrl = getImageUrl(brand.logo);
-        console.log(`Brand: ${brand.name}`);
-        console.log(`  Raw logo: ${brand.logo}`);
-        console.log(`  Generated URL: ${imageUrl}`);
-        console.log('---');
+      console.log(`🟢 Fetching brands from: ${API_URL}/companies`);
+      
+      const response = await axios.get(`${API_URL}/companies`, {
+        timeout: 10000
       });
 
-      const slides = [];
+      console.log("🟢 Response:", response.data);
 
+      // ✅ Handle different response formats
+      let brands = [];
+      if (response.data) {
+        if (response.data.success && Array.isArray(response.data.companies)) {
+          brands = response.data.companies;
+        } else if (Array.isArray(response.data)) {
+          brands = response.data;
+        } else if (response.data.companies && Array.isArray(response.data.companies)) {
+          brands = response.data.companies;
+        }
+      }
+
+      console.log(`✅ Found ${brands.length} brands`);
+
+      // ✅ Log each brand's logo URL for debugging
+      brands.forEach(brand => {
+        if (brand.logo) {
+          const url = getImageUrl(brand.logo);
+          console.log(`🖼️ ${brand.name}: ${url}`);
+        } else {
+          console.log(`⚠️ ${brand.name}: No logo`);
+        }
+      });
+
+      // ✅ Create slides
+      const slides = [];
       if (brands.length > 0) {
+        // First slide: first 4 brands
         const firstSlideBrands = brands.slice(0, 4);
         slides.push({
           slideNumber: 1,
-          brands: firstSlideBrands.map(brand => {
-            const logoUrl = getImageUrl(brand.logo);
-            return {
-              id: brand._id,
-              name: brand.name,
-              description: brand.description || "Premium Brand",
-              logo: logoUrl || null,
-              rawLogo: brand.logo,
-              firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
-              hasValidLogo: !!logoUrl,
-            };
-          }),
+          brands: firstSlideBrands.map(brand => ({
+            id: brand._id,
+            name: brand.name || "Brand",
+            description: brand.description || "Premium Brand",
+            logo: getImageUrl(brand.logo),
+            rawLogo: brand.logo,
+            firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
+            hasValidLogo: !!getImageUrl(brand.logo)
+          })),
           isFirst: true
         });
 
+        // Second slide: remaining brands
         if (brands.length > 4) {
           const remainingBrands = brands.slice(4);
           slides.push({
             slideNumber: 2,
-            brands: remainingBrands.map(brand => {
-              const logoUrl = getImageUrl(brand.logo);
-              return {
-                id: brand._id,
-                name: brand.name,
-                description: brand.description || "Premium Brand",
-                logo: logoUrl || null,
-                rawLogo: brand.logo,
-                firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
-                hasValidLogo: !!logoUrl,
-              };
-            }),
+            brands: remainingBrands.map(brand => ({
+              id: brand._id,
+              name: brand.name || "Brand",
+              description: brand.description || "Premium Brand",
+              logo: getImageUrl(brand.logo),
+              rawLogo: brand.logo,
+              firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
+              hasValidLogo: !!getImageUrl(brand.logo)
+            })),
             isFirst: false
           });
         }
@@ -122,8 +148,7 @@ const Arrival = () => {
 
       setBrandSlides(slides);
     } catch (error) {
-      console.error("Error fetching brands:", error);
-      // ✅ Show error state
+      console.error("❌ Error fetching brands:", error);
       setBrandSlides([]);
     } finally {
       setLoading(false);
@@ -138,6 +163,7 @@ const Arrival = () => {
     setIndex(selectedIndex);
   };
 
+  // Loading State
   if (loading) {
     return (
       <section className="arrival-premium">
@@ -152,6 +178,7 @@ const Arrival = () => {
     );
   }
 
+  // Empty State
   if (brandSlides.length === 0) {
     return (
       <section className="arrival-premium">
@@ -248,7 +275,6 @@ const Arrival = () => {
                             textAlign: 'center',
                             letterSpacing: '0.5px',
                             boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                            transition: 'all 0.3s ease',
                             border: '2px solid rgba(255,215,0,0.1)'
                           }}
                         >
@@ -257,7 +283,6 @@ const Arrival = () => {
                       </div>
                       <div className="info-premium text-center">
                         <h6 className="name-premium">{brand.name}</h6>
-                        {/* ❌ Description removed */}
                         <Button
                           variant="link"
                           className="shop-premium"
