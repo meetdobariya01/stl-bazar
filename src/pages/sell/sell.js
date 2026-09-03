@@ -42,7 +42,7 @@ const PRODUCT_CATEGORIES = [
 const Sell = () => {
   const { pathname } = useLocation();
   const pricingRef = useRef(null);
-
+  const [agreed, setAgreed] = useState(false);
   useEffect(() => {
     window.scrollTo({
       top: 0,
@@ -126,19 +126,20 @@ const Sell = () => {
       errors.pricingPlan = "Please select a pricing plan";
     }
 
-   if (formData.website.trim()) {
-  try {
-    const website = formData.website.trim();
+    if (formData.website.trim()) {
+      try {
+        const website = formData.website.trim();
 
-    const url = website.startsWith("http://") || website.startsWith("https://")
-      ? website
-      : `https://${website}`;
+        const url =
+          website.startsWith("http://") || website.startsWith("https://")
+            ? website
+            : `https://${website}`;
 
-    new URL(url);
-  } catch (error) {
-    errors.website = "Please enter a valid website or social media URL";
-  }
-}
+        new URL(url);
+      } catch (error) {
+        errors.website = "Please enter a valid website or social media URL";
+      }
+    }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -250,7 +251,7 @@ const Sell = () => {
 
                   <Form onSubmit={handleSubmit}>
                     <Form.Group className="mb-4">
-                      <Form.Label>Full Name *</Form.Label>
+                      <Form.Label>Your Full Name *</Form.Label>
                       <Form.Control
                         type="text"
                         name="fullName"
@@ -406,13 +407,41 @@ const Sell = () => {
                       )}
                     </Form.Group>
 
-                    <div className="privacy-note d-flex align-items-center gap-2 mb-4">
+                    <div className="privacy-note d-flex align-items-center gap-2 ">
                       <FaShieldAlt />
                       <span>
                         We respect your privacy. Your information is safe with
                         us.
                       </span>
                     </div>
+
+                    {/* <div className="privacy-note d-flex align-items-start gap-2 mb-4">
+                      <input
+                        type="checkbox"
+                        id="termsAgreement"
+                        className="terms-checkbox"
+                        checked={agreed}
+                        onChange={(e) => setAgreed(e.target.checked)}
+                      />
+
+                      <label htmlFor="termsAgreement" className="terms-label">
+                        I agree to the{" "}
+                        <a
+                          href="/terms-and-conditions"
+                          rel="noopener noreferrer"
+                        >
+                          Terms & Conditions
+                        </a>{" "}
+                        and{" "}
+                        <a
+                          href="/privacypolicy"
+                          rel="noopener noreferrer"
+                        >
+                          Privacy Policy
+                        </a>
+                        .
+                      </label>
+                    </div> */}
 
                     <Button
                       type="submit"
@@ -427,7 +456,7 @@ const Sell = () => {
                       )}
                     </Button>
 
-                    <div className="signin-text text-center mt-3">
+                    {/* <div className="signin-text text-center mt-3">
                       Already have an account?{" "}
                       <Link
                         to="/login"
@@ -440,7 +469,7 @@ const Sell = () => {
                       >
                         Sign in
                       </Link>
-                    </div>
+                    </div> */}
                   </Form>
                 </div>
               </Col>
