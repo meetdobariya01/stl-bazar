@@ -19,7 +19,7 @@ const SellerSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  category: {
+   category: {
     type: String,
     required: true,
     set: function(value) {
@@ -78,8 +78,15 @@ const SellerSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
-
-// ✅ Using async/await - NO next() function
+SellerSchema.pre('save', function(next) {
+  // If category is an array, convert to string
+  if (Array.isArray(this.category)) {
+    this.category = this.category.join(', ');
+  }
+  this.updatedAt = new Date();
+  next();
+});
+// Generate tracking ID if not exists
 SellerSchema.pre('save', async function() {
   // Convert category if it's an array
   if (Array.isArray(this.category)) {

@@ -33,8 +33,6 @@ transporter.verify((error, success) => {
     console.log("✅ Email server is ready to send messages");
   }
 });
-<<<<<<< HEAD
-=======
 const sendAdminNotificationEmail = async (sellerData) => {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@native91.com";
   
@@ -148,7 +146,6 @@ const sendAdminNotificationEmail = async (sellerData) => {
 
   return await transporter.sendMail(mailOptions);
 };
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
 
 // ============================================================
 // ✅ SEND TRACKING EMAIL
@@ -792,11 +789,6 @@ router.post("/register", async (req, res) => {
     } = req.body;
 
     console.log('📝 Registration request received:', req.body);
-<<<<<<< HEAD
-    console.log('📝 Category type:', typeof category);
-    console.log('📝 Category value:', category);
-=======
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
 
     // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
@@ -806,11 +798,7 @@ router.post("/register", async (req, res) => {
       });
     }
 
-<<<<<<< HEAD
-    // ✅ Handle category - if array, convert to string
-=======
     // Handle category - if array, convert to string
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
     let categoryString = category;
     if (Array.isArray(category)) {
       categoryString = category.join(', ');
@@ -834,11 +822,7 @@ router.post("/register", async (req, res) => {
       email,
       phoneNumber,
       businessName,
-<<<<<<< HEAD
-      category: categoryString, // ✅ Now always a string
-=======
       category: categoryString,
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
       website: website || '',
       pricingPlan: pricingPlan || '',
       status: 'pending',
@@ -851,14 +835,6 @@ router.post("/register", async (req, res) => {
     // Generate tracking URL
     const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${trackingToken}`;
 
-<<<<<<< HEAD
-    // Send tracking email
-    try {
-      await sendTrackingEmail(seller, trackingUrl);
-      console.log(`✅ Tracking email sent to ${seller.email}`);
-    } catch (emailErr) {
-      console.error("❌ Email error:", emailErr);
-=======
     // ========================================================
     // ✅ SEND EMAILS
     // ========================================================
@@ -878,7 +854,6 @@ router.post("/register", async (req, res) => {
       console.log(`📧 Admin email: ${process.env.ADMIN_EMAIL || 'admin@native91.com'}`);
     } catch (adminEmailErr) {
       console.error("❌ Admin email error:", adminEmailErr);
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
     }
 
     res.status(201).json({
@@ -908,13 +883,9 @@ router.post("/register", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-
-=======
 // ============================================================
 // ✅ STATUS CHECK
 // ============================================================
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
 router.get("/status/:trackingId", async (req, res) => {
   try {
     const { trackingId } = req.params;
@@ -964,13 +935,8 @@ router.get("/status/:trackingId", async (req, res) => {
         email: seller.email,
         phoneNumber: seller.phoneNumber,
         category: seller.category,
-<<<<<<< HEAD
-        website: seller.website || '',           // ✅ NEW
-        pricingPlan: seller.pricingPlan || '',   // ✅ NEW
-=======
         website: seller.website || '',
         pricingPlan: seller.pricingPlan || '',
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
         status: seller.status,
         registeredAt: seller.registeredAt,
         updatedAt: seller.updatedAt,
@@ -1058,11 +1024,7 @@ router.get("/applications/:id", async (req, res) => {
 });
 
 // ============================================================
-<<<<<<< HEAD
-// ✅ ADMIN: APPROVE APPLICATION - NO EMAIL (Frontend handles it)
-=======
 // ✅ ADMIN: APPROVE APPLICATION
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
 // ============================================================
 router.post("/applications/:id/approve", async (req, res) => {
   try {
@@ -1122,19 +1084,8 @@ router.post("/applications/:id/approve", async (req, res) => {
     application.vendorId = vendor._id;
     await application.save();
 
-<<<<<<< HEAD
-    // ========================================================
-    // ⚠️ IMPORTANT: NO EMAIL SENT HERE!
-    // The frontend will handle sending the approval email
-    // via /send-approval-email endpoint on port 5001
-    // ========================================================
     console.log(`✅ Application approved for: ${application.email}`);
     console.log(`✅ Vendor created: ${vendor._id}`);
-    console.log(`📧 NO EMAIL SENT - Frontend will handle it`);
-=======
-    console.log(`✅ Application approved for: ${application.email}`);
-    console.log(`✅ Vendor created: ${vendor._id}`);
->>>>>>> 3b781d5c3e704d1aec739a49ba01f31f1bdabb83
 
     res.json({
       success: true,

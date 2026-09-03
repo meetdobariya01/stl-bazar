@@ -8,10 +8,10 @@ import "./arrival.css";
 const API_URL = process.env.REACT_APP_API_URL;
 
 const OLD_IMAGE_BASE_URL = "https://native91.com";
-const ADMIN_IMAGE_BASE_URL = "https://api-admin.native91.com";
-const VENDOR_IMAGE_BASE_URL = "https://api-vendor.native91.com";
+const ADMIN_IMAGE_BASE_URL = "https://api-vendor.native91.com";
 
 const Arrival = () => {
+  const [brandSlides, setBrandSlides] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,35 +21,42 @@ const Arrival = () => {
     fetchAllBrands();
   }, []);
 
-  // Image Helper
-  const getImageUrl = (logo) => {
-    if (!logo) return null;
-
-    const image = Array.isArray(logo) ? logo[0] : logo;
-
+  // ✅ Get image URL - check if it's an admin uploaded image
+  const getImageUrl = (image) => {
     if (!image) return null;
 
-    // Already full URL
-    if (image.startsWith("http://") || image.startsWith("https://")) {
-      return image;
+    let imagePath = Array.isArray(image) ? image[0] : image;
+    if (!imagePath) return null;
+
+    // If it's already a full URL
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
     }
 
-    // Admin uploaded image
-    if (image.startsWith("/images")) {
-      return `${ADMIN_IMAGE_BASE_URL}${image}`;
+    // Clean the path - remove leading slash if present
+    let cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+
+    // ✅ Check if it's an admin uploaded image (has timestamp in filename)
+    const filename = cleanPath.includes('/') ? cleanPath.split('/').pop() : cleanPath;
+    const hasTimestamp = /^\d+/.test(filename);
+
+    if (hasTimestamp) {
+      // ✅ This is an admin uploaded image - use admin backend
+      return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
     }
 
-    // Vendor uploaded image
-    if (image.startsWith("/uploads")) {
-      return `${VENDOR_IMAGE_BASE_URL}${image}`;
+    // ✅ If it starts with images/ - use old frontend URL
+    if (cleanPath.startsWith('images/')) {
+      return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
     }
 
-    // Old frontend images
-    if (image.startsWith("images/")) {
-      return `${OLD_IMAGE_BASE_URL}/${image}`;
+    // ✅ If it starts with uploads/ - use admin backend
+    if (cleanPath.startsWith('uploads/')) {
+      return `${ADMIN_IMAGE_BASE_URL}/${cleanPath}`;
     }
 
-    return image;
+    // Default: try old frontend
+    return `${OLD_IMAGE_BASE_URL}/${cleanPath}`;
   };
 
   const fetchAllBrands = async () => {
@@ -58,25 +65,68 @@ const Arrival = () => {
 
       const response = await axios.get(`${API_URL}/companies`);
 
-      const fetchedBrands = response.data.companies || [];
+      // ✅ FIX: The response data is { companies: [...] }
+      const brands = response.data.companies || [];
 
-      console.log("✅ Brands fetched:", fetchedBrands.length);
+      console.log("Brands fetched:", brands.length);
+      console.log("Full response:", response.data);
 
-      const formattedBrands = fetchedBrands.map((brand) => {
-        const logoUrl = getImageUrl(brand.logo);
-
-        return {
-          id: brand._id,
-          name: brand.name,
-          logo: logoUrl || null,
-          hasValidLogo: !!logoUrl,
-        };
+      // Log each brand's image path and generated URL
+      brands.forEach(brand => {
+        const imageUrl = getImageUrl(brand.logo);
+        console.log(`Brand: ${brand.name}`);
+        console.log(`  Raw logo: ${brand.logo}`);
+        console.log(`  Generated URL: ${imageUrl}`);
+        console.log('---');
       });
 
-      setBrands(formattedBrands);
+      const slides = [];
+
+      if (brands.length > 0) {
+        const firstSlideBrands = brands.slice(0, 4);
+        slides.push({
+          slideNumber: 1,
+          brands: firstSlideBrands.map(brand => {
+            const logoUrl = getImageUrl(brand.logo);
+            return {
+              id: brand._id,
+              name: brand.name,
+              description: brand.description || "Premium Brand",
+              logo: logoUrl || null,
+              rawLogo: brand.logo,
+              firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
+              hasValidLogo: !!logoUrl,
+            };
+          }),
+          isFirst: true
+        });
+
+        if (brands.length > 4) {
+          const remainingBrands = brands.slice(4);
+          slides.push({
+            slideNumber: 2,
+            brands: remainingBrands.map(brand => {
+              const logoUrl = getImageUrl(brand.logo);
+              return {
+                id: brand._id,
+                name: brand.name,
+                description: brand.description || "Premium Brand",
+                logo: logoUrl || null,
+                rawLogo: brand.logo,
+                firstLetter: brand.name ? brand.name.charAt(0).toUpperCase() : '?',
+                hasValidLogo: !!logoUrl,
+              };
+            }),
+            isFirst: false
+          });
+        }
+      }
+
+      setBrandSlides(slides);
     } catch (error) {
-      console.error("❌ Error fetching brands:", error);
-      setBrands([]);
+      console.error("Error fetching brands:", error);
+      // ✅ Show error state
+      setBrandSlides([]);
     } finally {
       setLoading(false);
     }

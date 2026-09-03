@@ -798,7 +798,7 @@ const Checkout = () => {
                           Processing...
                         </>
                       ) : (
-                        ` We are not accepting orders at the moment. ₹${formatPrice(total)}`
+                        `Pay ₹${formatPrice(total)}`
                       )}
                     </Button>
 
