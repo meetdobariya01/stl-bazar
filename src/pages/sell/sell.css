@@ -417,3 +417,54 @@
     min-width: 16px;
   }
 }
+
+/* OTP Verification Styles */
+.otp-verification {
+  background: #faf9f5;
+  border-radius: 12px;
+  border: 1px solid #eeeae0;
+}
+
+.otp-input {
+  transition: all 0.2s ease;
+}
+
+.otp-input:focus {
+  border-color: #073f31 !important;
+  box-shadow: 0 0 0 3px rgba(7, 63, 49, 0.15) !important;
+  outline: none;
+}
+
+.otp-success {
+  background: #f0f7f0;
+  border-radius: 12px;
+  border: 1px solid #b8d4b8;
+}
+
+.otp-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #e8f5e9;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 14px;
+}
+
+/* Timer styles */
+.timer {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+/* Responsive OTP inputs */
+@media (max-width: 576px) {
+  .otp-input {
+    width: 40px !important;
+    height: 50px !important;
+    font-size: 20px !important;
+  }
+  
+  .otp-input-group {
+    gap: 8px !important;
+  }
+}
