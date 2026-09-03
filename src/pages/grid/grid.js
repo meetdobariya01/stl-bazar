@@ -29,8 +29,8 @@ import "./grid.css";
 import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
-// const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
-const VENDOR_BACKEND_URL = "http://localhost:5177"; // For local development
+const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
+// const VENDOR_BACKEND_URL = "http://localhost:5177"; // For local development
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
   let img = Array.isArray(image) ? image[0] : image;
