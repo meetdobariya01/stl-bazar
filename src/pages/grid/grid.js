@@ -539,7 +539,7 @@ const Grid = () => {
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
                   <h5>No products found</h5>
-                  <Button variant="primary" onClick={clearFilters}>
+                  <Button variant="outline-dark" onClick={clearFilters}>
                     Clear Filters
                   </Button>
                 </div>
