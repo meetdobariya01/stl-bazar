@@ -5,7 +5,7 @@
   overflow: hidden;
 }
 
-/* BLURRED BACKGROUND IMAGE */
+/* BACKGROUND IMAGE */
 .footer-section::before {
   content: "";
   position: absolute;
@@ -15,18 +15,23 @@
   background: url("../../../public/images/desktop-footer.webp") center / cover
     no-repeat;
 
-  /* filter: blur(2px); */
-  /* transform: scale(1.02); */
+  pointer-events: none;
 }
 
-/* DARK GREEN OVERLAY */
+/* OVERLAY */
 .footer-section::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
 
-  /* background: rgba(7, 18, 13, 0.35); */
+  pointer-events: none;
+}
+
+/* FOOTER CONTENT - CLICKABLE */
+.footer-section > * {
+  position: relative;
+  z-index: 2;
 }
 
 /* KEEP CONTENT ABOVE BACKGROUND */
@@ -187,7 +192,6 @@
   .footer-text {
     font-size: 14px;
   }
-  
 }
 
 /* MOBILE FOOTER ACCORDION */
