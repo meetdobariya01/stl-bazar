@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION WITH SHIPPING INFO (1 WEEK)
+// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION WITH SHIPPING INFO, INGREDIENTS, NUTRITIONAL INFO, ALLERGENS & DIETARY PREFERENCES
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -35,6 +35,12 @@ import {
   FaBox,
   FaShippingFast,
   FaMapMarkerAlt,
+  FaInfoCircle,
+  FaLeaf,
+  FaExclamationTriangle,
+  FaUtensils,
+  FaAppleAlt,
+  FaSeedling,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -804,6 +810,7 @@ const Productdetails = () => {
         weightUnit: product.weightUnit || "",
         sku: product.sku || "",
         variant: product.variant || "",
+        ingredients: product.ingredients || "",
       });
 
       setShowCart(true);
@@ -856,6 +863,7 @@ const Productdetails = () => {
         weightUnit: product.weightUnit || "",
         sku: product.sku || "",
         variant: product.variant || "",
+        ingredients: product.ingredients || "",
       });
 
       navigate("/checkout");
@@ -966,6 +974,23 @@ const Productdetails = () => {
   const stockStatus = getStockStatus(stock);
   const sizeWeightInfo = formatSizeWeight(product);
   const shippingInfo = getShippingDisplay(product);
+
+  // 🆕 Get ingredients data
+  const hasIngredients = product.ingredients || (product.ingredientsList && product.ingredientsList.length > 0);
+  const hasAllergens = product.allergens && product.allergens.length > 0;
+  const hasNutritionalInfo = product.nutritionalInfo && 
+    (product.nutritionalInfo.servingSize || 
+     product.nutritionalInfo.calories > 0 || 
+     product.nutritionalInfo.protein > 0 ||
+     product.nutritionalInfo.carbohydrates > 0 ||
+     product.nutritionalInfo.fat > 0);
+  const hasDietaryInfo = product.dietaryInfo && 
+    (product.dietaryInfo.isVegetarian || 
+     product.dietaryInfo.isVegan || 
+     product.dietaryInfo.isGlutenFree || 
+     product.dietaryInfo.isDairyFree || 
+     product.dietaryInfo.isNutFree || 
+     product.dietaryInfo.isOrganic);
 
   return (
     <>
@@ -1192,6 +1217,150 @@ const Productdetails = () => {
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* 🆕 INGREDIENTS & ALLERGENS SECTION */}
+                {(hasIngredients || hasAllergens) && (
+                  <div className="ingredients-section mt-3 p-3 border rounded" style={{ background: '#fafafa' }}>
+                    {hasIngredients && (
+                      <div className="mb-2">
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <FaUtensils className="text-primary" />
+                          <strong>Ingredients</strong>
+                        </div>
+                        <p className="mb-0 small">
+                          {product.ingredients}
+                          {product.ingredientsList && product.ingredientsList.length > 0 && (
+                            <span className="text-muted d-block mt-1">
+                              <small>Detailed: {product.ingredientsList.join(', ')}</small>
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    {hasAllergens && (
+                      <div className="mt-2">
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <FaExclamationTriangle className="text-warning" />
+                          <strong>Allergens</strong>
+                        </div>
+                        <div className="d-flex flex-wrap gap-1">
+                          {product.allergens.map((allergen, idx) => (
+                            <Badge key={idx} bg="warning" className="text-dark">
+                              {allergen}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 🆕 NUTRITIONAL INFORMATION */}
+                {hasNutritionalInfo && (
+                  <div className="nutritional-info-section mt-3 p-3 border rounded" style={{ background: '#f8fff8' }}>
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <FaAppleAlt className="text-success" />
+                      <strong>Nutritional Information</strong>
+                      {product.nutritionalInfo?.servingSize && (
+                        <span className="text-muted small">(per {product.nutritionalInfo.servingSize})</span>
+                      )}
+                    </div>
+                    <Row className="g-1">
+                      {product.nutritionalInfo?.calories > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Calories</div>
+                            <div className="fw-bold">{product.nutritionalInfo.calories}</div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.protein > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Protein</div>
+                            <div className="fw-bold">{product.nutritionalInfo.protein}g</div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.carbohydrates > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Carbs</div>
+                            <div className="fw-bold">{product.nutritionalInfo.carbohydrates}g</div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.fat > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Fat</div>
+                            <div className="fw-bold">{product.nutritionalInfo.fat}g</div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.sugar > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Sugar</div>
+                            <div className="fw-bold">{product.nutritionalInfo.sugar}g</div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.fiber > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Fiber</div>
+                            <div className="fw-bold">{product.nutritionalInfo.fiber}g</div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.sodium > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Sodium</div>
+                            <div className="fw-bold">{product.nutritionalInfo.sodium}mg</div>
+                          </div>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
+                )}
+
+                {/* 🆕 DIETARY PREFERENCES */}
+                {hasDietaryInfo && (
+                  <div className="dietary-info-section mt-3 d-flex flex-wrap gap-2">
+                    {product.dietaryInfo?.isVegetarian && (
+                      <Badge bg="success" className="p-2" style={{ fontSize: '14px' }}>
+                        <FaLeaf className="me-1" /> Vegetarian
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isVegan && (
+                      <Badge bg="info" className="p-2" style={{ fontSize: '14px' }}>
+                        <FaSeedling className="me-1" /> Vegan
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isGlutenFree && (
+                      <Badge bg="warning" className="p-2" style={{ fontSize: '14px' }}>
+                        🌾 Gluten Free
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isDairyFree && (
+                      <Badge bg="primary" className="p-2" style={{ fontSize: '14px' }}>
+                        🥛 Dairy Free
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isNutFree && (
+                      <Badge bg="secondary" className="p-2" style={{ fontSize: '14px' }}>
+                        🥜 Nut Free
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isOrganic && (
+                      <Badge bg="success" className="p-2" style={{ fontSize: '14px' }}>
+                        🌱 Organic
+                      </Badge>
+                    )}
                   </div>
                 )}
 
@@ -1565,7 +1734,7 @@ const Productdetails = () => {
             </Col>
           </Row>
 
-          {/* ACCORDION SECTION */}
+          {/* ACCORDION SECTION - UPDATED WITH INGREDIENTS */}
           <div className="product-accordion mt-5">
             <details open>
               <summary className="funnel-sans">Product Details</summary>
@@ -1578,6 +1747,153 @@ const Productdetails = () => {
                 </ul>
               )}
             </details>
+
+            {/* 🆕 INGREDIENTS ACCORDION */}
+            {(hasIngredients || hasAllergens || hasNutritionalInfo || hasDietaryInfo) && (
+              <details>
+                <summary className="funnel-sans">
+                  <FaInfoCircle className="me-2" /> Ingredients & Nutrition
+                </summary>
+                <div className="ingredients-accordion p-3">
+                  {hasIngredients && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaUtensils className="me-2 text-primary" />
+                        Ingredients
+                      </h6>
+                      <p className="mb-0">{product.ingredients}</p>
+                      {product.ingredientsList && product.ingredientsList.length > 0 && (
+                        <div className="mt-2">
+                          <small className="text-muted">Detailed:</small>
+                          <ul className="mb-0 mt-1">
+                            {product.ingredientsList.map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {hasAllergens && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaExclamationTriangle className="me-2 text-warning" />
+                        Allergens
+                      </h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {product.allergens.map((allergen, idx) => (
+                          <Badge key={idx} bg="warning" className="text-dark p-2">
+                            {allergen}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {hasNutritionalInfo && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaAppleAlt className="me-2 text-success" />
+                        Nutritional Information
+                        {product.nutritionalInfo?.servingSize && (
+                          <span className="text-muted small ms-2">(per {product.nutritionalInfo.servingSize})</span>
+                        )}
+                      </h6>
+                      <div className="nutrition-grid">
+                        <Row className="g-2">
+                          {product.nutritionalInfo?.calories > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Calories</div>
+                                <div className="fw-bold">{product.nutritionalInfo.calories}</div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.protein > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Protein</div>
+                                <div className="fw-bold">{product.nutritionalInfo.protein}g</div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.carbohydrates > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Carbs</div>
+                                <div className="fw-bold">{product.nutritionalInfo.carbohydrates}g</div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.fat > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Fat</div>
+                                <div className="fw-bold">{product.nutritionalInfo.fat}g</div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.sugar > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Sugar</div>
+                                <div className="fw-bold">{product.nutritionalInfo.sugar}g</div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.fiber > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Fiber</div>
+                                <div className="fw-bold">{product.nutritionalInfo.fiber}g</div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.sodium > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Sodium</div>
+                                <div className="fw-bold">{product.nutritionalInfo.sodium}mg</div>
+                              </div>
+                            </Col>
+                          )}
+                        </Row>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasDietaryInfo && (
+                    <div>
+                      <h6 className="fw-bold">
+                        <FaLeaf className="me-2 text-success" />
+                        Dietary Preferences
+                      </h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {product.dietaryInfo?.isVegetarian && (
+                          <Badge bg="success" className="p-2">🌱 Vegetarian</Badge>
+                        )}
+                        {product.dietaryInfo?.isVegan && (
+                          <Badge bg="info" className="p-2">🌿 Vegan</Badge>
+                        )}
+                        {product.dietaryInfo?.isGlutenFree && (
+                          <Badge bg="warning" className="p-2">🌾 Gluten Free</Badge>
+                        )}
+                        {product.dietaryInfo?.isDairyFree && (
+                          <Badge bg="primary" className="p-2">🥛 Dairy Free</Badge>
+                        )}
+                        {product.dietaryInfo?.isNutFree && (
+                          <Badge bg="secondary" className="p-2">🥜 Nut Free</Badge>
+                        )}
+                        {product.dietaryInfo?.isOrganic && (
+                          <Badge bg="success" className="p-2">🌱 Organic</Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
             
             {/* 🚚 SHIPPING & DELIVERY DETAILS ACCORDION - UPDATED to show 1 week */}
             <details>
