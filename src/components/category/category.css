@@ -85,12 +85,12 @@
 
 .premium-category-content {
   text-align: center;
-  padding: 24px;
-  height: 85px;
+  padding: 12px;
+  height: 45px;
 }
 
 .premium-category-content h5 {
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
   color: #111;

@@ -193,6 +193,7 @@ const Header = () => {
   }, []);
 
   const menu = [
+    { title: "Home", link: "/" },
     { title: "Brands", link: "/product" },
     {
       title: "Category",

@@ -89,10 +89,7 @@ const Footer = () => {
               <h5 className="lexend">OUR PROGRAMS</h5>
               <ul>
                 <li className="footer-links">
-                  <NavLink to="#">
-                    {" "}
-                    E-Gift Voucher
-                  </NavLink>
+                  <NavLink to="#"> E-Gift Voucher</NavLink>
                 </li>
               </ul>
 
@@ -125,35 +122,27 @@ const Footer = () => {
                 <li>{/* <NavLink to="/disclaimer">Disclaimer</NavLink> */}</li>
 
                 <li>
-                  <NavLink to="#">
-                    Terms & Conditions
-                  </NavLink>
+                  <NavLink to="/terms-and-conditions">Terms & Conditions</NavLink>
                 </li>
 
                 <li>
-                  <NavLink to="#">
-                    Shipping Policy
-                  </NavLink>
+                  <NavLink to="/shipping-policy">Shipping Policy</NavLink>
                 </li>
 
                 <li>
-                  <NavLink to="#">
-                    Return, Refund & Cancellation
-                  </NavLink>
+                  <NavLink to="/return-policy">Return, Refund & Cancellation</NavLink>
                 </li>
 
                 <li>
-                  <NavLink to="#">
-                    Privacy Policy
-                  </NavLink>
+                  <NavLink to="/privacypolicy">Privacy Policy</NavLink>
                 </li>
               </ul>
             </Col>
 
-              <hr/>
-              <p className="text-center mb-0">
-                Copyright © 2026 Native91. All rights reserved.
-              </p>
+            <hr />
+            <p className="text-center mb-0">
+              Copyright © 2026 Native91. All rights reserved.
+            </p>
           </Row>
 
           {/* MOBILE VIEW */}
@@ -217,10 +206,7 @@ const Footer = () => {
                   <summary>OUR PROGRAMS</summary>
                   <ul>
                     <li className="footer-links">
-                      <NavLink to="#">
-                        {" "}
-                        E-Gift Voucher
-                      </NavLink>
+                      <NavLink to="#"> E-Gift Voucher</NavLink>
                     </li>
                   </ul>
                 </details>
@@ -234,9 +220,7 @@ const Footer = () => {
                       </li>
 
                       <li>
-                        <NavLink to="#">
-                          Terms & Conditions
-                        </NavLink>
+                        <NavLink to="#">Terms & Conditions</NavLink>
                       </li>
 
                       <li>
@@ -244,9 +228,7 @@ const Footer = () => {
                       </li>
 
                       <li>
-                        <NavLink to="#">
-                          Return, Refund & Cancellation
-                        </NavLink>
+                        <NavLink to="#">Return, Refund & Cancellation</NavLink>
                       </li>
 
                       <li>
@@ -284,7 +266,6 @@ const Footer = () => {
               </div>
             </Col>
           </Row>
-          
         </Container>
       </footer>
 

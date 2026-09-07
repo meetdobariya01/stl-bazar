@@ -129,8 +129,21 @@ const Faqs = () => {
       <Header />
 
       <section className="faq-section lexend">
+        <section className="refund-hero">
+          <div className="container text-center">
+            <span className="badge bg-light text-success mb-3">Need Help?</span>
+
+            <h1 data-aos="fade-down"> Frequently Asked Questions</h1>
+
+            <p data-aos="fade-up">
+              {" "}
+              Find answers to the most common questions about ordering,
+              payments, shipping, returns, refunds, and more.
+            </p>
+          </div>
+        </section>
         <Container>
-          <Row className="justify-content-center">
+          {/* <Row className="justify-content-center">
             <Col lg={8} className="text-center">
               <div data-aos="fade-down">
                 <span className="faq-subtitle">Need Help?</span>
@@ -145,7 +158,7 @@ const Faqs = () => {
                 </p>
               </div>
             </Col>
-          </Row>
+          </Row> */}
 
           <Row className="justify-content-center mt-5">
             <Col lg={10}>
