@@ -780,10 +780,11 @@ const Checkout = () => {
                       </div>
                     </div>
 
-                    <Button
+                    <Button 
                       className="payment-btn"
                       onClick={placeOrder}
                       disabled={isProcessing}
+			disabled
                     >
                       {isProcessing ? (
                         <>

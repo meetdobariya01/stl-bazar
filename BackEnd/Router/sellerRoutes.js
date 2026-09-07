@@ -1,4 +1,4 @@
-// Router/sellerRoutes.js - UPDATED APPROVE ROUTE (NO CREDENTIALS EMAIL)
+// Router/sellerRoutes.js - COMPLETE WITH TWO-STEP REGISTRATION
 
 const express = require("express");
 const router = express.Router();
@@ -7,8 +7,26 @@ const bcrypt = require("bcryptjs");
 const Seller = require("../Models/Seller");
 const Vendor = require("../Models/Vendor");
 const Company = require("../Models/Company");
-
+const { sendOTP, verifyOTP, resendOTP } = require("../utils/otpService");
 const nodemailer = require("nodemailer");
+
+// ============================================================
+// TEMPORARY STORE (Use Redis in production)
+// ============================================================
+const tempStore = new Map();
+const otpVerificationStore = new Map();
+
+// Clean up expired temp data every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of tempStore.entries()) {
+    if (now - value.createdAt > 10 * 60 * 1000) { // 10 minutes
+      tempStore.delete(key);
+      otpVerificationStore.delete(key);
+      console.log(`🧹 Cleaned up expired temp data for: ${key}`);
+    }
+  }
+}, 10 * 60 * 1000);
 
 // ============================================================
 // EMAIL CONFIGURATION
@@ -33,6 +51,10 @@ transporter.verify((error, success) => {
     console.log("✅ Email server is ready to send messages");
   }
 });
+
+// ============================================================
+// SEND ADMIN NOTIFICATION EMAIL
+// ============================================================
 const sendAdminNotificationEmail = async (sellerData) => {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@native91.com";
   
@@ -125,6 +147,11 @@ const sendAdminNotificationEmail = async (sellerData) => {
         <div class="value">${new Date(sellerData.registeredAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
       </div>
       
+      <div class="field">
+        <div class="label">✅ Phone Verified</div>
+        <div class="value">${sellerData.phoneVerified ? 'Yes' : 'No'}</div>
+      </div>
+      
       <hr style="margin: 20px 0; border-color: #eee;">
       
       <div style="text-align: center;">
@@ -148,7 +175,7 @@ const sendAdminNotificationEmail = async (sellerData) => {
 };
 
 // ============================================================
-// ✅ SEND TRACKING EMAIL
+// SEND TRACKING EMAIL (After OTP Verification)
 // ============================================================
 const sendTrackingEmail = async (sellerData, trackingUrl) => {
   const mailOptions = {
@@ -162,11 +189,7 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Native91 Application Status</title>
-
   <style>
-    /* =========================
-       EMAIL RESET
-    ========================== */
     body {
       margin: 0;
       padding: 0;
@@ -176,31 +199,23 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
-
     table {
       border-spacing: 0;
       border-collapse: collapse;
     }
-
     img {
       border: 0;
       display: block;
       max-width: 100%;
     }
-
     a {
       text-decoration: none;
     }
-
-    /* =========================
-       MAIN CONTAINER
-    ========================== */
     .email-wrapper {
       width: 100%;
       padding: 30px 15px;
       background-color: #f5f5f2;
     }
-
     .email-container {
       width: 100%;
       max-width: 560px;
@@ -210,17 +225,12 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       border-radius: 8px;
       overflow: hidden;
     }
-
-    /* =========================
-       HEADER
-    ========================== */
     .header {
       background-color: #073f31;
       padding: 25px 20px;
       text-align: center;
       position: relative;
     }
-
     .brand-name {
       color: #e5d6a5;
       font-family: Georgia, "Times New Roman", serif;
@@ -229,7 +239,6 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       margin: 0;
       font-weight: normal;
     }
-
     .brand-subtitle {
       color: #ffffff;
       font-size: 9px;
@@ -237,7 +246,6 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       margin-top: 4px;
       text-transform: uppercase;
     }
-
     .leaf-decoration {
       color: #b39b63;
       font-size: 35px;
@@ -246,29 +254,16 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       margin-top: -20px;
       margin-right: 10px;
     }
-
-    /* =========================
-       PROGRESS SECTION
-    ========================== */
     .progress-section {
       padding: 22px 30px 10px;
       background-color: #ffffff;
     }
-
-    .progress-line {
-      height: 1px;
-      background-color: #d9d7cf;
-      position: relative;
-      top: 18px;
-    }
-
     .progress-item {
       width: 33.33%;
       text-align: center;
       vertical-align: top;
       position: relative;
     }
-
     .progress-circle {
       width: 36px;
       height: 36px;
@@ -283,26 +278,19 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       position: relative;
       z-index: 2;
     }
-
     .progress-circle.active {
       background-color: #073f31;
       border-color: #073f31;
       color: #ffffff;
     }
-
     .progress-label {
       font-size: 10px;
       color: #343833;
       white-space: nowrap;
     }
-
-    /* =========================
-       CONTENT
-    ========================== */
     .content {
       padding: 10px 35px 25px;
     }
-
     .main-title {
       font-family: Georgia, "Times New Roman", serif;
       font-size: 25px;
@@ -312,28 +300,21 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       text-align: center;
       margin: 5px 0 20px;
     }
-
     .greeting {
       font-size: 13px;
       color: #333631;
       margin: 0 0 12px;
     }
-
     .paragraph {
       font-size: 12px;
       line-height: 1.65;
       color: #50534e;
       margin: 0 0 12px;
     }
-
     .gold {
       color: #987d4e;
       font-weight: bold;
     }
-
-    /* =========================
-       APPLICATION BOX
-    ========================== */
     .application-box {
       background-color: #faf9f5;
       border: 1px solid #eeeae0;
@@ -342,7 +323,6 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       margin: 18px 0 15px;
       text-align: center;
     }
-
     .application-label {
       font-size: 9px;
       color: #74766f;
@@ -350,38 +330,30 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       text-transform: uppercase;
       margin-bottom: 5px;
     }
-
     .application-id {
       font-size: 16px;
       color: #333631;
       font-weight: bold;
       margin-bottom: 18px;
     }
-
     .status-label {
       font-size: 9px;
       color: #74766f;
       text-transform: uppercase;
       margin-bottom: 5px;
     }
-
     .status {
       font-family: Georgia, "Times New Roman", serif;
       color: #987d4e;
       font-size: 14px;
       letter-spacing: 0.5px;
     }
-
-    /* =========================
-       TRACK BUTTON
-    ========================== */
     .track-text {
       text-align: center;
       font-size: 10px;
       color: #60625c;
       margin: 12px 0;
     }
-
     .track-button {
       display: inline-block;
       background-color: #073f31;
@@ -393,43 +365,15 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       letter-spacing: 0.3px;
       text-transform: uppercase;
     }
-
     .arrow {
       color: #d8c48e;
       font-size: 15px;
       padding-left: 8px;
     }
-
-    /* =========================
-       SUPPORT
-    ========================== */
-    .support {
-      text-align: center;
-      margin-top: 17px;
-      padding-top: 15px;
-      border-top: 1px solid #eeeae0;
-    }
-
-    .support-title {
-      font-size: 10px;
-      color: #74766f;
-      margin-bottom: 5px;
-    }
-
-    .support-email {
-      font-size: 11px;
-      color: #073f31;
-      font-weight: bold;
-    }
-
-    /* =========================
-       SOCIAL ICONS
-    ========================== */
     .social-section {
       text-align: center;
       padding: 12px 0 5px;
     }
-
     .social-icon {
       display: inline-block;
       width: 25px;
@@ -442,273 +386,92 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
       margin: 0 5px;
       text-align: center;
     }
-
-    /* =========================
-       FOOTER
-    ========================== */
     .footer {
       text-align: center;
       padding: 5px 25px 20px;
       font-size: 9px;
       color: #999b94;
     }
-
-    /* =========================
-       MOBILE
-    ========================== */
     @media only screen and (max-width: 600px) {
-
-      .email-wrapper {
-        padding: 10px 8px;
-      }
-
-      .email-container {
-        width: 100% !important;
-      }
-
-      .header {
-        padding: 22px 15px;
-      }
-
-      .brand-name {
-        font-size: 21px;
-      }
-
-      .content {
-        padding: 10px 22px 22px;
-      }
-
-      .main-title {
-        font-size: 23px;
-      }
-
-      .progress-section {
-        padding-left: 15px;
-        padding-right: 15px;
-      }
-
-      .progress-label {
-        font-size: 9px;
-      }
-
-      .application-box {
-        padding: 15px 10px;
-      }
-
-      .track-button {
-        padding: 11px 16px;
-      }
+      .email-wrapper { padding: 10px 8px; }
+      .email-container { width: 100% !important; }
+      .header { padding: 22px 15px; }
+      .brand-name { font-size: 21px; }
+      .content { padding: 10px 22px 22px; }
+      .main-title { font-size: 23px; }
+      .progress-section { padding-left: 15px; padding-right: 15px; }
+      .progress-label { font-size: 9px; }
+      .application-box { padding: 15px 10px; }
+      .track-button { padding: 11px 16px; }
     }
   </style>
 </head>
-
 <body>
-
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr>
       <td class="email-wrapper">
-
-        <!-- MAIN EMAIL -->
-        <table
-          role="presentation"
-          class="email-container"
-          cellpadding="0"
-          cellspacing="0"
-          border="0"
-          align="center"
-        >
-
-          <!-- ================= HEADER ================= -->
+        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" border="0" align="center">
           <tr>
             <td class="header">
-
-              <div class="brand-name">
-                NATIVE91
-              </div>
-
-              <div class="brand-subtitle">
-                RESERVED FOR THE REMARKABLE
-              </div>
-
-              <div class="leaf-decoration">
-                ❧
-              </div>
-
+              <div class="brand-name">NATIVE91</div>
+              <div class="brand-subtitle">RESERVED FOR THE REMARKABLE</div>
+              <div class="leaf-decoration">❧</div>
             </td>
           </tr>
-
-
-          <!-- ================= PROGRESS ================= -->
           <tr>
             <td class="progress-section">
-
-              <table
-                role="presentation"
-                width="100%"
-                cellpadding="0"
-                cellspacing="0"
-                border="0"
-              >
-
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-
-                  <!-- RECEIVED -->
                   <td class="progress-item">
-
-                    <div class="progress-circle active">
-                      ✓
-                    </div>
-
-                    <div class="progress-label">
-                      Received
-                    </div>
-
+                    <div class="progress-circle active">✓</div>
+                    <div class="progress-label">Received</div>
                   </td>
-
-
-                  <!-- UNDER REVIEW -->
                   <td class="progress-item">
-
-                    <div class="progress-circle">
-                      ♙
-                    </div>
-
-                    <div class="progress-label">
-                      Under Review
-                    </div>
-
+                    <div class="progress-circle">♙</div>
+                    <div class="progress-label">Under Review</div>
                   </td>
-
-
-                  <!-- DECISION -->
                   <td class="progress-item">
-
-                    <div class="progress-circle">
-                      ◇
-                    </div>
-
-                    <div class="progress-label">
-                      Decision
-                    </div>
-
+                    <div class="progress-circle">◇</div>
+                    <div class="progress-label">Decision</div>
                   </td>
-
                 </tr>
-
               </table>
-
             </td>
           </tr>
-
-
-          <!-- ================= CONTENT ================= -->
           <tr>
             <td class="content">
-
-              <h1 class="main-title">
-                Your Native91<br>
-                application is in.
-              </h1>
-
-
-              <p class="greeting">
-                Hello ${sellerData.fullName},
-              </p>
-
-
-              <p class="paragraph">
-                Thank you for your interest in becoming a
-                <span class="gold">Native91 Founding Brand.</span>
-              </p>
-
-
-              <p class="paragraph">
-                We've received your application and our
-                curation team will now review your brand,
-                products and overall fit with the Native91
-                community.
-              </p>
-
-
-              <!-- APPLICATION STATUS -->
+              <h1 class="main-title">Your Native91<br>application is in.</h1>
+              <p class="greeting">Hello ${sellerData.fullName},</p>
+              <p class="paragraph">Thank you for your interest in becoming a <span class="gold">Native91 Founding Brand.</span></p>
+              <p class="paragraph">We've received your application and our curation team will now review your brand, products and overall fit with the Native91 community.</p>
               <div class="application-box">
-
-                <div class="application-label">
-                  Application ID
-                </div>
-
-                <div class="application-id">
-                  ${sellerData.trackingId}
-                </div>
-
-                <div class="status-label">
-                  Status
-                </div>
-
-                <div class="status">
-                  UNDER REVIEW
-                </div>
-
+                <div class="application-label">Application ID</div>
+                <div class="application-id">${sellerData.trackingId}</div>
+                <div class="status-label">Status</div>
+                <div class="status">UNDER REVIEW</div>
               </div>
-
-
-              <!-- TRACK STATUS -->
-              <p class="track-text">
-                You can track your application status anytime.
-              </p>
-
-
+              <p class="track-text">You can track your application status anytime.</p>
               <div style="text-align:center;">
-
-                <a
-                  href="${trackingUrl}"
-                  class="track-button"
-                  target="_blank"
-                >
-                  Track Application Status
-                  <span class="arrow">→</span>
+                <a href="${trackingUrl}" class="track-button" target="_blank">
+                  Track Application Status <span class="arrow">→</span>
                 </a>
-
               </div>
-
-
-             
-
-              <!-- SOCIAL -->
               <div class="social-section">
-
-                <a href="#" class="social-icon">
-                  ◎
-                </a>
-
-                <a href="#" class="social-icon">
-                  in
-                </a>
-
-               
-
+                <a href="#" class="social-icon">◎</a>
+                <a href="#" class="social-icon">in</a>
               </div>
-
             </td>
           </tr>
-
-
-          <!-- ================= FOOTER ================= -->
           <tr>
             <td class="footer">
-              <div style="margin-bottom:4px;">
-                This is an automated email. Please do not reply to this message.
-              </div>
+              <div style="margin-bottom:4px;">This is an automated email. Please do not reply to this message.</div>
               © ${new Date().getFullYear()} Native91. All rights reserved.
             </td>
           </tr>
-
         </table>
-
       </td>
     </tr>
   </table>
-
 </body>
 </html>
     `,
@@ -716,8 +479,9 @@ const sendTrackingEmail = async (sellerData, trackingUrl) => {
 
   return await transporter.sendMail(mailOptions);
 };
+
 // ============================================================
-// ✅ SEND REJECTION EMAIL ONLY (NO CREDENTIALS)
+// SEND REJECTION EMAIL
 // ============================================================
 const sendRejectionEmail = async (sellerData, reason) => {
   const mailOptions = {
@@ -746,16 +510,13 @@ const sendRejectionEmail = async (sellerData, reason) => {
           <div class="content">
             <h2>Hello ${sellerData.fullName},</h2>
             <p>We have reviewed your seller application for <strong>Native91</strong>.</p>
-            
             <p style="font-size: 18px; color: #e74c3c; font-weight: bold;">Status: Rejected</p>
-            
             ${reason ? `
               <div class="reason-box">
                 <p><strong>Reason for rejection:</strong></p>
                 <p>${reason}</p>
               </div>
             ` : ''}
-
             <p>We appreciate your interest in joining Native91.</p>
             <p>You can reapply after 30 days if you wish.</p>
             <hr>
@@ -774,9 +535,9 @@ const sendRejectionEmail = async (sellerData, reason) => {
 };
 
 // ============================================================
-// ✅ REGISTER SELLER (with tracking)
+// STEP 1: SEND OTP (Temporary storage - NO SELLER CREATED YET)
 // ============================================================
-router.post("/register", async (req, res) => {
+router.post("/send-otp", async (req, res) => {
   try {
     const { 
       fullName, 
@@ -788,7 +549,7 @@ router.post("/register", async (req, res) => {
       pricingPlan 
     } = req.body;
 
-    console.log('📝 Registration request received:', req.body);
+    console.log('📝 Send OTP request received:', { email, businessName });
 
     // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
@@ -798,13 +559,155 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Handle category - if array, convert to string
-    let categoryString = category;
-    if (Array.isArray(category)) {
-      categoryString = category.join(', ');
-      console.log('🔄 Category converted from array to string:', categoryString);
+    // Check if email already exists
+    const existingSeller = await Seller.findOne({ email });
+    if (existingSeller) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered.",
+      });
     }
 
+    // Generate a temporary ID
+    const tempId = crypto.randomBytes(16).toString('hex');
+    
+    // Store temp data in memory
+    tempStore.set(tempId, {
+      fullName,
+      email,
+      phoneNumber,
+      businessName,
+      category: Array.isArray(category) ? category.join(', ') : category,
+      website: website || '',
+      pricingPlan: pricingPlan || '',
+      createdAt: Date.now(),
+    });
+
+    console.log(`📝 Temp data stored for: ${tempId}`);
+
+    // Send OTP
+    const otpResult = await sendOTP(tempId, email);
+    console.log(`📱 OTP send result: ${otpResult.success ? 'Success' : 'Failed'}`);
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to your email!",
+      data: {
+        tempId: tempId,
+        email: email,
+        otpSent: otpResult?.success || false,
+        ...(process.env.NODE_ENV === 'development' && otpResult?.otp && { otp: otpResult.otp }),
+      },
+    });
+
+  } catch (error) {
+    console.error("❌ Send OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send OTP. Please try again.",
+      error: error.message,
+    });
+  }
+});
+
+// ============================================================
+// STEP 1b: VERIFY OTP
+// ============================================================
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { tempId, otp } = req.body;
+
+    if (!tempId || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Temporary ID and OTP are required",
+      });
+    }
+
+    // Get temp data
+    const tempData = tempStore.get(tempId);
+    if (!tempData) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration session expired. Please start over.",
+      });
+    }
+
+    // Verify OTP
+    const result = await verifyOTP(tempId, otp);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    // Mark OTP as verified in memory
+    otpVerificationStore.set(tempId, true);
+
+    res.json({
+      success: true,
+      message: "OTP verified successfully!",
+      data: {
+        tempId: tempId,
+        email: tempData.email,
+      },
+    });
+
+  } catch (error) {
+    console.error("❌ Verify OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to verify OTP",
+    });
+  }
+});
+
+// ============================================================
+// STEP 2: COMPLETE REGISTRATION (After OTP verification)
+// ============================================================
+router.post("/complete-registration", async (req, res) => {
+  try {
+    const { 
+      tempId,
+      fullName, 
+      email, 
+      phoneNumber, 
+      businessName, 
+      category, 
+      website,
+      pricingPlan 
+    } = req.body;
+
+    console.log('📝 Complete registration request received:', { tempId, email });
+
+    if (!tempId) {
+      return res.status(400).json({
+        success: false,
+        message: "Temporary ID is required",
+      });
+    }
+
+    // Get temp data from store
+    const tempData = tempStore.get(tempId);
+    if (!tempData) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration session expired. Please start over.",
+      });
+    }
+
+    // Verify OTP was verified
+    const otpVerified = otpVerificationStore.get(tempId);
+    if (!otpVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP verification required before completing registration.",
+      });
+    }
+
+    // Check if email already exists (double-check)
     const existingSeller = await Seller.findOne({ email });
     if (existingSeller) {
       return res.status(400).json({
@@ -817,86 +720,133 @@ router.post("/register", async (req, res) => {
     const trackingToken = crypto.randomBytes(32).toString('hex');
     const trackingTokenExpires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
 
+    // Handle category - ensure it's a string
+    let categoryString = category;
+    if (Array.isArray(category)) {
+      categoryString = category.join(', ');
+    }
+
+    // Create seller NOW (after OTP verification)
     const seller = new Seller({
-      fullName,
-      email,
-      phoneNumber,
-      businessName,
-      category: categoryString,
-      website: website || '',
-      pricingPlan: pricingPlan || '',
+      fullName: fullName || tempData.fullName,
+      email: email || tempData.email,
+      phoneNumber: phoneNumber || tempData.phoneNumber,
+      businessName: businessName || tempData.businessName,
+      category: categoryString || tempData.category,
+      website: website || tempData.website || '',
+      pricingPlan: pricingPlan || tempData.pricingPlan || '',
       status: 'pending',
       trackingToken,
       trackingTokenExpires,
+      phoneVerified: true, // Mark as verified since OTP was confirmed
     });
 
     await seller.save();
+    console.log(`✅ Seller created after OTP verification: ${seller._id}`);
 
-    // Generate tracking URL
-    const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${trackingToken}`;
+    // Clean up temp data
+    tempStore.delete(tempId);
+    otpVerificationStore.delete(tempId);
 
-    // ========================================================
-    // ✅ SEND EMAILS
-    // ========================================================
-    
-    // 1. Send tracking email to SELLER
-    try {
-      await sendTrackingEmail(seller, trackingUrl);
-      console.log(`✅ Tracking email sent to seller: ${seller.email}`);
-    } catch (emailErr) {
-      console.error("❌ Seller email error:", emailErr);
-    }
-
-    // 2. ✅ Send notification email to ADMIN
+    // Send admin notification
     try {
       await sendAdminNotificationEmail(seller);
       console.log(`✅ Admin notification email sent for: ${seller.businessName}`);
-      console.log(`📧 Admin email: ${process.env.ADMIN_EMAIL || 'admin@native91.com'}`);
     } catch (adminEmailErr) {
       console.error("❌ Admin email error:", adminEmailErr);
     }
 
+    // Send tracking email to seller
+    try {
+      const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${seller.trackingToken}`;
+      await sendTrackingEmail(seller, trackingUrl);
+      console.log(`✅ Tracking email sent to seller: ${seller.email}`);
+    } catch (trackingErr) {
+      console.error("❌ Tracking email error:", trackingErr);
+    }
+
     res.status(201).json({
       success: true,
-      message: "Registration successful! Please check your email for tracking link.",
+      message: "Registration completed successfully!",
       data: {
-        id: seller._id,
+        sellerId: seller._id,
         fullName: seller.fullName,
         email: seller.email,
         businessName: seller.businessName,
-        category: seller.category,
-        website: seller.website,
-        pricingPlan: seller.pricingPlan,
-        status: seller.status,
         trackingId: seller.trackingId,
+        phoneVerified: seller.phoneVerified,
       },
     });
+
   } catch (error) {
-    console.error("Seller registration error:", error);
+    console.error("❌ Complete registration error:", error);
     res.status(500).json({
       success: false,
       message: error.code === 11000
         ? "This email is already registered"
-        : "Failed to register. Please try again.",
+        : "Failed to complete registration. Please try again.",
       error: error.message,
     });
   }
 });
 
 // ============================================================
-// ✅ STATUS CHECK
+// RESEND OTP
+// ============================================================
+router.post("/resend-otp", async (req, res) => {
+  try {
+    const { tempId } = req.body;
+
+    if (!tempId) {
+      return res.status(400).json({
+        success: false,
+        message: "Temporary ID is required",
+      });
+    }
+
+    const tempData = tempStore.get(tempId);
+    if (!tempData) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration session expired. Please start over.",
+      });
+    }
+
+    const result = await resendOTP(tempId, tempData.email);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "OTP resent to your email!",
+      ...(process.env.NODE_ENV === 'development' && { otp: result.otp }),
+    });
+
+  } catch (error) {
+    console.error("❌ Resend OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to resend OTP",
+    });
+  }
+});
+
+// ============================================================
+// STATUS CHECK (with OTP status)
 // ============================================================
 router.get("/status/:trackingId", async (req, res) => {
   try {
     const { trackingId } = req.params;
     const { token } = req.query;
 
-    console.log(`🔍 Status check request:`);
-    console.log(`   Tracking ID: ${trackingId}`);
-    console.log(`   Token: ${token ? 'Present' : 'Missing'}`);
+    console.log(`🔍 Status check request: ${trackingId}`);
 
     if (!token) {
-      console.log("❌ Token missing in request");
       return res.status(400).json({
         success: false,
         message: "Tracking token is required",
@@ -909,17 +859,13 @@ router.get("/status/:trackingId", async (req, res) => {
     });
 
     if (!seller) {
-      console.log(`❌ Seller not found for trackingId: ${trackingId}`);
       return res.status(404).json({
         success: false,
         message: "Invalid tracking ID or token",
       });
     }
 
-    console.log(`✅ Seller found: ${seller.email}, Status: ${seller.status}`);
-
     if (seller.trackingTokenExpires && new Date(seller.trackingTokenExpires) < new Date()) {
-      console.log(`❌ Token expired for: ${seller.email}`);
       return res.status(400).json({
         success: false,
         message: "Tracking link has expired. Please contact support.",
@@ -938,6 +884,7 @@ router.get("/status/:trackingId", async (req, res) => {
         website: seller.website || '',
         pricingPlan: seller.pricingPlan || '',
         status: seller.status,
+        phoneVerified: seller.phoneVerified,
         registeredAt: seller.registeredAt,
         updatedAt: seller.updatedAt,
       },
@@ -957,11 +904,6 @@ router.get("/status/:trackingId", async (req, res) => {
       }
     }
 
-    if (seller.status !== 'pending' && seller.adminNotes) {
-      response.data.adminNotes = seller.adminNotes;
-    }
-
-    console.log(`✅ Status response sent for: ${seller.email}`);
     res.json(response);
 
   } catch (error) {
@@ -974,13 +916,13 @@ router.get("/status/:trackingId", async (req, res) => {
 });
 
 // ============================================================
-// ✅ ADMIN: GET ALL APPLICATIONS
+// ADMIN: GET ALL APPLICATIONS
 // ============================================================
 router.get("/applications", async (req, res) => {
   try {
     const applications = await Seller.find()
       .sort({ registeredAt: -1 })
-      .select('-trackingToken -trackingTokenExpires');
+      .select('-trackingToken -trackingTokenExpires -otpCode -otpExpires -otpAttempts -otpLastRequested');
 
     res.json({
       success: true,
@@ -996,12 +938,12 @@ router.get("/applications", async (req, res) => {
 });
 
 // ============================================================
-// ✅ ADMIN: GET SINGLE APPLICATION
+// ADMIN: GET SINGLE APPLICATION
 // ============================================================
 router.get("/applications/:id", async (req, res) => {
   try {
     const application = await Seller.findById(req.params.id)
-      .select('-trackingToken -trackingTokenExpires');
+      .select('-trackingToken -trackingTokenExpires -otpCode -otpExpires -otpAttempts -otpLastRequested');
 
     if (!application) {
       return res.status(404).json({
@@ -1024,7 +966,7 @@ router.get("/applications/:id", async (req, res) => {
 });
 
 // ============================================================
-// ✅ ADMIN: APPROVE APPLICATION
+// ADMIN: APPROVE APPLICATION
 // ============================================================
 router.post("/applications/:id/approve", async (req, res) => {
   try {
@@ -1042,6 +984,14 @@ router.post("/applications/:id/approve", async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Application is already ${application.status}`,
+      });
+    }
+
+    // Optional: Check if phone is verified before approval
+    if (!application.phoneVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be verified before approval",
       });
     }
 
@@ -1095,6 +1045,7 @@ router.post("/applications/:id/approve", async (req, res) => {
         vendorEmail: vendor.email,
         vendorCompany: vendor.company,
         trackingId: application.trackingId,
+        phoneVerified: application.phoneVerified,
       },
     });
 
@@ -1108,7 +1059,7 @@ router.post("/applications/:id/approve", async (req, res) => {
 });
 
 // ============================================================
-// ✅ ADMIN: REJECT APPLICATION
+// ADMIN: REJECT APPLICATION
 // ============================================================
 router.post("/applications/:id/reject", async (req, res) => {
   try {
@@ -1166,7 +1117,7 @@ router.post("/applications/:id/reject", async (req, res) => {
 });
 
 // ============================================================
-// ✅ GET STATISTICS
+// GET STATISTICS
 // ============================================================
 router.get("/stats", async (req, res) => {
   try {
@@ -1174,6 +1125,7 @@ router.get("/stats", async (req, res) => {
     const pending = await Seller.countDocuments({ status: 'pending' });
     const approved = await Seller.countDocuments({ status: 'approved' });
     const rejected = await Seller.countDocuments({ status: 'rejected' });
+    const verified = await Seller.countDocuments({ phoneVerified: true });
 
     res.json({
       success: true,
@@ -1182,6 +1134,7 @@ router.get("/stats", async (req, res) => {
         pending,
         approved,
         rejected,
+        phoneVerified: verified,
       },
     });
   } catch (error) {
@@ -1194,7 +1147,7 @@ router.get("/stats", async (req, res) => {
 });
 
 // ============================================================
-// ✅ TEST ROUTE
+// TEST ROUTE
 // ============================================================
 router.get("/test", (req, res) => {
   res.json({ message: "Seller routes are working!" });

@@ -30,7 +30,7 @@ import Details from "../../components/details/details";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
-//const VENDOR_BACKEND_URL = "http://localhost:5177"; // For local development
+// const VENDOR_BACKEND_URL = "http://localhost:5177"; // For local development
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
   let img = Array.isArray(image) ? image[0] : image;
@@ -539,7 +539,7 @@ const Grid = () => {
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
                   <h5>No products found</h5>
-                  <Button variant="primary" onClick={clearFilters}>
+                  <Button variant="outline-dark" onClick={clearFilters}>
                     Clear Filters
                   </Button>
                 </div>

@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION
+// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION WITH SHIPPING INFO (1 WEEK)
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -29,6 +29,12 @@ import {
   FaWeight,
   FaRulerCombined,
   FaTag,
+  FaTruck,
+  FaClock,
+  FaRupeeSign,
+  FaBox,
+  FaShippingFast,
+  FaMapMarkerAlt,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -82,6 +88,59 @@ const formatSizeWeight = (product) => {
   }
   
   return parts.length > 0 ? parts : null;
+};
+
+// 🚚 Get shipping display - UPDATED to show "1 week"
+const getShippingDisplay = (product) => {
+  if (!product) return null;
+  
+  let shippingText = product.shippingTime || "1 week";
+  
+  if (shippingText === "Custom" && product.customShippingTime) {
+    shippingText = product.customShippingTime;
+  }
+  
+  const charge = product.shippingCharge || 0;
+  const isFree = product.isFreeShipping !== undefined ? product.isFreeShipping : true;
+  
+  let chargeText = isFree ? "Free" : `₹${charge}`;
+  
+  // Check if shipping text contains "week" or "weeks"
+  const isWeekBased = shippingText.toLowerCase().includes('week');
+  
+  let deliveryRange = "1 week";
+  
+  if (isWeekBased) {
+    // Extract number from shipping text if it contains a number
+    const weekMatch = shippingText.match(/(\d+)\s*week/);
+    if (weekMatch) {
+      const weeks = parseInt(weekMatch[1]);
+      deliveryRange = `${weeks} week${weeks > 1 ? 's' : ''}`;
+    } else {
+      deliveryRange = shippingText;
+    }
+  } else {
+    // For day-based shipping
+    const minDays = product.estimatedDeliveryDays?.min || 3;
+    const maxDays = product.estimatedDeliveryDays?.max || 7;
+    
+    if (minDays === maxDays) {
+      deliveryRange = `${minDays} days`;
+    } else {
+      deliveryRange = `${minDays}–${maxDays} days`;
+    }
+  }
+  
+  return {
+    shippingText,
+    chargeText,
+    charge,
+    isFree,
+    minDays: product.estimatedDeliveryDays?.min || 3,
+    maxDays: product.estimatedDeliveryDays?.max || 7,
+    displayText: `${chargeText} • ${shippingText}`,
+    deliveryRange: deliveryRange
+  };
 };
 
 // Helper to decode slug back to name
@@ -164,7 +223,6 @@ const Productdetails = () => {
     try {
       console.log(`🟢 Fetching brand details for: ${companyName}`);
       
-      // Try to get company details from the Company model
       const response = await axios.get(`${API_URL}/company/details/${encodeURIComponent(companyName)}`);
       
       console.log("🟢 Brand response:", response.data);
@@ -175,14 +233,12 @@ const Productdetails = () => {
         setBrandDescription(company.description || `${company.name} - Premium brand on Native91`);
         setBrandLogo(company.logo || null);
       } else {
-        // Fallback: use product's company name
         setBrandName(companyName);
         setBrandDescription(`${companyName} - Premium brand on Native91`);
         setBrandLogo(null);
       }
     } catch (err) {
       console.error("🔴 Error fetching brand details:", err);
-      // Fallback
       setBrandName(companyName);
       setBrandDescription(`${companyName} - Premium brand on Native91`);
       setBrandLogo(null);
@@ -515,7 +571,6 @@ const Productdetails = () => {
 
         await fetchReviews(foundProduct._id);
         
-        // ✅ Check wishlist status using context
         const guestId = localStorage.getItem("guestId");
         if (guestId) {
           await fetchWishlist();
@@ -523,7 +578,6 @@ const Productdetails = () => {
           setIsInWishlistState(inWishlist);
         }
 
-        // ✅ Fetch brand details
         const companyName = foundProduct.company || foundProduct.vendor || foundProduct.vendorName;
         if (companyName) {
           await fetchBrandDetails(companyName);
@@ -911,6 +965,7 @@ const Productdetails = () => {
   const originalPrice = product.price;
   const stockStatus = getStockStatus(stock);
   const sizeWeightInfo = formatSizeWeight(product);
+  const shippingInfo = getShippingDisplay(product);
 
   return (
     <>
@@ -1096,7 +1151,6 @@ const Productdetails = () => {
                         </div>
                       )}
                     </div>
-                    {/* Dimensions */}
                     {product.dimensions && (
                       (product.dimensions.length > 0 || product.dimensions.width > 0 || product.dimensions.height > 0) && (
                         <div className="mt-2 small text-muted">
@@ -1108,11 +1162,44 @@ const Productdetails = () => {
                   </div>
                 )}
 
+                {/* 🚚 SHIPPING INFORMATION CARD - UPDATED to show 1 week */}
+                {shippingInfo && (
+                  <div className="shipping-info-card mt-3 p-3 border rounded" style={{ background: '#f8f9fa' }}>
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="shipping-icon">
+                        <FaTruck size={24} className="text-primary" />
+                      </div>
+                      <div className="shipping-details flex-grow-1">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span className="fw-bold">Delivery</span>
+                          <span className="text-success fw-bold">{shippingInfo.chargeText}</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-3 mt-1">
+                          <span className="small">
+                            <FaClock className="me-1 text-muted" />
+                            {shippingInfo.deliveryRange}
+                          </span>
+                          <span className="small text-muted">|</span>
+                          <span className="small">
+                            <FaBox className="me-1 text-muted" />
+                            {shippingInfo.shippingText}
+                          </span>
+                        </div>
+                        {!shippingInfo.isFree && shippingInfo.charge > 0 && (
+                          <Badge bg="info" className="mt-1">
+                            <FaRupeeSign className="me-1" /> ₹{shippingInfo.charge} Shipping
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* STOCK STATUS DISPLAY */}
                 <div className="stock-status mt-3">
                   <Badge 
                     bg={stockStatus.color}
-                    style={{ fontSize: '16px', padding: '8px 16px'   }}
+                    style={{ fontSize: '16px', padding: '8px 16px' }}
                   >
                     {stockStatus.icon} {stockStatus.label}
                   </Badge>
@@ -1472,7 +1559,7 @@ const Productdetails = () => {
                 </div>
 
                 <div className="delivery-text">
-                  Estimated delivery: 3 – 5 business days
+                  Estimated delivery: {shippingInfo ? shippingInfo.deliveryRange : "1 week"}
                 </div>
               </div>
             </Col>
@@ -1492,6 +1579,64 @@ const Productdetails = () => {
               )}
             </details>
             
+            {/* 🚚 SHIPPING & DELIVERY DETAILS ACCORDION - UPDATED to show 1 week */}
+            <details>
+              <summary className="funnel-sans">
+                <FaTruck className="me-2" /> Shipping & Delivery
+              </summary>
+              <div className="shipping-details-accordion p-3">
+                {shippingInfo ? (
+                  <>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <div className="shipping-info-item p-3 border rounded bg-light">
+                          <h6 className="mb-2">
+                            <FaClock className="me-2 text-primary" />
+                            Delivery Time
+                          </h6>
+                          <p className="mb-0">
+                            <strong>{shippingInfo.deliveryRange}</strong>
+                          </p>
+                          <small className="text-muted">
+                            {shippingInfo.shippingText}
+                          </small>
+                        </div>
+                      </div>
+                      <div className="col-md-6">
+                        <div className="shipping-info-item p-3 border rounded bg-light">
+                          <h6 className="mb-2">
+                            <FaRupeeSign className="me-2 text-primary" />
+                            Shipping Cost
+                          </h6>
+                          <p className="mb-0">
+                            <strong className={shippingInfo.isFree ? "text-success" : ""}>
+                              {shippingInfo.chargeText}
+                            </strong>
+                          </p>
+                          <small className="text-muted">
+                            {shippingInfo.isFree 
+                              ? "Free shipping on this item" 
+                              : `₹${shippingInfo.charge} shipping fee applies`}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="d-flex align-items-center gap-3 p-2 bg-primary bg-opacity-10 rounded">
+                        <FaTruck size={20} className="text-primary" />
+                        <small className="text-muted">
+                          Estimated delivery in {shippingInfo.deliveryRange} from order confirmation.
+                          {shippingInfo.isFree && " Free shipping included!"}
+                        </small>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted">Shipping information not available for this product.</p>
+                )}
+              </div>
+            </details>
+            
             <details>
               <summary className="funnel-sans">Why Native91?</summary>
               <p>
@@ -1502,16 +1647,15 @@ const Productdetails = () => {
             </details>
             
             <details>
-              <summary className="funnel-sans">Shipping & Returns</summary>
+              <summary className="funnel-sans">Returns Policy</summary>
               <p>
-                Free shipping above ₹1499. Easy 7-day returns available.{" "}
+                Easy 7-day returns available. Items must be unused and in original packaging.
                 <a
-                  href="/shipping-policy"
-                  className="text-decoration-none text-dark"
+                  href="/returns-policy"
+                  className="text-decoration-none text-primary ms-2"
                 >
-                  Click here
-                </a>{" "}
-                to learn more.
+                  Learn more
+                </a>
               </p>
             </details>
             
@@ -1556,15 +1700,9 @@ const Productdetails = () => {
                     <div className="brand-actions mt-3">
                       {/* <a 
                         href={`/company/${encodeURIComponent(product?.company || brandName || "Native91")}`} 
-                        className="text-decoration-none text-primary  "
+                        className="text-decoration-none text-primary"
                       >
                         View all products from this brand →
-                      </a> */}
-                      {/* <a 
-                        href="/aboutus" 
-                        className="text-decoration-none text-dark ms-3"
-                      >
-                        Learn more about Native91 →
                       </a> */}
                     </div>
                   </>
