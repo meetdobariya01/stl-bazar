@@ -336,6 +336,12 @@
   padding-left: 28px !important;
 }
 
+/* Selected / active item */
+.dropdown-item-custom.active,
+.dropdown-item-custom:active {
+  background: rgba(15, 81, 50, 0.08) !important;
+  color: #0f5132 !important;
+}
 /* product count */
 
 .product-count {

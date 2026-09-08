@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, NavLink  } from "react-router-dom";
 import { Link } from "react-router-dom";
 import {
   Container,
@@ -38,30 +38,35 @@ const PRODUCT_CATEGORIES = [
   "Sustainable Lifestyle",
   "Jewelry & Accessories",
   "Pet Care",
-"Kids Fashion & Toys",
-"Desk Essentials",
+  "Kids Fashion & Toys",
+  "Desk Essentials",
 ];
 
 // ============================================================
 // OTP VERIFICATION COMPONENT (inline for simplicity)
 // ============================================================
-const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }) => {
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+const OTPVerification = ({
+  tempId,
+  onVerificationComplete,
+  onSkip,
+  onResendOTP,
+}) => {
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
   const [canResend, setCanResend] = useState(true);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
-  
+
   const inputRefs = useRef([]);
 
   // Start timer
   useEffect(() => {
     if (timeLeft > 0 && !success) {
       const timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
+        setTimeLeft((prev) => prev - 1);
       }, 1000);
       return () => clearInterval(timer);
     }
@@ -69,47 +74,47 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
 
   const handleChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value.slice(0, 1);
     setOtp(newOtp);
-    setError('');
+    setError("");
 
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    if (newOtp.every(digit => digit !== '') && index === 5) {
+    if (newOtp.every((digit) => digit !== "") && index === 5) {
       handleVerify();
     }
   };
 
   const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text/plain').trim();
+    const pastedData = e.clipboardData.getData("text/plain").trim();
     if (/^\d{6}$/.test(pastedData)) {
-      const digits = pastedData.split('');
+      const digits = pastedData.split("");
       setOtp(digits);
       inputRefs.current[5]?.focus();
     }
   };
 
   const handleVerify = async () => {
-    const otpString = otp.join('');
-    
+    const otpString = otp.join("");
+
     if (otpString.length !== 6) {
-      setError('Please enter all 6 digits');
+      setError("Please enter all 6 digits");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await axios.post(`${API_URL}/sellers/verify-otp`, {
@@ -124,9 +129,9 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
         }
       }
     } catch (err) {
-      console.error('OTP verification error:', err);
-      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
-      setOtp(['', '', '', '', '', '']);
+      console.error("OTP verification error:", err);
+      setError(err.response?.data?.message || "Invalid OTP. Please try again.");
+      setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
@@ -137,7 +142,7 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
     if (!canResend || isResending) return;
 
     setIsResending(true);
-    setError('');
+    setError("");
     setResendCooldown(60);
     setCanResend(false);
 
@@ -151,18 +156,21 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
 
         if (response.data.success) {
           setTimeLeft(600);
-          setOtp(['', '', '', '', '', '']);
+          setOtp(["", "", "", "", "", ""]);
           inputRefs.current[0]?.focus();
-          setError('');
+          setError("");
         }
       }
     } catch (err) {
-      console.error('Resend OTP error:', err);
-      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+      console.error("Resend OTP error:", err);
+      setError(
+        err.response?.data?.message ||
+          "Failed to resend OTP. Please try again.",
+      );
     } finally {
       setIsResending(false);
       const interval = setInterval(() => {
-        setResendCooldown(prev => {
+        setResendCooldown((prev) => {
           if (prev <= 1) {
             clearInterval(interval);
             setCanResend(true);
@@ -177,7 +185,7 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   if (success) {
@@ -185,7 +193,9 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
       <div className="otp-success text-center p-4">
         <FaCheckCircle size={60} color="#0f5132" />
         <h4 className="mt-3">Email Verified!</h4>
-        <p className="text-muted">Your email address has been verified successfully.</p>
+        <p className="text-muted">
+          Your email address has been verified successfully.
+        </p>
         <Button variant="dark" onClick={() => onSkip?.()}>
           Continue
         </Button>
@@ -204,7 +214,7 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
       </div>
 
       {error && (
-        <Alert variant="danger" onClose={() => setError('')} dismissible>
+        <Alert variant="danger" onClose={() => setError("")} dismissible>
           {error}
         </Alert>
       )}
@@ -213,7 +223,7 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
         {otp.map((digit, index) => (
           <Form.Control
             key={index}
-            ref={el => inputRefs.current[index] = el}
+            ref={(el) => (inputRefs.current[index] = el)}
             type="text"
             maxLength={1}
             value={digit}
@@ -222,13 +232,13 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
             onPaste={index === 0 ? handlePaste : undefined}
             className="otp-input text-center"
             style={{
-              width: '50px',
-              height: '60px',
-              fontSize: '24px',
-              fontWeight: 'bold',
-              border: error ? '2px solid #dc3545' : '2px solid #dee2e6',
-              borderRadius: '8px',
-              backgroundColor: digit ? '#f8f9fa' : 'white',
+              width: "50px",
+              height: "60px",
+              fontSize: "24px",
+              fontWeight: "bold",
+              border: error ? "2px solid #dc3545" : "2px solid #dee2e6",
+              borderRadius: "8px",
+              backgroundColor: digit ? "#f8f9fa" : "white",
             }}
             disabled={loading}
             autoFocus={index === 0}
@@ -246,12 +256,12 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
           className="btn btn-link p-0 text-decoration-none"
           onClick={handleResend}
           disabled={!canResend || loading || isResending}
-          style={{ fontSize: '14px', color: '#073f31' }}
+          style={{ fontSize: "14px", color: "#073f31" }}
         >
           {isResending ? (
             <Spinner size="sm" animation="border" />
           ) : canResend ? (
-            'Resend OTP'
+            "Resend OTP"
           ) : (
             `Resend in ${resendCooldown}s`
           )}
@@ -262,13 +272,13 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
         variant="dark"
         className="w-100"
         onClick={handleVerify}
-        disabled={loading || otp.some(digit => digit === '')}
-        style={{ padding: '12px' }}
+        disabled={loading || otp.some((digit) => digit === "")}
+        style={{ padding: "12px" }}
       >
         {loading ? (
           <Spinner size="sm" animation="border" />
         ) : (
-          'Verify Phone Number'
+          "Verify Phone Number"
         )}
       </Button>
 
@@ -298,7 +308,7 @@ const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }
 const Sell = () => {
   const { pathname } = useLocation();
   const pricingRef = useRef(null);
-  
+
   useEffect(() => {
     window.scrollTo({
       top: 0,
@@ -323,13 +333,14 @@ const Sell = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
-  
+
   // OTP State
   const [tempId, setTempId] = useState(null);
   const [showOTP, setShowOTP] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [registrationData, setRegistrationData] = useState(null);
-  const [isCompletingRegistration, setIsCompletingRegistration] = useState(false);
+  const [isCompletingRegistration, setIsCompletingRegistration] =
+    useState(false);
 
   // Standard handler for text/select-one inputs
   const handleChange = (e) => {
@@ -397,9 +408,10 @@ const Sell = () => {
     if (formData.website.trim()) {
       try {
         const website = formData.website.trim();
-        const url = website.startsWith("http://") || website.startsWith("https://")
-          ? website
-          : `https://${website}`;
+        const url =
+          website.startsWith("http://") || website.startsWith("https://")
+            ? website
+            : `https://${website}`;
         new URL(url);
       } catch (error) {
         errors.website = "Please enter a valid website or social media URL";
@@ -462,16 +474,19 @@ const Sell = () => {
 
     try {
       // Step 2: Complete registration after OTP verification
-      const response = await axios.post(`${API_URL}/sellers/complete-registration`, {
-        tempId: tempId,
-        fullName: formData.fullName,
-        email: formData.email,
-        phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
-        businessName: formData.businessName,
-        website: formData.website,
-        pricingPlan: formData.pricingPlan,
-        category: formData.category,
-      });
+      const response = await axios.post(
+        `${API_URL}/sellers/complete-registration`,
+        {
+          tempId: tempId,
+          fullName: formData.fullName,
+          email: formData.email,
+          phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
+          businessName: formData.businessName,
+          website: formData.website,
+          pricingPlan: formData.pricingPlan,
+          category: formData.category,
+        },
+      );
 
       if (response.data.success) {
         setOtpVerified(true);
@@ -482,7 +497,8 @@ const Sell = () => {
     } catch (err) {
       console.error("Registration completion error:", err);
       setError(
-        err.response?.data?.message || "Failed to complete registration. Please try again."
+        err.response?.data?.message ||
+          "Failed to complete registration. Please try again.",
       );
       // If registration fails, go back to form
       setShowOTP(false);
@@ -531,7 +547,7 @@ const Sell = () => {
               {otpVerified && (
                 <div className="otp-verified-badge mt-2">
                   <FaCheckCircle size={20} color="#0f5132" className="me-2" />
-                  <span style={{ color: '#0f5132', fontWeight: '600' }}>
+                  <span style={{ color: "#0f5132", fontWeight: "600" }}>
                     Email Verified ✓
                   </span>
                 </div>
@@ -543,7 +559,8 @@ const Sell = () => {
               </p>
               {registrationData?.trackingId && (
                 <p className="text-muted small">
-                  Your Application ID: <strong>{registrationData.trackingId}</strong>
+                  Your Application ID:{" "}
+                  <strong>{registrationData.trackingId}</strong>
                 </p>
               )}
               <Button
@@ -575,9 +592,7 @@ const Sell = () => {
                 <Col lg={7}>
                   <div className="seller-form-box">
                     <h1 className="funnel-sans">Verify Your Email Address</h1>
-                    <p>
-                      We've sent a 6-digit verification code to your email.
-                    </p>
+                    <p>We've sent a 6-digit verification code to your email.</p>
 
                     {error && (
                       <Alert
@@ -606,7 +621,9 @@ const Sell = () => {
                     <div className="mt-4 text-center">
                       <p className="text-muted small">
                         Having trouble? Contact us at{" "}
-                        <a href="mailto:support@native91.com">support@native91.com</a>
+                        <a href="mailto:support@native91.com">
+                          support@native91.com
+                        </a>
                       </p>
                     </div>
                   </div>
@@ -718,7 +735,7 @@ const Sell = () => {
                       <Form.Control.Feedback type="invalid">
                         {validationErrors.email}
                       </Form.Control.Feedback>
-                       <Form.Text className="text-muted">
+                      <Form.Text className="text-muted">
                         We'll send a verification code to this email via email.
                       </Form.Text>
                     </Form.Group>
@@ -739,7 +756,6 @@ const Sell = () => {
                       <Form.Control.Feedback type="invalid">
                         {validationErrors.phoneNumber}
                       </Form.Control.Feedback>
-                     
                     </Form.Group>
 
                     <Form.Group className="mb-4">
@@ -905,7 +921,7 @@ const Sell = () => {
                     <div>
                       <h5>Founding Seller benefits available</h5>
                       <p>Unlock exclusive early seller advantages</p>
-                    </div>  
+                    </div>
                   </div>
 
                   <div className="support-card d-flex gap-3 p-3 bg-light rounded mt-4">
@@ -921,13 +937,9 @@ const Sell = () => {
                     <FaQuestion size={30} />
                     <div>
                       <h5>Frequently Asked Questions for Sellers</h5>
-                      <a
-                        href="https://faqs.native91.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <NavLink to="/faqseller" className="your-class-name">
                         FAQs for Seller →
-                      </a>
+                      </NavLink>
                     </div>
                   </div>
                 </div>
