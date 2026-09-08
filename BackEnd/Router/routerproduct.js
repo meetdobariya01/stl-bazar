@@ -1,3 +1,5 @@
+
+
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
@@ -9,29 +11,39 @@ const VendorSetting = require("../Models/VendorSetting");
 const StockService = require("../Comfig/stockService");
 const SellerDocument = require("../Models/SellerDocument");
 
-// ============================================================
-// SEARCH SUGGESTIONS
-// ============================================================
 router.get("/search-suggestions", async (req, res) => {
   try {
     const { q } = req.query;
 
-    if (!q || q.trim().length === 0) {
+    console.log(`🔍 Search suggestions request for: "${q}"`);
+
+    if (!q || q.trim().length < 2) {
       return res.json({ 
         success: true, 
         products: [] 
       });
     }
 
+    const searchTerm = q.trim();
+
+    // Search in multiple fields
     const products = await Product.find({
       $or: [
-        { name: { $regex: q, $options: "i" } },
-        { ProductName: { $regex: q, $options: "i" } }
-      ]
+        { name: { $regex: searchTerm, $options: "i" } },
+        { ProductName: { $regex: searchTerm, $options: "i" } },
+        { description: { $regex: searchTerm, $options: "i" } },
+        { category: { $regex: searchTerm, $options: "i" } },
+        { company: { $regex: searchTerm, $options: "i" } }
+      ],
+      isActive: true
     })
-    .limit(8)
-    .select("name ProductName price image company vendorId _id stockQuantity stockStatus");
+    .limit(10)
+    .select("name ProductName price image company vendorId _id stockQuantity stockStatus category")
+    .lean();
 
+    console.log(`📦 Found ${products.length} products matching "${searchTerm}"`);
+
+    // Get vendor IDs to check for suspended vendors
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
     
     let suspendedVendorIds = [];
@@ -43,22 +55,36 @@ router.get("/search-suggestions", async (req, res) => {
       suspendedVendorIds = suspendedVendors.map(v => v._id.toString());
     }
 
+    // ✅ REMOVED stock filter - show all products regardless of stock
     const formattedProducts = products
       .filter(p => !suspendedVendorIds.includes(p.vendorId?.toString()))
-      .filter(p => p.stockQuantity > 0)
+      // ✅ REMOVED: .filter(p => p.stockQuantity > 0)
       .map(p => {
-        const productObj = p.toObject ? p.toObject() : p;
+        // Get the first image or placeholder
+        let imageUrl = null;
+        if (p.image) {
+          if (Array.isArray(p.image) && p.image.length > 0) {
+            imageUrl = p.image[0];
+          } else if (typeof p.image === 'string') {
+            imageUrl = p.image;
+          }
+        }
+
         return {
-          _id: productObj._id,
-          name: productObj.name || productObj.ProductName || "Unnamed Product",
-          price: productObj.price,
-          image: productObj.image || [],
-          company: productObj.company || "Native91",
-          stockQuantity: productObj.stockQuantity || 0,
-          stockStatus: productObj.stockStatus || "out_of_stock",
-          inStock: productObj.stockQuantity > 0
+          _id: p._id,
+          name: p.name || p.ProductName || "Unnamed Product",
+          price: p.price || 0,
+          image: imageUrl ? [imageUrl] : [],
+          company: p.company || "Native91",
+          category: p.category || "",
+          stockQuantity: p.stockQuantity || 0,
+          stockStatus: p.stockStatus || "out_of_stock",
+          inStock: p.stockQuantity > 0,
+          slug: p.slug || p._id
         };
       });
+
+    console.log(`✅ Returning ${formattedProducts.length} suggestions`);
 
     res.json({
       success: true,
@@ -66,7 +92,7 @@ router.get("/search-suggestions", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Search suggestions error:", error);
+    console.error("❌ Search suggestions error:", error);
     res.status(500).json({
       success: false,
       products: [],
@@ -75,123 +101,140 @@ router.get("/search-suggestions", async (req, res) => {
   }
 });
 
-// ============================================================
-// ✅ GET COMPANIES - FIXED WITH CATEGORY AND CREATED AT
-// ============================================================
+
+
 router.get("/companies", async (req, res) => {
   try {
-    // Get all active vendors
     const activeVendors = await Vendor.find({ 
       status: 'active',
       role: 'vendor'
-    }).select('_id company name email createdAt updatedAt');
+    }).select('_id company name email createdAt updatedAt plan categories category logo description');
 
     const companies = [];
+    const categoryMap = {};
 
     for (const vendor of activeVendors) {
-      // ✅ Get Company data first
-      const companyData = await Company.findOne({ 
-        name: vendor.company || vendor.name 
-      });
-      
-      // ✅ Get Vendor Settings
-      const settings = await VendorSetting.findOne({ vendorId: vendor._id });
-      
-      let logo = null;
-      let description = '';
-      let companyName = vendor.company || vendor.name || 'N/A';
-      let category = null;
-      let createdAt = vendor.createdAt || new Date();
-      let plan = vendor.plan || 'STARTER';
-      let status = vendor.status || 'active';
+      let categories = [];
+      let description = "";
 
-      // ✅ 1. Get description and category from Company model FIRST
-      if (companyData) {
-        description = companyData.description || '';
-        category = companyData.category || null;
-        // If Company has logo, use it
-        if (companyData.logo) {
-          logo = companyData.logo;
-        }
-        if (companyData.createdAt) {
-          createdAt = companyData.createdAt;
-        }
+      // ✅ Get description from Vendor first
+      if (vendor.description) {
+        description = vendor.description;
       }
 
-      // ✅ 2. Get logo from settings (override if Company logo not found)
-      if (settings && !logo) {
-        logo = settings.logo || null;
-        if (settings.companyDescription) {
-          description = settings.companyDescription;
-        }
-        if (settings.category) {
-          category = settings.category;
-        }
+      // ✅ Get categories from Vendor
+      if (vendor.categories && vendor.categories.length > 0) {
+        categories = vendor.categories;
+      } else if (vendor.category) {
+        categories = [vendor.category];
       }
 
-      // ✅ 3. If no logo in settings, try SellerDocument
-      if (!logo) {
-        const doc = await SellerDocument.findOne({ 
-          email: vendor.email,
-          status: { $in: ['verified', 'submitted', 'pending_review'] }
-        });
-        
-        if (doc && doc.logo && doc.logo.image) {
-          logo = doc.logo.image;
-          description = doc.brand?.description || description;
-          
-          // Sync to VendorSettings
-          if (settings) {
-            settings.logo = logo;
-            if (doc.brand?.description) {
-              settings.companyDescription = doc.brand.description;
-            }
-            await settings.save();
+      // ✅ Get logo from Vendor
+      let logo = vendor.logo || null;
+      
+      // ✅ If no categories in Vendor, check SellerDocument
+      if (categories.length === 0) {
+        const sellerDoc = await SellerDocument.findOne({ email: vendor.email });
+        if (sellerDoc) {
+          // Get categories from SellerDocument
+          if (sellerDoc.categories && sellerDoc.categories.length > 0) {
+            categories = sellerDoc.categories;
+          } else if (sellerDoc.category) {
+            categories = [sellerDoc.category];
           }
+          
+          // ✅ Get description from SellerDocument brand description
+          if (!description && sellerDoc.brand && sellerDoc.brand.description) {
+            description = sellerDoc.brand.description;
+          }
+          
+          // ✅ NEW: Get LOGO from SellerDocument
+          if (!logo) {
+            if (sellerDoc.logo && typeof sellerDoc.logo === 'object') {
+              logo = sellerDoc.logo.image || sellerDoc.logo.url || null;
+            } else if (Array.isArray(sellerDoc.logo)) {
+              logo = sellerDoc.logo[0] || null;
+            } else if (typeof sellerDoc.logo === 'string') {
+              logo = sellerDoc.logo;
+            }
+          }
+          
+          // ✅ Get business name from SellerDocument
+          if (sellerDoc.businessName) {
+            vendor.company = sellerDoc.businessName;
+          }
+        }
+      }
+      
+      // ✅ If still no category, check Company
+      if (categories.length === 0) {
+        const companyData = await Company.findOne({ name: vendor.company || vendor.name });
+        if (companyData) {
+          if (companyData.categories && companyData.categories.length > 0) {
+            categories = companyData.categories;
+          } else if (companyData.category) {
+            categories = [companyData.category];
+          }
+          
+          // ✅ Get description from Company
+          if (!description && companyData.description) {
+            description = companyData.description;
+          }
+        }
+      }
+      
+      // ✅ Get logo from Company (if still not found)
+      if (!logo) {
+        const companyData = await Company.findOne({ name: vendor.company || vendor.name });
+        if (companyData && companyData.logo) {
+          logo = companyData.logo;
         }
       }
 
       // ✅ Count products for this company
       const productCount = await Product.countDocuments({ 
-        company: companyName,
+        company: vendor.company,
         stockQuantity: { $gt: 0 }
       });
 
-      // ✅ Only add if company name exists
-      if (companyName && companyName !== 'N/A') {
-        companies.push({
-          _id: vendor._id,
-          name: companyName,
-          description: description || `${companyName} - Premium brand on Native91`,
-          logo: logo,
-          email: vendor.email,
-          hasLogo: !!logo,
-          category: category,
-          plan: plan,
-          status: status,
-          productCount: productCount,
-          createdAt: createdAt,
-          registeredAt: vendor.createdAt || createdAt
-        });
-      }
+      const companyDataObj = {
+        _id: vendor._id,
+        name: vendor.company || vendor.name,
+        description: description || `${vendor.company || vendor.name} - Premium brand on Native91`,
+        logo: logo,
+        email: vendor.email,
+        hasLogo: !!logo,
+        categories: categories.length > 0 ? categories : ['Uncategorized'],
+        category: categories.length > 0 ? categories[0] : 'Uncategorized',
+        plan: vendor.plan || 'STARTER',
+        status: vendor.status || 'active',
+        productCount: productCount,
+        createdAt: vendor.createdAt,
+        registeredAt: vendor.createdAt
+      };
+      
+      companies.push(companyDataObj);
+      
+      categories.forEach(cat => {
+        if (!categoryMap[cat]) {
+          categoryMap[cat] = [];
+        }
+        categoryMap[cat].push(vendor.company);
+      });
     }
-
-    console.log(`✅ Found ${companies.length} active companies`);
-    console.log(`📊 Companies with logos: ${companies.filter(c => c.hasLogo).length}`);
-    console.log(`📊 Companies with categories: ${companies.filter(c => c.category).length}`);
 
     res.json({
       success: true,
       companies: companies,
+      categories: Object.keys(categoryMap).filter(k => k !== 'Uncategorized').sort(),
       stats: {
         total: companies.length,
-        withLogo: companies.filter(c => c.hasLogo).length,
-        withoutLogo: companies.filter(c => !c.hasLogo).length,
-        withCategory: companies.filter(c => c.category).length
+        withCategories: companies.filter(c => c.categories && c.categories[0] !== 'Uncategorized').length,
+        categoriesCount: Object.keys(categoryMap).filter(k => k !== 'Uncategorized').length
       }
     });
   } catch (err) {
-    console.error("Error fetching companies:", err);
+    console.error("❌ Error fetching companies:", err);
     res.status(500).json({ 
       success: false, 
       message: "Failed to fetch companies",
@@ -200,168 +243,8 @@ router.get("/companies", async (req, res) => {
   }
 });
 
-// ============================================================
-// ✅ GET COMPANY BY ID - UPDATED
-// ============================================================
-router.get("/company/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const vendor = await Vendor.findById(id);
-    if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: "Company not found"
-      });
-    }
 
-    // Get settings
-    const settings = await VendorSetting.findOne({ vendorId: vendor._id });
-    
-    let logo = settings?.logo || null;
-    let description = settings?.companyDescription || '';
-    let category = settings?.category || null;
 
-    // If no logo, try documents
-    if (!logo) {
-      const doc = await SellerDocument.findOne({ 
-        email: vendor.email,
-        status: { $in: ['verified', 'submitted', 'pending_review'] }
-      });
-      if (doc && doc.logo && doc.logo.image) {
-        logo = doc.logo.image;
-        description = doc.brand?.description || description;
-      }
-    }
-
-    // Get company data
-    const companyData = await Company.findOne({ name: vendor.company || vendor.name });
-    if (companyData) {
-      if (!description) description = companyData.description || '';
-      if (!category) category = companyData.category || null;
-    }
-
-    res.json({
-      success: true,
-      company: {
-        _id: vendor._id,
-        name: vendor.company || vendor.name,
-        description: description || `${vendor.company} - Premium brand`,
-        logo: logo,
-        email: vendor.email,
-        status: vendor.status,
-        category: category,
-        plan: vendor.plan || 'STARTER'
-      }
-    });
-  } catch (err) {
-    console.error("Error fetching company:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-});
-
-// ============================================================
-// GET COMPANY DETAILS BY NAME - FIXED
-// ============================================================
-router.get("/company/details/:name", async (req, res) => {
-  try {
-    const { name } = req.params;
-    
-    console.log(`🔵 Fetching company details for: "${name}"`);
-    
-    // Try to find company by name (case insensitive)
-    let company = await Company.findOne({ 
-      name: { $regex: new RegExp(`^${name}$`, 'i') }
-    });
-    
-    console.log("🔵 Company found in Company model:", company);
-    
-    // If not found in Company, try Vendor
-    if (!company) {
-      const vendor = await Vendor.findOne({ 
-        company: { $regex: new RegExp(`^${name}$`, 'i') },
-        status: 'active'
-      });
-      
-      console.log("🔵 Vendor found:", vendor);
-      
-      if (vendor) {
-        // Check if there's a Company document for this vendor
-        company = await Company.findOne({ name: vendor.company });
-        
-        if (!company) {
-          // Return vendor data as fallback
-          return res.json({
-            success: true,
-            company: {
-              name: vendor.company || vendor.name,
-              description: vendor.description || `${vendor.company || vendor.name} - Premium brand on Native91`,
-              logo: null,
-              email: vendor.email,
-              status: vendor.status,
-              category: null,
-              plan: vendor.plan || 'STARTER'
-            }
-          });
-        }
-      }
-    }
-    
-    // If still not found, try VendorSetting
-    if (!company) {
-      const vendorSetting = await VendorSetting.findOne({ 
-        companyName: { $regex: new RegExp(`^${name}$`, 'i') }
-      });
-      
-      if (vendorSetting) {
-        return res.json({
-          success: true,
-          company: {
-            name: vendorSetting.companyName || name,
-            description: vendorSetting.companyDescription || `${name} - Premium brand on Native91`,
-            logo: vendorSetting.logo || null,
-            email: vendorSetting.email || null,
-            category: vendorSetting.category || null
-          }
-        });
-      }
-      
-      // Return 404 if nothing found
-      return res.status(404).json({
-        success: false,
-        message: `Company "${name}" not found`
-      });
-    }
-    
-    // Return company data from Company model
-    res.json({
-      success: true,
-      company: {
-        _id: company._id,
-        name: company.name,
-        description: company.description || `${company.name} - Premium brand on Native91`,
-        logo: company.logo || null,
-        status: company.status || 'Active',
-        email: company.email || null,
-        category: company.category || null
-      }
-    });
-    
-  } catch (err) {
-    console.error("🔴 Error fetching company details:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-});
-
-// ============================================================
-// CREATE COMPANY (Admin only)
-// ============================================================
 router.post("/company", async (req, res) => {
   try {
     const { name, description, logo, category } = req.body;

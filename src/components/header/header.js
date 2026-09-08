@@ -1,4 +1,5 @@
-// Header.jsx - WITH CART & WISHLIST COUNTS
+// Header.jsx - WITH FIXED AUTO-SUGGESTIONS
+
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -19,7 +20,7 @@ import {
 } from "react-icons/hi";
 import { FiHeart, FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
@@ -28,6 +29,7 @@ import "./header.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const Header = () => {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -40,6 +42,7 @@ const Header = () => {
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const searchTimeout = useRef(null);
+  const searchRef = useRef(null);
 
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
@@ -84,6 +87,18 @@ const Header = () => {
     };
   }, [fetchCart, fetchWishlist]);
 
+  // 🔥 Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowRecommendations(false);
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // 🔥 LIVE SEARCH: Fetch suggestions while typing
   const fetchLiveSuggestions = async (query) => {
     if (!query || query.trim().length < 2) {
@@ -93,24 +108,26 @@ const Header = () => {
     }
 
     try {
+      console.log(`🔍 Fetching suggestions for: "${query}"`);
+      
       const response = await axios.get(`${API_URL}/search-suggestions`, {
         params: { q: query },
+        timeout: 5000,
       });
 
-      console.log("🔍 LIVE SEARCH API Response:", response.data);
+      console.log("📥 Suggestions response:", response.data);
 
-      // Only use API data, no fallback
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
+        console.log(`✅ Found ${response.data.products.length} products`);
       } else {
-        // API returned empty - show nothing
         setRecommendations([]);
         setShowRecommendations(false);
+        console.log("❌ No products found");
       }
     } catch (error) {
-      console.log("❌ Live search error:", error);
-      // On error, show nothing (no fallback)
+      console.error("❌ Live search error:", error);
       setRecommendations([]);
       setShowRecommendations(false);
     }
@@ -120,6 +137,7 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
+    console.log(`🔍 Typing: "${value}"`);
 
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
@@ -127,7 +145,6 @@ const Header = () => {
 
     searchTimeout.current = setTimeout(() => {
       if (value.trim().length >= 2) {
-        // Only fetch live suggestions from API
         fetchLiveSuggestions(value);
       } else {
         setRecommendations([]);
@@ -172,19 +189,8 @@ const Header = () => {
     setShowRecommendations(false);
     setSearchQuery("");
     setRecommendations([]);
-    window.location.href = `/product/${product._id}`;
+    navigate(`/product/${product._id}`);
   };
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".search-box")) {
-        setShowSearchResults(false);
-        setShowRecommendations(false);
-      }
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -193,7 +199,6 @@ const Header = () => {
   }, []);
 
   const menu = [
-    { title: "Home", link: "/" },
     { title: "Brands", link: "/product" },
     {
       title: "Category",
@@ -208,19 +213,18 @@ const Header = () => {
     // { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 30);
     };
-
     handleScroll();
-
     window.addEventListener("scroll", handleScroll);
-
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
   return (
     <>
       <div className="lexend">
@@ -235,7 +239,7 @@ const Header = () => {
               transition={{ duration: 0.35 }}
             >
               <Container>
-                <div className="search-box">
+                <div className="search-box" ref={searchRef}>
                   <Form onSubmit={handleSearch} className="w-100 d-flex">
                     <Form.Control
                       placeholder="Search products..."
@@ -258,11 +262,19 @@ const Header = () => {
                     </Button>
                   </Form>
 
+                  {/* 🔥 Loading State */}
+                  {isLoading && !recommendations.length && (
+                    <div className="search-loading">
+                      <Spinner animation="border" size="sm" />
+                      <span className="ms-2">Searching...</span>
+                    </div>
+                  )}
+
                   {/* 🔥 Live Recommendations from API while typing */}
                   {showRecommendations && recommendations.length > 0 && (
                     <div className="search-recommendations-dropdown">
                       <div className="recommendations-header">
-                        {/* <span>Live Recommendations</span> */}
+                        <span>Live Recommendations</span>
                         <small>{recommendations.length} products</small>
                       </div>
                       {recommendations.map((product) => (
@@ -297,9 +309,15 @@ const Header = () => {
                         </div>
                       ))}
                       <div className="recommendations-footer">
-                        <div className="view-all-text">
-                          {/* Showing live suggestions for "{searchQuery}" */}
-                        </div>
+                        <button
+                          className="view-all-btn"
+                          onClick={() => {
+                            setShowSearch(false);
+                            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+                          }}
+                        >
+                          View all results for "{searchQuery}"
+                        </button>
                       </div>
                     </div>
                   )}
@@ -350,14 +368,7 @@ const Header = () => {
                     </div>
                   )}
 
-                  {isLoading && !recommendations.length && (
-                    <div className="search-loading">
-                      <Spinner animation="border" size="sm" />
-                      <span className="ms-2">Searching...</span>
-                    </div>
-                  )}
-
-                  {/* 🔥 No results message - Only from API */}
+                  {/* 🔥 No results message */}
                   {!isLoading &&
                     searchQuery.length >= 2 &&
                     !showRecommendations &&
@@ -411,7 +422,7 @@ const Header = () => {
                         {item.title}
                         {loadingCategories && (
                           <span className="ms-1" style={{ fontSize: "10px" }}>
-                            WITING...
+                            ...
                           </span>
                         )}
                       </Dropdown.Toggle>
@@ -470,7 +481,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Wishlist Icon with Count */}
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
@@ -482,7 +492,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Cart Icon with Count */}
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -507,7 +516,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Mobile Wishlist Icon with Count */}
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
@@ -519,7 +527,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Mobile Cart Icon with Count */}
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -564,7 +571,7 @@ const Header = () => {
                         {item.title}
                         {loadingCategories && (
                           <span className="ms-1" style={{ fontSize: "12px" }}>
-                            WITING...
+                            ...
                           </span>
                         )}
                       </div>
@@ -627,7 +634,6 @@ const Header = () => {
                 {wishlistCount > 0 && (
                   <Badge
                     pill
-                    bg=""
                     className="ms-1"
                     style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
                   >
@@ -646,7 +652,6 @@ const Header = () => {
                 {cartCount > 0 && (
                   <Badge
                     pill
-                    // bg="danger"
                     className="ms-1"
                     style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
                   >

@@ -6,6 +6,63 @@ const passport = require("passport");
 const router = express.Router();
 
 // ============================================
+// SESSION STORE (Use Redis in production)
+// ============================================
+const activeSessions = new Map(); // email -> { token, device, loginTime, expiresAt }
+
+// Clean up expired sessions every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [email, session] of activeSessions.entries()) {
+    if (session.expiresAt < now) {
+      activeSessions.delete(email);
+      console.log(`🧹 Cleaned up expired session for: ${email}`);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// ============================================
+// HELPER: Check if user is already logged in
+// ============================================
+const isUserLoggedIn = (email) => {
+  const session = activeSessions.get(email);
+  if (!session) return false;
+  
+  // Check if session is expired
+  if (session.expiresAt < Date.now()) {
+    activeSessions.delete(email);
+    return false;
+  }
+  
+  return true;
+};
+
+// ============================================
+// HELPER: Create session
+// ============================================
+const createSession = (email, token, device = 'Unknown Device') => {
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+  activeSessions.set(email, {
+    token,
+    device,
+    loginTime: new Date().toISOString(),
+    expiresAt,
+  });
+  return { email, expiresAt };
+};
+
+// ============================================
+// HELPER: Logout user (remove session)
+// ============================================
+const logoutUser = (email) => {
+  if (activeSessions.has(email)) {
+    activeSessions.delete(email);
+    return true;
+  }
+  return false;
+};
+
+// ============================================
 // REGISTER
 // ============================================
 router.post("/register", async (req, res) => {
@@ -116,11 +173,24 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // ✅ Check if user is already logged in
+    if (isUserLoggedIn(user.email)) {
+      return res.status(409).json({
+        success: false,
+        message: "This account is already logged in from another device. Please logout from that device first.",
+        code: "ALREADY_LOGGED_IN"
+      });
+    }
+
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET || 'supersecretjwtkey',
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
+
+    // ✅ Create active session
+    const device = req.headers['user-agent'] || 'Unknown Device';
+    createSession(user.email, token, device);
 
     res.json({
       success: true,
@@ -135,6 +205,7 @@ router.post("/login", async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
       message: "Server error. Please try again later."
@@ -163,12 +234,25 @@ router.get(
   }),
   (req, res) => {
     try {
-      const { token } = req.user;
+      const { token, user } = req.user;
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      
+      // ✅ Check if user is already logged in
+      if (user && isUserLoggedIn(user.email)) {
+        // Redirect with error
+        return res.redirect(`${clientUrl}/login?error=already_logged_in`);
+      }
+      
+      // ✅ Create active session for Google login
+      if (user) {
+        const device = req.headers['user-agent'] || 'Unknown Device';
+        createSession(user.email, token, device);
+      }
       
       // DIRECT HOME PAGE REDIRECT WITH TOKEN
       res.redirect(`${clientUrl}/?token=${token}`);
     } catch (error) {
+      console.error("Google callback error:", error);
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
       res.redirect(`${clientUrl}/login?error=auth_failed`);
     }
@@ -222,11 +306,24 @@ router.post("/google-verify", async (req, res) => {
       await user.save();
     }
 
+    // ✅ Check if user is already logged in
+    if (isUserLoggedIn(user.email)) {
+      return res.status(409).json({
+        success: false,
+        message: "This account is already logged in from another device. Please logout from that device first.",
+        code: "ALREADY_LOGGED_IN"
+      });
+    }
+
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET || 'supersecretjwtkey',
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
+
+    // ✅ Create active session
+    const device = req.headers['user-agent'] || 'Unknown Device';
+    createSession(user.email, token, device);
 
     res.json({
       success: true,
@@ -242,9 +339,135 @@ router.post("/google-verify", async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Google verify error:", error);
     res.status(400).json({
       success: false,
       message: "Invalid Google token"
+    });
+  }
+});
+
+// ============================================
+// LOGOUT - Remove session
+// ============================================
+router.post("/logout", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "No token provided"
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey');
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // ✅ Remove session
+    const loggedOut = logoutUser(user.email);
+
+    res.json({
+      success: true,
+      message: loggedOut ? "Logged out successfully" : "No active session found",
+    });
+
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to logout"
+    });
+  }
+});
+
+// ============================================
+// CHECK SESSION STATUS
+// ============================================
+router.get("/session-status", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "No token provided"
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey');
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const session = activeSessions.get(user.email);
+    
+    res.json({
+      success: true,
+      isLoggedIn: !!session,
+      session: session ? {
+        device: session.device,
+        loginTime: session.loginTime,
+        expiresAt: session.expiresAt,
+        expiresIn: Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000))
+      } : null,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    console.error("Session status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to check session status"
+    });
+  }
+});
+
+// ============================================
+// FORCE LOGOUT ALL DEVICES (Admin only)
+// ============================================
+router.post("/admin/force-logout/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    // Check if admin (you can add admin verification here)
+    const isAdmin = req.headers['x-admin-key'] === process.env.ADMIN_KEY;
+    
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    const loggedOut = logoutUser(email);
+    
+    res.json({
+      success: true,
+      message: loggedOut ? `User ${email} logged out from all devices` : "No active session found",
+    });
+
+  } catch (error) {
+    console.error("Force logout error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to force logout"
     });
   }
 });
@@ -273,6 +496,15 @@ router.get("/me", async (req, res) => {
       });
     }
 
+    // ✅ Check if session is still valid
+    if (!isUserLoggedIn(user.email)) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired. Please login again.",
+        code: "SESSION_EXPIRED"
+      });
+    }
+
     res.json({
       success: true,
       user: {
@@ -285,9 +517,49 @@ router.get("/me", async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Get user error:", error);
     res.status(401).json({
       success: false,
       message: "Invalid token"
+    });
+  }
+});
+
+// ============================================
+// GET ACTIVE SESSIONS (Admin only)
+// ============================================
+router.get("/admin/active-sessions", async (req, res) => {
+  try {
+    // Check if admin
+    const isAdmin = req.headers['x-admin-key'] === process.env.ADMIN_KEY;
+    
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    const sessions = [];
+    for (const [email, session] of activeSessions.entries()) {
+      sessions.push({
+        email,
+        ...session,
+        isExpired: session.expiresAt < Date.now()
+      });
+    }
+
+    res.json({
+      success: true,
+      sessions,
+      total: sessions.length
+    });
+
+  } catch (error) {
+    console.error("Get sessions error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get active sessions"
     });
   }
 });
