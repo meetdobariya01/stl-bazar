@@ -1,3 +1,4 @@
+
 // models/SellerDocument.js
 const mongoose = require("mongoose");
 
@@ -8,7 +9,15 @@ const sellerDocumentSchema = new mongoose.Schema(
       index: true,
       unique: true,
     },
-
+  categories: {
+      type: [String],
+      default: []
+    },
+    // ✅ Keep single category for backward compatibility
+    category: {
+      type: String,
+      default: ""
+    },
     company: {
       type: String,
     },
@@ -18,6 +27,10 @@ const sellerDocumentSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+     website: {
+    type: String,
+    default: ""
+  },
 
     // Brand Information
     logo: {

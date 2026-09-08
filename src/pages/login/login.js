@@ -1,8 +1,9 @@
-// Login.js
+// Login.js - UPDATED WITH SESSION MANAGEMENT HANDLING
+
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
+import { Container, Row, Col, Form, Button, Card, Modal } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaGoogle, FaEye, FaEyeSlash, FaExclamationTriangle } from "react-icons/fa";
 import "./login.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
@@ -15,72 +16,143 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showForceLogoutModal, setShowForceLogoutModal] = useState(false);
+  const [pendingLoginData, setPendingLoginData] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   // Check for Google OAuth callback
   useEffect(() => {
-  const params = new URLSearchParams(location.search);
-  const token = params.get("token");
-  const error = params.get("error");
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+    const error = params.get("error");
 
-  if (token) {
-    // Save Google token
-    localStorage.setItem("token", token);
+    if (token) {
+      // Save Google token
+      localStorage.setItem("token", token);
+      // Immediately go to home page and remove token from URL
+      window.history.replaceState({}, document.title, "/");
+      navigate("/", { replace: true });
+    }
 
-    // Immediately go to home page and remove token from URL
-    window.history.replaceState({}, document.title, "/");
+    if (error === "already_logged_in") {
+      setErrorMessage("This account is already logged in from another device.");
+      setShowForceLogoutModal(true);
+    }
 
-    navigate("/", { replace: true });
-  }
+    if (error && error !== "already_logged_in") {
+      setErrorMessage("Google login failed. Please try again.");
+    }
+  }, [location.search, navigate]);
 
-  if (error) {
-    alert("Google login failed. Please try again.");
-  }
-}, [location.search, navigate]);
-// Login.js - Updated handleSubmit
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  // Handle Submit Login
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage("");
 
-  try {
-    console.log("Attempting login with:", { email, password: password ? "***" : "missing" });
+    try {
+      console.log("Attempting login with:", { email, password: password ? "***" : "missing" });
 
-    const response = await axios.post(
-      `${process.env.REACT_APP_API_URL}/auth/login`,
-      { email, password },
-      {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/login`,
+        { email, password },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      console.log("Login response:", response.data);
+
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        navigate("/");
+      } else {
+        setErrorMessage("Login failed: No token received");
+      }
+    } catch (error) {
+      console.error("Login error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+
+      // ✅ Handle "already logged in" error
+      if (error.response?.status === 409 && error.response?.data?.code === "ALREADY_LOGGED_IN") {
+        setErrorMessage(error.response?.data?.message || "This account is already logged in from another device.");
+        setShowForceLogoutModal(true);
+        // Store login data for retry after force logout
+        setPendingLoginData({ email, password });
+      } else {
+        const message = error.response?.data?.message || "Something went wrong! Try again.";
+        setErrorMessage(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Handle Force Logout from other devices
+  const handleForceLogout = async () => {
+    setShowForceLogoutModal(false);
+    setLoading(true);
+
+    try {
+      // Call logout endpoint to clear session
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/logout`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      // Now retry login with stored credentials
+      if (pendingLoginData) {
+        const response = await axios.post(
+          `${process.env.REACT_APP_API_URL}/auth/login`,
+          { 
+            email: pendingLoginData.email, 
+            password: pendingLoginData.password 
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
+          localStorage.setItem("user", JSON.stringify(response.data.user));
+          setPendingLoginData(null);
+          navigate("/");
         }
       }
-    );
-
-    console.log("Login response:", response.data);
-
-    if (response.data.token) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      navigate("/");
-    } else {
-      alert("Login failed: No token received");
+    } catch (error) {
+      console.error("Force logout error:", error);
+      setErrorMessage("Failed to force logout. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Login error details:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    });
+  };
 
-    setLoading(false);
-    const message = error.response?.data?.message || "Something went wrong! Try again.";
-    alert(message);
-  } finally {
-    setLoading(false);
-  }
-};
-  // Handle Google One-Tap Login
+  // Handle Cancel Force Logout
+  const handleCancelForceLogout = () => {
+    setShowForceLogoutModal(false);
+    setPendingLoginData(null);
+    setErrorMessage("");
+  };
+
+  // Handle Google Login
   const handleGoogleLogin = () => {
+    setErrorMessage("");
     window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
   };
 
@@ -111,6 +183,8 @@ const handleSubmit = async (e) => {
 
   const handleGoogleCredentialResponse = async (response) => {
     setGoogleLoading(true);
+    setErrorMessage("");
+
     try {
       const result = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/google-verify`,
@@ -122,8 +196,15 @@ const handleSubmit = async (e) => {
       navigate("/");
     } catch (error) {
       console.error("Google login error:", error);
-      const message = error.response?.data?.message || "Google login failed";
-      alert(message);
+      
+      // ✅ Handle "already logged in" error for Google login
+      if (error.response?.status === 409 && error.response?.data?.code === "ALREADY_LOGGED_IN") {
+        setErrorMessage(error.response?.data?.message || "This account is already logged in from another device.");
+        setShowForceLogoutModal(true);
+      } else {
+        const message = error.response?.data?.message || "Google login failed";
+        setErrorMessage(message);
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -159,6 +240,19 @@ const handleSubmit = async (e) => {
                 <p className="text-center text-muted mb-4">
                   Login to continue shopping
                 </p>
+
+                {/* ✅ Error Message Display */}
+                {errorMessage && !showForceLogoutModal && (
+                  <div className="alert alert-danger d-flex align-items-center" role="alert">
+                    <FaExclamationTriangle className="me-2" />
+                    <span>{errorMessage}</span>
+                    <button
+                      type="button"
+                      className="btn-close ms-auto"
+                      onClick={() => setErrorMessage("")}
+                    />
+                  </div>
+                )}
 
                 <Button
                   variant="outline-dark"
@@ -258,6 +352,46 @@ const handleSubmit = async (e) => {
           </Col>
         </Row>
       </Container>
+
+      {/* ✅ Force Logout Modal */}
+      <Modal show={showForceLogoutModal} onHide={handleCancelForceLogout} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <FaExclamationTriangle className="text-warning me-2" />
+            Already Logged In
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            <strong>This account is already logged in from another device.</strong>
+          </p>
+          <p className="text-muted">
+            For security reasons, only one active session is allowed per account.
+          </p>
+          <p className="text-muted">
+            Would you like to log out from the other device and continue with this login?
+          </p>
+          <div className="mt-3 p-3 bg-light rounded">
+            <small className="text-muted">
+              <strong>What will happen:</strong>
+              <ul className="mb-0 mt-1">
+                <li>The other device will be logged out</li>
+                <li>You will be logged in on this device</li>
+                <li>Your session will remain active for 7 days</li>
+              </ul>
+            </small>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCancelForceLogout}>
+            Cancel
+          </Button>
+          <Button variant="warning" onClick={handleForceLogout} disabled={loading}>
+            {loading ? "Processing..." : "Logout Other Device & Login"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       <Footer />
     </section>
   );
