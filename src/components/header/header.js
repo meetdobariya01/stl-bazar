@@ -205,7 +205,7 @@ const Header = () => {
     },
     { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
-    { title: "FAQs", link: "/faqs" },
+    // { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
   useEffect(() => {

@@ -67,9 +67,9 @@ const Footer = () => {
             <Col md={2}>
               <h5 className="lexend">INFO</h5>
               <ul className="footer-links">
-                <li>
+                {/* <li>
                   <NavLink to="/aboutus">Our Story</NavLink>
-                </li>
+                </li> */}
                 <li>
                   <NavLink to="/contactus">Contact Us</NavLink>
                 </li>
@@ -77,7 +77,10 @@ const Footer = () => {
                   {/* <NavLink to="/track-order">Track Order</NavLink> */}
                 </li>
                 <li>
-                  <NavLink to="/faqs">FAQ</NavLink>
+                  <NavLink to="/faqs">User FAQ</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/faqseller">Seller FAQ</NavLink>
                 </li>
                 <li>
                   <NavLink to="/orderhistory">Order History</NavLink>
@@ -107,12 +110,12 @@ const Footer = () => {
                 >
                   <FaInstagram />
                 </a>
-                <a href="mailto:support@native91.com" target="_blank">
+                {/* <a href="mailto:support@native91.com" target="_blank">
                   <FaEnvelope />
                 </a>
                 <a href="tel:+919998323998" target="_blank">
                   <FaPhone />
-                </a>
+                </a> */}
               </div>
             </Col>
 
@@ -122,7 +125,9 @@ const Footer = () => {
                 <li>{/* <NavLink to="/disclaimer">Disclaimer</NavLink> */}</li>
 
                 <li>
-                  <NavLink to="/terms-and-conditions">Terms & Conditions</NavLink>
+                  <NavLink to="/terms-and-conditions">
+                    Terms & Conditions
+                  </NavLink>
                 </li>
 
                 <li>
@@ -130,7 +135,9 @@ const Footer = () => {
                 </li>
 
                 <li>
-                  <NavLink to="/return-policy">Return, Refund & Cancellation</NavLink>
+                  <NavLink to="/return-policy">
+                    Return, Refund & Cancellation
+                  </NavLink>
                 </li>
 
                 <li>
@@ -139,7 +146,7 @@ const Footer = () => {
               </ul>
             </Col>
 
-            <hr />
+            {/* <hr /> */}
             <p className="text-center mb-0">
               Copyright © 2026 Native91. All rights reserved.
             </p>
@@ -183,9 +190,9 @@ const Footer = () => {
                   <summary>INFO</summary>
                   <div className="mobile-footer-content">
                     <ul className="footer-links">
-                      <li>
+                      {/* <li>
                         <NavLink to="/aboutus">Our Story</NavLink>
-                      </li>
+                      </li> */}
                       <li>
                         <NavLink to="/contactus">Contact Us</NavLink>
                       </li>
@@ -193,7 +200,10 @@ const Footer = () => {
                         {/* <NavLink to="/track-order">Track Order</NavLink> */}
                       </li>
                       <li>
-                        <NavLink to="/faqs">FAQ</NavLink>
+                        <NavLink to="/faqs">User FAQ</NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/faqseller">Seller FAQ</NavLink>
                       </li>
                       <li>
                         <NavLink to="/orderhistory">Order History</NavLink>
@@ -220,19 +230,23 @@ const Footer = () => {
                       </li>
 
                       <li>
-                        <NavLink to="#">Terms & Conditions</NavLink>
+                        <NavLink to="/terms-and-conditions">
+                          Terms & Conditions
+                        </NavLink>
                       </li>
 
                       <li>
-                        <NavLink to="#">Shipping Policy</NavLink>
+                        <NavLink to="/shipping-policy">Shipping Policy</NavLink>
                       </li>
 
                       <li>
-                        <NavLink to="#">Return, Refund & Cancellation</NavLink>
+                        <NavLink to="/return-policy">
+                          Return, Refund & Cancellation
+                        </NavLink>
                       </li>
 
                       <li>
-                        <NavLink to="#">Privacy Policy</NavLink>
+                        <NavLink to="/privacypolicy">Privacy Policy</NavLink>
                       </li>
                     </ul>
                   </div>
@@ -254,12 +268,12 @@ const Footer = () => {
                       >
                         <FaInstagram />
                       </a>
-                      <a href="https://youtube.com" target="_blank">
+                      {/* <a href="https://youtube.com" target="_blank">
                         <FaYoutube />
                       </a>
                       <a href="https://linkedin.com" target="_blank">
                         <FaLinkedinIn />
-                      </a>
+                      </a> */}
                     </div>
                   </div>
                 </details>

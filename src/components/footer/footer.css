@@ -35,10 +35,10 @@
 }
 
 /* KEEP CONTENT ABOVE BACKGROUND */
-.footer-section > * {
+/* .footer-section > * {
   position: relative;
   z-index: 2;
-}
+} */
 .d-none.d-md-flex.row {
   color: #000;
 }
@@ -186,11 +186,22 @@
 /* MOBILE FIX */
 @media (max-width: 768px) {
   .footer-section {
-    padding: 50px 20px;
+    padding: 150px 20px;
   }
 
   .footer-text {
     font-size: 14px;
+  }
+  .footer-section::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    z-index: 0;
+
+    background: url("../../../public/images/mobile-footer.webp") center / cover
+      no-repeat;
+
+    pointer-events: none;
   }
 }
 
