@@ -263,7 +263,7 @@ const Footer = () => {
                         <FaPinterestP />
                       </a> */}
                       <a
-                        href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                        href="https://www.instagram.com/native91.official?utm_source=ig_web_button_share_sheet&igsi=ZDNlZDc0MzIxNw=="
                         target="_blank"
                       >
                         <FaInstagram />
