@@ -10,7 +10,12 @@
       rgba(212, 175, 55, 0.08),
       transparent 30%
     ),
-    linear-gradient(135deg, #07120d 0%, #102019 50%, #07120d 100%);
+    linear-gradient(
+      135deg,
+      #07120d 0%,
+      #102019 50%,
+      #07120d 100%
+    );
 
   padding: 40px 0 55px;
   overflow: hidden;
@@ -25,11 +30,12 @@
   width: 500px;
   height: 500px;
 
-  background: radial-gradient(
-    circle,
-    rgba(212, 175, 55, 0.03) 0%,
-    transparent 70%
-  );
+  background:
+    radial-gradient(
+      circle,
+      rgba(212, 175, 55, 0.03) 0%,
+      transparent 70%
+    );
 
   border-radius: 50%;
   pointer-events: none;
@@ -83,7 +89,12 @@
   width: 100%;
   height: 3px;
 
-  background: linear-gradient(90deg, #c8a96b, transparent);
+  background:
+    linear-gradient(
+      90deg,
+      #c8a96b,
+      transparent
+    );
 
   border-radius: 2px;
   opacity: 0.3;
@@ -124,8 +135,10 @@
 
   transform: translateY(-2px);
 
-  box-shadow: 0 4px 25px rgba(212, 175, 55, 0.1);
+  box-shadow:
+    0 4px 25px rgba(212, 175, 55, 0.1);
 }
+
 
 /* =================================
    AUTO LEFT BRAND SLIDER
@@ -152,26 +165,32 @@
     Increase duration = slower
     Decrease duration = faster
   */
-  animation: brandSlideLeft 35s linear infinite;
+  animation:
+    brandSlideLeft 35s linear infinite;
 
   will-change: transform;
 }
 
 /* Pause on hover */
 
-.brand-slider-wrapper:hover .brand-slider-track {
+.brand-slider-wrapper:hover
+.brand-slider-track {
   animation-play-state: paused;
 }
+
 
 /* Individual slide */
 
 .brand-slide-item {
   flex: 0 0 auto;
 
-  width: calc((100vw - 100px) / 4);
+  width: calc(
+    (100vw - 100px) / 4
+  );
 
   max-width: 340px;
 }
+
 
 /* =================================
    PREMIUM CARD
@@ -180,12 +199,14 @@
 .brand-premium {
   width: 100%;
 
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    rgba(255, 255, 255, 0.05);
 
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 
-  border: 1px solid rgba(212, 175, 55, 0.15);
+  border:
+    1px solid rgba(212, 175, 55, 0.15);
 
   border-radius: 16px;
 
@@ -197,7 +218,13 @@
 
   text-align: center;
 
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  transition:
+    all 0.4s cubic-bezier(
+      0.23,
+      1,
+      0.32,
+      1
+    );
 
   cursor: pointer;
 
@@ -217,15 +244,17 @@
   right: 0;
   bottom: 0;
 
-  background: linear-gradient(
-    135deg,
-    rgba(212, 175, 55, 0.05),
-    transparent 50%
-  );
+  background:
+    linear-gradient(
+      135deg,
+      rgba(212, 175, 55, 0.05),
+      transparent 50%
+    );
 
   opacity: 0;
 
-  transition: opacity 0.4s ease;
+  transition:
+    opacity 0.4s ease;
 
   border-radius: 16px;
 
@@ -237,14 +266,17 @@
 
   border-color: #c8a96b;
 
-  box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15);
+  box-shadow:
+    0 15px 40px rgba(212, 175, 55, 0.15);
 
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    rgba(255, 255, 255, 0.08);
 }
 
 .brand-premium:hover::before {
   opacity: 1;
 }
+
 
 /* =================================
    LOGO
@@ -266,9 +298,11 @@
 
   flex-shrink: 0;
 
-  transition: all 0.4s ease;
+  transition:
+    all 0.4s ease;
 
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.2);
 
   position: relative;
 
@@ -280,7 +314,8 @@
 .brand-premium:hover .logo-premium {
   transform: scale(1.05);
 
-  box-shadow: 0 8px 30px rgba(212, 175, 55, 0.2);
+  box-shadow:
+    0 8px 30px rgba(212, 175, 55, 0.2);
 }
 
 .logo-premium img {
@@ -294,12 +329,15 @@
 
   object-fit: contain;
 
-  transition: transform 0.3s ease;
+  transition:
+    transform 0.3s ease;
 }
 
-.brand-premium:hover .logo-premium img {
+.brand-premium:hover
+.logo-premium img {
   transform: scale(1.04);
 }
+
 
 /* =================================
    BRAND INFO
@@ -324,7 +362,8 @@
 
   font-weight: 600;
 
-  margin: 0 0 4px 0;
+  margin:
+    0 0 4px 0;
 
   letter-spacing: 0.5px;
 
@@ -340,13 +379,15 @@
 }
 
 .desc-premium {
-  color: rgba(255, 255, 255, 0.3);
+  color:
+    rgba(255, 255, 255, 0.3);
 
   font-size: 0.7rem;
 
   font-weight: 300;
 
-  margin: 0 0 12px 0;
+  margin:
+    0 0 12px 0;
 
   line-height: 1.4;
 
@@ -358,6 +399,7 @@
 
   overflow: hidden;
 }
+
 
 /* =================================
    EXPLORE BUTTON
@@ -384,7 +426,8 @@
 
   justify-content: center;
 
-  transition: all 0.3s ease;
+  transition:
+    all 0.3s ease;
 
   border: none;
 
@@ -402,12 +445,16 @@
 }
 
 .shop-premium .arrow-icon {
-  transition: transform 0.3s ease;
+  transition:
+    transform 0.3s ease;
 }
 
-.shop-premium:hover .arrow-icon {
-  transform: translateX(4px);
+.shop-premium:hover
+.arrow-icon {
+  transform:
+    translateX(4px);
 }
+
 
 /* Remove button underline */
 
@@ -417,6 +464,7 @@
 .btn-link:hover {
   text-decoration: none !important;
 }
+
 
 /* =================================
    INFINITE LEFT ANIMATION
@@ -428,17 +476,25 @@
   }
 
   100% {
-    transform: translateX(calc(-50% - 9px));
+    transform:
+      translateX(
+        calc(-50% - 9px)
+      );
   }
 }
+
 
 /* =================================
    TABLET
 ================================= */
 
 @media (max-width: 1199px) {
+
   .brand-slide-item {
-    width: calc((100vw - 80px) / 3);
+    width:
+      calc(
+        (100vw - 80px) / 3
+      );
   }
 
   .logo-premium {
@@ -451,11 +507,13 @@
   }
 }
 
+
 /* =================================
    991px
 ================================= */
 
 @media (max-width: 991px) {
+
   .logo-premium {
     width: 75px;
     height: 75px;
@@ -483,13 +541,16 @@
   }
 }
 
+
 /* =================================
    MOBILE
 ================================= */
 
 @media (max-width: 768px) {
+
   .arrival-premium {
-    padding: 25px 0 40px;
+    padding:
+      25px 0 40px;
   }
 
   .arrival-header-premium {
@@ -514,22 +575,29 @@
   }
 
   .view-premium {
-    padding: 5px 16px;
+    padding:
+      5px 16px;
 
     font-size: 0.7rem;
   }
 
+
   /* 2 cards visible */
 
   .brand-slide-item {
-    width: calc((100vw - 50px) / 2);
+    width:
+      calc(
+        (100vw - 50px) / 2
+      );
   }
 
   .brand-slider-track {
     gap: 12px;
 
-    animation-duration: 25s;
+    animation-duration:
+      25s;
   }
+
 
   .brand-premium {
     padding: 12px;
@@ -561,11 +629,13 @@
   }
 }
 
+
 /* =================================
    SMALL MOBILE
 ================================= */
 
 @media (max-width: 576px) {
+
   .title-premium {
     font-size: 1.2rem;
   }
@@ -584,17 +654,23 @@
     padding: 4px 12px;
   }
 
+
   /* Keep exactly 2 cards visible */
 
   .brand-slide-item {
-    width: calc((100vw - 38px) / 2);
+    width:
+      calc(
+        (100vw - 38px) / 2
+      );
   }
 
   .brand-slider-track {
     gap: 10px;
 
-    animation-duration: 22s;
+    animation-duration:
+      22s;
   }
+
 
   .brand-premium {
     padding: 10px;
@@ -626,6 +702,7 @@
     font-size: 0.6rem;
   }
 }
+
 
 /* =================================
    FALLBACK LETTER
@@ -662,11 +739,13 @@
   text-transform: uppercase;
 }
 
+
 /* =================================
    SMOOTHNESS / ACCESSIBILITY
 ================================= */
 
 @media (prefers-reduced-motion: reduce) {
+
   .brand-slider-track {
     animation: none;
   }

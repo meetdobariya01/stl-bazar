@@ -1,4 +1,5 @@
-// Header.jsx - WITH CART & WISHLIST COUNTS
+// Header.jsx - WITH SUB-CATEGORY SUPPORT
+
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -19,7 +20,7 @@ import {
 } from "react-icons/hi";
 import { FiHeart, FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
@@ -28,6 +29,7 @@ import "./header.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const Header = () => {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -39,34 +41,117 @@ const Header = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [categorySubCategories, setCategorySubCategories] = useState({});
+  const [loadingSubCategories, setLoadingSubCategories] = useState({});
+  
   const searchTimeout = useRef(null);
+  const searchRef = useRef(null);
+  const categoryMenuTimeout = useRef(null);
 
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
 
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await axios.get(`${API_URL}/categories`);
         if (response.data && Array.isArray(response.data)) {
           setCategories(response.data);
+          // Fetch sub-categories for each category
+          await fetchAllSubCategories(response.data);
         }
       } catch {
-        setCategories([
-          { _id: "1", name: "All Category" },
-          { _id: "2", name: "Organic Food & Healthy Snacks" },
-          { _id: "3", name: "Natural Skin Care & Wellness" },
-          { _id: "4", name: "Gifts & Hamper" },
-          { _id: "5", name: "Handmade Home Decor" },
-          { _id: "6", name: "Sustainable Lifestyle" },
-          { _id: "7", name: "Jewelry & Accessories" },
-        ]);
+        const defaultCategories = [
+          { _id: "1", name: "Organic Food & Healthy Snacks" },
+          { _id: "2", name: "Natural Skin Care & Wellness" },
+          { _id: "3", name: "Gifts & Hamper" },
+          { _id: "4", name: "Handmade Home Decor" },
+          { _id: "5", name: "Sustainable Lifestyle" },
+          { _id: "6", name: "Jewelry & Accessories" },
+        ];
+        setCategories(defaultCategories);
+        // Fetch sub-categories for default categories
+        await fetchAllSubCategories(defaultCategories);
       } finally {
         setLoadingCategories(false);
       }
     };
     fetchCategories();
   }, []);
+
+  // Fetch sub-categories for all categories
+  const fetchAllSubCategories = async (categoriesList) => {
+    const subMap = {};
+    
+    for (const category of categoriesList) {
+      try {
+        const response = await axios.get(`${API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`);
+        if (response.data && response.data.subCategories) {
+          subMap[category.name] = response.data.subCategories;
+        } else {
+          // Fallback: try to get from products
+          const productsRes = await axios.get(`${API_URL}/products/by-category/${encodeURIComponent(category.name)}`);
+          if (productsRes.data && productsRes.data.products) {
+            const subs = new Set();
+            productsRes.data.products.forEach(p => {
+              if (p.subCategory) subs.add(p.subCategory);
+              if (p.subCategories) p.subCategories.forEach(s => subs.add(s));
+            });
+            subMap[category.name] = Array.from(subs);
+          }
+        }
+      } catch (error) {
+        console.error(`Error fetching sub-categories for ${category.name}:`, error);
+        subMap[category.name] = [];
+      }
+    }
+    
+    setCategorySubCategories(subMap);
+  };
+
+  // Fetch sub-categories for a specific category on hover
+  const fetchSubCategoriesForCategory = async (categoryName) => {
+    if (categorySubCategories[categoryName] && categorySubCategories[categoryName].length > 0) {
+      return categorySubCategories[categoryName];
+    }
+    
+    setLoadingSubCategories(prev => ({ ...prev, [categoryName]: true }));
+    
+    try {
+      const response = await axios.get(`${API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`);
+      const subs = response.data?.subCategories || [];
+      
+      setCategorySubCategories(prev => ({
+        ...prev,
+        [categoryName]: subs
+      }));
+      
+      return subs;
+    } catch (error) {
+      console.error(`Error fetching sub-categories for ${categoryName}:`, error);
+      return [];
+    } finally {
+      setLoadingSubCategories(prev => ({ ...prev, [categoryName]: false }));
+    }
+  };
+
+  // Handle category hover
+  const handleCategoryHover = (categoryName) => {
+    if (categoryMenuTimeout.current) {
+      clearTimeout(categoryMenuTimeout.current);
+    }
+    setHoveredCategory(categoryName);
+    fetchSubCategoriesForCategory(categoryName);
+  };
+
+  // Handle category leave
+  const handleCategoryLeave = () => {
+    categoryMenuTimeout.current = setTimeout(() => {
+      setHoveredCategory(null);
+    }, 300);
+  };
 
   useEffect(() => {
     fetchCart();
@@ -81,10 +166,25 @@ const Header = () => {
     return () => {
       window.removeEventListener("cartUpdated", handleCartUpdate);
       window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
+      if (categoryMenuTimeout.current) {
+        clearTimeout(categoryMenuTimeout.current);
+      }
     };
   }, [fetchCart, fetchWishlist]);
 
-  // 🔥 LIVE SEARCH: Fetch suggestions while typing
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowRecommendations(false);
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Live search
   const fetchLiveSuggestions = async (query) => {
     if (!query || query.trim().length < 2) {
       setRecommendations([]);
@@ -95,28 +195,23 @@ const Header = () => {
     try {
       const response = await axios.get(`${API_URL}/search-suggestions`, {
         params: { q: query },
+        timeout: 5000,
       });
 
-      console.log("🔍 LIVE SEARCH API Response:", response.data);
-
-      // Only use API data, no fallback
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
       } else {
-        // API returned empty - show nothing
         setRecommendations([]);
         setShowRecommendations(false);
       }
     } catch (error) {
-      console.log("❌ Live search error:", error);
-      // On error, show nothing (no fallback)
+      console.error("Live search error:", error);
       setRecommendations([]);
       setShowRecommendations(false);
     }
   };
 
-  // 🔥 Handle search change with live suggestions
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
@@ -127,7 +222,6 @@ const Header = () => {
 
     searchTimeout.current = setTimeout(() => {
       if (value.trim().length >= 2) {
-        // Only fetch live suggestions from API
         fetchLiveSuggestions(value);
       } else {
         setRecommendations([]);
@@ -138,7 +232,6 @@ const Header = () => {
     }, 300);
   };
 
-  // 🔥 Search on button click or Enter
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -172,19 +265,8 @@ const Header = () => {
     setShowRecommendations(false);
     setSearchQuery("");
     setRecommendations([]);
-    window.location.href = `/product/${product._id}`;
+    navigate(`/product/${product._id}`);
   };
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".search-box")) {
-        setShowSearchResults(false);
-        setShowRecommendations(false);
-      }
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -200,6 +282,8 @@ const Header = () => {
         title: cat.name,
         link: `/category/${encodeURIComponent(cat.name)}`,
         productCount: cat.productCount || 0,
+        subCategories: categorySubCategories[cat.name] || [],
+        loading: loadingSubCategories[cat.name] || false,
       })),
     },
     { title: "Social Impact", link: "/social-impact" },
@@ -207,19 +291,18 @@ const Header = () => {
     { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 30);
     };
-
     handleScroll();
-
     window.addEventListener("scroll", handleScroll);
-
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
   return (
     <>
       <div className="lexend">
@@ -234,7 +317,7 @@ const Header = () => {
               transition={{ duration: 0.35 }}
             >
               <Container>
-                <div className="search-box">
+                <div className="search-box" ref={searchRef}>
                   <Form onSubmit={handleSearch} className="w-100 d-flex">
                     <Form.Control
                       placeholder="Search products..."
@@ -257,11 +340,17 @@ const Header = () => {
                     </Button>
                   </Form>
 
-                  {/* 🔥 Live Recommendations from API while typing */}
+                  {isLoading && !recommendations.length && (
+                    <div className="search-loading">
+                      <Spinner animation="border" size="sm" />
+                      <span className="ms-2">Searching...</span>
+                    </div>
+                  )}
+
                   {showRecommendations && recommendations.length > 0 && (
                     <div className="search-recommendations-dropdown">
                       <div className="recommendations-header">
-                        {/* <span>Live Recommendations</span> */}
+                        <span>Live Recommendations</span>
                         <small>{recommendations.length} products</small>
                       </div>
                       {recommendations.map((product) => (
@@ -272,9 +361,7 @@ const Header = () => {
                         >
                           <div className="recommendation-img">
                             <img
-                              src={
-                                product.image?.[0] || "/images/placeholder.png"
-                              }
+                              src={product.image?.[0] || "/images/placeholder.png"}
                               alt={product.name}
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -296,67 +383,19 @@ const Header = () => {
                         </div>
                       ))}
                       <div className="recommendations-footer">
-                        <div className="view-all-text">
-                          {/* Showing live suggestions for "{searchQuery}" */}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 🔥 Search Results after button click */}
-                  {showSearchResults && searchResults.length > 0 && (
-                    <div className="search-results-dropdown">
-                      <div className="recommendations-header">
-                        <span>Search Results</span>
-                        <small>{searchResults.length} products</small>
-                      </div>
-                      {searchResults.map((product) => (
-                        <NavLink
-                          key={product._id}
-                          to={`/product/${product._id}`}
-                          className="search-result-item"
+                        <button
+                          className="view-all-btn"
                           onClick={() => {
                             setShowSearch(false);
-                            setShowSearchResults(false);
-                            setSearchQuery("");
+                            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
                           }}
                         >
-                          <div className="search-result-img">
-                            <img
-                              src={
-                                product.image?.[0] || "/images/placeholder.png"
-                              }
-                              alt={product.name}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "/images/placeholder.png";
-                              }}
-                            />
-                          </div>
-                          <div className="search-result-info">
-                            <div className="search-result-name">
-                              {product.name}
-                            </div>
-                            <div className="search-result-price">
-                              ₹{product.price}
-                            </div>
-                            <div className="search-result-company">
-                              {product.company}
-                            </div>
-                          </div>
-                        </NavLink>
-                      ))}
+                          View all results for "{searchQuery}"
+                        </button>
+                      </div>
                     </div>
                   )}
 
-                  {isLoading && !recommendations.length && (
-                    <div className="search-loading">
-                      <Spinner animation="border" size="sm" />
-                      <span className="ms-2">Searching...</span>
-                    </div>
-                  )}
-
-                  {/* 🔥 No results message - Only from API */}
                   {!isLoading &&
                     searchQuery.length >= 2 &&
                     !showRecommendations &&
@@ -402,7 +441,11 @@ const Header = () => {
               {menu.map((item, index) => (
                 <motion.div key={index} whileHover={{ y: -3 }}>
                   {item.dropdown ? (
-                    <Dropdown className="premium-dropdown">
+                    <Dropdown 
+                      className="premium-dropdown category-dropdown"
+                      onMouseEnter={() => handleCategoryHover(item.title)}
+                      onMouseLeave={handleCategoryLeave}
+                    >
                       <Dropdown.Toggle
                         as="div"
                         className="premium-link dropdown-toggle-custom"
@@ -410,12 +453,12 @@ const Header = () => {
                         {item.title}
                         {loadingCategories && (
                           <span className="ms-1" style={{ fontSize: "10px" }}>
-                            WITING...
+                            ...
                           </span>
                         )}
                       </Dropdown.Toggle>
 
-                      <Dropdown.Menu>
+                      <Dropdown.Menu className="category-mega-menu">
                         {loadingCategories ? (
                           <Dropdown.Item className="dropdown-item-custom text-center">
                             <span className="dropdown-loading">
@@ -429,22 +472,83 @@ const Header = () => {
                             </span>
                           </Dropdown.Item>
                         ) : (
-                          item.dropdown.map((sub, i) => (
-                            <Dropdown.Item
-                              as={NavLink}
-                              to={sub.link}
-                              key={i}
-                              className="dropdown-item-custom"
-                              onClick={() => setShowMenu(false)}
-                            >
-                              {sub.title}
-                              {sub.productCount > 0 && (
-                                <span className="product-count">
-                                  ({sub.productCount})
-                                </span>
-                              )}
-                            </Dropdown.Item>
-                          ))
+                          <div className="category-menu-wrapper">
+                            {/* Categories Column */}
+                            <div className="category-list-column">
+                              {item.dropdown.map((sub, i) => (
+                                <div
+                                  key={i}
+                                  className={`category-menu-item ${hoveredCategory === sub.title ? 'active' : ''}`}
+                                  onMouseEnter={() => handleCategoryHover(sub.title)}
+                                >
+                                  <NavLink
+                                    to={sub.link}
+                                    className="dropdown-item-custom category-link"
+                                    onClick={() => setShowMenu(false)}
+                                  >
+                                    {sub.title}
+                                    {sub.productCount > 0 && (
+                                      <span className="product-count">
+                                        ({sub.productCount})
+                                      </span>
+                                    )}
+                                    {sub.subCategories && sub.subCategories.length > 0 && (
+                                      <span className="sub-category-arrow">›</span>
+                                    )}
+                                  </NavLink>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Sub-Categories Column */}
+                            {hoveredCategory && (
+                              <div className="subcategory-list-column">
+                                <div className="subcategory-header">
+                                  <span className="subcategory-title">
+                                    {hoveredCategory}
+                                  </span>
+                                  <span className="subcategory-count">
+                                    {categorySubCategories[hoveredCategory]?.length || 0} sub-categories
+                                  </span>
+                                </div>
+                                {loadingSubCategories[hoveredCategory] ? (
+                                  <div className="subcategory-loading">
+                                    <Spinner animation="border" size="sm" />
+                                    <span>Loading sub-categories...</span>
+                                  </div>
+                                ) : (
+                                  <div className="subcategory-grid">
+                                    {categorySubCategories[hoveredCategory]?.length > 0 ? (
+                                      categorySubCategories[hoveredCategory].map((sub, idx) => (
+                                        <NavLink
+                                          key={idx}
+                                          to={`/category/${encodeURIComponent(hoveredCategory)}/${encodeURIComponent(sub)}`}
+                                          className="subcategory-item"
+                                          onClick={() => setShowMenu(false)}
+                                        >
+                                          <span className="subcategory-dot">•</span>
+                                          {sub}
+                                        </NavLink>
+                                      ))
+                                    ) : (
+                                      <div className="subcategory-empty">
+                                        No sub-categories available
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="subcategory-footer">
+                                  <NavLink
+                                    to={`/category/${encodeURIComponent(hoveredCategory)}`}
+                                    className="view-all-subcategories"
+                                    onClick={() => setShowMenu(false)}
+                                  >
+                                    View All Products in {hoveredCategory} →
+                                  </NavLink>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </Dropdown.Menu>
                     </Dropdown>
@@ -469,7 +573,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Wishlist Icon with Count */}
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
@@ -481,7 +584,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Cart Icon with Count */}
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -506,7 +608,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Mobile Wishlist Icon with Count */}
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
@@ -518,7 +619,6 @@ const Header = () => {
                 </button>
               </NavLink>
 
-              {/* Mobile Cart Icon with Count */}
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -563,40 +663,50 @@ const Header = () => {
                         {item.title}
                         {loadingCategories && (
                           <span className="ms-1" style={{ fontSize: "12px" }}>
-                            WITING...
+                            ...
                           </span>
                         )}
                       </div>
 
                       {loadingCategories ? (
-                        <div
-                          className="mobile-sublink text-muted"
-                          style={{ paddingLeft: "20px" }}
-                        >
+                        <div className="mobile-sublink text-muted" style={{ paddingLeft: "20px" }}>
                           Loading categories...
                         </div>
                       ) : item.dropdown.length === 0 ? (
-                        <div
-                          className="mobile-sublink text-danger"
-                          style={{ paddingLeft: "20px" }}
-                        >
+                        <div className="mobile-sublink text-danger" style={{ paddingLeft: "20px" }}>
                           No categories available
                         </div>
                       ) : (
                         item.dropdown.map((sub, i) => (
-                          <NavLink
-                            key={i}
-                            to={sub.link}
-                            className="mobile-sublink"
-                            onClick={() => setShowMenu(false)}
-                          >
-                            {sub.title}
-                            {sub.productCount > 0 && (
-                              <span className="product-count">
-                                ({sub.productCount})
-                              </span>
+                          <div key={i}>
+                            <NavLink
+                              to={sub.link}
+                              className="mobile-sublink"
+                              onClick={() => setShowMenu(false)}
+                            >
+                              {sub.title}
+                              {sub.productCount > 0 && (
+                                <span className="product-count">
+                                  ({sub.productCount})
+                                </span>
+                              )}
+                            </NavLink>
+                            {/* Mobile Sub-Categories */}
+                            {categorySubCategories[sub.title] && categorySubCategories[sub.title].length > 0 && (
+                              <div className="mobile-sub-subcategories">
+                                {categorySubCategories[sub.title].map((subCat, idx) => (
+                                  <NavLink
+                                    key={idx}
+                                    to={`/category/${encodeURIComponent(sub.title)}/${encodeURIComponent(subCat)}`}
+                                    className="mobile-sub-sublink"
+                                    onClick={() => setShowMenu(false)}
+                                  >
+                                    • {subCat}
+                                  </NavLink>
+                                ))}
+                              </div>
                             )}
-                          </NavLink>
+                          </div>
                         ))
                       )}
                     </>
@@ -626,7 +736,6 @@ const Header = () => {
                 {wishlistCount > 0 && (
                   <Badge
                     pill
-                    bg=""
                     className="ms-1"
                     style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
                   >
@@ -645,7 +754,6 @@ const Header = () => {
                 {cartCount > 0 && (
                   <Badge
                     pill
-                    // bg="danger"
                     className="ms-1"
                     style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
                   >

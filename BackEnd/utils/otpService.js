@@ -1,7 +1,23 @@
-// utils/otpService.js
+// utils/otpService.js - Updated to work with both ObjectId and string identifiers
 
 const Seller = require('../Models/Seller');
 const nodemailer = require('nodemailer');
+
+// ============================================================
+// TEMPORARY OTP STORE (Use Redis in production)
+// ============================================================
+const otpStore = new Map();
+
+// Clean up expired OTPs every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of otpStore.entries()) {
+    if (now - value.createdAt > 10 * 60 * 1000) { // 10 minutes expiry
+      otpStore.delete(key);
+      console.log(`🧹 Cleaned up expired OTP for: ${key}`);
+    }
+  }
+}, 5 * 60 * 1000);
 
 // ============================================================
 // EMAIL CONFIGURATION
@@ -30,12 +46,16 @@ emailTransporter.verify((error, success) => {
 // ============================================================
 // SEND OTP VIA EMAIL
 // ============================================================
-const sendOTPviaEmail = async (email, fullName, otp) => {
+const sendOTPviaEmail = async (email, fullName, otp, isResend = false) => {
   try {
+    const subject = isResend 
+      ? "🔄 New OTP for Native91 Seller Registration" 
+      : "🔐 Your Native91 Verification Code";
+    
     const mailOptions = {
       from: `"Native91" <${process.env.EMAIL_USER || "brands@native91.com"}>`,
       to: email,
-      subject: "🔐 Your Native91 Verification Code",
+      subject: subject,
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -169,8 +189,10 @@ const sendOTPviaEmail = async (email, fullName, otp) => {
                 <p class="greeting">Hello ${fullName || 'there'},</p>
                 
                 <p class="paragraph">
-                  Thank you for registering with <strong>Native91</strong>. 
-                  Please use the verification code below to verify your phone number.
+                  ${isResend 
+                    ? 'You requested a new verification code for your Native91 seller account.' 
+                    : 'Thank you for registering with <strong>Native91</strong>. Please use the verification code below to verify your email address.'
+                  }
                 </p>
                 
                 <!-- OTP CODE -->
@@ -218,25 +240,93 @@ const sendOTPviaEmail = async (email, fullName, otp) => {
 };
 
 // ============================================================
-// SEND OTP TO SELLER
+// SEND OTP (Works with both MongoDB ObjectId and tempId strings)
 // ============================================================
-const sendOTP = async (sellerId) => {
+const sendOTP = async (identifier, email, fullName) => {
   try {
-    const seller = await Seller.findById(sellerId).select('+otpCode +otpExpires +otpAttempts +otpLastRequested');
+    // Check if identifier is a valid MongoDB ObjectId (24 hex chars)
+    const isObjectId = identifier.match(/^[0-9a-fA-F]{24}$/);
     
-    if (!seller) {
-      return { success: false, message: 'Seller not found' };
-    }
+    let sellerEmail = email;
+    let sellerName = fullName || 'there';
+    
+    // If it's a MongoDB ObjectId, try to fetch seller from database
+    if (isObjectId) {
+      try {
+        const seller = await Seller.findById(identifier).select('+otpCode +otpExpires +otpAttempts +otpLastRequested');
+        
+        if (!seller) {
+          return { success: false, message: 'Seller not found' };
+        }
 
-    // Check if already verified
-    if (seller.phoneVerified) {
-      return { success: false, message: 'Phone number is already verified' };
-    }
+        // Check if already verified
+        if (seller.phoneVerified) {
+          return { success: false, message: 'Email address is already verified' };
+        }
 
-    // Rate limiting (prevent spam)
-    if (seller.otpLastRequested) {
-      const timeSinceLastRequest = Date.now() - seller.otpLastRequested.getTime();
-      const cooldownPeriod = 60000; // 60 seconds
+        // Rate limiting (prevent spam) for existing sellers
+        if (seller.otpLastRequested) {
+          const timeSinceLastRequest = Date.now() - seller.otpLastRequested.getTime();
+          const cooldownPeriod = 60000; // 60 seconds
+          if (timeSinceLastRequest < cooldownPeriod) {
+            const remainingSeconds = Math.ceil((cooldownPeriod - timeSinceLastRequest) / 1000);
+            return { 
+              success: false, 
+              message: `Please wait ${remainingSeconds} seconds before requesting a new OTP` 
+            };
+          }
+        }
+
+        sellerEmail = seller.email;
+        sellerName = seller.fullName || 'there';
+        
+        // Generate OTP using seller's method
+        const otp = seller.generateOTP();
+        await seller.save();
+        
+        // Send OTP via email
+        const emailResult = await sendOTPviaEmail(sellerEmail, sellerName, otp);
+        
+        if (!emailResult.success) {
+          // In development, still return OTP for testing
+          if (process.env.NODE_ENV === 'development') {
+            return {
+              success: true,
+              message: 'OTP generated (development mode - check console)',
+              otp,
+              emailResult,
+            };
+          }
+          return {
+            success: false,
+            message: 'Failed to send OTP email. Please try again.',
+            emailResult,
+          };
+        }
+
+        return {
+          success: true,
+          message: 'OTP sent successfully to your email',
+          ...(process.env.NODE_ENV === 'development' && { otp }),
+        };
+        
+      } catch (dbError) {
+        console.error("❌ Database error while fetching seller:", dbError);
+        return { success: false, message: 'Failed to fetch seller data' };
+      }
+    }
+    
+    // ============================================================
+    // Handle tempId (string-based identifier for new registrations)
+    // ============================================================
+    
+    // Check if there's an existing OTP for this tempId
+    const existingOTP = otpStore.get(identifier);
+    
+    // Rate limiting for temp registrations (30 seconds cooldown)
+    if (existingOTP) {
+      const timeSinceLastRequest = Date.now() - existingOTP.createdAt;
+      const cooldownPeriod = 30000; // 30 seconds
       if (timeSinceLastRequest < cooldownPeriod) {
         const remainingSeconds = Math.ceil((cooldownPeriod - timeSinceLastRequest) / 1000);
         return { 
@@ -245,14 +335,24 @@ const sendOTP = async (sellerId) => {
         };
       }
     }
-
+    
     // Generate OTP
-    const otp = seller.generateOTP();
-    await seller.save();
-
-    // Send OTP via EMAIL
-    const emailResult = await sendOTPviaEmail(seller.email, seller.fullName, otp);
-
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP with tempId
+    otpStore.set(identifier, {
+      otp: otp,
+      createdAt: Date.now(),
+      attempts: 0,
+      email: sellerEmail,
+      fullName: sellerName,
+    });
+    
+    console.log(`📱 OTP generated for tempId ${identifier}: ${otp}`);
+    
+    // Send OTP via email
+    const emailResult = await sendOTPviaEmail(sellerEmail, sellerName, otp);
+    
     if (!emailResult.success) {
       // In development, still return OTP for testing
       if (process.env.NODE_ENV === 'development') {
@@ -269,13 +369,13 @@ const sendOTP = async (sellerId) => {
         emailResult,
       };
     }
-
+    
     return {
       success: true,
       message: 'OTP sent successfully to your email',
       ...(process.env.NODE_ENV === 'development' && { otp }),
     };
-
+    
   } catch (error) {
     console.error("❌ Send OTP error:", error);
     return { success: false, message: error.message || 'Failed to send OTP' };
@@ -283,37 +383,105 @@ const sendOTP = async (sellerId) => {
 };
 
 // ============================================================
-// VERIFY OTP
+// VERIFY OTP (Works with both MongoDB ObjectId and tempId strings)
 // ============================================================
-const verifyOTP = async (sellerId, enteredOTP) => {
+const verifyOTP = async (identifier, enteredOTP) => {
   try {
-    const seller = await Seller.findById(sellerId).select('+otpCode +otpExpires +otpAttempts +phoneVerified');
+    // Check if identifier is a valid MongoDB ObjectId (24 hex chars)
+    const isObjectId = identifier.match(/^[0-9a-fA-F]{24}$/);
     
-    if (!seller) {
-      return { success: false, message: 'Seller not found' };
-    }
+    // If it's a MongoDB ObjectId, verify using database
+    if (isObjectId) {
+      try {
+        const seller = await Seller.findById(identifier).select('+otpCode +otpExpires +otpAttempts +phoneVerified');
+        
+        if (!seller) {
+          return { success: false, message: 'Seller not found' };
+        }
 
-    if (seller.phoneVerified) {
-      return { success: false, message: 'Phone number is already verified' };
-    }
+        if (seller.phoneVerified) {
+          return { success: false, message: 'Email address is already verified' };
+        }
 
-    const verificationResult = seller.verifyOTP(enteredOTP);
+        const verificationResult = seller.verifyOTP(enteredOTP);
+        
+        if (!verificationResult.valid) {
+          await seller.save();
+          return { success: false, message: verificationResult.message };
+        }
+
+        await seller.save();
+
+        return {
+          success: true,
+          message: 'Email address verified successfully!',
+          data: {
+            phoneVerified: seller.phoneVerified,
+            email: seller.email,
+          },
+        };
+        
+      } catch (dbError) {
+        console.error("❌ Database error while verifying seller:", dbError);
+        return { success: false, message: 'Failed to verify seller data' };
+      }
+    }
     
-    if (!verificationResult.valid) {
-      await seller.save();
-      return { success: false, message: verificationResult.message };
+    // ============================================================
+    // Handle tempId (string-based identifier for new registrations)
+    // ============================================================
+    
+    // Get OTP data from store
+    const otpData = otpStore.get(identifier);
+    
+    if (!otpData) {
+      return { 
+        success: false, 
+        message: 'OTP not found or expired. Please request a new OTP.' 
+      };
     }
-
-    await seller.save();
-
-    return {
-      success: true,
-      message: 'Phone number verified successfully!',
+    
+    // Check if OTP is expired (10 minutes)
+    if (Date.now() - otpData.createdAt > 10 * 60 * 1000) {
+      otpStore.delete(identifier);
+      return { 
+        success: false, 
+        message: 'OTP has expired. Please request a new OTP.' 
+      };
+    }
+    
+    // Check attempts (max 5 attempts)
+    if (otpData.attempts >= 5) {
+      otpStore.delete(identifier);
+      return { 
+        success: false, 
+        message: 'Too many failed attempts. Please request a new OTP.' 
+      };
+    }
+    
+    // Verify OTP
+    if (otpData.otp !== enteredOTP) {
+      otpData.attempts += 1;
+      otpStore.set(identifier, otpData);
+      return { 
+        success: false, 
+        message: `Invalid OTP. ${5 - otpData.attempts} attempts remaining.` 
+      };
+    }
+    
+    // OTP is valid - delete from store
+    otpStore.delete(identifier);
+    
+    return { 
+      success: true, 
+      message: 'OTP verified successfully!',
       data: {
-        phoneVerified: seller.phoneVerified,
-      },
+        phoneVerified: true,
+        email: otpData.email,
+        fullName: otpData.fullName,
+      }
     };
-
+    
   } catch (error) {
     console.error("❌ Verify OTP error:", error);
     return { success: false, message: error.message || 'Failed to verify OTP' };
@@ -321,15 +489,123 @@ const verifyOTP = async (sellerId, enteredOTP) => {
 };
 
 // ============================================================
-// RESEND OTP
+// RESEND OTP (Works with both MongoDB ObjectId and tempId strings)
 // ============================================================
-const resendOTP = async (sellerId) => {
-  return await sendOTP(sellerId);
+const resendOTP = async (identifier, email, fullName) => {
+  try {
+    // Check if identifier is a valid MongoDB ObjectId (24 hex chars)
+    const isObjectId = identifier.match(/^[0-9a-fA-F]{24}$/);
+    
+    // If it's a MongoDB ObjectId, use the existing sendOTP logic
+    if (isObjectId) {
+      return await sendOTP(identifier);
+    }
+    
+    // ============================================================
+    // Handle tempId (string-based identifier for new registrations)
+    // ============================================================
+    
+    // Check if there's an existing OTP for this tempId
+    const existingOTP = otpStore.get(identifier);
+    
+    // If OTP exists and was created less than 30 seconds ago, prevent resend spam
+    if (existingOTP && Date.now() - existingOTP.createdAt < 30000) {
+      return { 
+        success: false, 
+        message: 'Please wait 30 seconds before requesting a new OTP.' 
+      };
+    }
+    
+    // Get email from parameter or from existing OTP data
+    const userEmail = email || existingOTP?.email;
+    const userName = fullName || existingOTP?.fullName || 'there';
+    
+    if (!userEmail) {
+      return { 
+        success: false, 
+        message: 'Email is required for resending OTP.' 
+      };
+    }
+    
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store new OTP
+    otpStore.set(identifier, {
+      otp: otp,
+      createdAt: Date.now(),
+      attempts: 0,
+      email: userEmail,
+      fullName: userName,
+    });
+    
+    console.log(`📱 New OTP generated for tempId ${identifier}: ${otp}`);
+    
+    // Send new OTP via email
+    const emailResult = await sendOTPviaEmail(userEmail, userName, otp, true);
+    
+    if (!emailResult.success) {
+      if (process.env.NODE_ENV === 'development') {
+        return {
+          success: true,
+          message: 'OTP generated (development mode - check console)',
+          otp,
+          emailResult,
+        };
+      }
+      return {
+        success: false,
+        message: 'Failed to send OTP email. Please try again.',
+        emailResult,
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'OTP resent successfully to your email',
+      ...(process.env.NODE_ENV === 'development' && { otp }),
+    };
+    
+  } catch (error) {
+    console.error("❌ Resend OTP error:", error);
+    return { success: false, message: error.message || 'Failed to resend OTP' };
+  }
 };
 
+// ============================================================
+// GET OTP STATUS (for debugging)
+// ============================================================
+const getOTPStatus = (identifier) => {
+  const otpData = otpStore.get(identifier);
+  if (!otpData) {
+    return null;
+  }
+  
+  return {
+    exists: true,
+    createdAt: otpData.createdAt,
+    expiresIn: Math.max(0, 10 * 60 * 1000 - (Date.now() - otpData.createdAt)),
+    attempts: otpData.attempts,
+    email: otpData.email,
+  };
+};
+
+// ============================================================
+// CLEAR OTP (manual cleanup)
+// ============================================================
+const clearOTP = (identifier) => {
+  otpStore.delete(identifier);
+  return { success: true, message: 'OTP cleared successfully' };
+};
+
+// ============================================================
+// EXPORT ALL FUNCTIONS
+// ============================================================
 module.exports = {
   sendOTP,
   verifyOTP,
   resendOTP,
   sendOTPviaEmail,
+  getOTPStatus,
+  clearOTP,
 };

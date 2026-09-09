@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION
+// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION WITH SHIPPING INFO (1 WEEK)
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -29,6 +29,12 @@ import {
   FaWeight,
   FaRulerCombined,
   FaTag,
+  FaTruck,
+  FaClock,
+  FaRupeeSign,
+  FaBox,
+  FaShippingFast,
+  FaMapMarkerAlt,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -82,6 +88,59 @@ const formatSizeWeight = (product) => {
   }
   
   return parts.length > 0 ? parts : null;
+};
+
+// 🚚 Get shipping display - UPDATED to show "1 week"
+const getShippingDisplay = (product) => {
+  if (!product) return null;
+  
+  let shippingText = product.shippingTime || "1 week";
+  
+  if (shippingText === "Custom" && product.customShippingTime) {
+    shippingText = product.customShippingTime;
+  }
+  
+  const charge = product.shippingCharge || 0;
+  const isFree = product.isFreeShipping !== undefined ? product.isFreeShipping : true;
+  
+  let chargeText = isFree ? "Free" : `₹${charge}`;
+  
+  // Check if shipping text contains "week" or "weeks"
+  const isWeekBased = shippingText.toLowerCase().includes('week');
+  
+  let deliveryRange = "1 week";
+  
+  if (isWeekBased) {
+    // Extract number from shipping text if it contains a number
+    const weekMatch = shippingText.match(/(\d+)\s*week/);
+    if (weekMatch) {
+      const weeks = parseInt(weekMatch[1]);
+      deliveryRange = `${weeks} week${weeks > 1 ? 's' : ''}`;
+    } else {
+      deliveryRange = shippingText;
+    }
+  } else {
+    // For day-based shipping
+    const minDays = product.estimatedDeliveryDays?.min || 3;
+    const maxDays = product.estimatedDeliveryDays?.max || 7;
+    
+    if (minDays === maxDays) {
+      deliveryRange = `${minDays} days`;
+    } else {
+      deliveryRange = `${minDays}–${maxDays} days`;
+    }
+  }
+  
+  return {
+    shippingText,
+    chargeText,
+    charge,
+    isFree,
+    minDays: product.estimatedDeliveryDays?.min || 3,
+    maxDays: product.estimatedDeliveryDays?.max || 7,
+    displayText: `${chargeText} • ${shippingText}`,
+    deliveryRange: deliveryRange
+  };
 };
 
 // Helper to decode slug back to name
@@ -164,7 +223,6 @@ const Productdetails = () => {
     try {
       console.log(`🟢 Fetching brand details for: ${companyName}`);
       
-      // Try to get company details from the Company model
       const response = await axios.get(`${API_URL}/company/details/${encodeURIComponent(companyName)}`);
       
       console.log("🟢 Brand response:", response.data);
@@ -175,14 +233,12 @@ const Productdetails = () => {
         setBrandDescription(company.description || `${company.name} - Premium brand on Native91`);
         setBrandLogo(company.logo || null);
       } else {
-        // Fallback: use product's company name
         setBrandName(companyName);
         setBrandDescription(`${companyName} - Premium brand on Native91`);
         setBrandLogo(null);
       }
     } catch (err) {
       console.error("🔴 Error fetching brand details:", err);
-      // Fallback
       setBrandName(companyName);
       setBrandDescription(`${companyName} - Premium brand on Native91`);
       setBrandLogo(null);
@@ -515,7 +571,6 @@ const Productdetails = () => {
 
         await fetchReviews(foundProduct._id);
         
-        // ✅ Check wishlist status using context
         const guestId = localStorage.getItem("guestId");
         if (guestId) {
           await fetchWishlist();
@@ -523,7 +578,6 @@ const Productdetails = () => {
           setIsInWishlistState(inWishlist);
         }
 
-        // ✅ Fetch brand details
         const companyName = foundProduct.company || foundProduct.vendor || foundProduct.vendorName;
         if (companyName) {
           await fetchBrandDetails(companyName);
@@ -911,6 +965,7 @@ const Productdetails = () => {
   const originalPrice = product.price;
   const stockStatus = getStockStatus(stock);
   const sizeWeightInfo = formatSizeWeight(product);
+  const shippingInfo = getShippingDisplay(product);
 
   return (
     <>
@@ -1096,7 +1151,6 @@ const Productdetails = () => {
                         </div>
                       )}
                     </div>
-                    {/* Dimensions */}
                     {product.dimensions && (
                       (product.dimensions.length > 0 || product.dimensions.width > 0 || product.dimensions.height > 0) && (
                         <div className="mt-2 small text-muted">
@@ -1108,11 +1162,44 @@ const Productdetails = () => {
                   </div>
                 )}
 
+                {/* 🚚 SHIPPING INFORMATION CARD - UPDATED to show 1 week */}
+                {shippingInfo && (
+                  <div className="shipping-info-card mt-3 p-3 border rounded" style={{ background: '#f8f9fa' }}>
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="shipping-icon">
+                        <FaTruck size={24} className="text-primary" />
+                      </div>
+                      <div className="shipping-details flex-grow-1">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span className="fw-bold">Delivery</span>
+                          <span className="text-success fw-bold">{shippingInfo.chargeText}</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-3 mt-1">
+                          <span className="small">
+                            <FaClock className="me-1 text-muted" />
+                            {shippingInfo.deliveryRange}
+                          </span>
+                          <span className="small text-muted">|</span>
+                          <span className="small">
+                            <FaBox className="me-1 text-muted" />
+                            {shippingInfo.shippingText}
+                          </span>
+                        </div>
+                        {!shippingInfo.isFree && shippingInfo.charge > 0 && (
+                          <Badge bg="info" className="mt-1">
+                            <FaRupeeSign className="me-1" /> ₹{shippingInfo.charge} Shipping
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* STOCK STATUS DISPLAY */}
                 <div className="stock-status mt-3">
                   <Badge 
                     bg={stockStatus.color}
-                    style={{ fontSize: '16px', padding: '8px 16px'   }}
+                    style={{ fontSize: '16px', padding: '8px 16px' }}
                   >
                     {stockStatus.icon} {stockStatus.label}
                   </Badge>
@@ -1472,7 +1559,7 @@ const Productdetails = () => {
                 </div>
 
                 <div className="delivery-text">
-                  Estimated delivery: 3 – 5 business days
+                  Estimated delivery: {shippingInfo ? shippingInfo.deliveryRange : "1 week"}
                 </div>
               </div>
             </Col>
@@ -1492,6 +1579,64 @@ const Productdetails = () => {
               )}
             </details>
             
+            {/* 🚚 SHIPPING & DELIVERY DETAILS ACCORDION - UPDATED to show 1 week */}
+            <details>
+              <summary className="funnel-sans">
+                <FaTruck className="me-2" /> Shipping & Delivery
+              </summary>
+              <div className="shipping-details-accordion p-3">
+                {shippingInfo ? (
+                  <>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <div className="shipping-info-item p-3 border rounded bg-light">
+                          <h6 className="mb-2">
+                            <FaClock className="me-2 text-primary" />
+                            Delivery Time
+                          </h6>
+                          <p className="mb-0">
+                            <strong>{shippingInfo.deliveryRange}</strong>
+                          </p>
+                          <small className="text-muted">
+                            {shippingInfo.shippingText}
+                          </small>
+                        </div>
+                      </div>
+                      <div className="col-md-6">
+                        <div className="shipping-info-item p-3 border rounded bg-light">
+                          <h6 className="mb-2">
+                            <FaRupeeSign className="me-2 text-primary" />
+                            Shipping Cost
+                          </h6>
+                          <p className="mb-0">
+                            <strong className={shippingInfo.isFree ? "text-success" : ""}>
+                              {shippingInfo.chargeText}
+                            </strong>
+                          </p>
+                          <small className="text-muted">
+                            {shippingInfo.isFree 
+                              ? "Free shipping on this item" 
+                              : `₹${shippingInfo.charge} shipping fee applies`}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="d-flex align-items-center gap-3 p-2 bg-primary bg-opacity-10 rounded">
+                        <FaTruck size={20} className="text-primary" />
+                        <small className="text-muted">
+                          Estimated delivery in {shippingInfo.deliveryRange} from order confirmation.
+                          {shippingInfo.isFree && " Free shipping included!"}
+                        </small>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted">Shipping information not available for this product.</p>
+                )}
+              </div>
+            </details>
+            
             <details>
               <summary className="funnel-sans">Why Native91?</summary>
               <p>
@@ -1502,16 +1647,15 @@ const Productdetails = () => {
             </details>
             
             <details>
-              <summary className="funnel-sans">Shipping & Returns</summary>
+              <summary className="funnel-sans">Returns Policy</summary>
               <p>
-                Free shipping above ₹1499. Easy 7-day returns available.{" "}
+                Easy 7-day returns available. Items must be unused and in original packaging.
                 <a
-                  href="/shipping-policy"
-                  className="text-decoration-none text-dark"
+                  href="/returns-policy"
+                  className="text-decoration-none text-primary ms-2"
                 >
-                  Click here
-                </a>{" "}
-                to learn more.
+                  Learn more
+                </a>
               </p>
             </details>
             
@@ -1556,15 +1700,9 @@ const Productdetails = () => {
                     <div className="brand-actions mt-3">
                       {/* <a 
                         href={`/company/${encodeURIComponent(product?.company || brandName || "Native91")}`} 
-                        className="text-decoration-none text-primary  "
+                        className="text-decoration-none text-primary"
                       >
                         View all products from this brand →
-                      </a> */}
-                      {/* <a 
-                        href="/aboutus" 
-                        className="text-decoration-none text-dark ms-3"
-                      >
-                        Learn more about Native91 →
                       </a> */}
                     </div>
                   </>
@@ -1776,3 +1914,564 @@ const Productdetails = () => {
 };
 
 export default Productdetails;
+
+
+
+
+// import React, { useEffect, useState } from "react";
+// import { Container, Row, Col, Spinner, Alert, Button, Form, Badge } from "react-bootstrap";
+// import { motion } from "framer-motion";
+// import Header from "../../components/header/header";
+// import Footer from "../../components/footer/footer";
+// import { NavLink } from "react-router-dom";
+// import axios from "axios";
+// import "./product.css";
+
+// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
+
+// const fadeLeft = {
+//   hidden: { opacity: 0, x: -50 },
+//   visible: { opacity: 1, x: 0 },
+// };
+// const fadeRight = {
+//   hidden: { opacity: 0, x: 50 },
+//   visible: { opacity: 1, x: 0 },
+// };
+
+// const Product = () => {
+//   const [brands, setBrands] = useState([]);
+//   const [filteredBrands, setFilteredBrands] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState("");
+//   const [imageErrors, setImageErrors] = useState({});
+//   const [retryCount, setRetryCount] = useState(0);
+
+//   const [sortBy, setSortBy] = useState("newest");
+//   const [selectedCategory, setSelectedCategory] = useState("all");
+//   const [availableCategories, setAvailableCategories] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState("");
+
+//   const getSortLabel = (value) => {
+//     const labels = {
+//       newest: "🆕 Newest First",
+//       oldest: "📅 Oldest First",
+//       name_asc: "🔤 A to Z",
+//       name_desc: "🔤 Z to A"
+//     };
+//     return labels[value] || value;
+//   };
+
+
+//   // ✅ Helper function to get normalized categories from a brand
+//   const getBrandCategories = (brand) => {
+//     let categories = [];
+
+//     if (Array.isArray(brand.categories)) {
+//       categories = brand.categories;
+//     } else if (Array.isArray(brand.category)) {
+//       categories = brand.category;
+//     } else if (typeof brand.category === "string") {
+//       categories = brand.category.split(",");
+//     }
+
+//     return categories
+//       .map((cat) => String(cat).trim())
+//       .filter((cat) => cat && cat.toLowerCase() !== "uncategorized");
+//   };
+
+//   const extractCategories = (brandsData) => {
+//     const categorySet = new Set();
+//     brandsData.forEach(brand => {
+//       const categories = getBrandCategories(brand);
+//       categories.forEach(cat => {
+//         if (cat) categorySet.add(cat);
+//       });
+//     });
+//     return Array.from(categorySet).sort();
+//   };
+//   // ✅ Get image URL
+//   const getImageUrl = (logo) => {
+//     if (!logo) return null;
+
+//     const image = Array.isArray(logo) ? logo[0] : logo;
+//     if (!image || typeof image !== 'string') return null;
+
+//     if (image.startsWith("http://") || image.startsWith("https://")) {
+//       return image;
+//     }
+//     if (image.startsWith("/images")) {
+//       return `https://api-admin.native91.com${image}`;
+//     }
+//     if (image.startsWith("/uploads")) {
+//       return `https://api-vendor.native91.com${image}`;
+//     }
+//     return null;
+//   };
+//   // ⚠️ groupBrandsByCategory function REMOVED as it is no longer needed for display
+
+//   const applyFiltersAndSort = (brandsData) => {
+//     let result = [...brandsData];
+
+//     // ✅ CATEGORY FILTER - using normalized helper
+//     if (selectedCategory !== "all") {
+//       result = result.filter((brand) => {
+//         const categories = getBrandCategories(brand);
+//         return categories.some(
+//           (cat) => cat.toLowerCase() === selectedCategory.toLowerCase()
+//         );
+//       });
+//     }
+
+//     // ✅ SEARCH FILTER
+//     if (searchTerm.trim()) {
+//       const term = searchTerm.toLowerCase().trim();
+//       result = result.filter((brand) => {
+//         const categories = getBrandCategories(brand);
+//         return (
+//           brand.name?.toLowerCase().includes(term) ||
+//           brand.description?.toLowerCase().includes(term) ||
+//           categories.some((cat) => cat.toLowerCase().includes(term))
+//         );
+//       });
+//     }
+
+//     // ✅ SORT
+//     switch (sortBy) {
+//       case "newest":
+//         result.sort(
+//           (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+//         );
+//         break;
+//       case "oldest":
+//         result.sort(
+//           (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+//         );
+//         break;
+//       case "name_asc":
+//         result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+//         break;
+//       case "name_desc":
+//         result.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
+//         break;
+//       default:
+//         break;
+//     }
+
+//     return result;
+//   };
+
+//   const fetchBrands = async () => {
+//     try {
+//       setLoading(true);
+//       setError("");
+
+//       console.log(`🟢 Fetching brands (attempt ${retryCount + 1}) from: ${API_URL}/companies`);
+
+//       const response = await axios.get(`${API_URL}/companies`, {
+//         timeout: 15000,
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Accept': 'application/json'
+//         }
+//       });
+
+//       console.log("🟢 Response status:", response.status);
+
+//       let brandsData = [];
+
+//       if (response.data) {
+//         if (response.data.success && Array.isArray(response.data.companies)) {
+//           brandsData = response.data.companies;
+//           console.log(`✅ Found ${brandsData.length} companies in data.companies`);
+//         } else if (Array.isArray(response.data)) {
+//           brandsData = response.data;
+//           console.log(`✅ Found ${brandsData.length} companies (direct array)`);
+//         } else if (response.data.companies && Array.isArray(response.data.companies)) {
+//           brandsData = response.data.companies;
+//           console.log(`✅ Found ${brandsData.length} companies in nested property`);
+//         } else {
+//           console.warn("⚠️ Unexpected response format:", response.data);
+//           brandsData = [];
+//         }
+//       }
+
+//       setBrands(brandsData);
+      
+//       const extractedCategories = extractCategories(brandsData);
+//       setAvailableCategories(extractedCategories);
+
+//       const filtered = applyFiltersAndSort(brandsData);
+//       setFilteredBrands(filtered);
+
+//       if (brandsData.length === 0) {
+//         setError("No brands found in the database.");
+//       }
+
+//       console.log(`✅ Found ${brandsData.length} brands`);
+//       console.log(`📊 Categories: ${extractedCategories.join(', ') || 'None'}`);
+
+//     } catch (err) {
+//       console.error("🔴 ERROR FETCHING BRANDS:", err);
+      
+//       let errorMessage = "Failed to load brands. ";
+      
+//       if (err.code === 'ECONNABORTED') {
+//         errorMessage += "Request timed out. Please check your network connection.";
+//       } else if (err.response) {
+//         errorMessage += `Server responded with status ${err.response.status}.`;
+//       } else if (err.request) {
+//         errorMessage += "No response from server. Please check if the server is running.";
+//       } else {
+//         errorMessage += err.message || "Unknown error occurred.";
+//       }
+
+//       setError(errorMessage);
+//       setBrands([]);
+//       setFilteredBrands([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (brands.length > 0) {
+//       const filtered = applyFiltersAndSort(brands);
+//       setFilteredBrands(filtered);
+//     }
+//   }, [sortBy, searchTerm, selectedCategory, brands]);
+
+//   const handleRetry = () => {
+//     setRetryCount(prev => prev + 1);
+//     fetchBrands();
+//   };
+
+//   useEffect(() => {
+//     fetchBrands();
+//   }, []);
+
+//   if (loading) {
+//     return (
+//       <div>
+//         <Header />
+//         <Container className="py-5 text-center">
+//           <Spinner animation="border" variant="primary" />
+//           <p className="mt-3">Loading brands...</p>
+//           {retryCount > 0 && (
+//             <p className="text-muted small">Retry attempt {retryCount}</p>
+//           )}
+//         </Container>
+//         <Footer />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div>
+//         <Header />
+//         <Container className="py-5">
+//           <Alert variant="danger">
+//             <Alert.Heading>⚠️ Error Loading Brands</Alert.Heading>
+//             <p>{error}</p>
+//             <hr />
+//             <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+//               <div>
+//                 <small className="text-muted d-block">
+//                   API URL: {API_URL}
+//                 </small>
+//                 <small className="text-muted d-block">
+//                   Brands found: {brands.length}
+//                 </small>
+//               </div>
+//               <div className="d-flex gap-2">
+//                 <Button variant="outline-danger" size="sm" onClick={handleRetry}>
+//                   🔄 Retry
+//                 </Button>
+//                 <Button variant="outline-secondary" size="sm" onClick={() => window.location.reload()}>
+//                   🔄 Refresh Page
+//                 </Button>
+//               </div>
+//             </div>
+//           </Alert>
+//         </Container>
+//         <Footer />
+//       </div>
+//     );
+//   }
+
+//   if (brands.length === 0) {
+//     return (
+//       <div>
+//         <Header />
+//         <Container className="py-5 text-center">
+//           <h4>No brands available</h4>
+//           <p className="text-muted">Check back soon for new brands.</p>
+//           <Button variant="outline-primary" size="sm" onClick={handleRetry}>
+//             Refresh
+//           </Button>
+//         </Container>
+//         <Footer />
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div>
+//       <Header />
+
+//       <section className="values-section">
+//         <motion.img
+//           src="./images/product-banner.png"
+//           alt="Nature"
+//           className="simple-image w-100"
+//           initial={{ opacity: 0 }}
+//           whileInView={{ opacity: 1 }}
+//           transition={{ duration: 0.8 }}
+//           viewport={{ once: true }}
+//         />
+//         <Container>
+//           <h2 className="text-center funnel-sans my-5 display-2">Our Brands</h2>
+//           <p className="text-center text-muted mb-4">
+//             {filteredBrands.length} of {brands.length} brands available
+//           </p>
+
+//           <div className="filters-section mb-5 p-4 bg-light rounded">
+//             <Row className="g-3 align-items-end">
+//               <Col md={4}>
+//                 <Form.Group>
+//                   <Form.Label className="fw-bold">
+//                     <i className="bi bi-search me-1"></i> Search Brands
+//                   </Form.Label>
+//                   <Form.Control
+//                     type="text"
+//                     placeholder="Search by name, category..."
+//                     value={searchTerm}
+//                     onChange={(e) => setSearchTerm(e.target.value)}
+//                     className="rounded-pill"
+//                   />
+//                 </Form.Group>
+//               </Col>
+
+//               <Col md={3}>
+//                 <Form.Group>
+//                   <Form.Label className="fw-bold">
+//                     <i className="bi bi-tag me-1"></i> Category
+//                   </Form.Label>
+//                   <Form.Select
+//                     value={selectedCategory}
+//                     onChange={(e) => setSelectedCategory(e.target.value)}
+//                     className="rounded-pill"
+//                   >
+//                     <option value="all">📂 All Categories</option>
+//                     {availableCategories.map((cat) => (
+//                       <option key={cat} value={cat}>
+//                         {cat}
+//                       </option>
+//                     ))}
+//                   </Form.Select>
+//                 </Form.Group>
+//               </Col>
+
+//               <Col md={3}>
+//                 <Form.Group>
+//                   <Form.Label className="fw-bold">
+//                     <i className="bi bi-sort-down me-1"></i> Sort By
+//                   </Form.Label>
+//                   <Form.Select
+//                     value={sortBy}
+//                     onChange={(e) => setSortBy(e.target.value)}
+//                     className="rounded-pill"
+//                   >
+//                     <option value="newest">🆕 Newest First</option>
+//                     <option value="oldest">📅 Oldest First</option>
+//                     <option value="name_asc">🔤 A to Z</option>
+//                     <option value="name_desc">🔤 Z to A</option>
+//                   </Form.Select>
+//                 </Form.Group>
+//               </Col>
+
+//               <Col md={2}>
+//                 <Button
+//                   variant="outline-secondary"
+//                   className="w-100 rounded-pill"
+//                   onClick={() => {
+//                     setSearchTerm("");
+//                     setSelectedCategory("all");
+//                     setSortBy("newest");
+//                   }}
+//                 >
+//                   <i className="bi bi-arrow-counterclockwise me-1"></i> Reset
+//                 </Button>
+//               </Col>
+//             </Row>
+
+//             {(searchTerm || selectedCategory !== "all" || sortBy !== "newest") && (
+//               <div className="active-filters mt-3 d-flex flex-wrap gap-2 align-items-center">
+//                 <span className="text-muted small">Active filters:</span>
+                
+//                 {searchTerm && (
+//                   <Badge bg="primary" className="d-flex align-items-center gap-1">
+//                     🔍 {searchTerm}
+//                     <span className="ms-1" style={{ cursor: 'pointer' }} onClick={() => setSearchTerm("")}>✕</span>
+//                   </Badge>
+//                 )}
+                
+//                 {selectedCategory !== "all" && (
+//                   <Badge bg="secondary" className="d-flex align-items-center gap-1">
+//                     📂 {selectedCategory}
+//                     <span className="ms-1" style={{ cursor: 'pointer' }} onClick={() => setSelectedCategory("all")}>✕</span>
+//                   </Badge>
+//                 )}
+                
+//                 {sortBy !== "newest" && (
+//                   <Badge bg="info" className="d-flex align-items-center gap-1">
+//                     {getSortLabel(sortBy)}
+//                     <span className="ms-1" style={{ cursor: 'pointer' }} onClick={() => setSortBy("newest")}>✕</span>
+//                   </Badge>
+//                 )}
+//               </div>
+//             )}
+
+//             <div className="mt-2">
+//               <small className="text-muted">
+//                 Showing {filteredBrands.length} results
+//                 {sortBy !== "newest" && (
+//                   <span className="ms-2">
+//                     sorted by: <strong>{getSortLabel(sortBy)}</strong>
+//                   </span>
+//                 )}
+//                 {searchTerm && (
+//                   <span className="ms-2">
+//                     filtered by: <strong>"{searchTerm}"</strong>
+//                   </span>
+//                 )}
+//                 {selectedCategory !== "all" && (
+//                   <span className="ms-2">
+//                     category: <strong>{selectedCategory}</strong>
+//                   </span>
+//                 )}
+//               </small>
+//             </div>
+//           </div>
+
+//           {filteredBrands.length === 0 ? (
+//             <div className="text-center py-5">
+//               <h5>No brands match your filters</h5>
+//               <p className="text-muted">Try adjusting your search or filter criteria</p>
+//               <Button
+//                 variant="outline-primary"
+//                 className="rounded-pill"
+//                 onClick={() => {
+//                   setSearchTerm("");
+//                   setSelectedCategory("all");
+//                   setSortBy("newest");
+//                 }}
+//               >
+//                 Clear all filters
+//               </Button>
+//             </div>
+//           ) : (
+//             // ✅ UPDATED RENDER LOGIC
+//             <div className="category-section mb-5">
+
+//               {/* Show category heading ONLY when a specific category is selected */}
+//               {selectedCategory !== "all" && (
+//                 <h3 className="category-title mb-4">
+//                   <span className="badge bg-primary me-2">{filteredBrands.length}</span>
+//                   {selectedCategory}
+//                 </h3>
+//               )}
+
+//               {/* Show ALL brands in a single flat list (No grouping when "all" is selected) */}
+//               {filteredBrands.map((item, index) => {
+//                 const imageUrl = getImageUrl(item.logo);
+//                 const hasError = imageErrors[item._id];
+//                 const showImage = imageUrl && !hasError;
+//                 const isEven = index % 2 !== 0;
+
+//                 return (
+//                   <Row
+//                     key={item._id || index}
+//                     className={`align-items-center value-row mb-5 ${
+//                       isEven ? "flex-row-reverse" : ""
+//                     }`}
+//                   >
+//                     <Col md={3}>
+//                       <motion.div
+//                         className="value-image-wrapper"
+//                         variants={!isEven ? fadeLeft : fadeRight}
+//                         initial="hidden"
+//                         whileInView="visible"
+//                         transition={{ duration: 0.8 }}
+//                         viewport={{ once: true }}
+//                       >
+//                         {showImage ? (
+//                           <div className="brand-image-container">
+//                             <img
+//                               src={imageUrl}
+//                               alt={item.name}
+//                               className="brand-image"
+//                               onError={() => handleImageError(item._id)}
+//                               loading="lazy"
+//                             />
+//                           </div>
+//                         ) : (
+//                           <div className="brand-placeholder">
+//                             <span className="brand-initial">
+//                               {item.name?.charAt(0)?.toUpperCase() || "?"}
+//                             </span>
+//                             <span className="brand-name-display">{item.name || "Unknown"}</span>
+//                           </div>
+//                         )}
+//                       </motion.div>
+//                     </Col>
+
+//                     <Col md={9}>
+//                       <motion.div
+//                         className="value-content light mt-2 mt-md-0"
+//                         variants={!isEven ? fadeRight : fadeLeft}
+//                         initial="hidden"
+//                         whileInView="visible"
+//                         transition={{ duration: 0.8 }}
+//                         viewport={{ once: true }}
+//                       >
+//                         <div className="d-flex align-items-center gap-3 flex-wrap">
+//                           <h4 className="funnel-sans mb-0">{item.name || "Unnamed Brand"}</h4>
+                        
+//                         </div>
+                        
+//                         <p className="lexend mt-2">
+//                           {item.description || `${item.name || "This brand"} - Premium brand on Native91`}
+//                         </p>
+                        
+//                         <div className="d-flex flex-wrap gap-3 align-items-center mt-3">
+//                           <NavLink
+//                             to={`/company/${encodeURIComponent(item.name || item._id)}`}
+//                             className="nav-link p-0"
+//                           >
+//                             <motion.button
+//                               className="buy-btn lexend"
+//                               whileHover={{ scale: 1.05 }}
+//                               whileTap={{ scale: 0.95 }}
+//                             >
+//                               Explore Brand
+//                             </motion.button>
+//                           </NavLink>
+
+//                         </div>
+//                       </motion.div>
+//                     </Col>
+//                   </Row>
+//                 );
+//               })}
+//             </div>
+//           )}
+//         </Container>
+//       </section>
+
+//       <Footer />
+//     </div>
+//   );
+// };
+
+// export default Product;

@@ -1,4 +1,4 @@
-// Router/sellerRoutes.js - COMPLETE WITH OTP SUPPORT (TRACKING EMAIL AFTER OTP)
+// Router/sellerRoutes.js - COMPLETE WITH TWO-STEP REGISTRATION
 
 const express = require("express");
 const router = express.Router();
@@ -9,6 +9,24 @@ const Vendor = require("../Models/Vendor");
 const Company = require("../Models/Company");
 const { sendOTP, verifyOTP, resendOTP } = require("../utils/otpService");
 const nodemailer = require("nodemailer");
+
+// ============================================================
+// TEMPORARY STORE (Use Redis in production)
+// ============================================================
+const tempStore = new Map();
+const otpVerificationStore = new Map();
+
+// Clean up expired temp data every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of tempStore.entries()) {
+    if (now - value.createdAt > 10 * 60 * 1000) { // 10 minutes
+      tempStore.delete(key);
+      otpVerificationStore.delete(key);
+      console.log(`🧹 Cleaned up expired temp data for: ${key}`);
+    }
+  }
+}, 10 * 60 * 1000);
 
 // ============================================================
 // EMAIL CONFIGURATION
@@ -517,9 +535,9 @@ const sendRejectionEmail = async (sellerData, reason) => {
 };
 
 // ============================================================
-// ✅ REGISTER SELLER (with OTP only - NO tracking email yet)
+// STEP 1: SEND OTP (Temporary storage - NO SELLER CREATED YET)
 // ============================================================
-router.post("/register", async (req, res) => {
+router.post("/send-otp", async (req, res) => {
   try {
     const { 
       fullName, 
@@ -531,7 +549,7 @@ router.post("/register", async (req, res) => {
       pricingPlan 
     } = req.body;
 
-    console.log('📝 Registration request received:', { email, businessName });
+    console.log('📝 Send OTP request received:', { email, businessName });
 
     // Validate required fields
     if (!fullName || !email || !phoneNumber || !businessName || !category) {
@@ -539,13 +557,6 @@ router.post("/register", async (req, res) => {
         success: false,
         message: "All fields are required",
       });
-    }
-
-    // Handle category - if array, convert to string
-    let categoryString = category;
-    if (Array.isArray(category)) {
-      categoryString = category.join(', ');
-      console.log('🔄 Category converted from array to string:', categoryString);
     }
 
     // Check if email already exists
@@ -557,92 +568,73 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Generate tracking token
-    const trackingToken = crypto.randomBytes(32).toString('hex');
-    const trackingTokenExpires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
-
-    // Create seller
-    const seller = new Seller({
+    // Generate a temporary ID
+    const tempId = crypto.randomBytes(16).toString('hex');
+    
+    // Store temp data in memory
+    tempStore.set(tempId, {
       fullName,
       email,
       phoneNumber,
       businessName,
-      category: categoryString,
+      category: Array.isArray(category) ? category.join(', ') : category,
       website: website || '',
       pricingPlan: pricingPlan || '',
-      status: 'pending',
-      trackingToken,
-      trackingTokenExpires,
-      phoneVerified: false,
+      createdAt: Date.now(),
     });
 
-    await seller.save();
-    console.log(`✅ Seller created: ${seller._id}`);
+    console.log(`📝 Temp data stored for: ${tempId}`);
 
-    // ========================================================
-    // SEND ADMIN NOTIFICATION ONLY (No tracking email yet)
-    // ========================================================
-    try {
-      await sendAdminNotificationEmail(seller);
-      console.log(`✅ Admin notification email sent for: ${seller.businessName}`);
-    } catch (adminEmailErr) {
-      console.error("❌ Admin email error:", adminEmailErr);
-    }
+    // Send OTP
+    const otpResult = await sendOTP(tempId, email);
+    console.log(`📱 OTP send result: ${otpResult.success ? 'Success' : 'Failed'}`);
 
-    // ========================================================
-    // SEND OTP
-    // ========================================================
-    let otpResult = null;
-    try {
-      otpResult = await sendOTP(seller._id);
-      console.log(`📱 OTP send result: ${otpResult.success ? 'Success' : 'Failed'}`);
-    } catch (otpErr) {
-      console.error("❌ OTP send error:", otpErr);
-    }
-
-    // Return response (NO tracking email sent yet)
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: "Registration successful! Please verify your phone number via OTP.",
+      message: "OTP sent to your email!",
       data: {
-        sellerId: seller._id,
-        fullName: seller.fullName,
-        email: seller.email,
-        businessName: seller.businessName,
-        trackingId: seller.trackingId,
-        phoneVerified: seller.phoneVerified,
+        tempId: tempId,
+        email: email,
         otpSent: otpResult?.success || false,
         ...(process.env.NODE_ENV === 'development' && otpResult?.otp && { otp: otpResult.otp }),
       },
     });
 
   } catch (error) {
-    console.error("❌ Seller registration error:", error);
+    console.error("❌ Send OTP error:", error);
     res.status(500).json({
       success: false,
-      message: error.code === 11000
-        ? "This email is already registered"
-        : "Failed to register. Please try again.",
+      message: "Failed to send OTP. Please try again.",
       error: error.message,
     });
   }
 });
 
 // ============================================================
-// ✅ VERIFY OTP (Sends tracking email after successful verification)
+// STEP 1b: VERIFY OTP
 // ============================================================
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { sellerId, otp } = req.body;
+    const { tempId, otp } = req.body;
 
-    if (!sellerId || !otp) {
+    if (!tempId || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Seller ID and OTP are required",
+        message: "Temporary ID and OTP are required",
       });
     }
 
-    const result = await verifyOTP(sellerId, otp);
+    // Get temp data
+    const tempData = tempStore.get(tempId);
+    if (!tempData) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration session expired. Please start over.",
+      });
+    }
+
+    // Verify OTP
+    const result = await verifyOTP(tempId, otp);
 
     if (!result.success) {
       return res.status(400).json({
@@ -651,32 +643,15 @@ router.post("/verify-otp", async (req, res) => {
       });
     }
 
-    // ========================================================
-    // ✅ OTP VERIFIED - NOW SEND TRACKING EMAIL
-    // ========================================================
-    try {
-      // Fetch updated seller data
-      const seller = await Seller.findById(sellerId);
-      
-      if (seller) {
-        // Generate tracking URL
-        const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${seller.trackingToken}`;
-        
-        // Send tracking email
-        await sendTrackingEmail(seller, trackingUrl);
-        console.log(`✅ Tracking email sent to seller after OTP verification: ${seller.email}`);
-      }
-    } catch (trackingErr) {
-      console.error("❌ Tracking email error after OTP verification:", trackingErr);
-      // Don't fail the verification if tracking email fails
-    }
+    // Mark OTP as verified in memory
+    otpVerificationStore.set(tempId, true);
 
     res.json({
       success: true,
-      message: result.message,
+      message: "OTP verified successfully!",
       data: {
-        ...result.data,
-        trackingEmailSent: true,
+        tempId: tempId,
+        email: tempData.email,
       },
     });
 
@@ -690,58 +665,154 @@ router.post("/verify-otp", async (req, res) => {
 });
 
 // ============================================================
-// ✅ REQUEST OTP
+// STEP 2: COMPLETE REGISTRATION (After OTP verification)
 // ============================================================
-router.post("/request-otp", async (req, res) => {
+router.post("/complete-registration", async (req, res) => {
   try {
-    const { sellerId } = req.body;
+    const { 
+      tempId,
+      fullName, 
+      email, 
+      phoneNumber, 
+      businessName, 
+      category, 
+      website,
+      pricingPlan 
+    } = req.body;
 
-    if (!sellerId) {
+    console.log('📝 Complete registration request received:', { tempId, email });
+
+    if (!tempId) {
       return res.status(400).json({
         success: false,
-        message: "Seller ID is required",
+        message: "Temporary ID is required",
       });
     }
 
-    const result = await sendOTP(sellerId);
-
-    if (!result.success) {
+    // Get temp data from store
+    const tempData = tempStore.get(tempId);
+    if (!tempData) {
       return res.status(400).json({
         success: false,
-        message: result.message,
+        message: "Registration session expired. Please start over.",
       });
     }
 
-    res.json({
+    // Verify OTP was verified
+    const otpVerified = otpVerificationStore.get(tempId);
+    if (!otpVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP verification required before completing registration.",
+      });
+    }
+
+    // Check if email already exists (double-check)
+    const existingSeller = await Seller.findOne({ email });
+    if (existingSeller) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered.",
+      });
+    }
+
+    // Generate tracking token
+    const trackingToken = crypto.randomBytes(32).toString('hex');
+    const trackingTokenExpires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+
+    // Handle category - ensure it's a string
+    let categoryString = category;
+    if (Array.isArray(category)) {
+      categoryString = category.join(', ');
+    }
+
+    // Create seller NOW (after OTP verification)
+    const seller = new Seller({
+      fullName: fullName || tempData.fullName,
+      email: email || tempData.email,
+      phoneNumber: phoneNumber || tempData.phoneNumber,
+      businessName: businessName || tempData.businessName,
+      category: categoryString || tempData.category,
+      website: website || tempData.website || '',
+      pricingPlan: pricingPlan || tempData.pricingPlan || '',
+      status: 'pending',
+      trackingToken,
+      trackingTokenExpires,
+      phoneVerified: true, // Mark as verified since OTP was confirmed
+    });
+
+    await seller.save();
+    console.log(`✅ Seller created after OTP verification: ${seller._id}`);
+
+    // Clean up temp data
+    tempStore.delete(tempId);
+    otpVerificationStore.delete(tempId);
+
+    // Send admin notification
+    try {
+      await sendAdminNotificationEmail(seller);
+      console.log(`✅ Admin notification email sent for: ${seller.businessName}`);
+    } catch (adminEmailErr) {
+      console.error("❌ Admin email error:", adminEmailErr);
+    }
+
+    // Send tracking email to seller
+    try {
+      const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:3002'}/application-status/${seller.trackingId}?token=${seller.trackingToken}`;
+      await sendTrackingEmail(seller, trackingUrl);
+      console.log(`✅ Tracking email sent to seller: ${seller.email}`);
+    } catch (trackingErr) {
+      console.error("❌ Tracking email error:", trackingErr);
+    }
+
+    res.status(201).json({
       success: true,
-      message: "OTP sent to your email!",
-      ...(process.env.NODE_ENV === 'development' && { otp: result.otp }),
+      message: "Registration completed successfully!",
+      data: {
+        sellerId: seller._id,
+        fullName: seller.fullName,
+        email: seller.email,
+        businessName: seller.businessName,
+        trackingId: seller.trackingId,
+        phoneVerified: seller.phoneVerified,
+      },
     });
 
   } catch (error) {
-    console.error("❌ Request OTP error:", error);
+    console.error("❌ Complete registration error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to send OTP",
+      message: error.code === 11000
+        ? "This email is already registered"
+        : "Failed to complete registration. Please try again.",
+      error: error.message,
     });
   }
 });
 
 // ============================================================
-// ✅ RESEND OTP
+// RESEND OTP
 // ============================================================
 router.post("/resend-otp", async (req, res) => {
   try {
-    const { sellerId } = req.body;
+    const { tempId } = req.body;
 
-    if (!sellerId) {
+    if (!tempId) {
       return res.status(400).json({
         success: false,
-        message: "Seller ID is required",
+        message: "Temporary ID is required",
       });
     }
 
-    const result = await resendOTP(sellerId);
+    const tempData = tempStore.get(tempId);
+    if (!tempData) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration session expired. Please start over.",
+      });
+    }
+
+    const result = await resendOTP(tempId, tempData.email);
 
     if (!result.success) {
       return res.status(400).json({
@@ -766,7 +837,7 @@ router.post("/resend-otp", async (req, res) => {
 });
 
 // ============================================================
-// ✅ STATUS CHECK (with OTP status)
+// STATUS CHECK (with OTP status)
 // ============================================================
 router.get("/status/:trackingId", async (req, res) => {
   try {
@@ -917,12 +988,12 @@ router.post("/applications/:id/approve", async (req, res) => {
     }
 
     // Optional: Check if phone is verified before approval
-    // if (!application.phoneVerified) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Phone number must be verified before approval",
-    //   });
-    // }
+    if (!application.phoneVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be verified before approval",
+      });
+    }
 
     // Create or get company
     let company = await Company.findOne({ name: application.businessName });

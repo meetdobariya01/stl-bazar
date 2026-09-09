@@ -43,7 +43,7 @@ const PRODUCT_CATEGORIES = [
 // ============================================================
 // OTP VERIFICATION COMPONENT (inline for simplicity)
 // ============================================================
-const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
+const OTPVerification = ({ tempId, onVerificationComplete, onSkip, onResendOTP }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +51,7 @@ const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
   const [timeLeft, setTimeLeft] = useState(600);
   const [canResend, setCanResend] = useState(true);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
   
   const inputRefs = useRef([]);
 
@@ -110,7 +111,7 @@ const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
 
     try {
       const response = await axios.post(`${API_URL}/sellers/verify-otp`, {
-        sellerId,
+        tempId,
         otp: otpString,
       });
 
@@ -131,29 +132,33 @@ const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
   };
 
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || isResending) return;
 
-    setLoading(true);
+    setIsResending(true);
     setError('');
     setResendCooldown(60);
     setCanResend(false);
 
     try {
-      const response = await axios.post(`${API_URL}/sellers/resend-otp`, {
-        sellerId,
-      });
+      if (onResendOTP) {
+        await onResendOTP(tempId);
+      } else {
+        const response = await axios.post(`${API_URL}/sellers/resend-otp`, {
+          tempId,
+        });
 
-      if (response.data.success) {
-        setTimeLeft(600);
-        setOtp(['', '', '', '', '', '']);
-        inputRefs.current[0]?.focus();
-        setError('');
+        if (response.data.success) {
+          setTimeLeft(600);
+          setOtp(['', '', '', '', '', '']);
+          inputRefs.current[0]?.focus();
+          setError('');
+        }
       }
     } catch (err) {
       console.error('Resend OTP error:', err);
       setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
     } finally {
-      setLoading(false);
+      setIsResending(false);
       const interval = setInterval(() => {
         setResendCooldown(prev => {
           if (prev <= 1) {
@@ -177,8 +182,8 @@ const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
     return (
       <div className="otp-success text-center p-4">
         <FaCheckCircle size={60} color="#0f5132" />
-        <h4 className="mt-3">Phone Verified!</h4>
-        <p className="text-muted">Your phone number has been verified successfully.</p>
+        <h4 className="mt-3">Email Verified!</h4>
+        <p className="text-muted">Your email address has been verified successfully.</p>
         <Button variant="dark" onClick={() => onSkip?.()}>
           Continue
         </Button>
@@ -238,10 +243,16 @@ const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
           type="button"
           className="btn btn-link p-0 text-decoration-none"
           onClick={handleResend}
-          disabled={!canResend || loading}
+          disabled={!canResend || loading || isResending}
           style={{ fontSize: '14px', color: '#073f31' }}
         >
-          {canResend ? 'Resend OTP' : `Resend in ${resendCooldown}s`}
+          {isResending ? (
+            <Spinner size="sm" animation="border" />
+          ) : canResend ? (
+            'Resend OTP'
+          ) : (
+            `Resend in ${resendCooldown}s`
+          )}
         </button>
       </div>
 
@@ -260,14 +271,14 @@ const OTPVerification = ({ sellerId, onVerificationComplete, onSkip }) => {
       </Button>
 
       <div className="text-center mt-3">
-        <button
+        {/* <button
           type="button"
           className="btn btn-link text-muted p-0"
           onClick={() => onSkip?.()}
           style={{ fontSize: '13px' }}
         >
           Skip for now (verify later)
-        </button>
+        </button> */}
       </div>
 
       <div className="text-center mt-3">
@@ -311,11 +322,12 @@ const Sell = () => {
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
   
-  // ✅ OTP State
-  const [sellerId, setSellerId] = useState(null);
+  // OTP State
+  const [tempId, setTempId] = useState(null);
   const [showOTP, setShowOTP] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [registrationData, setRegistrationData] = useState(null);
+  const [isCompletingRegistration, setIsCompletingRegistration] = useState(false);
 
   // Standard handler for text/select-one inputs
   const handleChange = (e) => {
@@ -397,7 +409,7 @@ const Sell = () => {
   };
 
   // ============================================================
-  // HANDLE REGISTRATION SUBMIT
+  // HANDLE REGISTRATION SUBMIT (Step 1: Send OTP)
   // ============================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -410,7 +422,8 @@ const Sell = () => {
     setError("");
 
     try {
-      const response = await axios.post(`${API_URL}/sellers/register`, {
+      // Step 1: Send OTP without creating seller
+      const response = await axios.post(`${API_URL}/sellers/send-otp`, {
         fullName: formData.fullName,
         email: formData.email,
         phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
@@ -420,24 +433,18 @@ const Sell = () => {
         category: formData.category,
       });
 
-      console.log("Registration response:", response.data);
+      console.log("OTP send response:", response.data);
 
       if (response.data.success) {
-        // ✅ Store seller ID for OTP verification
-        setSellerId(response.data.data.sellerId);
+        // Store the temp registration ID
+        setTempId(response.data.data.tempId);
         setRegistrationData(response.data.data);
         setShowOTP(true);
-        
-        // If OTP was sent automatically, show the OTP screen
-        if (response.data.data.otpSent) {
-          console.log("✅ OTP sent to email");
-        }
       }
     } catch (err) {
-      console.error("Registration error:", err);
-      console.error("Error response:", err.response?.data);
+      console.error("OTP send error:", err);
       setError(
-        err.response?.data?.message || "Failed to register. Please try again.",
+        err.response?.data?.message || "Failed to send OTP. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -445,12 +452,41 @@ const Sell = () => {
   };
 
   // ============================================================
-  // OTP VERIFICATION COMPLETE
+  // OTP VERIFICATION COMPLETE (Step 2: Complete Registration)
   // ============================================================
-  const handleOTPVerificationComplete = (data) => {
-    setOtpVerified(true);
-    setSuccess(true);
-    setShowOTP(false);
+  const handleOTPVerificationComplete = async (data) => {
+    setIsCompletingRegistration(true);
+    setError("");
+
+    try {
+      // Step 2: Complete registration after OTP verification
+      const response = await axios.post(`${API_URL}/sellers/complete-registration`, {
+        tempId: tempId,
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
+        businessName: formData.businessName,
+        website: formData.website,
+        pricingPlan: formData.pricingPlan,
+        category: formData.category,
+      });
+
+      if (response.data.success) {
+        setOtpVerified(true);
+        setSuccess(true);
+        setShowOTP(false);
+        setRegistrationData(response.data.data);
+      }
+    } catch (err) {
+      console.error("Registration completion error:", err);
+      setError(
+        err.response?.data?.message || "Failed to complete registration. Please try again."
+      );
+      // If registration fails, go back to form
+      setShowOTP(false);
+    } finally {
+      setIsCompletingRegistration(false);
+    }
   };
 
   // ============================================================
@@ -459,6 +495,16 @@ const Sell = () => {
   const handleSkipOTP = () => {
     setShowOTP(false);
     setSuccess(true);
+  };
+
+  // ============================================================
+  // HANDLE RESEND OTP
+  // ============================================================
+  const handleResendOTP = async (tempId) => {
+    const response = await axios.post(`${API_URL}/sellers/resend-otp`, {
+      tempId,
+    });
+    return response.data;
   };
 
   // ============================================================
@@ -531,11 +577,29 @@ const Sell = () => {
                       We've sent a 6-digit verification code to your email.
                     </p>
 
+                    {error && (
+                      <Alert
+                        variant="danger"
+                        onClose={() => setError("")}
+                        dismissible
+                      >
+                        {error}
+                      </Alert>
+                    )}
+
                     <OTPVerification
-                      sellerId={sellerId}
+                      tempId={tempId}
                       onVerificationComplete={handleOTPVerificationComplete}
                       onSkip={handleSkipOTP}
+                      onResendOTP={handleResendOTP}
                     />
+
+                    {isCompletingRegistration && (
+                      <div className="text-center mt-3">
+                        <Spinner animation="border" size="sm" />
+                        <span className="ms-2">Completing registration...</span>
+                      </div>
+                    )}
 
                     <div className="mt-4 text-center">
                       <p className="text-muted small">
@@ -566,7 +630,6 @@ const Sell = () => {
                         <FaCheckCircle size={24} />
                       </div>
                       <div>
-                        <h5>Trust & Credibility</h5>
                         <p>Verified sellers build more trust with customers</p>
                       </div>
                     </div>
@@ -653,6 +716,9 @@ const Sell = () => {
                       <Form.Control.Feedback type="invalid">
                         {validationErrors.email}
                       </Form.Control.Feedback>
+                       <Form.Text className="text-muted">
+                        We'll send a verification code to this email via email.
+                      </Form.Text>
                     </Form.Group>
 
                     <Form.Group className="mb-4">
@@ -671,9 +737,7 @@ const Sell = () => {
                       <Form.Control.Feedback type="invalid">
                         {validationErrors.phoneNumber}
                       </Form.Control.Feedback>
-                      <Form.Text className="text-muted">
-                        We'll send a verification code to this number via email.
-                      </Form.Text>
+                     
                     </Form.Group>
 
                     <Form.Group className="mb-4">
@@ -787,7 +851,7 @@ const Sell = () => {
                       {loading ? (
                         <Spinner size="sm" animation="border" />
                       ) : (
-                        "Create My Account"
+                        "Send OTP & Create Account"
                       )}
                     </Button>
                   </Form>
@@ -839,7 +903,7 @@ const Sell = () => {
                     <div>
                       <h5>Founding Seller benefits available</h5>
                       <p>Unlock exclusive early seller advantages</p>
-                    </div>
+                    </div>  
                   </div>
 
                   <div className="support-card d-flex gap-3 p-3 bg-light rounded mt-4">
