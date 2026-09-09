@@ -238,7 +238,8 @@
   background: transparent;
 }
 .shop-premium .arrow-icon {
-  transition: transform 0.3s ease;
+  transition:
+    transform 0.3s ease;
 }
 .shop-premium:hover .arrow-icon {
   transform: translateX(4px);
@@ -250,8 +251,12 @@
   text-decoration: none !important;
 } /* ================================= TABLET ================================= */
 @media (max-width: 1199px) {
+
   .brand-slide-item {
-    width: calc((100vw - 80px) / 3);
+    width:
+      calc(
+        (100vw - 80px) / 3
+      );
   }
   .logo-premium {
     width: 85px;
@@ -262,6 +267,7 @@
   }
 } /* ================================= 991px ================================= */
 @media (max-width: 991px) {
+
   .logo-premium {
     width: 75px;
     height: 75px;
@@ -281,8 +287,10 @@
   }
 } /* ================================= MOBILE ================================= */
 @media (max-width: 768px) {
+
   .arrival-premium {
-    padding: 25px 0 40px;
+    padding:
+      25px 0 40px;
   }
   .arrival-header-premium {
     align-items: flex-start;
@@ -304,7 +312,10 @@
     font-size: 0.7rem;
   } /* * Two cards visible */
   .brand-slide-item {
-    width: calc((100vw - 50px) / 2);
+    width:
+      calc(
+        (100vw - 50px) / 2
+      );
   }
   .brand-slider-track {
     gap: 12px;
@@ -334,6 +345,7 @@
   }
 } /* ================================= SMALL MOBILE ================================= */
 @media (max-width: 576px) {
+
   .title-premium {
     font-size: 1.2rem;
   }
@@ -349,7 +361,10 @@
     padding: 4px 12px;
   } /* * Keep exactly two cards visible */
   .brand-slide-item {
-    width: calc((100vw - 38px) / 2);
+    width:
+      calc(
+        (100vw - 38px) / 2
+      );
   }
   .brand-slider-track {
     gap: 10px;

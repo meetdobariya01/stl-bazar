@@ -102,6 +102,7 @@ router.get("/search-suggestions", async (req, res) => {
 });
 
 
+// In your routes file - Update the /companies endpoint
 
 router.get("/companies", async (req, res) => {
   try {
@@ -116,79 +117,109 @@ router.get("/companies", async (req, res) => {
     for (const vendor of activeVendors) {
       let categories = [];
       let description = "";
+      let logo = vendor.logo || null;
 
       // ✅ Get description from Vendor first
       if (vendor.description) {
         description = vendor.description;
       }
 
-      // ✅ Get categories from Vendor
+      // ✅ 1. Get categories from Vendor
       if (vendor.categories && vendor.categories.length > 0) {
         categories = vendor.categories;
-      } else if (vendor.category) {
-        categories = [vendor.category];
+      } else if (vendor.category && typeof vendor.category === 'string') {
+        categories = vendor.category.split(",").map(c => c.trim()).filter(Boolean);
       }
-
-      // ✅ Get logo from Vendor
-      let logo = vendor.logo || null;
       
-      // ✅ If no categories in Vendor, check SellerDocument
-      if (categories.length === 0) {
+      // ✅ 2. If categories na hoy OR logo na hoy, to SellerDocument check karo
+      if (categories.length === 0 || !logo) {
         const sellerDoc = await SellerDocument.findOne({ email: vendor.email });
         if (sellerDoc) {
-          // Get categories from SellerDocument
-          if (sellerDoc.categories && sellerDoc.categories.length > 0) {
+          
+          // ✅ CATEGORY FIX (SellerDocument mathi)
+          if (sellerDoc.categories && Array.isArray(sellerDoc.categories) && sellerDoc.categories.length > 0) {
             categories = sellerDoc.categories;
-          } else if (sellerDoc.category) {
-            categories = [sellerDoc.category];
+          } else if (sellerDoc.category && typeof sellerDoc.category === 'string') {
+            categories = sellerDoc.category.split(",").map(c => c.trim()).filter(Boolean);
+          } else if (sellerDoc.brand && Array.isArray(sellerDoc.brand.categories) && sellerDoc.brand.categories.length > 0) {
+            categories = sellerDoc.brand.categories;
+          } else if (sellerDoc.brand && sellerDoc.brand.category && typeof sellerDoc.brand.category === 'string') {
+            categories = sellerDoc.brand.category.split(",").map(c => c.trim()).filter(Boolean);
           }
           
-          // ✅ Get description from SellerDocument brand description
-          if (!description && sellerDoc.brand && sellerDoc.brand.description) {
-            description = sellerDoc.brand.description;
-          }
-          
-          // ✅ NEW: Get LOGO from SellerDocument
+          // ✅ LOGO FIX (SellerDocument mathi)
           if (!logo) {
             if (sellerDoc.logo && typeof sellerDoc.logo === 'object') {
               logo = sellerDoc.logo.image || sellerDoc.logo.url || null;
-            } else if (Array.isArray(sellerDoc.logo)) {
-              logo = sellerDoc.logo[0] || null;
             } else if (typeof sellerDoc.logo === 'string') {
               logo = sellerDoc.logo;
             }
           }
           
-          // ✅ Get business name from SellerDocument
+          // ✅ Description fix
+          if (!description && sellerDoc.brand && sellerDoc.brand.description) {
+            description = sellerDoc.brand.description;
+          }
+          
+          // ✅ Business name fix
           if (sellerDoc.businessName) {
             vendor.company = sellerDoc.businessName;
           }
         }
       }
       
-      // ✅ If still no category, check Company
-      if (categories.length === 0) {
+      // ✅ 3. If still no category or logo, check Company
+      if (categories.length === 0 || !logo) {
         const companyData = await Company.findOne({ name: vendor.company || vendor.name });
         if (companyData) {
+          // ✅ Check if company has categories array
           if (companyData.categories && companyData.categories.length > 0) {
             categories = companyData.categories;
-          } else if (companyData.category) {
-            categories = [companyData.category];
+          } else if (companyData.category && typeof companyData.category === 'string') {
+            // ✅ If company has old category field, convert it
+            categories = companyData.category.split(",").map(c => c.trim()).filter(Boolean);
           }
           
-          // ✅ Get description from Company
           if (!description && companyData.description) {
             description = companyData.description;
           }
+
+          // ✅ Logo from Company
+          if (!logo && companyData.logo) {
+            logo = companyData.logo;
+          }
         }
       }
-      
-      // ✅ Get logo from Company (if still not found)
-      if (!logo) {
-        const companyData = await Company.findOne({ name: vendor.company || vendor.name });
-        if (companyData && companyData.logo) {
-          logo = companyData.logo;
-        }
+
+      // ✅ 4. If STILL no categories, try to infer from product data
+      if (categories.length === 0) {
+        // Get products for this company and extract categories
+        const products = await Product.find({ 
+          company: vendor.company,
+          stockQuantity: { $gt: 0 }
+        }).select('category').limit(10);
+        
+        const productCategories = new Set();
+        products.forEach(p => {
+          if (p.category) {
+            if (Array.isArray(p.category)) {
+              p.category.forEach(c => {
+                if (c && c.trim()) productCategories.add(c.trim());
+              });
+            } else if (typeof p.category === 'string') {
+              p.category.split(',').forEach(c => {
+                if (c && c.trim()) productCategories.add(c.trim());
+              });
+            }
+          }
+        });
+        
+        categories = Array.from(productCategories);
+      }
+
+      // ✅ 5. If STILL no categories, use 'Uncategorized'
+      if (categories.length === 0) {
+        categories = ['Uncategorized'];
       }
 
       // ✅ Count products for this company
@@ -204,7 +235,7 @@ router.get("/companies", async (req, res) => {
         logo: logo,
         email: vendor.email,
         hasLogo: !!logo,
-        categories: categories.length > 0 ? categories : ['Uncategorized'],
+        categories: categories,
         category: categories.length > 0 ? categories[0] : 'Uncategorized',
         plan: vendor.plan || 'STARTER',
         status: vendor.status || 'active',
@@ -215,6 +246,7 @@ router.get("/companies", async (req, res) => {
       
       companies.push(companyDataObj);
       
+      // ✅ Update category map
       categories.forEach(cat => {
         if (!categoryMap[cat]) {
           categoryMap[cat] = [];
@@ -229,6 +261,7 @@ router.get("/companies", async (req, res) => {
       categories: Object.keys(categoryMap).filter(k => k !== 'Uncategorized').sort(),
       stats: {
         total: companies.length,
+        withLogos: companies.filter(c => c.hasLogo).length,
         withCategories: companies.filter(c => c.categories && c.categories[0] !== 'Uncategorized').length,
         categoriesCount: Object.keys(categoryMap).filter(k => k !== 'Uncategorized').length
       }
@@ -245,6 +278,63 @@ router.get("/companies", async (req, res) => {
 
 
 
+// ============================================================
+// GET SUB-CATEGORIES FOR A CATEGORY
+// ============================================================
+router.get("/categories/:category/subcategories", async (req, res) => {
+  try {
+    const { category } = req.params;
+    
+    // Get distinct sub-categories from products
+    const subCategories = await Product.distinct("subCategory", {
+      category: decodeURIComponent(category)
+    });
+    
+    const subCategoriesArray = await Product.distinct("subCategories", {
+      category: decodeURIComponent(category)
+    });
+    
+    const allSubCategories = [...subCategories, ...subCategoriesArray];
+    const uniqueSubCategories = [...new Set(allSubCategories)].filter(s => s && s.trim() !== '');
+    
+    res.json({
+      success: true,
+      category,
+      subCategories: uniqueSubCategories
+    });
+  } catch (error) {
+    console.error("Error fetching sub-categories:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// ============================================================
+// GET PRODUCTS BY CATEGORY (for fallback)
+// ============================================================
+router.get("/products/by-category/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+    
+    const products = await Product.find({
+      category: decodeURIComponent(category),
+      isActive: true
+    }).select('subCategory subCategories name price');
+    
+    res.json({
+      success: true,
+      products
+    });
+  } catch (error) {
+    console.error("Error fetching products by category:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
 router.post("/company", async (req, res) => {
   try {
     const { name, description, logo, category } = req.body;

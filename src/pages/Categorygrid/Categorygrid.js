@@ -9,12 +9,12 @@ import {
   FaFilter,
   FaChevronRight,
   FaShoppingCart,
+  FaSitemap,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
-import Details from "../../components/details/details";
 import { createSlug } from "../../utils/slugUtils";
 import { useWishlist } from "../../context/WishlistContext";
 import { useCart } from "../../context/CartContext";
@@ -51,8 +51,9 @@ const CategoryProducts = () => {
     });
   }, [pathname]);
 
-  const { categoryName } = useParams();
+  const { categoryName, subCategoryName } = useParams();
   const decodedCategory = decodeURIComponent(categoryName || "All");
+  const decodedSubCategory = subCategoryName ? decodeURIComponent(subCategoryName) : null;
   const navigate = useNavigate();
 
   const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
@@ -60,6 +61,7 @@ const CategoryProducts = () => {
 
   const [products, setProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
+  const [allSubCategories, setAllSubCategories] = useState({});
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -67,64 +69,111 @@ const CategoryProducts = () => {
   const [isAddingToCart, setIsAddingToCart] = useState({});
 
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedSubCategories, setSelectedSubCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
+  // Fetch products
   useEffect(() => {
     if (!decodedCategory) return;
 
     setLoading(true);
     
-    if (decodedCategory === "All") {
-      axios
-        .get(`${API_URL}/products`)
-        .then((res) => {
-          setProducts(res.data);
-          setFilteredProducts(res.data);
-          fetchWishlist();
-        })
-        .catch((err) => {
-          console.error("Error fetching all products:", err);
-          setProducts([]);
-          setFilteredProducts([]);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      axios
-        .get(`${API_URL}/products`)
-        .then((res) => {
-          const allProducts = res.data;
-          const filtered = allProducts.filter(
+    const fetchProducts = async () => {
+      try {
+        let url = `${API_URL}/products`;
+        let response = await axios.get(url);
+        let allProducts = response.data || [];
+
+        // Filter by category
+        if (decodedCategory !== "All") {
+          allProducts = allProducts.filter(
             (p) => p.category && p.category.toLowerCase() === decodedCategory.toLowerCase()
           );
-          setProducts(filtered);
-          setFilteredProducts(filtered);
-          fetchWishlist();
-        })
-        .catch((err2) => {
-          console.error("Error fetching products:", err2);
-          setProducts([]);
-          setFilteredProducts([]);
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [decodedCategory, fetchWishlist]);
+        }
 
+        // Filter by sub-category if specified (from URL)
+        if (decodedSubCategory) {
+          allProducts = allProducts.filter((p) => {
+            if (p.subCategory && p.subCategory.toLowerCase() === decodedSubCategory.toLowerCase()) {
+              return true;
+            }
+            if (p.subCategories && Array.isArray(p.subCategories)) {
+              return p.subCategories.some(
+                (sub) => sub.toLowerCase() === decodedSubCategory.toLowerCase()
+              );
+            }
+            return false;
+          });
+          // Set the selected sub-category filter to match URL
+          setSelectedSubCategories([decodedSubCategory]);
+        }
+
+        setProducts(allProducts);
+        setFilteredProducts(allProducts);
+        fetchWishlist();
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+        setFilteredProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [decodedCategory, decodedSubCategory, fetchWishlist]);
+
+  // Fetch categories and sub-categories
   useEffect(() => {
-    axios
-      .get(`${API_URL}/categories`)
-      .then((res) => {
-        setAllCategories(res.data);
-      })
-      .catch((err) => console.error("Error fetching categories:", err));
+    const fetchCategoriesAndSubs = async () => {
+      try {
+        const catRes = await axios.get(`${API_URL}/categories`);
+        setAllCategories(catRes.data || []);
+
+        const subMap = {};
+        const categories = catRes.data || [];
+        
+        for (const cat of categories) {
+          try {
+            const subRes = await axios.get(`${API_URL}/categories/${encodeURIComponent(cat.name)}/subcategories`);
+            if (subRes.data && subRes.data.subCategories) {
+              subMap[cat.name] = subRes.data.subCategories;
+            }
+          } catch (err) {
+            try {
+              const prodRes = await axios.get(`${API_URL}/products/by-category/${encodeURIComponent(cat.name)}`);
+              if (prodRes.data && prodRes.data.products) {
+                const subs = new Set();
+                prodRes.data.products.forEach(p => {
+                  if (p.subCategory) subs.add(p.subCategory);
+                  if (p.subCategories) p.subCategories.forEach(s => subs.add(s));
+                });
+                subMap[cat.name] = Array.from(subs);
+              }
+            } catch (prodErr) {
+              subMap[cat.name] = [];
+            }
+          }
+        }
+        
+        setAllSubCategories(subMap);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategoriesAndSubs();
   }, []);
 
+  // Apply filters - FIXED
   useEffect(() => {
     let filtered = [...products];
 
+    // Filter by selected categories
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
         selectedCategories.some(cat => 
@@ -133,6 +182,25 @@ const CategoryProducts = () => {
       );
     }
 
+    // Filter by selected sub-categories - FIXED
+    if (selectedSubCategories.length > 0) {
+      filtered = filtered.filter((p) => {
+        // Check if product matches ANY selected sub-category
+        return selectedSubCategories.some(selectedSub => {
+          // Check primary subCategory
+          if (p.subCategory && p.subCategory.toLowerCase() === selectedSub.toLowerCase()) {
+            return true;
+          }
+          // Check subCategories array
+          if (p.subCategories && Array.isArray(p.subCategories)) {
+            return p.subCategories.some(s => s.toLowerCase() === selectedSub.toLowerCase());
+          }
+          return false;
+        });
+      });
+    }
+
+    // Filter by price range
     if (selectedPriceRange) {
       switch (selectedPriceRange) {
         case "under-500":
@@ -162,6 +230,7 @@ const CategoryProducts = () => {
       }
     }
 
+    // Filter by rating
     if (selectedRating > 0) {
       filtered = filtered.filter(
         (p) => (p.averageRating || 0) >= selectedRating,
@@ -171,6 +240,7 @@ const CategoryProducts = () => {
     setFilteredProducts(filtered);
   }, [
     selectedCategories,
+    selectedSubCategories,
     selectedPriceRange,
     priceMin,
     priceMax,
@@ -178,7 +248,7 @@ const CategoryProducts = () => {
     products,
   ]);
 
-  // ✅ UPDATED: getSortedProducts with Alphabetical Order
+  // Get sorted products
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
     switch (sortBy) {
@@ -207,7 +277,6 @@ const CategoryProducts = () => {
           (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
         );
       default:
-        // ✅ Default: Alphabetical A-Z
         return sorted.sort((a, b) => {
           const nameA = a.name?.toLowerCase() || '';
           const nameB = b.name?.toLowerCase() || '';
@@ -290,8 +359,25 @@ const CategoryProducts = () => {
     setShowMobileFilters(false);
   };
 
+  // Handle sub-category checkbox change - FIXED
+  const handleSubCategoryToggle = (subCategory) => {
+    setSelectedSubCategories(prev => {
+      if (prev.includes(subCategory)) {
+        return prev.filter(s => s !== subCategory);
+      } else {
+        return [...prev, subCategory];
+      }
+    });
+  };
+
+  // Handle "All Sub-Categories" toggle
+  const handleAllSubCategoriesToggle = () => {
+    setSelectedSubCategories([]);
+  };
+
   const clearFilters = () => {
     setSelectedCategories([]);
+    setSelectedSubCategories([]);
     setSelectedPriceRange("");
     setPriceMin("");
     setPriceMax("");
@@ -303,6 +389,20 @@ const CategoryProducts = () => {
   const checkIsInWishlist = (productId) => {
     return isInWishlist(productId);
   };
+
+  // Get unique sub-categories for the current category
+  const getCategorySubCategories = () => {
+    if (decodedCategory === "All") {
+      const allSubs = new Set();
+      Object.values(allSubCategories).forEach(subs => {
+        subs.forEach(s => allSubs.add(s));
+      });
+      return Array.from(allSubs);
+    }
+    return allSubCategories[decodedCategory] || [];
+  };
+
+  const categorySubCategories = getCategorySubCategories();
 
   if (loading) {
     return (
@@ -328,7 +428,21 @@ const CategoryProducts = () => {
           <div className="category-hero-section">
             <Container>
               <div className="hero-content text-center">
-                <h1 className="hero-title funnel-sans">{decodedCategory}</h1>
+                <h1 className="hero-title funnel-sans">
+                  {decodedSubCategory || decodedCategory}
+                </h1>
+                {decodedSubCategory && (
+                  <p className="hero-breadcrumb">
+                    <span 
+                      onClick={() => navigate(`/category/${encodeURIComponent(decodedCategory)}`)}
+                      style={{ cursor: "pointer", color: "#0D3B2E", textDecoration: "underline" }}
+                    >
+                      {decodedCategory}
+                    </span>
+                    {" › "}
+                    <span>{decodedSubCategory}</span>
+                  </p>
+                )}
                 <p className="hero-subtitle">
                   Beautiful pieces to style your space and make it truly yours.
                 </p>
@@ -347,6 +461,11 @@ const CategoryProducts = () => {
                 onClick={() => setShowMobileFilters(true)}
               >
                 <FaFilter /> Filters
+                {selectedSubCategories.length > 0 && (
+                  <span className="filter-count-badge">
+                    {selectedSubCategories.length}
+                  </span>
+                )}
               </Button>
 
               <div className="d-flex align-items-center gap-3 ms-auto">
@@ -388,6 +507,7 @@ const CategoryProducts = () => {
                     </Button>
                   </div>
                   <div className="drawer-body">
+                    {/* Categories Filter */}
                     <div className="filter-group">
                       <h6>Categories</h6>
                       <div className="category-list">
@@ -408,6 +528,41 @@ const CategoryProducts = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* Sub-Categories Filter - Now inside the filter drawer */}
+                    {categorySubCategories.length > 0 && (
+                      <div className="filter-group">
+                        <h6>
+                          <FaSitemap className="me-1" /> Sub-Categories
+                        </h6>
+                        <div className="sub-category-filter-list">
+                          <Form.Check
+                            type="checkbox"
+                            label="All Sub-Categories"
+                            checked={selectedSubCategories.length === 0}
+                            onChange={handleAllSubCategoriesToggle}
+                          />
+                          {categorySubCategories.map((sub, index) => (
+                            <Form.Check
+                              key={index}
+                              type="checkbox"
+                              label={sub}
+                              checked={selectedSubCategories.includes(sub)}
+                              onChange={() => handleSubCategoryToggle(sub)}
+                            />
+                          ))}
+                        </div>
+                        {selectedSubCategories.length > 0 && (
+                          <div className="selected-filters-info">
+                            <small className="text-muted">
+                              {selectedSubCategories.length} sub-category(s) selected
+                            </small>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Price Filter */}
                     <div className="filter-group">
                       <h6>Price</h6>
                       <Form.Check
@@ -446,6 +601,39 @@ const CategoryProducts = () => {
                         onChange={() => setSelectedPriceRange("above-5000")}
                       />
                     </div>
+
+                    {/* Rating Filter */}
+                    <div className="filter-group">
+                      <h6>Rating</h6>
+                      <Form.Check
+                        type="radio"
+                        name="ratingMobile"
+                        label="4★ & above"
+                        checked={selectedRating === 4}
+                        onChange={() => setSelectedRating(4)}
+                      />
+                      <Form.Check
+                        type="radio"
+                        name="ratingMobile"
+                        label="3★ & above"
+                        checked={selectedRating === 3}
+                        onChange={() => setSelectedRating(3)}
+                      />
+                      <Form.Check
+                        type="radio"
+                        name="ratingMobile"
+                        label="2★ & above"
+                        checked={selectedRating === 2}
+                        onChange={() => setSelectedRating(2)}
+                      />
+                      <Form.Check
+                        type="radio"
+                        name="ratingMobile"
+                        label="All Ratings"
+                        checked={selectedRating === 0}
+                        onChange={() => setSelectedRating(0)}
+                      />
+                    </div>
                   </div>
                   <div className="drawer-footer">
                     <Button variant="outline" onClick={clearFilters}>
@@ -455,7 +643,7 @@ const CategoryProducts = () => {
                       variant="outline-success"
                       onClick={() => setShowMobileFilters(false)}
                     >
-                      Apply
+                      Apply Filters
                     </Button>
                   </div>
                 </div>
@@ -466,7 +654,13 @@ const CategoryProducts = () => {
             <Col lg={12}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
-                  <h5>No products found in "{decodedCategory}"</h5>
+                  <h5>No products found</h5>
+                  <p className="text-muted">
+                    {decodedSubCategory 
+                      ? `No products found in "${decodedSubCategory}" under "${decodedCategory}"`
+                      : `No products found in "${decodedCategory}"`
+                    }
+                  </p>
                   <p className="text-muted">Try adjusting your filters or select another category</p>
                   <Button variant="outline-dark" onClick={() => navigate("/category/All")}>
                     View All Products
@@ -517,6 +711,12 @@ const CategoryProducts = () => {
                                   <FaRegHeart />
                                 )}
                               </div>
+                              {/* Sub-Category Badge */}
+                              {item.subCategory && (
+                                <div className="sub-category-badge">
+                                  {item.subCategory}
+                                </div>
+                              )}
                             </div>
                             <Card.Body>
                               <div className="product-brand">
