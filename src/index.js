@@ -59,6 +59,10 @@ root.render(
             path="/category/:categoryName"
             element={<CategoryProducts />}
           />
+          <Route
+            path="/category/:categoryName/:subCategoryName"
+            element={<CategoryProducts />}
+          />
           <Route path="/sell" element={<Sell />} />
           <Route
             path="/application-status/:trackingId"
