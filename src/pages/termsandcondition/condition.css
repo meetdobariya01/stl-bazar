@@ -10,7 +10,7 @@
 
 .hero {
   padding: 120px 20px;
-  background: linear-gradient(135deg, #0f172a, #0ea5a4);
+  background: linear-gradient(135deg, #fff, #000);
   color: #fff;
   text-align: center;
   overflow: hidden;

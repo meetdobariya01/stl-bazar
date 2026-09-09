@@ -193,6 +193,8 @@ const Header = () => {
     }
 
     try {
+      console.log(`🔍 Fetching suggestions for: "${query}"`);
+      
       const response = await axios.get(`${API_URL}/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
@@ -201,9 +203,11 @@ const Header = () => {
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
+        console.log(`✅ Found ${response.data.products.length} products`);
       } else {
         setRecommendations([]);
         setShowRecommendations(false);
+        console.log("❌ No products found");
       }
     } catch (error) {
       console.error("Live search error:", error);
@@ -215,6 +219,7 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
+    console.log(`🔍 Typing: "${value}"`);
 
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
@@ -288,7 +293,7 @@ const Header = () => {
     },
     { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
-    { title: "FAQs", link: "/faqs" },
+    // { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
 

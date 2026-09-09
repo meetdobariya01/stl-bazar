@@ -800,7 +800,7 @@ const Product = () => {
       let errorMessage = "Failed to load brands. ";
       
       if (err.code === 'ECONNABORTED') {
-        errorMessage += "Request timed out. Please check your network connection.";
+        errorMessage += "Request timed out.";
       } else if (err.response) {
         errorMessage += `Server responded with status ${err.response.status}.`;
       } else if (err.request) {
@@ -845,9 +845,6 @@ const Product = () => {
         <Container className="py-5 text-center">
           <Spinner animation="border" variant="primary" />
           <p className="mt-3">Loading brands...</p>
-          {retryCount > 0 && (
-            <p className="text-muted small">Retry attempt {retryCount}</p>
-          )}
         </Container>
         <Footer />
       </div>
@@ -1153,20 +1150,6 @@ const Product = () => {
                               Explore Brand
                             </motion.button>
                           </NavLink>
-                          
-                          {item.productCount !== undefined && (
-                            <span className="text-muted small">
-                              <i className="bi bi-box-seam me-1"></i>
-                              {item.productCount} products
-                            </span>
-                          )}
-                          
-                          {item.createdAt && (
-                            <span className="text-muted small">
-                              <i className="bi bi-calendar3 me-1"></i>
-                              Joined: {new Date(item.createdAt).toLocaleDateString()}
-                            </span>
-                          )}
                         </div>
                       </motion.div>
                     </Col>

@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION WITH SHIPPING INFO (1 WEEK)
+// pages/Productdetails/Productdetails.js - COMPLETE UPDATED VERSION WITH SHIPPING INFO, INGREDIENTS, NUTRITIONAL INFO, ALLERGENS & DIETARY PREFERENCES
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -35,6 +35,12 @@ import {
   FaBox,
   FaShippingFast,
   FaMapMarkerAlt,
+  FaInfoCircle,
+  FaLeaf,
+  FaExclamationTriangle,
+  FaUtensils,
+  FaAppleAlt,
+  FaSeedling,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -46,7 +52,8 @@ import { useWishlist } from "../../context/WishlistContext";
 import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+const COUPON_API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -57,65 +64,90 @@ const formatPrice = (price) => {
 
 // ✅ Stock status helper
 const getStockStatus = (stock) => {
-  if (!stock && stock !== 0) return { label: "In Stock", color: "success", icon: "✅", canAdd: true };
-  if (stock === 0) return { label: "Out of Stock", color: "danger", icon: "❌", canAdd: false };
-  if (stock <= 5) return { label: `Only ${stock} left! Hurry!`, color: "warning", icon: "⚠️", canAdd: true };
-  if (stock <= 10) return { label: `Only ${stock} left`, color: "info", icon: "📦", canAdd: true };
-  return { label: `${stock} in stock`, color: "success", icon: "✅", canAdd: true };
+  if (!stock && stock !== 0)
+    return { label: "In Stock", color: "success", icon: "✅", canAdd: true };
+  if (stock === 0)
+    return {
+      label: "Out of Stock",
+      color: "danger",
+      icon: "❌",
+      canAdd: false,
+    };
+  if (stock <= 5)
+    return {
+      label: `Only ${stock} left! Hurry!`,
+      color: "warning",
+      icon: "⚠️",
+      canAdd: true,
+    };
+  if (stock <= 10)
+    return {
+      label: `Only ${stock} left`,
+      color: "info",
+      icon: "📦",
+      canAdd: true,
+    };
+  return {
+    label: `${stock} in stock`,
+    color: "success",
+    icon: "✅",
+    canAdd: true,
+  };
 };
 
 // ✅ Format size/weight display
 const formatSizeWeight = (product) => {
   if (!product) return null;
-  
+
   const parts = [];
-  
+
   if (product.size) {
     parts.push(`Size: ${product.size}`);
   }
-  
+
   if (product.weight && product.weight > 0) {
-    const unit = product.weightUnit || '';
+    const unit = product.weightUnit || "";
     parts.push(`Weight: ${product.weight}${unit}`);
   }
-  
+
   if (product.sku) {
     parts.push(`SKU: ${product.sku}`);
   }
-  
+
   if (product.variant) {
     parts.push(`Variant: ${product.variant}`);
   }
-  
+
   return parts.length > 0 ? parts : null;
 };
 
 // 🚚 Get shipping display - UPDATED to show "1 week"
 const getShippingDisplay = (product) => {
   if (!product) return null;
-  
+
   let shippingText = product.shippingTime || "1 week";
-  
+
   if (shippingText === "Custom" && product.customShippingTime) {
     shippingText = product.customShippingTime;
   }
-  
+
   const charge = product.shippingCharge || 0;
-  const isFree = product.isFreeShipping !== undefined ? product.isFreeShipping : true;
-  
+  const isFree =
+    product.isFreeShipping !== undefined ? product.isFreeShipping : true;
+
   let chargeText = isFree ? "Free" : `₹${charge}`;
-  
+
   // Check if shipping text contains "week" or "weeks"
-  const isWeekBased = shippingText.toLowerCase().includes('week');
-  
+  const isWeekBased = shippingText.toLowerCase().includes("week");
+
   let deliveryRange = "1 week";
-  
+
   if (isWeekBased) {
     // Extract number from shipping text if it contains a number
     const weekMatch = shippingText.match(/(\d+)\s*week/);
     if (weekMatch) {
       const weeks = parseInt(weekMatch[1]);
-      deliveryRange = `${weeks} week${weeks > 1 ? 's' : ''}`;
+      deliveryRange = `${weeks} week${weeks > 1 ? "s" : ""}`;
     } else {
       deliveryRange = shippingText;
     }
@@ -123,14 +155,12 @@ const getShippingDisplay = (product) => {
     // For day-based shipping
     const minDays = product.estimatedDeliveryDays?.min || 3;
     const maxDays = product.estimatedDeliveryDays?.max || 7;
-    
     if (minDays === maxDays) {
       deliveryRange = `${minDays} days`;
     } else {
       deliveryRange = `${minDays}–${maxDays} days`;
     }
   }
-  
   return {
     shippingText,
     chargeText,
@@ -139,7 +169,7 @@ const getShippingDisplay = (product) => {
     minDays: product.estimatedDeliveryDays?.min || 3,
     maxDays: product.estimatedDeliveryDays?.max || 7,
     displayText: `${chargeText} • ${shippingText}`,
-    deliveryRange: deliveryRange
+    deliveryRange: deliveryRange,
   };
 };
 
@@ -190,7 +220,7 @@ const Productdetails = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountedPrice, setDiscountedPrice] = useState(null);
-  
+
   // Review states
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
@@ -215,37 +245,45 @@ const Productdetails = () => {
   }, []);
 
   // ✅ Fetch brand details from Company model
-  const fetchBrandDetails = useCallback(async (companyName) => {
-    if (!companyName) return;
-    
-    setBrandLoading(true);
-    
-    try {
-      console.log(`🟢 Fetching brand details for: ${companyName}`);
-      
-      const response = await axios.get(`${API_URL}/company/details/${encodeURIComponent(companyName)}`);
-      
-      console.log("🟢 Brand response:", response.data);
-      
-      if (response.data && response.data.success) {
-        const company = response.data.company;
-        setBrandName(company.name || companyName);
-        setBrandDescription(company.description || `${company.name} - Premium brand on Native91`);
-        setBrandLogo(company.logo || null);
-      } else {
+  const fetchBrandDetails = useCallback(
+    async (companyName) => {
+      if (!companyName) return;
+
+      setBrandLoading(true);
+
+      try {
+        console.log(`🟢 Fetching brand details for: ${companyName}`);
+
+        const response = await axios.get(
+          `${API_URL}/company/details/${encodeURIComponent(companyName)}`,
+        );
+
+        console.log("🟢 Brand response:", response.data);
+
+        if (response.data && response.data.success) {
+          const company = response.data.company;
+          setBrandName(company.name || companyName);
+          setBrandDescription(
+            company.description ||
+              `${company.name} - Premium brand on Native91`,
+          );
+          setBrandLogo(company.logo || null);
+        } else {
+          setBrandName(companyName);
+          setBrandDescription(`${companyName} - Premium brand on Native91`);
+          setBrandLogo(null);
+        }
+      } catch (err) {
+        console.error("🔴 Error fetching brand details:", err);
         setBrandName(companyName);
         setBrandDescription(`${companyName} - Premium brand on Native91`);
         setBrandLogo(null);
+      } finally {
+        setBrandLoading(false);
       }
-    } catch (err) {
-      console.error("🔴 Error fetching brand details:", err);
-      setBrandName(companyName);
-      setBrandDescription(`${companyName} - Premium brand on Native91`);
-      setBrandLogo(null);
-    } finally {
-      setBrandLoading(false);
-    }
-  }, [API_URL]);
+    },
+    [API_URL],
+  );
 
   const calculateDiscountedPrice = useCallback(
     (coupon) => {
@@ -432,8 +470,9 @@ const Productdetails = () => {
   }, [product, COUPON_API_URL]);
 
   // Get image URL
-  const getImageUrl = useCallback((image) => {
-    if (!image) return "/images/placeholder.png";
+  const getImageUrl = useCallback(
+    (image) => {
+      if (!image) return "/images/placeholder.png";
 
       let img = image;
 
@@ -570,7 +609,6 @@ const Productdetails = () => {
         }
 
         await fetchReviews(foundProduct._id);
-        
         const guestId = localStorage.getItem("guestId");
         if (guestId) {
           await fetchWishlist();
@@ -578,11 +616,13 @@ const Productdetails = () => {
           setIsInWishlistState(inWishlist);
         }
 
-        const companyName = foundProduct.company || foundProduct.vendor || foundProduct.vendorName;
+        const companyName =
+          foundProduct.company ||
+          foundProduct.vendor ||
+          foundProduct.vendorName;
         if (companyName) {
           await fetchBrandDetails(companyName);
         }
-
       } catch (err) {
         console.error("Product fetch error:", err);
         if (isMounted.current) {
@@ -602,7 +642,13 @@ const Productdetails = () => {
     fetchProduct();
 
     return () => {};
-  }, [slug, API_URL, getAllImagesFromProduct, fetchWishlist, fetchBrandDetails]);
+  }, [
+    slug,
+    API_URL,
+    getAllImagesFromProduct,
+    fetchWishlist,
+    fetchBrandDetails,
+  ]);
 
   useEffect(() => {
     const checkWishlist = async () => {
@@ -770,7 +816,7 @@ const Productdetails = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
-    
+
     setIsAddingToCart(true);
 
     try {
@@ -804,6 +850,7 @@ const Productdetails = () => {
         weightUnit: product.weightUnit || "",
         sku: product.sku || "",
         variant: product.variant || "",
+        ingredients: product.ingredients || "",
       });
 
       setShowCart(true);
@@ -824,7 +871,7 @@ const Productdetails = () => {
       alert("Sorry, this product is out of stock!");
       return;
     }
-    
+
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
@@ -856,6 +903,7 @@ const Productdetails = () => {
         weightUnit: product.weightUnit || "",
         sku: product.sku || "",
         variant: product.variant || "",
+        ingredients: product.ingredients || "",
       });
 
       navigate("/checkout");
@@ -967,6 +1015,27 @@ const Productdetails = () => {
   const sizeWeightInfo = formatSizeWeight(product);
   const shippingInfo = getShippingDisplay(product);
 
+  // 🆕 Get ingredients data
+  const hasIngredients =
+    product.ingredients ||
+    (product.ingredientsList && product.ingredientsList.length > 0);
+  const hasAllergens = product.allergens && product.allergens.length > 0;
+  const hasNutritionalInfo =
+    product.nutritionalInfo &&
+    (product.nutritionalInfo.servingSize ||
+      product.nutritionalInfo.calories > 0 ||
+      product.nutritionalInfo.protein > 0 ||
+      product.nutritionalInfo.carbohydrates > 0 ||
+      product.nutritionalInfo.fat > 0);
+  const hasDietaryInfo =
+    product.dietaryInfo &&
+    (product.dietaryInfo.isVegetarian ||
+      product.dietaryInfo.isVegan ||
+      product.dietaryInfo.isGlutenFree ||
+      product.dietaryInfo.isDairyFree ||
+      product.dietaryInfo.isNutFree ||
+      product.dietaryInfo.isOrganic);
+
   return (
     <>
       <Header />
@@ -1035,8 +1104,8 @@ const Productdetails = () => {
                           left: "10px",
                           top: "50%",
                           transform: "translateY(-50%)",
-                          background: "rgba(0,0,0,0.6)",
-                          color: "white",
+                          background: "transparent",
+                          color: "black",
                           border: "none",
                           borderRadius: "50%",
                           width: "40px",
@@ -1059,8 +1128,8 @@ const Productdetails = () => {
                           right: "10px",
                           top: "50%",
                           transform: "translateY(-50%)",
-                          background: "rgba(0,0,0,0.6)",
-                          color: "white",
+                          background: "transparent",
+                          color: "black",
                           border: "none",
                           borderRadius: "50%",
                           width: "40px",
@@ -1079,20 +1148,7 @@ const Productdetails = () => {
                   )}
 
                   {hasMultipleImages && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "10px",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        background: "rgba(0,0,0,0.6)",
-                        color: "white",
-                        padding: "4px 12px",
-                        borderRadius: "20px",
-                        fontSize: "12px",
-                        zIndex: 10,
-                      }}
-                    >
+                    <div className="image-counter">
                       {currentImageIndex + 1} / {productImages.length}
                     </div>
                   )}
@@ -1130,34 +1186,240 @@ const Productdetails = () => {
                       {product.size && (
                         <div className="d-flex align-items-center">
                           <FaTag className="me-1 text-muted" />
-                          <span><strong>Size:</strong> {product.size}</span>
+                          <span>
+                            <strong>Size:</strong> {product.size}
+                          </span>
                         </div>
                       )}
                       {product.weight > 0 && (
                         <div className="d-flex align-items-center">
-                          <span><strong>Weight:</strong> {product.weight} {product.weightUnit || ''}</span>
+                          <span>
+                            <strong>Weight:</strong> {product.weight}{" "}
+                            {product.weightUnit || ""}
+                          </span>
                         </div>
                       )}
                       {product.sku && (
                         <div className="d-flex align-items-center">
                           <FaTag className="me-1 text-muted" />
-                          <span><strong>SKU:</strong> {product.sku}</span>
+                          <span>
+                            <strong>SKU:</strong> {product.sku}
+                          </span>
                         </div>
                       )}
                       {product.variant && (
                         <div className="d-flex align-items-center">
                           <FaRulerCombined className="me-1 text-muted" />
-                          <span><strong>Variant:</strong> {product.variant}</span>
+                          <span>
+                            <strong>Variant:</strong> {product.variant}
+                          </span>
                         </div>
                       )}
                     </div>
-                    {product.dimensions && (
-                      (product.dimensions.length > 0 || product.dimensions.width > 0 || product.dimensions.height > 0) && (
+                    {product.dimensions &&
+                      (product.dimensions.length > 0 ||
+                        product.dimensions.width > 0 ||
+                        product.dimensions.height > 0) && (
                         <div className="mt-2 small text-muted">
                           <FaRulerCombined className="me-1" />
-                          Dimensions: {product.dimensions.length} × {product.dimensions.width} × {product.dimensions.height} {product.dimensions.unit || 'cm'}
+                          Dimensions: {product.dimensions.length} ×{" "}
+                          {product.dimensions.width} ×{" "}
+                          {product.dimensions.height}{" "}
+                          {product.dimensions.unit || "cm"}
                         </div>
-                      )
+                      )}
+                  </div>
+                )}
+
+                {/* 🆕 INGREDIENTS & ALLERGENS SECTION */}
+                {(hasIngredients || hasAllergens) && (
+                  <div
+                    className="ingredients-section mt-3 p-3 border rounded"
+                    style={{ background: "#fafafa" }}
+                  >
+                    {hasIngredients && (
+                      <div className="mb-2">
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <FaUtensils className="text-primary" />
+                          <strong>Ingredients</strong>
+                        </div>
+                        <p className="mb-0 small">
+                          {product.ingredients}
+                          {product.ingredientsList &&
+                            product.ingredientsList.length > 0 && (
+                              <span className="text-muted d-block mt-1">
+                                <small>
+                                  Detailed: {product.ingredientsList.join(", ")}
+                                </small>
+                              </span>
+                            )}
+                        </p>
+                      </div>
+                    )}
+                    {hasAllergens && (
+                      <div className="mt-2">
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <FaExclamationTriangle className="text-warning" />
+                          <strong>Allergens</strong>
+                        </div>
+                        <div className="d-flex flex-wrap gap-1">
+                          {product.allergens.map((allergen, idx) => (
+                            <Badge key={idx} bg="warning" className="text-dark">
+                              {allergen}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 🆕 NUTRITIONAL INFORMATION */}
+                {hasNutritionalInfo && (
+                  <div
+                    className="nutritional-info-section mt-3 p-3 border rounded"
+                    style={{ background: "#f8fff8" }}
+                  >
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <FaAppleAlt className="text-success" />
+                      <strong>Nutritional Information</strong>
+                      {product.nutritionalInfo?.servingSize && (
+                        <span className="text-muted small">
+                          (per {product.nutritionalInfo.servingSize})
+                        </span>
+                      )}
+                    </div>
+                    <Row className="g-1">
+                      {product.nutritionalInfo?.calories > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Calories</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.calories}
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.protein > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Protein</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.protein}g
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.carbohydrates > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Carbs</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.carbohydrates}g
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.fat > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Fat</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.fat}g
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.sugar > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Sugar</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.sugar}g
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.fiber > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Fiber</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.fiber}g
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                      {product.nutritionalInfo?.sodium > 0 && (
+                        <Col xs={6} md={4}>
+                          <div className="nutrition-item p-2 bg-white rounded border text-center">
+                            <div className="small text-muted">Sodium</div>
+                            <div className="fw-bold">
+                              {product.nutritionalInfo.sodium}mg
+                            </div>
+                          </div>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
+                )}
+
+                {/* 🆕 DIETARY PREFERENCES */}
+                {hasDietaryInfo && (
+                  <div className="dietary-info-section mt-3 d-flex flex-wrap gap-2">
+                    {product.dietaryInfo?.isVegetarian && (
+                      <Badge
+                        bg="success"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
+                        <FaLeaf className="me-1" /> Vegetarian
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isVegan && (
+                      <Badge
+                        bg="info"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
+                        <FaSeedling className="me-1" /> Vegan
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isGlutenFree && (
+                      <Badge
+                        bg="warning"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
+                        🌾 Gluten Free
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isDairyFree && (
+                      <Badge
+                        bg="primary"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
+                        🥛 Dairy Free
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isNutFree && (
+                      <Badge
+                        bg="secondary"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
+                        🥜 Nut Free
+                      </Badge>
+                    )}
+                    {product.dietaryInfo?.isOrganic && (
+                      <Badge
+                        bg="success"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
+                        🌱 Organic
+                      </Badge>
                     )}
                   </div>
                 )}
@@ -1197,9 +1459,9 @@ const Productdetails = () => {
 
                 {/* STOCK STATUS DISPLAY */}
                 <div className="stock-status mt-3">
-                  <Badge 
+                  <Badge
                     bg={stockStatus.color}
-                    style={{ fontSize: '16px', padding: '8px 16px' }}
+                    style={{ fontSize: "16px", padding: "8px 16px" }}
                   >
                     {stockStatus.icon} {stockStatus.label}
                   </Badge>
@@ -1211,7 +1473,7 @@ const Productdetails = () => {
                       </div>
                       <div className="progress" style={{ height: "6px" }}>
                         <div
-                          className={`progress-bar bg-${stock <= 5 ? 'warning' : 'info'}`}
+                          className={`progress-bar bg-${stock <= 5 ? "warning" : "info"}`}
                           style={{ width: `${(stock / 10) * 100}%` }}
                         />
                       </div>
@@ -1333,16 +1595,36 @@ const Productdetails = () => {
                       : "Add to Wishlist"}
                 </p>
 
+                {/* 🚚 SHIPPING INFORMATION CARD - UPDATED to show 1 week */}
+                {shippingInfo && (
+                  <div className="shipping-info-card mb-1 tax-text">
+                    <span className="fw-bold">Estimated Delivery</span>
+                    <span className="mx-2">-</span>
+                    <span className="small ">
+                      {/* <FaClock className="me-1" /> */}
+                      <span className="me-1">
+                        {" "}
+                        Your order will arrive within{" "}
+                        {shippingInfo.deliveryRange}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
                 <p className="tax-text">
                   Inclusive of all taxes | Free shipping on orders above ₹1499
                 </p>
+                {/* <div className="delivery-text">
+                  Estimated delivery:{" "}
+                  {shippingInfo ? shippingInfo.deliveryRange : "1 week"}
+                </div> */}
 
-                <p className="description-text">
+                {/* <p className="description-text">
                   {String(
                     product.description ||
                       "A timeless piece to elevate your space.",
                   )}
-                </p>
+                </p> */}
 
                 {/* COUPONS SECTION */}
                 {vendorCoupons.length > 0 && !couponLoading && (
@@ -1493,14 +1775,14 @@ const Productdetails = () => {
                 <div className="quantity-section">
                   <span>Quantity</span>
                   <div className="qty-box-product-details">
-                    <button 
+                    <button
                       onClick={() => setQty(qty > 1 ? qty - 1 : 1)}
                       disabled={stock === 0}
                     >
                       −
                     </button>
                     <input value={qty} readOnly />
-                    <button 
+                    <button
                       onClick={() => setQty(Math.min(qty + 1, stock))}
                       disabled={qty >= stock || stock === 0}
                     >
@@ -1541,7 +1823,10 @@ const Productdetails = () => {
                     )}
                   </Button>
 
-                  <Button className="buy-btn-product-details" onClick={handleBuyNow}>
+                  <Button
+                    className="buy-btn-product-details"
+                    onClick={handleBuyNow}
+                  >
                     Buy Now
                   </Button>
                 </div>
@@ -1557,15 +1842,11 @@ const Productdetails = () => {
                     <FaShoppingBag /> <span>Secure Checkout</span>
                   </div>
                 </div>
-
-                <div className="delivery-text">
-                  Estimated delivery: {shippingInfo ? shippingInfo.deliveryRange : "1 week"}
-                </div>
               </div>
             </Col>
           </Row>
 
-          {/* ACCORDION SECTION */}
+          {/* ACCORDION SECTION - UPDATED WITH INGREDIENTS */}
           <div className="product-accordion mt-5">
             <details open>
               <summary className="funnel-sans">Product Details</summary>
@@ -1578,65 +1859,253 @@ const Productdetails = () => {
                 </ul>
               )}
             </details>
-            
+
+            {/* 🆕 INGREDIENTS ACCORDION */}
+            {(hasIngredients ||
+              hasAllergens ||
+              hasNutritionalInfo ||
+              hasDietaryInfo) && (
+              <details>
+                <summary className="funnel-sans">
+                  <FaInfoCircle className="me-2" /> Ingredients & Nutrition
+                </summary>
+                <div className="ingredients-accordion p-3">
+                  {hasIngredients && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaUtensils className="me-2 text-primary" />
+                        Ingredients
+                      </h6>
+                      <p className="mb-0">{product.ingredients}</p>
+                      {product.ingredientsList &&
+                        product.ingredientsList.length > 0 && (
+                          <div className="mt-2">
+                            <small className="text-muted">Detailed:</small>
+                            <ul className="mb-0 mt-1">
+                              {product.ingredientsList.map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  {hasAllergens && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaExclamationTriangle className="me-2 text-warning" />
+                        Allergens
+                      </h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {product.allergens.map((allergen, idx) => (
+                          <Badge
+                            key={idx}
+                            bg="warning"
+                            className="text-dark p-2"
+                          >
+                            {allergen}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {hasNutritionalInfo && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaAppleAlt className="me-2 text-success" />
+                        Nutritional Information
+                        {product.nutritionalInfo?.servingSize && (
+                          <span className="text-muted small ms-2">
+                            (per {product.nutritionalInfo.servingSize})
+                          </span>
+                        )}
+                      </h6>
+                      <div className="nutrition-grid">
+                        <Row className="g-2">
+                          {product.nutritionalInfo?.calories > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Calories</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.calories}
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.protein > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Protein</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.protein}g
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.carbohydrates > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Carbs</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.carbohydrates}g
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.fat > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Fat</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.fat}g
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.sugar > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Sugar</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.sugar}g
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.fiber > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Fiber</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.fiber}g
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.sodium > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Sodium</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.sodium}mg
+                                </div>
+                              </div>
+                            </Col>
+                          )}
+                        </Row>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasDietaryInfo && (
+                    <div>
+                      <h6 className="fw-bold">
+                        <FaLeaf className="me-2 text-success" />
+                        Dietary Preferences
+                      </h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {product.dietaryInfo?.isVegetarian && (
+                          <Badge bg="success" className="p-2">
+                            🌱 Vegetarian
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isVegan && (
+                          <Badge bg="info" className="p-2">
+                            🌿 Vegan
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isGlutenFree && (
+                          <Badge bg="warning" className="p-2">
+                            🌾 Gluten Free
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isDairyFree && (
+                          <Badge bg="primary" className="p-2">
+                            🥛 Dairy Free
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isNutFree && (
+                          <Badge bg="secondary" className="p-2">
+                            🥜 Nut Free
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isOrganic && (
+                          <Badge bg="success" className="p-2">
+                            🌱 Organic
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
             {/* 🚚 SHIPPING & DELIVERY DETAILS ACCORDION - UPDATED to show 1 week */}
             <details>
-              <summary className="funnel-sans">
-                <FaTruck className="me-2" /> Shipping & Delivery
-              </summary>
-              <div className="shipping-details-accordion p-3">
+              <summary className="funnel-sans">Shipping & Delivery</summary>
+              <div className="shipping-details-accordion ">
                 {shippingInfo ? (
                   <>
                     <div className="row g-3">
-                      <div className="col-md-6">
-                        <div className="shipping-info-item p-3 border rounded bg-light">
-                          <h6 className="mb-2">
-                            <FaClock className="me-2 text-primary" />
-                            Delivery Time
-                          </h6>
-                          <p className="mb-0">
-                            <strong>{shippingInfo.deliveryRange}</strong>
-                          </p>
-                          <small className="text-muted">
-                            {shippingInfo.shippingText}
-                          </small>
+                      {shippingInfo && (
+                        <div className="shipping-info-card mb-1 tax-text">
+                          <span className="fw-bold">Estimated Delivery</span>
+                          <span className="mx-2">-</span>
+                          <span className="small ">
+                            {/* <FaClock className="me-1" /> */}
+                            <span className="me-1">
+                              {" "}
+                              Your order will arrive within{" "}
+                              {shippingInfo.deliveryRange}
+                            </span>
+                          </span>
                         </div>
-                      </div>
-                      <div className="col-md-6">
+                      )}
+                      {/* <div className="col-md-6">
                         <div className="shipping-info-item p-3 border rounded bg-light">
                           <h6 className="mb-2">
-                            <FaRupeeSign className="me-2 text-primary" />
+                            <FaRupeeSign className="me-2 text-dark" />
                             Shipping Cost
                           </h6>
                           <p className="mb-0">
-                            <strong className={shippingInfo.isFree ? "text-success" : ""}>
+                            <strong
+                              className={
+                                shippingInfo.isFree ? "text-success" : ""
+                              }
+                            >
                               {shippingInfo.chargeText}
                             </strong>
                           </p>
                           <small className="text-muted">
-                            {shippingInfo.isFree 
-                              ? "Free shipping on this item" 
+                            {shippingInfo.isFree
+                              ? "Free shipping on this item"
                               : `₹${shippingInfo.charge} shipping fee applies`}
                           </small>
                         </div>
-                      </div>
+                      </div> */}
                     </div>
-                    <div className="mt-3">
+                    {/* <div className="mt-3">
                       <div className="d-flex align-items-center gap-3 p-2 bg-primary bg-opacity-10 rounded">
-                        <FaTruck size={20} className="text-primary" />
+                        <FaTruck size={20} className="text-dark" />
                         <small className="text-muted">
-                          Estimated delivery in {shippingInfo.deliveryRange} from order confirmation.
+                          Estimated delivery in {shippingInfo.deliveryRange}{" "}
+                          from order confirmation.
                           {shippingInfo.isFree && " Free shipping included!"}
                         </small>
                       </div>
-                    </div>
+                    </div> */}
                   </>
                 ) : (
-                  <p className="text-muted">Shipping information not available for this product.</p>
+                  <p className="text-muted">
+                    Shipping information not available for this product.
+                  </p>
                 )}
               </div>
             </details>
-            
+
             <details>
               <summary className="funnel-sans">Why Native91?</summary>
               <p>
@@ -1645,11 +2114,12 @@ const Productdetails = () => {
                 trust.
               </p>
             </details>
-            
+
             <details>
               <summary className="funnel-sans">Returns Policy</summary>
               <p>
-                Easy 7-day returns available. Items must be unused and in original packaging.
+                Easy 7-day returns available. Items must be unused and in
+                original packaging.
                 <a
                   href="/returns-policy"
                   className="text-decoration-none text-primary ms-2"
@@ -1658,7 +2128,7 @@ const Productdetails = () => {
                 </a>
               </p>
             </details>
-            
+
             {/* ✅ UPDATED: About the Brand with Dynamic Content */}
             <details>
               <summary className="funnel-sans">About the Brand</summary>
@@ -1672,17 +2142,17 @@ const Productdetails = () => {
                   <>
                     <div className="d-flex align-items-center gap-3 mb-3">
                       {brandLogo && (
-                        <img 
-                          src={brandLogo} 
-                          alt={brandName} 
+                        <img
+                          src={brandLogo}
+                          alt={brandName}
                           className="brand-logo-small"
-                          onError={(e) => e.target.style.display = 'none'}
-                          style={{ 
-                            width: '60px', 
-                            height: '60px', 
-                            objectFit: 'cover', 
-                            borderRadius: '12px',
-                            border: '1px solid #e9ecef'
+                          onError={(e) => (e.target.style.display = "none")}
+                          style={{
+                            width: "60px",
+                            height: "60px",
+                            objectFit: "cover",
+                            borderRadius: "12px",
+                            border: "1px solid #e9ecef",
                           }}
                         />
                       )}
@@ -1690,13 +2160,14 @@ const Productdetails = () => {
                         {brandName || product?.company || "Native91"}
                       </h5>
                     </div>
-                    
+
                     <p className="brand-description">
-                      {brandDescription || 
-                       (product?.company ? `${product.company} - Premium brand on Native91` : 
-                        "Native91 focuses on timeless handcrafted products made with love.")}
+                      {brandDescription ||
+                        (product?.company
+                          ? `${product.company} - Premium brand on Native91`
+                          : "Native91 focuses on timeless handcrafted products made with love.")}
                     </p>
-                    
+
                     <div className="brand-actions mt-3">
                       {/* <a 
                         href={`/company/${encodeURIComponent(product?.company || brandName || "Native91")}`} 
@@ -1900,11 +2371,15 @@ const Productdetails = () => {
           {isAddingToCart ? (
             <Spinner animation="border" size="sm" className="me-2" />
           ) : stock === 0 ? (
-            'Out of Stock'
+            "Out of Stock"
           ) : (
             <FaShoppingBag className="me-2" />
           )}
-          {isAddingToCart ? 'Adding...' : (discountedPrice ? `₹${formatPrice(displayPrice)}` : 'Add to Cart')}
+          {isAddingToCart
+            ? "Adding..."
+            : discountedPrice
+              ? `₹${formatPrice(displayPrice)}`
+              : "Add to Cart"}
         </button>
       </div>
 

@@ -60,7 +60,7 @@ const Home = () => {
       {/* <StatsSection /> */}
 
       {/* Email subscription */}
-      <CTASection />
+      {/* <CTASection /> */}
 
       {/* footer */}
       <Footer />

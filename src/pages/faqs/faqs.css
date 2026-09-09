@@ -1,6 +1,6 @@
 .faq-section {
-  padding: 100px 0;
-  background: #f8faf8;
+  /* padding: 100px 0; */
+  /* background: #f8faf8; */
 }
 
 .faq-subtitle {
@@ -65,7 +65,7 @@
 
 @media (max-width: 991px) {
   .faq-section {
-    padding: 70px 0;
+    /* padding: 70px 0; */
   }
 
   .faq-title {

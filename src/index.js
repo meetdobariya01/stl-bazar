@@ -30,11 +30,17 @@ import Orderhistory from "./pages/orderhistory/orderhistory";
 import Cookies from "./components/cookies/cookies";
 import Socialimpact from "./pages/socialimpact/socialimpact";
 import OAuthSuccess from "./pages/login/OAuthSuccess";
+import Breadcrumb from "./components/breadcrumb/breadcrumb";
+import FoundingBrandFAQ from "./pages/sellerfaqs/que";
+import BirdCursorFlock from "./BirdCursorFlock";
+import NotFound from "./pages/error/error";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
     <WishlistProvider>
       <Router>
+        {/* <Breadcrumb /> */}
+        <BirdCursorFlock birdCount={1} />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/aboutus" element={<Aboutus />} />
@@ -65,6 +71,8 @@ root.render(
           <Route path="/privacypolicy" element={<Privacypolicy />} />
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/orderhistory" element={<Orderhistory />} />
+          <Route path="/faqseller" element={<FoundingBrandFAQ />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
         <Cookies />
       </Router>

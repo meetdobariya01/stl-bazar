@@ -1,27 +1,13 @@
 .arrival-premium {
-  background:
-    radial-gradient(
-      circle at top right,
-      rgba(212, 175, 55, 0.15),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at bottom left,
-      rgba(212, 175, 55, 0.08),
-      transparent 30%
-    ),
-    linear-gradient(
-      135deg,
-      #07120d 0%,
-      #102019 50%,
-      #07120d 100%
-    );
+  background-image: url("../../../public/images/email-box-1.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 
   padding: 40px 0 55px;
   overflow: hidden;
   position: relative;
 }
-
 .arrival-premium::before {
   content: "";
   position: absolute;
@@ -59,7 +45,7 @@
 }
 
 .badge-premium {
-  color: #c8a96b;
+  /* color: #c8a96b; */
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 3px;
@@ -70,13 +56,13 @@
 .title-premium {
   font-size: 2rem;
   font-weight: 700;
-  color: #ffffff;
+  /* color: #ffffff; */
   margin: 0;
   line-height: 1.2;
 }
 
 .title-premium .gold-premium {
-  color: #c8a96b;
+  /* color: #c8a96b; */
   font-weight: 700;
   position: relative;
 }
@@ -88,20 +74,13 @@
   left: 0;
   width: 100%;
   height: 3px;
-
-  background:
-    linear-gradient(
-      90deg,
-      #c8a96b,
-      transparent
-    );
-
+  background: linear-gradient(90deg, #c8a96b, transparent);
   border-radius: 2px;
   opacity: 0.3;
 }
 
 .subtitle-premium {
-  color: rgba(255, 255, 255, 0.3);
+  /* color: rgba(255, 255, 255, 0.3); */
   font-size: 0.85rem;
   font-weight: 300;
   margin: 0;
@@ -111,9 +90,9 @@
 
 .view-premium {
   background: transparent;
-  color: #c8a96b;
+  color: #000;
 
-  border: 1px solid rgba(212, 175, 55, 0.15);
+  border: 1px solid #000;
 
   padding: 8px 24px;
   border-radius: 50px;
@@ -131,12 +110,9 @@
 .view-premium:hover {
   background: rgba(212, 175, 55, 0.1);
   border-color: #c8a96b;
-  color: #f4e6c4;
-
+  color: #000;
   transform: translateY(-2px);
-
-  box-shadow:
-    0 4px 25px rgba(212, 175, 55, 0.1);
+  box-shadow: 0 4px 25px rgba(212, 175, 55, 0.1);
 }
 
 
@@ -148,7 +124,6 @@
   width: 100%;
   overflow: hidden;
   position: relative;
-
   padding: 8px 0 15px;
 }
 
@@ -157,7 +132,6 @@
 .brand-slider-track {
   display: flex;
   width: max-content;
-
   gap: 18px;
 
   /*
@@ -165,9 +139,7 @@
     Increase duration = slower
     Decrease duration = faster
   */
-  animation:
-    brandSlideLeft 35s linear infinite;
-
+  animation: brandSlideLeft 35s linear infinite;
   will-change: transform;
 }
 
@@ -356,7 +328,7 @@
 }
 
 .name-premium {
-  color: #ffffff;
+  color: #000;
 
   font-size: 1rem;
 
@@ -379,8 +351,7 @@
 }
 
 .desc-premium {
-  color:
-    rgba(255, 255, 255, 0.3);
+  color: #000;
 
   font-size: 0.7rem;
 
@@ -408,7 +379,7 @@
 .shop-premium {
   background: transparent;
 
-  color: #c8a96b !important;
+  color: grey !important;
 
   padding: 0;
 
