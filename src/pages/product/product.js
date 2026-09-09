@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Spinner, Alert, Button, Form, Badge } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Spinner,
+  Alert,
+  Button,
+  Form,
+  Badge,
+} from "react-bootstrap";
 import { motion } from "framer-motion";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import { NavLink } from "react-router-dom";
 import axios from "axios";
 import "./product.css";
+import { FaXmark } from "react-icons/fa6";
 
 // ✅ Use consistent API URL
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
@@ -26,6 +36,7 @@ const Product = () => {
   const [error, setError] = useState("");
   const [imageErrors, setImageErrors] = useState({});
   const [retryCount, setRetryCount] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
 
   // ✅ Filter and Sort States
   const [sortBy, setSortBy] = useState("newest");
@@ -34,7 +45,7 @@ const Product = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [brandStats, setBrandStats] = useState({
     totalBrands: 0,
-    totalCategories: 0
+    totalCategories: 0,
   });
 
   // ✅ NEW UPGRADED IMAGE LOGIC (Handles Object, Array, String)
@@ -42,10 +53,10 @@ const Product = () => {
     if (!logo) return null;
 
     // Object handle karo
-    if (typeof logo === 'object' && !Array.isArray(logo)) {
-      if (logo.image && typeof logo.image === 'string') {
+    if (typeof logo === "object" && !Array.isArray(logo)) {
+      if (logo.image && typeof logo.image === "string") {
         logo = logo.image;
-      } else if (logo.url && typeof logo.url === 'string') {
+      } else if (logo.url && typeof logo.url === "string") {
         logo = logo.url;
       } else {
         return null;
@@ -57,35 +68,36 @@ const Product = () => {
       logo = logo[0];
     }
 
-    if (!logo || typeof logo !== 'string') return null;
+    if (!logo || typeof logo !== "string") return null;
 
     // Full URL check
     if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
 
     // Relative URL fix
     if (logo.startsWith("/images")) return `http://localhost:5177${logo}`;
-    if (logo.startsWith("/uploads") || logo.startsWith("/public")) return `http://localhost:5177${logo}`;
+    if (logo.startsWith("/uploads") || logo.startsWith("/public"))
+      return `http://localhost:5177${logo}`;
 
     // Fallback
     return `http://localhost:5177/uploads/${logo}`;
   };
 
   const handleImageError = (brandId) => {
-    setImageErrors(prev => ({ ...prev, [brandId]: true }));
+    setImageErrors((prev) => ({ ...prev, [brandId]: true }));
   };
 
   // ✅ Extract categories from brands - ✅ UNCOMMENTED
   const extractCategories = (brandsData) => {
     const categorySet = new Set();
-    brandsData.forEach(brand => {
+    brandsData.forEach((brand) => {
       if (brand.category) {
         if (Array.isArray(brand.category)) {
-          brand.category.forEach(cat => {
+          brand.category.forEach((cat) => {
             if (cat && cat.trim()) categorySet.add(cat.trim());
           });
-        } else if (typeof brand.category === 'string') {
-          const cats = brand.category.split(',').map(c => c.trim());
-          cats.forEach(cat => {
+        } else if (typeof brand.category === "string") {
+          const cats = brand.category.split(",").map((c) => c.trim());
+          cats.forEach((cat) => {
             if (cat) categorySet.add(cat);
           });
         }
@@ -100,14 +112,16 @@ const Product = () => {
 
     // ✅ Filter by category - ✅ UNCOMMENTED
     if (selectedCategory !== "all") {
-      result = result.filter(brand => {
+      result = result.filter((brand) => {
         if (brand.category) {
           if (Array.isArray(brand.category)) {
-            return brand.category.some(cat => 
-              cat.toLowerCase() === selectedCategory.toLowerCase()
+            return brand.category.some(
+              (cat) => cat.toLowerCase() === selectedCategory.toLowerCase(),
             );
-          } else if (typeof brand.category === 'string') {
-            return brand.category.toLowerCase().includes(selectedCategory.toLowerCase());
+          } else if (typeof brand.category === "string") {
+            return brand.category
+              .toLowerCase()
+              .includes(selectedCategory.toLowerCase());
           }
         }
         return false;
@@ -117,20 +131,25 @@ const Product = () => {
     // ✅ Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
-      result = result.filter(brand => 
-        brand.name?.toLowerCase().includes(term) ||
-        brand.description?.toLowerCase().includes(term) ||
-        brand.category?.toString().toLowerCase().includes(term)
+      result = result.filter(
+        (brand) =>
+          brand.name?.toLowerCase().includes(term) ||
+          brand.description?.toLowerCase().includes(term) ||
+          brand.category?.toString().toLowerCase().includes(term),
       );
     }
 
     // ✅ Apply sorting
     switch (sortBy) {
       case "newest":
-        result.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        result.sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+        );
         break;
       case "oldest":
-        result.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        result.sort(
+          (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+        );
         break;
       case "name_asc":
         result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -151,14 +170,16 @@ const Product = () => {
       setLoading(true);
       setError("");
 
-      console.log(`🟢 Fetching brands (attempt ${retryCount + 1}) from: ${API_URL}/companies`);
+      console.log(
+        `🟢 Fetching brands (attempt ${retryCount + 1}) from: ${API_URL}/companies`,
+      );
 
       const response = await axios.get(`${API_URL}/companies`, {
         timeout: 15000,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       });
 
       console.log("🟢 Response status:", response.status);
@@ -169,13 +190,20 @@ const Product = () => {
       if (response.data) {
         if (response.data.success && Array.isArray(response.data.companies)) {
           brandsData = response.data.companies;
-          console.log(`✅ Found ${brandsData.length} companies in data.companies`);
+          console.log(
+            `✅ Found ${brandsData.length} companies in data.companies`,
+          );
         } else if (Array.isArray(response.data)) {
           brandsData = response.data;
           console.log(`✅ Found ${brandsData.length} companies (direct array)`);
-        } else if (response.data.companies && Array.isArray(response.data.companies)) {
+        } else if (
+          response.data.companies &&
+          Array.isArray(response.data.companies)
+        ) {
           brandsData = response.data.companies;
-          console.log(`✅ Found ${brandsData.length} companies in nested property`);
+          console.log(
+            `✅ Found ${brandsData.length} companies in nested property`,
+          );
         } else {
           console.warn("⚠️ Unexpected response format:", response.data);
           brandsData = [];
@@ -183,13 +211,13 @@ const Product = () => {
       }
 
       setBrands(brandsData);
-      
+
       // ✅ Extract categories - ✅ UNCOMMENTED
       const extractedCategories = extractCategories(brandsData);
       setCategories(extractedCategories);
       setBrandStats({
         totalBrands: brandsData.length,
-        totalCategories: extractedCategories.length
+        totalCategories: extractedCategories.length,
       });
 
       // ✅ Apply filters and sorting
@@ -201,18 +229,18 @@ const Product = () => {
       }
 
       console.log(`✅ Found ${brandsData.length} brands`);
-
     } catch (err) {
       console.error("🔴 ERROR FETCHING BRANDS:", err);
-      
+
       let errorMessage = "Failed to load brands. ";
-      
-      if (err.code === 'ECONNABORTED') {
+
+      if (err.code === "ECONNABORTED") {
         errorMessage += "Request timed out.";
       } else if (err.response) {
         errorMessage += `Server responded with status ${err.response.status}.`;
       } else if (err.request) {
-        errorMessage += "No response from server. Please check if the server is running.";
+        errorMessage +=
+          "No response from server. Please check if the server is running.";
       } else {
         errorMessage += err.message || "Unknown error occurred.";
       }
@@ -235,7 +263,7 @@ const Product = () => {
 
   // ✅ Retry function
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
     fetchBrands();
   };
 
@@ -271,18 +299,24 @@ const Product = () => {
             <hr />
             <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
               <div>
-                <small className="text-muted d-block">
-                  API URL: {API_URL}
-                </small>
+                <small className="text-muted d-block">API URL: {API_URL}</small>
                 <small className="text-muted d-block">
                   Brands found: {brands.length}
                 </small>
               </div>
               <div className="d-flex gap-2">
-                <Button variant="outline-danger" size="sm" onClick={handleRetry}>
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={handleRetry}
+                >
                   🔄 Retry
                 </Button>
-                <Button variant="outline-secondary" size="sm" onClick={() => window.location.reload()}>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                >
                   🔄 Refresh Page
                 </Button>
               </div>
@@ -327,119 +361,157 @@ const Product = () => {
           viewport={{ once: true }}
         />
         <Container>
-          <h2 className="text-center funnel-sans my-5 display-2">Our Brands</h2>
+          <div className="our-brands-header position-relative my-5">
+            <h2 className="text-center funnel-sans display-2 mb-0">
+              Our Brands
+            </h2>
+
+            {/* FILTER BUTTON */}
+            <div className="filter-trigger-wrapper lexend">
+              <Button
+                className="filter-trigger-btn"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <i className="bi bi-sliders me-2"></i>
+                Filters
+                <span className="filter-trigger-arrow">
+                  <i
+                    className={`bi ${
+                      showFilters ? "bi-chevron-up" : "bi-chevron-down"
+                    }`}
+                  ></i>
+                </span>
+              </Button>
+            </div>
+          </div>
           {/* <p className="text-center text-muted mb-4">
             {filteredBrands.length} of {brands.length} brands available
           </p> */}
-
           {/* ✅ FILTERS AND SORTING SECTION */}
-          <div className="filters-section mb-5 p-4 bg-light rounded">
-            <Row className="g-3 align-items-end">
-              {/* Search */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-bold">
-                    <i className="bi bi-search me-1"></i> Search Brands
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Search by name, category..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="rounded-pill"
-                  />
-                </Form.Group>
-              </Col>
+          {/* FILTER BUTTON */}
 
-              {/* Category Filter - ✅ UNCOMMENTED */}
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label className="fw-bold">
-                    <i className="bi bi-tag me-1"></i> Category
-                  </Form.Label>
-                  <Form.Select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="rounded-pill"
+          {/* FILTER PANEL */}
+          {showFilters && (
+            <div className="filters-section lexend">
+              <div className="filter-header-product">
+                <div>
+                  <h5>
+                    <i className="bi bi-sliders me-2"></i>
+                    Filter & Sort
+                  </h5>
+                  <p>Find exactly what you're looking for</p>
+                </div>
+                <Col lg={2} md={12}>
+                  <Button
+                    className="filter-reset-btn"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("all");
+                      setSortBy("newest");
+                    }}
                   >
-                    <option value="all">📂 All Categories</option>
-                    {categories.map((cat, idx) => (
-                      <option key={idx} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              {/* Sort By */}
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label className="fw-bold">
-                    <i className="bi bi-sort-down me-1"></i> Sort By
-                  </Form.Label>
-                  <Form.Select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="rounded-pill"
-                  >
-                    <option value="newest">🆕 Newest First</option>
-                    <option value="oldest">📅 Oldest First</option>
-                    <option value="name_asc">🔤 A to Z</option>
-                    <option value="name_desc">🔤 Z to A</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              {/* Clear Filters */}
-              <Col md={2}>
-                <Button
-                  variant="outline-secondary"
-                  className="w-100 rounded-pill"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedCategory("all"); // ✅ UNCOMMENTED
-                    setSortBy("newest");
-                  }}
+                    Reset
+                  </Button>
+                </Col>
+                <button
+                  type="button"
+                  className="filter-close-btn"
+                  onClick={() => setShowFilters(false)}
                 >
-                  <i className="bi bi-arrow-counterclockwise me-1"></i> Reset
-                </Button>
-              </Col>
-            </Row>
-
-            {/* Active Filters Display */}
-            {(searchTerm || selectedCategory !== "all" || sortBy !== "newest") && (
-              <div className="active-filters mt-3 d-flex flex-wrap gap-2 align-items-center">
-                <span className="text-muted small">Active filters:</span>
-                {searchTerm && (
-                  <Badge bg="primary" className="d-flex align-items-center gap-1">
-                    🔍 {searchTerm}
-                    <span className="ms-1" style={{ cursor: 'pointer' }} onClick={() => setSearchTerm("")}>✕</span>
-                  </Badge>
-                )}
-                {selectedCategory !== "all" && (
-                  <Badge bg="success" className="d-flex align-items-center gap-1">
-                    📂 {selectedCategory}
-                    <span className="ms-1" style={{ cursor: 'pointer' }} onClick={() => setSelectedCategory("all")}>✕</span>
-                  </Badge>
-                )}
-                {sortBy !== "newest" && (
-                  <Badge bg="info" className="d-flex align-items-center gap-1">
-                    {sortBy === "oldest" && "📅 Oldest"}
-                    {sortBy === "name_asc" && "🔤 A to Z"}
-                    {sortBy === "name_desc" && "🔤 Z to A"}
-                    <span className="ms-1" style={{ cursor: 'pointer' }} onClick={() => setSortBy("newest")}>✕</span>
-                  </Badge>
-                )}
+                  <FaXmark />
+                </button>
               </div>
-            )}
-          </div>
 
+              <Row className="g-3">
+                {/* SEARCH */}
+                <Col lg={5} md={12}>
+                  <Form.Group>
+                    <Form.Label className="filter-label">
+                      <i className="bi bi-search me-2"></i>
+                      Search Brands
+                    </Form.Label>
+
+                    <div className="filter-input-wrapper">
+                      <i className="bi bi-search"></i>
+
+                      <Form.Control
+                        type="text"
+                        placeholder="Search by name, category..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </Form.Group>
+                </Col>
+
+                {/* CATEGORY */}
+                <Col lg={3} md={6}>
+                  <Form.Group>
+                    <Form.Label className="filter-label">
+                      <i className="bi bi-tag me-2"></i>
+                      Category
+                    </Form.Label>
+
+                    <Form.Select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="filter-select"
+                    >
+                      <option value="all">All Categories</option>
+
+                      {categories.map((cat, idx) => (
+                        <option key={idx} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* SORT */}
+                <Col lg={2} md={6}>
+                  <Form.Group>
+                    <Form.Label className="filter-label">
+                      <i className="bi bi-sort-down me-2"></i>
+                      Sort By
+                    </Form.Label>
+
+                    <Form.Select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="filter-select"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="name_asc">A to Z</option>
+                      <option value="name_desc">Z to A</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* RESET */}
+                {/* <Col lg={2} md={12}>
+                  <Button
+                    className="filter-reset-btn"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("all");
+                      setSortBy("newest");
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </Col> */}
+              </Row>
+            </div>
+          )}
           {/* ✅ BRAND GRID DISPLAY */}
           {filteredBrands.length === 0 ? (
             <div className="text-center py-5">
               <h5>No brands match your filters</h5>
-              <p className="text-muted">Try adjusting your search or filter criteria</p>
+              <p className="text-muted">
+                Try adjusting your search or filter criteria
+              </p>
               <Button
                 variant="outline-primary"
                 className="rounded-pill"
@@ -465,7 +537,7 @@ const Product = () => {
                 if (item.category) {
                   if (Array.isArray(item.category)) {
                     categoryDisplay = item.category.join(", ");
-                  } else if (typeof item.category === 'string') {
+                  } else if (typeof item.category === "string") {
                     categoryDisplay = item.category;
                   }
                 }
@@ -502,10 +574,11 @@ const Product = () => {
                             <span className="brand-initial">
                               {item.name?.charAt(0)?.toUpperCase() || "?"}
                             </span>
-                            <span className="brand-name-display">{item.name || "Unknown"}</span>
+                            <span className="brand-name-display">
+                              {item.name || "Unknown"}
+                            </span>
                           </div>
                         )}
-                        
                       </motion.div>
                     </Col>
 
@@ -520,13 +593,16 @@ const Product = () => {
                         viewport={{ once: true }}
                       >
                         <div className="d-flex align-items-center gap-3 flex-wrap">
-                          <h4 className="funnel-sans mb-0">{item.name || "Unnamed Brand"}</h4>
+                          <h4 className="funnel-sans mb-0">
+                            {item.name || "Unnamed Brand"}
+                          </h4>
                         </div>
-                        
+
                         <p className="lexend mt-2">
-                          {item.description || `${item.name || "This brand"} - Premium brand on Native91`}
+                          {item.description ||
+                            `${item.name || "This brand"} - Premium brand on Native91`}
                         </p>
-                        
+
                         <div className="d-flex flex-wrap gap-3 align-items-center mt-3">
                           <NavLink
                             to={`/company/${encodeURIComponent(item.name || item._id)}`}
