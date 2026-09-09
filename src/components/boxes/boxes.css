@@ -157,11 +157,11 @@
 
 @media (max-width: 576px) {
   .promo-card {
-    height: 250px;
+    height: 300px;
   }
 
   .promo-content h3 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .promo-content p {
