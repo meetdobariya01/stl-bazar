@@ -39,8 +39,8 @@ root.render(
   <CartProvider>
     <WishlistProvider>
       <Router>
-        {/* <Breadcrumb /> */}
-        <BirdCursorFlock birdCount={1} />
+        {/* <Breadcrumb /> */}  
+        {/* <BirdCursorFlock birdCount={1} /> */}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/aboutus" element={<Aboutus />} />
@@ -57,6 +57,10 @@ root.render(
           <Route path="/product/:slug" element={<Productdetails />} />
           <Route
             path="/category/:categoryName"
+            element={<CategoryProducts />}
+          />
+          <Route
+            path="/category/:categoryName/:subCategoryName"
             element={<CategoryProducts />}
           />
           <Route path="/sell" element={<Sell />} />

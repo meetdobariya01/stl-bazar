@@ -59,7 +59,6 @@ const OTPVerification = ({
   const [canResend, setCanResend] = useState(true);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
-
   const inputRefs = useRef([]);
 
   // Start timer
@@ -333,7 +332,6 @@ const Sell = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
-
   // OTP State
   const [tempId, setTempId] = useState(null);
   const [showOTP, setShowOTP] = useState(false);
@@ -593,6 +591,16 @@ const Sell = () => {
                   <div className="seller-form-box">
                     <h1 className="funnel-sans">Verify Your Email Address</h1>
                     <p>We've sent a 6-digit verification code to your email.</p>
+
+                    {error && (
+                      <Alert
+                        variant="danger"
+                        onClose={() => setError("")}
+                        dismissible
+                      >
+                        {error}
+                      </Alert>
+                    )}
 
                     {error && (
                       <Alert
@@ -921,7 +929,7 @@ const Sell = () => {
                     <div>
                       <h5>Founding Seller benefits available</h5>
                       <p>Unlock exclusive early seller advantages</p>
-                    </div>
+                    </div>  
                   </div>
 
                   <div className="support-card d-flex gap-3 p-3 bg-light rounded mt-4">

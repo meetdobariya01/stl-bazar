@@ -11,6 +11,7 @@ import { useCart } from "../../context/CartContext";
 
 const API_URL = process.env.REACT_APP_API_URL;
 // ✅ USE VENDOR BACKEND URL FOR IMAGES
+
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
 
 // ✅ FIXED: Format image using VENDOR backend
