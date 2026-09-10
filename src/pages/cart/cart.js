@@ -35,8 +35,10 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BACKEND_URL =
-  "https://api-vendor.native91.com";
+// const VENDOR_BACKEND_URL =
+//   "https://api-vendor.native91.com";
+
+const VENDOR_BACKEND_URL = "http://localhost:5177"; // Adjust this to your backend URL
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -108,7 +110,7 @@ const Cart = () => {
       const res = await axios.get(`${API_URL}/cart/${guestId}`);
       const cartData = res.data || { items: [], appliedCoupon: null };
       setCart(cartData);
-      
+
       // ✅ Fetch stock for each item in cart
       if (cartData.items && cartData.items.length > 0) {
         fetchAllProductStocks(cartData.items);
@@ -162,9 +164,15 @@ const Cart = () => {
     fetchCart();
   }, [guestId]);
 
-  // ✅ Update quantity with stock validation
-  const updateQty = async (productId, type) => {
-    const item = cart.items.find((i) => i.productId === productId);
+  // ✅ Update quantity with stock validation — variant-aware (optional variantId)
+  const updateQty = async (productId, type, variantId = null) => {
+    // ✅ Find item matching BOTH productId AND variantId (null-safe)
+    const item = cart.items.find((i) => {
+      const sameProduct = i.productId === productId;
+      const itemVariant = i.variantId ? i.variantId.toString() : null;
+      const targetVariant = variantId ? variantId.toString() : null;
+      return sameProduct && itemVariant === targetVariant;
+    });
     if (!item) return;
 
     // ✅ Check stock when adding
@@ -179,7 +187,7 @@ const Cart = () => {
     const newQuantity = type === "inc" ? item.quantity + 1 : item.quantity - 1;
 
     if (newQuantity < 1) {
-      removeItem(productId);
+      removeItem(productId, variantId);
       return;
     }
 
@@ -192,6 +200,12 @@ const Cart = () => {
           price: item.price,
           image: item.image,
           quantity: type === "inc" ? 1 : -1,
+          // ✅ PASS VARIANT FIELDS (null/empty if not set — optional)
+          variantId: item.variantId || null,
+          selectedColor: item.selectedColor || "",
+          selectedSize: item.selectedSize || "",
+          variantImage: item.variantImage || "",
+          variantPrice: item.variantPrice || 0,
         },
       });
       fetchCart();
@@ -204,9 +218,13 @@ const Cart = () => {
     }
   };
 
-  const removeItem = async (productId) => {
+  // ✅ Remove item — variant-aware (optional variantId)
+  const removeItem = async (productId, variantId = null) => {
     try {
-      await axios.delete(`${API_URL}/cart/remove/${guestId}/${productId}`);
+      const url = variantId
+        ? `${API_URL}/cart/remove/${guestId}/${productId}?variantId=${variantId}`
+        : `${API_URL}/cart/remove/${guestId}/${productId}`;
+      await axios.delete(url);
       fetchCart();
     } catch (err) {
       console.error("Remove item error:", err.response?.data || err.message);
@@ -486,7 +504,7 @@ const Cart = () => {
                       
                       return (
                         <motion.div
-                          key={item.productId}
+                          key={`${item.productId}_${item.variantId || 'default'}`}
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.1 }}
@@ -497,8 +515,9 @@ const Cart = () => {
                               <Row className="align-items-center">
                                 <Col md={3} xs={4}>
                                   <div className="cart-img">
+                                    {/* ✅ Use variant image if available, else product image */}
                                     <img
-                                      src={formatImagePath(item.image)}
+                                      src={formatImagePath(item.variantImage || item.image)}
                                       alt={item.name}
                                       onError={(e) => {
                                         e.target.onerror = null;
@@ -510,6 +529,30 @@ const Cart = () => {
                                 <Col md={6} xs={8}>
                                   <div className="cart-info">
                                     <h4>{item.name}</h4>
+
+                                    {/* ✅ VARIANT COLOR/SIZE BADGES — display only if selected */}
+                                    {(item.selectedColor || item.selectedSize) && (
+                                      <div className="cart-variant-info mb-1">
+                                        {item.selectedColor && (
+                                          <Badge
+                                            bg="dark"
+                                            className="me-1"
+                                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                                          >
+                                            🎨 {item.selectedColor}
+                                          </Badge>
+                                        )}
+                                        {item.selectedSize && (
+                                          <Badge
+                                            bg="secondary"
+                                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                                          >
+                                            📏 {item.selectedSize}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+
                                     <h5 className="funnel-sans">
                                       ₹{formatPrice(item.price)}
                                     </h5>
@@ -561,20 +604,22 @@ const Cart = () => {
                                       </small>
                                     </div>
                                     <div className="cart-actions">
+                                      {/* ✅ Pass variantId for variant-aware remove */}
                                       <button
-                                        onClick={() => removeItem(item.productId)}
+                                        onClick={() => removeItem(item.productId, item.variantId)}
                                         disabled={isOutOfStock}
                                       >
-                                        <FaTrash /> {isOutOfStock ? 'Remove' : 'Remove'}
+                                        <FaTrash /> Remove
                                       </button>
                                     </div>
                                   </div>
                                 </Col>
                                 <Col md={3} xs={12}>
                                   <div className="qty-box">
+                                    {/* ✅ Pass variantId for variant-aware update */}
                                     <button
                                       onClick={() =>
-                                        updateQty(item.productId, "dec")
+                                        updateQty(item.productId, "dec", item.variantId)
                                       }
                                       disabled={isOutOfStock}
                                     >
@@ -583,7 +628,7 @@ const Cart = () => {
                                     <span>{item.quantity}</span>
                                     <button
                                       onClick={() =>
-                                        updateQty(item.productId, "inc")
+                                        updateQty(item.productId, "inc", item.variantId)
                                       }
                                       disabled={item.quantity >= stock || isOutOfStock}
                                     >
@@ -723,7 +768,6 @@ const Cart = () => {
                     >
                       Proceed to Checkout
                     </Button>
-                    
 
                     <div className="secure-checkout">
                       <FaShieldAlt />

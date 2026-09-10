@@ -1,4 +1,4 @@
-// Models/Cart.js - UPDATED WITH VENDOR AND STOCK FIELDS
+// Models/Cart.js - UPDATED WITH VENDOR, STOCK & VARIANT FIELDS
 const mongoose = require("mongoose");
 
 const CartSchema = new mongoose.Schema(
@@ -30,7 +30,7 @@ const CartSchema = new mongoose.Schema(
         },
         image: [String],
         
-        // ✅ ADD THESE FIELDS
+        // ✅ VENDOR FIELDS
         vendorId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Vendor"
@@ -40,6 +40,28 @@ const CartSchema = new mongoose.Schema(
           default: "N/A"
         },
         stock: {
+          type: Number,
+          default: 0
+        },
+
+        // 🆕 VARIANT FIELDS (ADDED)
+        variantId: {
+          type: mongoose.Schema.Types.ObjectId,
+          default: null
+        },
+        selectedColor: {
+          type: String,
+          default: ""
+        },
+        selectedSize: {
+          type: String,
+          default: ""
+        },
+        variantImage: {
+          type: String,
+          default: ""
+        },
+        variantPrice: {
           type: Number,
           default: 0
         }

@@ -31,7 +31,7 @@ import Header from "../../components/header/header";
 import "./checkout.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
+const VENDOR_BACKEND_URL = "http://localhost:5177";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -88,7 +88,6 @@ const Checkout = () => {
 
   const guestId = localStorage.getItem("guestId");
 
-  // ✅ FIX: Keep guestId persistent
   useEffect(() => {
     let currentGuestId = localStorage.getItem("guestId");
     if (!currentGuestId) {
@@ -223,7 +222,6 @@ const Checkout = () => {
   const shippingCost = getShippingCost(discountedSubtotal, shippingMethod);
   const total = discountedSubtotal + shippingCost;
 
-  // ✅ Apply coupon function
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       setCouponError("Please enter a coupon code");
@@ -241,7 +239,6 @@ const Checkout = () => {
         setAppliedCoupon(response.data.coupon);
         setCouponError("");
 
-        // Update cart with coupon
         setCart(prev => ({
           ...prev,
           appliedCoupon: response.data.coupon
@@ -255,7 +252,6 @@ const Checkout = () => {
     }
   };
 
-  // ✅ Remove coupon function
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode("");
@@ -265,7 +261,6 @@ const Checkout = () => {
     }));
   };
 
-  // ✅ Save address function
   const saveAddressToDB = async () => {
     const currentGuestId = localStorage.getItem("guestId");
     if (!currentGuestId) {
@@ -312,7 +307,6 @@ const Checkout = () => {
     }
   };
 
-  // ✅ Send order email function
   const sendOrderEmail = async (orderId) => {
     try {
       setEmailStatus("sending");
@@ -342,13 +336,11 @@ const Checkout = () => {
     }
   };
 
-  // ✅ Place order function with proper cart clearing
   const placeOrder = async () => {
     setIsProcessing(true);
     setEmailStatus("");
 
     try {
-      // Validate shipping address
       if (!shipping.name || !shipping.email || !shipping.phone || !shipping.address) {
         alert("Please fill in all required shipping address fields");
         setIsProcessing(false);
@@ -362,38 +354,25 @@ const Checkout = () => {
         couponCode: appliedCoupon?.code || null,
       };
 
-      // console.log('📦 Placing order with data:', orderData);
-      // console.log('🎫 Coupon code being sent:', orderData.couponCode);
-
       const response = await axios.post(
         `${API_URL}/order/place`,
         orderData
       );
 
-      // console.log('✅ Order response:', response.data);
-
       if (response.data.success) {
-        // Send email notification
         await sendOrderEmail(response.data.orderId);
 
-        // ✅ FIX: Clear cart using the correct endpoint
         try {
-          // Use the existing clear endpoint from cartRouter
           await axios.delete(`${API_URL}/cart/clear/${guestId}`);
-          // console.log('✅ Cart cleared successfully');
         } catch (cartError) {
           console.error("Cart clear error:", cartError);
-          // Alternative: Try to clear via POST if DELETE fails
           try {
             await axios.post(`${API_URL}/cart/clear`, { guestId: guestId });
-            // console.log('✅ Cart cleared via POST');
           } catch (err) {
             console.error("❌ Alternative cart clear failed:", err);
-            // If both fail, the cart will be cleared when the user refreshes
           }
         }
 
-        // Clear coupon
         setAppliedCoupon(null);
         setCouponCode("");
 
@@ -780,11 +759,10 @@ const Checkout = () => {
                       </div>
                     </div>
 
-                    <Button 
+                    <Button
                       className="payment-btn"
                       onClick={placeOrder}
                       disabled={isProcessing}
-			disabled
                     >
                       {isProcessing ? (
                         <>
@@ -876,11 +854,15 @@ const Checkout = () => {
                       )}
                     </div>
 
-                    {cart.items.map((item) => (
-                      <div key={item.productId} className="summary-item">
+                    {cart.items.map((item, index) => (
+                      <div
+                        key={`${item.productId}_${item.variantId || 'default'}_${index}`}
+                        className="summary-item"
+                      >
                         <div className="summary-img">
+                          {/* 🆕 Variant image fallback */}
                           <Image
-                            src={formatImagePath(item.image)}
+                            src={formatImagePath(item.variantImage || item.image)}
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = "/images/placeholder.png";
@@ -890,6 +872,27 @@ const Checkout = () => {
                         </div>
                         <div className="summary-info">
                           <h5>{item.name}</h5>
+
+                          {/* 🆕 VARIANT COLOR/SIZE */}
+                          {(item.selectedColor || item.selectedSize) && (
+                            <div
+                              className="checkout-variant-info"
+                              style={{
+                                fontSize: '12px',
+                                color: '#666',
+                                marginTop: '2px',
+                                marginBottom: '4px',
+                              }}
+                            >
+                              {item.selectedColor && (
+                                <span className="me-2">🎨 {item.selectedColor}</span>
+                              )}
+                              {item.selectedSize && (
+                                <span>📏 {item.selectedSize}</span>
+                              )}
+                            </div>
+                          )}
+
                           <p>₹{formatPrice(item.price)}</p>
                         </div>
                       </div>

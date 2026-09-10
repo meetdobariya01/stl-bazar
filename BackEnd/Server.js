@@ -15,6 +15,7 @@ const cors = require("cors");
 const path = require("path");
 const connectDB = require("./Comfig/db/db");
 const shiprocketRouter = require('./Router/shiprocketRouter');
+
 // Connect DB
 connectDB();
 
@@ -62,6 +63,9 @@ app.use("/api/categories", require("./Router/categoryRoutes"));
 app.use('/api/coupons', require('./Router/couponRoutes'));
 app.use('/api/shiprocket', shiprocketRouter);
 app.use("/api", require("./Router/routerproduct"));   
+
+
+
 /* ===============================
    ROOT
 ================================ */

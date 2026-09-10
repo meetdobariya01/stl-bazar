@@ -1,4 +1,4 @@
-// Models/Order.js - UPDATED WITH COUPON FIELDS, STOCK SNAPSHOT & SHIPROCKET
+// Models/Order.js - UPDATED WITH VARIANT SUPPORT
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -10,11 +10,18 @@ const orderSchema = new mongoose.Schema({
       name: String,
       price: Number,
       quantity: Number,
-      stockAtPurchase: { type: Number, default: 0 }, // ✅ Stock snapshot at time of purchase
+      stockAtPurchase: { type: Number, default: 0 },
       image: [String],
       vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
       company: { type: String, default: "N/A" },
-      weight: { type: Number, default: 0.5 }, // ✅ Added weight for Shiprocket
+      weight: { type: Number, default: 0.5 },
+
+      // 🆕 VARIANT FIELDS
+      variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
+      selectedColor: { type: String, default: "" },
+      selectedSize: { type: String, default: "" },
+      variantImage: { type: String, default: "" },
+      variantPrice: { type: Number, default: 0 },
     },
   ],
   shippingAddress: {
@@ -28,8 +35,7 @@ const orderSchema = new mongoose.Schema({
     country: String,
   },
   paymentMethod: { type: String, default: "COD" },
-  
-  // Coupon fields
+
   coupon: {
     code: { type: String, default: null },
     discountType: { type: String, enum: ["percentage", "fixed"], default: null },
@@ -39,13 +45,12 @@ const orderSchema = new mongoose.Schema({
   },
   subtotal: { type: Number, default: 0 },
   totalPrice: { type: Number, required: true },
-  orderStatus: { 
-    type: String, 
+  orderStatus: {
+    type: String,
     enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
-    default: "Pending" 
+    default: "Pending"
   },
-  
-  // ✅ SHIPROCKET SHIPMENTS
+
   shipments: [
     {
       vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
@@ -63,15 +68,13 @@ const orderSchema = new mongoose.Schema({
       createdAt: { type: Date, default: Date.now }
     }
   ],
-  
-  // ✅ SHIPROCKET SYNC STATUS - FIXED ENUM
+
   shiprocketSyncStatus: {
     type: String,
     enum: ['pending', 'synced', 'failed', 'partial', 'skipped', 'disabled'],
     default: 'pending'
   },
-  
-  // ✅ SHIPROCKET ERROR (if any)
+
   shiprocketError: { type: String, default: null },
 
 }, {

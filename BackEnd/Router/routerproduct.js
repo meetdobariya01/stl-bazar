@@ -10,7 +10,23 @@ const Vendor = require("../Models/Vendor");
 const VendorSetting = require("../Models/VendorSetting");
 const StockService = require("../Comfig/stockService");
 const SellerDocument = require("../Models/SellerDocument");
-const Category = require("../Models/Category"); // 🆕 Import Category model
+const Category = require("../Models/Category");
+
+// ============================================================
+// 🆕 HELPER: Format product consistently (adds variants)
+// ============================================================
+const formatProduct = (p) => {
+  const productObj = p.toObject ? p.toObject() : p;
+  return {
+    ...productObj,
+    subcategory: productObj.subcategory || productObj.subCategory || "",
+    subcategories: productObj.subcategories || productObj.subCategories || [],
+    variants: productObj.variants || [],   // 🆕
+    inStock: productObj.stockQuantity > 0,
+    availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
+    stockStatus: productObj.stockStatus || "out_of_stock"
+  };
+};
 
 // ============================================================
 // SEARCH SUGGESTIONS
@@ -22,15 +38,11 @@ router.get("/search-suggestions", async (req, res) => {
     console.log(`🔍 Search suggestions request for: "${q}"`);
 
     if (!q || q.trim().length < 2) {
-      return res.json({
-        success: true,
-        products: []
-      });
+      return res.json({ success: true, products: [] });
     }
 
     const searchTerm = q.trim();
 
-    // Search in multiple fields
     const products = await Product.find({
       $or: [
         { name: { $regex: searchTerm, $options: "i" } },
@@ -42,12 +54,9 @@ router.get("/search-suggestions", async (req, res) => {
       isActive: true
     })
       .limit(10)
-      .select("name ProductName price image company vendorId _id stockQuantity stockStatus category subcategory subcategories")
+      .select("name ProductName price image company vendorId _id stockQuantity stockStatus category subcategory subcategories variants")
       .lean();
 
-    console.log(`📦 Found ${products.length} products matching "${searchTerm}"`);
-
-    // Get vendor IDs to check for suspended vendors
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
 
     let suspendedVendorIds = [];
@@ -80,6 +89,7 @@ router.get("/search-suggestions", async (req, res) => {
           category: p.category || "",
           subcategory: p.subcategory || p.subCategory || "",
           subcategories: p.subcategories || p.subCategories || [],
+          variants: p.variants || [],   // 🆕
           stockQuantity: p.stockQuantity || 0,
           stockStatus: p.stockStatus || "out_of_stock",
           inStock: p.stockQuantity > 0,
@@ -87,13 +97,7 @@ router.get("/search-suggestions", async (req, res) => {
         };
       });
 
-    console.log(`✅ Returning ${formattedProducts.length} suggestions`);
-
-    res.json({
-      success: true,
-      products: formattedProducts
-    });
-
+    res.json({ success: true, products: formattedProducts });
   } catch (error) {
     console.error("❌ Search suggestions error:", error);
     res.status(500).json({
@@ -122,9 +126,7 @@ router.get("/companies", async (req, res) => {
       let description = "";
       let logo = vendor.logo || null;
 
-      if (vendor.description) {
-        description = vendor.description;
-      }
+      if (vendor.description) description = vendor.description;
 
       if (vendor.categories && vendor.categories.length > 0) {
         categories = vendor.categories;
@@ -157,9 +159,7 @@ router.get("/companies", async (req, res) => {
             description = sellerDoc.brand.description;
           }
 
-          if (sellerDoc.businessName) {
-            vendor.company = sellerDoc.businessName;
-          }
+          if (sellerDoc.businessName) vendor.company = sellerDoc.businessName;
         }
       }
 
@@ -172,13 +172,8 @@ router.get("/companies", async (req, res) => {
             categories = companyData.category.split(",").map(c => c.trim()).filter(Boolean);
           }
 
-          if (!description && companyData.description) {
-            description = companyData.description;
-          }
-
-          if (!logo && companyData.logo) {
-            logo = companyData.logo;
-          }
+          if (!description && companyData.description) description = companyData.description;
+          if (!logo && companyData.logo) logo = companyData.logo;
         }
       }
 
@@ -192,13 +187,9 @@ router.get("/companies", async (req, res) => {
         products.forEach(p => {
           if (p.category) {
             if (Array.isArray(p.category)) {
-              p.category.forEach(c => {
-                if (c && c.trim()) productCategories.add(c.trim());
-              });
+              p.category.forEach(c => { if (c && c.trim()) productCategories.add(c.trim()); });
             } else if (typeof p.category === 'string') {
-              p.category.split(',').forEach(c => {
-                if (c && c.trim()) productCategories.add(c.trim());
-              });
+              p.category.split(',').forEach(c => { if (c && c.trim()) productCategories.add(c.trim()); });
             }
           }
         });
@@ -206,16 +197,14 @@ router.get("/companies", async (req, res) => {
         categories = Array.from(productCategories);
       }
 
-      if (categories.length === 0) {
-        categories = ['Uncategorized'];
-      }
+      if (categories.length === 0) categories = ['Uncategorized'];
 
       const productCount = await Product.countDocuments({
         company: vendor.company,
         stockQuantity: { $gt: 0 }
       });
 
-      const companyDataObj = {
+      companies.push({
         _id: vendor._id,
         name: vendor.company || vendor.name,
         description: description || `${vendor.company || vendor.name} - Premium brand on Native91`,
@@ -229,14 +218,10 @@ router.get("/companies", async (req, res) => {
         productCount: productCount,
         createdAt: vendor.createdAt,
         registeredAt: vendor.createdAt
-      };
-
-      companies.push(companyDataObj);
+      });
 
       categories.forEach(cat => {
-        if (!categoryMap[cat]) {
-          categoryMap[cat] = [];
-        }
+        if (!categoryMap[cat]) categoryMap[cat] = [];
         categoryMap[cat].push(vendor.company);
       });
     }
@@ -263,22 +248,19 @@ router.get("/companies", async (req, res) => {
 });
 
 // ============================================================
-// 🆕 GET SUB-CATEGORIES FOR A CATEGORY (PUBLIC)
-// Merges vendor products + admin Category collection
+// GET SUB-CATEGORIES FOR A CATEGORY
 // ============================================================
 router.get("/categories/:category/subcategories", async (req, res) => {
   try {
     const { category } = req.params;
     const decodedCategory = decodeURIComponent(category);
 
-    // 1️⃣ From vendor products — try BOTH casing variants
     const s1 = await Product.distinct("subcategory", { category: decodedCategory });
     const s2 = await Product.distinct("subCategory", { category: decodedCategory });
     const s3 = await Product.distinct("subcategories", { category: decodedCategory });
     const s4 = await Product.distinct("subCategories", { category: decodedCategory });
     const fromProducts = [...s1, ...s2, ...s3, ...s4];
 
-    // 2️⃣ From admin Category collection
     let fromAdmin = [];
     try {
       const adminCategory = await Category.findOne({
@@ -295,7 +277,6 @@ router.get("/categories/:category/subcategories", async (req, res) => {
       console.warn("⚠️ Admin category lookup failed:", adminErr.message);
     }
 
-    // 3️⃣ Merge + dedupe
     const allSubCategories = [...fromProducts, ...fromAdmin];
     const uniqueSubCategories = [...new Set(allSubCategories)]
       .filter(s => s && typeof s === "string" && s.trim() !== "")
@@ -308,15 +289,12 @@ router.get("/categories/:category/subcategories", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error fetching sub-categories:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
 // ============================================================
-// GET PRODUCTS BY CATEGORY (for fallback)
+// GET PRODUCTS BY CATEGORY (fallback)
 // ============================================================
 router.get("/products/by-category/:category", async (req, res) => {
   try {
@@ -327,16 +305,10 @@ router.get("/products/by-category/:category", async (req, res) => {
       isActive: true
     }).select('subcategory subcategories subCategory subCategories name price');
 
-    res.json({
-      success: true,
-      products
-    });
+    res.json({ success: true, products });
   } catch (error) {
     console.error("Error fetching products by category:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -352,12 +324,7 @@ router.post("/company", async (req, res) => {
     const exists = await Company.findOne({ name });
     if (exists) return res.status(400).json({ message: "Company already exists" });
 
-    const company = await Company.create({
-      name,
-      description,
-      logo,
-      category
-    });
+    const company = await Company.create({ name, description, logo, category });
     res.status(201).json(company);
   } catch (err) {
     console.error(err);
@@ -376,11 +343,10 @@ router.get("/products", async (req, res) => {
 
     if (company) filter.company = company;
     if (category) filter.category = category;
-    // 🆕 Filter by subcategory (matches both fields)
     if (subcategory) {
       filter.$or = [
         { subcategory: subcategory },
-        { subcategories: subcategory } // array contains
+        { subcategories: subcategory }
       ];
     }
     if (search) {
@@ -416,17 +382,7 @@ router.get("/products", async (req, res) => {
       products = products.filter(p => p.stockQuantity > 0);
     }
 
-    const formattedProducts = products.map(p => {
-      const productObj = p.toObject ? p.toObject() : p;
-      return {
-        ...productObj,
-        subcategory: productObj.subcategory || productObj.subCategory || "",
-        subcategories: productObj.subcategories || productObj.subCategories || [],
-        inStock: productObj.stockQuantity > 0,
-        availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
-        stockStatus: productObj.stockStatus || "out_of_stock"
-      };
-    });
+    const formattedProducts = products.map(formatProduct);
 
     res.json(formattedProducts);
   } catch (err) {
@@ -453,16 +409,7 @@ router.get("/product/:id", async (req, res) => {
       }
     }
 
-    const productObj = product.toObject ? product.toObject() : product;
-    const response = {
-      ...productObj,
-      subcategory: productObj.subcategory || productObj.subCategory || "",
-      subcategories: productObj.subcategories || productObj.subCategories || [],
-      inStock: productObj.stockQuantity > 0,
-      availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
-      stockStatus: productObj.stockStatus || "out_of_stock",
-    };
-
+    const response = formatProduct(product);
     res.json(response);
   } catch (err) {
     console.error(err);
@@ -497,14 +444,7 @@ router.get("/best-sellers", async (req, res) => {
       if (product) {
         const vendor = await Vendor.findById(product.vendorId);
         if (vendor && vendor.status === 'active') {
-          const productObj = product.toObject ? product.toObject() : product;
-          result.push({
-            ...productObj,
-            subcategory: productObj.subcategory || productObj.subCategory || "",
-            subcategories: productObj.subcategories || productObj.subCategories || [],
-            inStock: productObj.stockQuantity > 0,
-            availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
-          });
+          result.push(formatProduct(product));
         }
       }
     }
@@ -552,6 +492,7 @@ router.get("/arrival-best-sellers", async (req, res) => {
             category: productObj.category,
             subcategory: productObj.subcategory || productObj.subCategory || "",
             subcategories: productObj.subcategories || productObj.subCategories || [],
+            variants: productObj.variants || [],   // 🆕
             averageRating: productObj.averageRating,
             stockQuantity: productObj.stockQuantity || 0,
             stockStatus: productObj.stockStatus || "out_of_stock",
@@ -616,27 +557,12 @@ router.get("/search", async (req, res) => {
       !suspendedVendorIds.includes(p.vendorId?.toString())
     );
 
-    const formattedProducts = products.map(p => {
-      const productObj = p.toObject ? p.toObject() : p;
-      return {
-        ...productObj,
-        subcategory: productObj.subcategory || productObj.subCategory || "",
-        subcategories: productObj.subcategories || productObj.subCategories || [],
-        inStock: productObj.stockQuantity > 0,
-        availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
-      };
-    });
+    const formattedProducts = products.map(formatProduct);
 
-    res.status(200).json({
-      success: true,
-      products: formattedProducts,
-    });
+    res.status(200).json({ success: true, products: formattedProducts });
   } catch (error) {
     console.log(error);
-    res.status(500).json({
-      success: false,
-      message: "Search failed",
-    });
+    res.status(500).json({ success: false, message: "Search failed" });
   }
 });
 
@@ -660,17 +586,7 @@ router.get("/products/company/:companyName", async (req, res) => {
     }
 
     const products = await Product.find({ company: companyName });
-
-    const formattedProducts = products.map(p => {
-      const productObj = p.toObject ? p.toObject() : p;
-      return {
-        ...productObj,
-        subcategory: productObj.subcategory || productObj.subCategory || "",
-        subcategories: productObj.subcategories || productObj.subCategories || [],
-        inStock: productObj.stockQuantity > 0,
-        availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
-      };
-    });
+    const formattedProducts = products.map(formatProduct);
 
     res.json(formattedProducts);
   } catch (err) {
@@ -689,10 +605,7 @@ router.get("/active-vendors", async (req, res) => {
       role: 'vendor'
     }).select('name company plan status createdAt');
 
-    res.json({
-      success: true,
-      vendors
-    });
+    res.json({ success: true, vendors });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch vendors" });
@@ -707,10 +620,7 @@ router.post("/cart/validate-stock", async (req, res) => {
     const { items } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide cart items"
-      });
+      return res.status(400).json({ success: false, message: "Please provide cart items" });
     }
 
     const stockValidation = [];
@@ -718,7 +628,7 @@ router.post("/cart/validate-stock", async (req, res) => {
 
     for (const item of items) {
       const product = await Product.findById(item.productId)
-        .select('name stockQuantity reservedStock stockStatus price vendorId');
+        .select('name stockQuantity reservedStock stockStatus price vendorId variants');
 
       if (!product) {
         stockValidation.push({
@@ -749,18 +659,31 @@ router.post("/cart/validate-stock", async (req, res) => {
         }
       }
 
-      const availableStock = Math.max(0, product.stockQuantity - (product.reservedStock || 0));
+      // 🆕 Check variant stock if variantId provided
+      let availableStock;
+      if (item.variantId && product.variants && product.variants.length > 0) {
+        const variant = product.variants.id(item.variantId);
+        if (variant) {
+          availableStock = variant.stock || 0;
+        } else {
+          availableStock = Math.max(0, product.stockQuantity - (product.reservedStock || 0));
+        }
+      } else {
+        availableStock = Math.max(0, product.stockQuantity - (product.reservedStock || 0));
+      }
+
       const requested = item.quantity || 1;
       const inStock = availableStock >= requested;
 
       stockValidation.push({
         productId: item.productId,
+        variantId: item.variantId || null,
         name: product.name || item.name,
         requested: requested,
         available: availableStock,
         stockQuantity: product.stockQuantity,
         inStock: inStock,
-        price: product.price,
+        price: item.price || product.price,
         issue: inStock ? null : "Insufficient stock"
       });
 
@@ -825,10 +748,7 @@ router.post("/products/stock/bulk", async (req, res) => {
     const { productIds } = req.body;
 
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide product IDs"
-      });
+      return res.status(400).json({ success: false, message: "Please provide product IDs" });
     }
 
     const products = await Product.find({
@@ -846,16 +766,10 @@ router.post("/products/stock/bulk", async (req, res) => {
       price: p.price
     }));
 
-    res.json({
-      success: true,
-      products: stockData
-    });
+    res.json({ success: true, products: stockData });
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch stock data"
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch stock data" });
   }
 });
 
