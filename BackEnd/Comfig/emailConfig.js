@@ -297,10 +297,18 @@ const getAdminOrderEmail = (order, orderId) => {
 const getVendorOrderEmail = (order, orderId, vendorItems, vendor, customerName = "Brandel") => {
   const itemsList = (vendorItems || []).map(item => `
     <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; font-family:Arial,sans-serif; font-size:14px;">
+        ${item.name}
+        ${(item.selectedColor || item.selectedSize) ?
+          `<div style="font-size: 12px; color: #666; margin-top: 3px;">
+            ${item.selectedColor ? `🎨 ${item.selectedColor}` : ''}
+            ${item.selectedColor && item.selectedSize ? ' • ' : ''}
+            ${item.selectedSize ? `📏 ${item.selectedSize}` : ''}
+          </div>` : ''}
+      </td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center; font-family:Arial,sans-serif; font-size:14px;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-family:Arial,sans-serif; font-size:14px;">₹${item.price}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-family:Arial,sans-serif; font-size:14px;">₹${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `).join("");
 

@@ -49,7 +49,7 @@ const Product = () => {
   });
 
   // ✅ NEW UPGRADED IMAGE LOGIC (Handles Object, Array, String)
-  const getImageUrl = (logo) => {
+ const getImageUrl = (logo) => {
     if (!logo) return null;
 
     // Object handle karo
@@ -79,8 +79,9 @@ const Product = () => {
       return `https://api-vendor.native91.com${logo}`;
 
     // Fallback
-    return `https://api-vendor.native91.com/uploads/${logo}`;
+    return `https://api-admin.native91.com/uploads/${logo}`;
   };
+
 
   const handleImageError = (brandId) => {
     setImageErrors((prev) => ({ ...prev, [brandId]: true }));

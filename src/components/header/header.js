@@ -29,6 +29,9 @@ import "./header.css";
 // ✅ API URLs
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
 const ADMIN_API_URL = "https://api-admin.native91.com/api";
+// const VENDOR_API_URL = "http://localhost:9000/api";
+// const ADMIN_API_URL = "http://localhost:7001/api/category";
+
 
 // ✅ Helper function to get auth headers
 const getAuthHeaders = () => {

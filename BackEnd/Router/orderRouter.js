@@ -1,24 +1,23 @@
-// Router/orderRouter.js - COMPLETE FIXED VERSION WITH SELLERDOCUMENT SUPPORT
+// Router/orderRouter.js - COMPLETE UPDATED WITH VARIANT SUPPORT
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const Order = require("../Models/Order");
 const Cart = require("../Models/Cart");
 const Vendor = require("../Models/Vendor");
-const SellerDocument = require("../Models/SellerDocument"); // ✅ ADDED
+const SellerDocument = require("../Models/SellerDocument");
 const Product = require("../Models/Product");
 const Coupon = require("../Models/Coupon");
 const axios = require("axios");
-const { 
-  sendEmail, 
-  getCustomerOrderEmail, 
-  getAdminOrderEmail, 
+const {
+  sendEmail,
+  getCustomerOrderEmail,
+  getAdminOrderEmail,
   getVendorOrderEmail,
-  emailMode 
+  emailMode
 } = require("../Comfig/emailConfig");
 
-// ✅ FIXED: Correct path to shiprocketService
-const shiprocketService = require("../utils/shiprocketService"); // Updated path to shiprocketService
+const shiprocketService = require("../utils/shiprocketService");
 
 const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
 
@@ -27,22 +26,17 @@ const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.
 // ============================================
 async function getCompleteVendorData(vendorId) {
   try {
-    // Get vendor basic info
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return null;
 
-    // Get seller document (includes address)
     const sellerDoc = await SellerDocument.findOne({ vendorId: vendorId });
-    
-    // Build complete vendor data with address from SellerDocument
+
     const vendorData = {
       _id: vendor._id,
       name: vendor.name || vendor.company,
       company: vendor.company || "N/A",
       email: vendor.email,
       phone: vendor.phone || sellerDoc?.contact?.phone || '9876543210',
-      
-      // ✅ Address from SellerDocument.contact
       address: sellerDoc?.contact?.address || 'Default Address',
       city: sellerDoc?.contact?.city || 'Mumbai',
       state: sellerDoc?.contact?.state || 'Maharashtra',
@@ -64,9 +58,9 @@ router.post("/place", async (req, res) => {
   const { guestId, shippingAddress, paymentMethod, couponCode } = req.body;
 
   if (!guestId || !shippingAddress) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "Incomplete data" 
+      message: "Incomplete data"
     });
   }
 
@@ -74,13 +68,13 @@ router.post("/place", async (req, res) => {
     // Fetch cart items
     const cart = await Cart.findOne({ guestId });
     if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Cart is empty" 
+        message: "Cart is empty"
       });
     }
 
-    // Get full product details including vendor company and vendorId
+    // ✅ Get full product details including vendor company and vendorId
     const itemsWithVendorInfo = await Promise.all(
       cart.items.map(async (item) => {
         const product = await Product.findById(item.productId)
@@ -88,10 +82,10 @@ router.post("/place", async (req, res) => {
             path: 'vendorId',
             select: 'company name email _id'
           });
-        
+
         let company = null;
         let vendorId = null;
-        
+
         if (product?.vendorId) {
           if (product.vendorId._id) {
             vendorId = product.vendorId._id;
@@ -101,20 +95,20 @@ router.post("/place", async (req, res) => {
             vendorId = product.vendorId;
           }
         }
-        
+
         if (!vendorId && product?.vendor) {
           vendorId = product.vendor;
         }
-        
+
         if (!vendorId && item.company) {
-          const vendorByCompany = await Vendor.findOne({ 
+          const vendorByCompany = await Vendor.findOne({
             company: { $regex: new RegExp(`^${item.company}$`, "i") }
           });
           if (vendorByCompany) {
             vendorId = vendorByCompany._id;
           }
         }
-        
+
         if (product && product.company) {
           company = product.company;
         } else if (product && product.vendorId) {
@@ -127,38 +121,51 @@ router.post("/place", async (req, res) => {
             company = vendorDoc.company;
           }
         }
-        
+
         if (!company && vendorId) {
           const vendor = await Vendor.findById(vendorId);
           if (vendor && vendor.company) {
             company = vendor.company;
           }
         }
-        
+
         if (!company && item.company) {
           company = item.company;
         }
-        
+
+        // 🆕 Resolve variant image + price
+        const variantImage = item.variantImage || null;
+        const variantPrice = item.variantPrice || 0;
+
         return {
           productId: item.productId,
           name: item.name || product?.name || "Unknown Product",
           price: item.price || product?.price || 0,
           quantity: item.quantity || 1,
           stock: product?.stock || 0,
-          image: Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null),
+          image: variantImage
+            ? variantImage
+            : (Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null)),
           vendorId: vendorId,
           company: company || "N/A",
           weight: product?.weight || 0.5,
+
+          // 🆕 VARIANT FIELDS FROM CART
+          variantId: item.variantId || null,
+          selectedColor: item.selectedColor || "",
+          selectedSize: item.selectedSize || "",
+          variantImage: item.variantImage || "",
+          variantPrice: variantPrice,
         };
       })
     );
 
     // ============================================
-    // ✅ CHECK PRODUCT STOCK BEFORE ORDER
+    // ✅ CHECK PRODUCT STOCK BEFORE ORDER (WITH VARIANT)
     // ============================================
     for (const item of itemsWithVendorInfo) {
       const product = await Product.findById(item.productId);
-      
+
       if (!product) {
         return res.status(404).json({
           success: false,
@@ -166,11 +173,29 @@ router.post("/place", async (req, res) => {
         });
       }
 
-      if (product.stock < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock for ${product.name}. Available stock: ${product.stock}`
-        });
+      // 🆕 Check variant stock if variantId provided
+      if (item.variantId && product.variants && product.variants.length > 0) {
+        const variant = product.variants.id(item.variantId);
+        if (!variant) {
+          return res.status(400).json({
+            success: false,
+            message: `Variant not found for ${product.name}`
+          });
+        }
+        if (variant.stock < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${product.name} (${variant.color} ${variant.size}). Available: ${variant.stock}`
+          });
+        }
+      } else {
+        // Base product stock check
+        if (product.stock < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${product.name}. Available: ${product.stock}`
+          });
+        }
       }
     }
 
@@ -204,7 +229,7 @@ router.post("/place", async (req, res) => {
 
           if (!isExpired && !usageLimitReached && !minOrderNotMet) {
             let discountAmount = 0;
-            
+
             if (coupon.discountType === "percentage") {
               discountAmount = (subtotal * coupon.discountValue) / 100;
               if (coupon.maxDiscountAmount) {
@@ -233,7 +258,7 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    // ✅ Create order with stock snapshot
+    // ✅ Create order with variant info
     const order = new Order({
       guestId,
       items: itemsWithVendorInfo.map(item => ({
@@ -246,6 +271,13 @@ router.post("/place", async (req, res) => {
         vendorId: item.vendorId,
         company: item.company,
         weight: item.weight || 0.5,
+
+        // 🆕 VARIANT FIELDS
+        variantId: item.variantId || null,
+        selectedColor: item.selectedColor || "",
+        selectedSize: item.selectedSize || "",
+        variantImage: item.variantImage || "",
+        variantPrice: item.variantPrice || 0,
       })),
       shippingAddress,
       paymentMethod: paymentMethod || "COD",
@@ -258,17 +290,22 @@ router.post("/place", async (req, res) => {
     await order.save();
 
     // ============================================
-    // ✅ UPDATE PRODUCT STOCK AFTER ORDER SAVE
+    // ✅ UPDATE PRODUCT STOCK AFTER ORDER (VARIANT AWARE)
     // ============================================
     for (const item of itemsWithVendorInfo) {
-      await Product.findByIdAndUpdate(
-        item.productId,
-        {
-          $inc: {
-            stock: -item.quantity
-          }
-        }
-      );
+      if (item.variantId) {
+        // 🆕 Deduct variant stock only
+        await Product.updateOne(
+          { _id: item.productId, "variants._id": item.variantId },
+          { $inc: { "variants.$.stock": -item.quantity } }
+        );
+      } else {
+        // Deduct product base stock
+        await Product.findByIdAndUpdate(
+          item.productId,
+          { $inc: { stock: -item.quantity } }
+        );
+      }
     }
 
     // ============================================
@@ -277,7 +314,7 @@ router.post("/place", async (req, res) => {
     await Cart.findOneAndDelete({ guestId });
 
     const orderId = order._id;
-    
+
     // ============================================
     // ✅ SHIPROCKET INTEGRATION - CREATE SHIPMENTS
     // ============================================
@@ -285,11 +322,9 @@ router.post("/place", async (req, res) => {
     let shiprocketSyncStatus = 'pending';
 
     try {
-      // Check if Shiprocket is enabled
       if (process.env.SHIPROCKET_ENABLED === 'true') {
         console.log('🚀 Creating Shiprocket shipments for order:', orderId);
-        
-        // Group items by vendor
+
         const vendorItemsMap = {};
 
         for (const item of itemsWithVendorInfo) {
@@ -306,16 +341,14 @@ router.post("/place", async (req, res) => {
         }
 
         const vendorIds = Object.keys(vendorItemsMap);
-        
+
         if (vendorIds.length > 0) {
           console.log(`📦 Creating shipments for ${vendorIds.length} vendor(s)`);
-          
-          // Create shipments for each vendor
+
           for (const vendorId of vendorIds) {
             try {
-              // ✅ Get complete vendor data (includes address from SellerDocument)
               const vendorData = await getCompleteVendorData(vendorId);
-              
+
               if (!vendorData) {
                 console.warn(`⚠️ Vendor ${vendorId} not found, skipping shipment`);
                 shipmentResults.push({
@@ -328,7 +361,6 @@ router.post("/place", async (req, res) => {
 
               const vendorItems = vendorItemsMap[vendorId];
 
-              // Create shipment for this vendor
               const result = await shiprocketService.createVendorShipment(
                 order,
                 vendorData,
@@ -354,7 +386,6 @@ router.post("/place", async (req, res) => {
             }
           }
 
-          // Update order with shipment details
           const successfulShipments = shipmentResults.filter(r => r.success);
           order.shipments = successfulShipments.map(r => ({
             vendorId: r.vendorId,
@@ -367,7 +398,6 @@ router.post("/place", async (req, res) => {
             createdAt: new Date()
           }));
 
-          // Update sync status
           if (successfulShipments.length === shipmentResults.length) {
             shiprocketSyncStatus = 'synced';
           } else if (successfulShipments.length > 0) {
@@ -407,15 +437,15 @@ router.post("/place", async (req, res) => {
       admin: false,
       vendors: []
     };
-    
+
     // 1. SEND EMAIL TO CUSTOMER
     const customerEmail = shippingAddress.email;
     if (customerEmail) {
       try {
         const customerHtml = getCustomerOrderEmail(order, orderId);
         const result = await sendEmail(
-          customerEmail, 
-          `Order Confirmed! - Order #${orderId}`, 
+          customerEmail,
+          `Order Confirmed! - Order #${orderId}`,
           customerHtml
         );
         emailResults.customer = result.success;
@@ -423,15 +453,15 @@ router.post("/place", async (req, res) => {
         console.error("Error sending customer email:", error.message);
       }
     }
-    
+
     // 2. SEND EMAIL TO ADMIN
     const adminEmail = process.env.ADMIN_EMAIL || "orders@native91.com";
     if (adminEmail) {
       try {
         const adminHtml = getAdminOrderEmail(order, orderId);
         const result = await sendEmail(
-          adminEmail, 
-          `New Order Received - Order #${orderId}`, 
+          adminEmail,
+          `New Order Received - Order #${orderId}`,
           adminHtml
         );
         emailResults.admin = result.success;
@@ -439,10 +469,10 @@ router.post("/place", async (req, res) => {
         console.error("Error sending admin email:", error.message);
       }
     }
-    
+
     // 3. GROUP ITEMS BY VENDOR
     const vendorGroups = new Map();
-    
+
     for (const item of itemsWithVendorInfo) {
       if (item.company && item.company !== "N/A") {
         const company = item.company;
@@ -456,44 +486,44 @@ router.post("/place", async (req, res) => {
         vendorGroups.get(company).items.push(item);
       }
     }
-    
+
     // 4. SEND EMAIL TO EACH VENDOR
     for (const [company, vendorData] of vendorGroups) {
       try {
         let vendor = null;
         let vendorEmail = null;
         let vendorName = company;
-        
-        vendor = await Vendor.findOne({ 
+
+        vendor = await Vendor.findOne({
           company: company
         }).select("email name company phone");
-        
+
         if (!vendor) {
-          vendor = await Vendor.findOne({ 
+          vendor = await Vendor.findOne({
             company: { $regex: new RegExp(`^${company}$`, "i") }
           }).select("email name company phone");
         }
-        
+
         if (vendor) {
           vendorEmail = vendor.email;
           vendorName = vendor.name || company;
         }
-        
+
         if (vendorEmail) {
           const vendorItems = vendorData.items;
-          const vendorHtml = getVendorOrderEmail(order, orderId, vendorItems, { 
+          const vendorHtml = getVendorOrderEmail(order, orderId, vendorItems, {
             name: vendorName,
             email: vendorEmail,
             shopName: company,
             phone: vendor?.phone || "N/A",
           });
-          
+
           const result = await sendEmail(
-            vendorEmail, 
-            `New Order Received for ${company} - Order #${orderId}`, 
+            vendorEmail,
+            `New Order Received for ${company} - Order #${orderId}`,
             vendorHtml
           );
-          
+
           emailResults.vendors.push({
             company: company,
             email: vendorEmail,
@@ -518,7 +548,7 @@ router.post("/place", async (req, res) => {
 
     // 5. CREATE VENDOR NOTIFICATIONS
     const notificationResults = [];
-    
+
     for (const [company, vendorData] of vendorGroups) {
       try {
         const vendorItems = vendorData.items;
@@ -526,7 +556,6 @@ router.post("/place", async (req, res) => {
           return sum + (item.price || 0) * (item.quantity || 1);
         }, 0);
 
-        // Find shipment for this vendor
         const vendorShipment = shipmentResults.find(
           s => s.company === company && s.success
         );
@@ -554,18 +583,18 @@ router.post("/place", async (req, res) => {
           },
           timeout: 5000,
         });
-        
-        notificationResults.push({ 
-          company, 
+
+        notificationResults.push({
+          company,
           success: true
         });
-        
+
       } catch (vendorError) {
         console.error(`Failed to create notification for ${company}:`, vendorError.message);
-        notificationResults.push({ 
-          company, 
-          success: false, 
-          error: vendorError.message 
+        notificationResults.push({
+          company,
+          success: false,
+          error: vendorError.message
         });
       }
     }
@@ -573,9 +602,9 @@ router.post("/place", async (req, res) => {
     // ============================================
     // 6. RESPONSE
     // ============================================
-    res.json({ 
+    res.json({
       success: true,
-      message: "Order placed successfully", 
+      message: "Order placed successfully",
       orderId: order._id,
       order: {
         _id: order._id,
@@ -591,12 +620,12 @@ router.post("/place", async (req, res) => {
       vendorCount: vendorGroups.size,
       emailMode: emailMode
     });
-    
+
   } catch (err) {
     console.error("Order placement error:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Server error", 
+      message: "Server error",
       error: process.env.NODE_ENV === "development" ? err.message : "Internal server error"
     });
   }
@@ -650,11 +679,11 @@ router.get("/user/:userId", async (req, res) => {
 router.get("/admin/commission/:orderId", async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId);
-    
+
     if (!order) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Order not found" 
+        message: "Order not found"
       });
     }
 
@@ -666,7 +695,7 @@ router.get("/admin/commission/:orderId", async (req, res) => {
       if (item.vendorId) {
         const vendorIdStr = item.vendorId.toString();
         const vendor = await Vendor.findById(item.vendorId).populate('planId');
-        
+
         let commissionPercentage = 8;
         if (vendor && vendor.planId) {
           commissionPercentage = vendor.planId.commissionPercentage || 8;
@@ -700,15 +729,19 @@ router.get("/admin/commission/:orderId", async (req, res) => {
           total: itemTotal,
           vendorCommission: vendorCommission,
           adminCommission: adminCommission,
+
+          // 🆕 VARIANT INFO in breakdown
+          selectedColor: item.selectedColor || "",
+          selectedSize: item.selectedSize || "",
+          variantImage: item.variantImage || "",
         });
-        
+
         vendorBreakdown[vendorIdStr].totalItemValue += itemTotal;
         vendorBreakdown[vendorIdStr].totalVendorCommission += vendorCommission;
         vendorBreakdown[vendorIdStr].totalAdminCommission += adminCommission;
       }
     }
 
-    // ✅ Add shipment info to response
     const shipmentInfo = order.shipments || [];
 
     res.json({
@@ -727,8 +760,8 @@ router.get("/admin/commission/:orderId", async (req, res) => {
       commissionSummary: {
         totalAdminCommission: totalAdminCommission,
         totalVendorCommission: totalVendorCommission,
-        platformCommissionRate: order.totalPrice > 0 ? 
-          ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' : 
+        platformCommissionRate: order.totalPrice > 0 ?
+          ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' :
           '0%',
         vendorCommissionRate: order.totalPrice > 0 ?
           ((totalVendorCommission / order.totalPrice) * 100).toFixed(2) + '%' :
@@ -738,10 +771,10 @@ router.get("/admin/commission/:orderId", async (req, res) => {
     });
   } catch (err) {
     console.error("Commission view error:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message 
+      error: err.message
     });
   }
 });
@@ -752,7 +785,7 @@ router.get("/admin/commission/:orderId", async (req, res) => {
 router.get("/admin/commissions", async (req, res) => {
   try {
     const { startDate, endDate, vendorId, status } = req.query;
-    
+
     let filter = {};
     if (startDate && endDate) {
       filter.createdAt = {
@@ -760,11 +793,11 @@ router.get("/admin/commissions", async (req, res) => {
         $lte: new Date(endDate),
       };
     }
-    
+
     if (status) {
       filter.orderStatus = status;
     }
-    
+
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 });
 
@@ -781,9 +814,9 @@ router.get("/admin/commissions", async (req, res) => {
       for (const item of order.items) {
         if (item.vendorId) {
           vendorSet.add(item.vendorId.toString());
-          
+
           const vendor = await Vendor.findById(item.vendorId).populate('planId');
-          
+
           let commissionPercentage = 8;
           if (vendor && vendor.planId) {
             commissionPercentage = vendor.planId.commissionPercentage || 8;
@@ -814,8 +847,8 @@ router.get("/admin/commissions", async (req, res) => {
         shiprocketSyncStatus: order.shiprocketSyncStatus || 'pending',
         adminCommission: orderAdminCommission,
         vendorCommission: orderVendorCommission,
-        platformCommissionRate: order.totalPrice > 0 ? 
-          ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' : 
+        platformCommissionRate: order.totalPrice > 0 ?
+          ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' :
           '0%',
       });
     }
@@ -826,12 +859,12 @@ router.get("/admin/commissions", async (req, res) => {
         ...filter,
         'items.vendorId': vendorId
       }).sort({ createdAt: -1 });
-      
+
       const filteredResults = [];
       let filteredAdminCommission = 0;
       let filteredVendorCommission = 0;
       let filteredRevenue = 0;
-      
+
       for (const order of filteredOrders) {
         let orderAdminCommission = 0;
         let orderVendorCommission = 0;
@@ -840,7 +873,7 @@ router.get("/admin/commissions", async (req, res) => {
         for (const item of order.items) {
           if (item.vendorId && item.vendorId.toString() === vendorId) {
             vendorSet.add(item.vendorId.toString());
-            
+
             const vendor = await Vendor.findById(item.vendorId).populate('planId');
             let commissionPercentage = 8;
             if (vendor && vendor.planId) {
@@ -872,12 +905,12 @@ router.get("/admin/commissions", async (req, res) => {
           shiprocketSyncStatus: order.shiprocketSyncStatus || 'pending',
           adminCommission: orderAdminCommission,
           vendorCommission: orderVendorCommission,
-          platformCommissionRate: order.totalPrice > 0 ? 
-            ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' : 
+          platformCommissionRate: order.totalPrice > 0 ?
+            ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' :
             '0%',
         });
       }
-      
+
       filteredSummaries = filteredResults;
       totalAdminCommission = filteredAdminCommission;
       totalVendorCommission = filteredVendorCommission;
@@ -891,18 +924,18 @@ router.get("/admin/commissions", async (req, res) => {
         totalRevenue: totalRevenue,
         totalAdminCommission: totalAdminCommission,
         totalVendorCommission: totalVendorCommission,
-        platformCommissionRate: totalRevenue > 0 ? 
-          ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + '%' : 
+        platformCommissionRate: totalRevenue > 0 ?
+          ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + '%' :
           '0%',
       },
       orders: filteredSummaries,
     });
   } catch (err) {
     console.error("Admin commissions fetch error:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message 
+      error: err.message
     });
   }
 });
@@ -914,7 +947,7 @@ router.put("/admin/status/:orderId", async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
-    
+
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -978,9 +1011,9 @@ router.post("/send-confirmation", async (req, res) => {
     } = req.body;
 
     if (!to) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Recipient email is required" 
+        message: "Recipient email is required"
       });
     }
 
@@ -1038,9 +1071,17 @@ router.post("/send-confirmation", async (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${items.map(item => `
+                ${(items || []).map(item => `
                   <tr>
-                    <td>${item.name}</td>
+                    <td>
+                      ${item.name}
+                      ${(item.selectedColor || item.selectedSize) ?
+                        `<div style="font-size: 12px; color: #666; margin-top: 2px;">
+                          ${item.selectedColor ? `🎨 ${item.selectedColor}` : ''}
+                          ${item.selectedColor && item.selectedSize ? ' • ' : ''}
+                          ${item.selectedSize ? `📏 ${item.selectedSize}` : ''}
+                        </div>` : ''}
+                    </td>
                     <td>${item.quantity}</td>
                     <td style="text-align: right;">₹${(item.price || 0).toFixed(2)}</td>
                     <td style="text-align: right;">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
@@ -1116,5 +1157,4 @@ router.post("/send-confirmation", async (req, res) => {
     });
   }
 });
-
 module.exports = router;
