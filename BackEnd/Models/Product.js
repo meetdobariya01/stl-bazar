@@ -2,84 +2,38 @@ const mongoose = require("mongoose");
 
 const ProductSchema = new mongoose.Schema(
   {
-    name: { 
-      type: String, 
-      required: true 
-    },
-
+    name: { type: String, required: true },
     description: String,
+    price: { type: Number, required: true },
 
-    price: { 
-      type: Number, 
-      required: true 
-    },
+    category: { type: String, required: true },
+    categoryIcon: { type: String, default: "FaBoxOpen" },
 
-    category: { 
-      type: String, 
-      required: true 
-    },
+    // 🆕 SUB-CATEGORY FIELDS
+    subcategory: { type: String, default: "" },
+    subcategories: { type: [String], default: [] },
 
-    categoryIcon: { 
-      type: String, 
-      default: "FaBoxOpen" 
-    },
+    image: [{ type: String }],
+    size: { type: String },
+    company: { type: String, required: true },
 
-    // Multiple images
-    image: [{ 
-      type: String 
-    }],
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
 
-    size: { 
-      type: String 
-    },
-
-    company: { 
-      type: String, 
-      required: true 
-    },
-
-    // ✅ FIXED: Reference Vendor model instead of User
-    vendorId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Vendor"  // ← CHANGED FROM "User" TO "Vendor"
-    },
-
-    // ✅ Stock field
-    stock: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
+    stock: { type: Number, default: 0, min: 0 },
 
     ratings: [
       {
-        userName: { 
-          type: String, 
-          default: "Anonymous" 
-        },
-
-        rating: { 
-          type: Number, 
-          min: 1, 
-          max: 5 
-        },
-
+        userName: { type: String, default: "Anonymous" },
+        rating: { type: Number, min: 1, max: 5 },
         review: String,
-
-        createdAt: { 
-          type: Date, 
-          default: Date.now 
-        }
+        createdAt: { type: Date, default: Date.now }
       }
     ],
 
-    averageRating: { 
-      type: Number, 
-      default: 0 
-    },
-
+    averageRating: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
 
 module.exports = mongoose.model("Product", ProductSchema);
+

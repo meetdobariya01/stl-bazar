@@ -61,7 +61,7 @@ app.use("/api/ngos", require("./Router/ngoRoutes"));
 app.use("/api/categories", require("./Router/categoryRoutes"));
 app.use('/api/coupons', require('./Router/couponRoutes'));
 app.use('/api/shiprocket', shiprocketRouter);
-
+app.use("/api", require("./Router/routerproduct"));   
 /* ===============================
    ROOT
 ================================ */

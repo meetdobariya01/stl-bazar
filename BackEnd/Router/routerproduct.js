@@ -1,4 +1,4 @@
-
+// routes/user.routes.js — User-facing API routes
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -10,7 +10,11 @@ const Vendor = require("../Models/Vendor");
 const VendorSetting = require("../Models/VendorSetting");
 const StockService = require("../Comfig/stockService");
 const SellerDocument = require("../Models/SellerDocument");
+const Category = require("../Models/Category"); // 🆕 Import Category model
 
+// ============================================================
+// SEARCH SUGGESTIONS
+// ============================================================
 router.get("/search-suggestions", async (req, res) => {
   try {
     const { q } = req.query;
@@ -18,9 +22,9 @@ router.get("/search-suggestions", async (req, res) => {
     console.log(`🔍 Search suggestions request for: "${q}"`);
 
     if (!q || q.trim().length < 2) {
-      return res.json({ 
-        success: true, 
-        products: [] 
+      return res.json({
+        success: true,
+        products: []
       });
     }
 
@@ -37,15 +41,15 @@ router.get("/search-suggestions", async (req, res) => {
       ],
       isActive: true
     })
-    .limit(10)
-    .select("name ProductName price image company vendorId _id stockQuantity stockStatus category")
-    .lean();
+      .limit(10)
+      .select("name ProductName price image company vendorId _id stockQuantity stockStatus category subcategory subcategories")
+      .lean();
 
     console.log(`📦 Found ${products.length} products matching "${searchTerm}"`);
 
     // Get vendor IDs to check for suspended vendors
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
-    
+
     let suspendedVendorIds = [];
     if (vendorIds.length > 0) {
       const suspendedVendors = await Vendor.find({
@@ -55,12 +59,9 @@ router.get("/search-suggestions", async (req, res) => {
       suspendedVendorIds = suspendedVendors.map(v => v._id.toString());
     }
 
-    // ✅ REMOVED stock filter - show all products regardless of stock
     const formattedProducts = products
       .filter(p => !suspendedVendorIds.includes(p.vendorId?.toString()))
-      // ✅ REMOVED: .filter(p => p.stockQuantity > 0)
       .map(p => {
-        // Get the first image or placeholder
         let imageUrl = null;
         if (p.image) {
           if (Array.isArray(p.image) && p.image.length > 0) {
@@ -77,6 +78,8 @@ router.get("/search-suggestions", async (req, res) => {
           image: imageUrl ? [imageUrl] : [],
           company: p.company || "Native91",
           category: p.category || "",
+          subcategory: p.subcategory || p.subCategory || "",
+          subcategories: p.subcategories || p.subCategories || [],
           stockQuantity: p.stockQuantity || 0,
           stockStatus: p.stockStatus || "out_of_stock",
           inStock: p.stockQuantity > 0,
@@ -101,12 +104,12 @@ router.get("/search-suggestions", async (req, res) => {
   }
 });
 
-
-// In your routes file - Update the /companies endpoint
-
+// ============================================================
+// GET COMPANIES
+// ============================================================
 router.get("/companies", async (req, res) => {
   try {
-    const activeVendors = await Vendor.find({ 
+    const activeVendors = await Vendor.find({
       status: 'active',
       role: 'vendor'
     }).select('_id company name email createdAt updatedAt plan categories category logo description');
@@ -119,24 +122,19 @@ router.get("/companies", async (req, res) => {
       let description = "";
       let logo = vendor.logo || null;
 
-      // ✅ Get description from Vendor first
       if (vendor.description) {
         description = vendor.description;
       }
 
-      // ✅ 1. Get categories from Vendor
       if (vendor.categories && vendor.categories.length > 0) {
         categories = vendor.categories;
       } else if (vendor.category && typeof vendor.category === 'string') {
         categories = vendor.category.split(",").map(c => c.trim()).filter(Boolean);
       }
-      
-      // ✅ 2. If categories na hoy OR logo na hoy, to SellerDocument check karo
+
       if (categories.length === 0 || !logo) {
         const sellerDoc = await SellerDocument.findOne({ email: vendor.email });
         if (sellerDoc) {
-          
-          // ✅ CATEGORY FIX (SellerDocument mathi)
           if (sellerDoc.categories && Array.isArray(sellerDoc.categories) && sellerDoc.categories.length > 0) {
             categories = sellerDoc.categories;
           } else if (sellerDoc.category && typeof sellerDoc.category === 'string') {
@@ -146,8 +144,7 @@ router.get("/companies", async (req, res) => {
           } else if (sellerDoc.brand && sellerDoc.brand.category && typeof sellerDoc.brand.category === 'string') {
             categories = sellerDoc.brand.category.split(",").map(c => c.trim()).filter(Boolean);
           }
-          
-          // ✅ LOGO FIX (SellerDocument mathi)
+
           if (!logo) {
             if (sellerDoc.logo && typeof sellerDoc.logo === 'object') {
               logo = sellerDoc.logo.image || sellerDoc.logo.url || null;
@@ -155,50 +152,42 @@ router.get("/companies", async (req, res) => {
               logo = sellerDoc.logo;
             }
           }
-          
-          // ✅ Description fix
+
           if (!description && sellerDoc.brand && sellerDoc.brand.description) {
             description = sellerDoc.brand.description;
           }
-          
-          // ✅ Business name fix
+
           if (sellerDoc.businessName) {
             vendor.company = sellerDoc.businessName;
           }
         }
       }
-      
-      // ✅ 3. If still no category or logo, check Company
+
       if (categories.length === 0 || !logo) {
         const companyData = await Company.findOne({ name: vendor.company || vendor.name });
         if (companyData) {
-          // ✅ Check if company has categories array
           if (companyData.categories && companyData.categories.length > 0) {
             categories = companyData.categories;
           } else if (companyData.category && typeof companyData.category === 'string') {
-            // ✅ If company has old category field, convert it
             categories = companyData.category.split(",").map(c => c.trim()).filter(Boolean);
           }
-          
+
           if (!description && companyData.description) {
             description = companyData.description;
           }
 
-          // ✅ Logo from Company
           if (!logo && companyData.logo) {
             logo = companyData.logo;
           }
         }
       }
 
-      // ✅ 4. If STILL no categories, try to infer from product data
       if (categories.length === 0) {
-        // Get products for this company and extract categories
-        const products = await Product.find({ 
+        const products = await Product.find({
           company: vendor.company,
           stockQuantity: { $gt: 0 }
         }).select('category').limit(10);
-        
+
         const productCategories = new Set();
         products.forEach(p => {
           if (p.category) {
@@ -213,17 +202,15 @@ router.get("/companies", async (req, res) => {
             }
           }
         });
-        
+
         categories = Array.from(productCategories);
       }
 
-      // ✅ 5. If STILL no categories, use 'Uncategorized'
       if (categories.length === 0) {
         categories = ['Uncategorized'];
       }
 
-      // ✅ Count products for this company
-      const productCount = await Product.countDocuments({ 
+      const productCount = await Product.countDocuments({
         company: vendor.company,
         stockQuantity: { $gt: 0 }
       });
@@ -243,10 +230,9 @@ router.get("/companies", async (req, res) => {
         createdAt: vendor.createdAt,
         registeredAt: vendor.createdAt
       };
-      
+
       companies.push(companyDataObj);
-      
-      // ✅ Update category map
+
       categories.forEach(cat => {
         if (!categoryMap[cat]) {
           categoryMap[cat] = [];
@@ -268,42 +254,60 @@ router.get("/companies", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Error fetching companies:", err);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: "Failed to fetch companies",
       error: err.message
     });
   }
 });
 
-
-
 // ============================================================
-// GET SUB-CATEGORIES FOR A CATEGORY
+// 🆕 GET SUB-CATEGORIES FOR A CATEGORY (PUBLIC)
+// Merges vendor products + admin Category collection
 // ============================================================
 router.get("/categories/:category/subcategories", async (req, res) => {
   try {
     const { category } = req.params;
-    
-    // Get distinct sub-categories from products
-    const subCategories = await Product.distinct("subCategory", {
-      category: decodeURIComponent(category)
-    });
-    
-    const subCategoriesArray = await Product.distinct("subCategories", {
-      category: decodeURIComponent(category)
-    });
-    
-    const allSubCategories = [...subCategories, ...subCategoriesArray];
-    const uniqueSubCategories = [...new Set(allSubCategories)].filter(s => s && s.trim() !== '');
-    
+    const decodedCategory = decodeURIComponent(category);
+
+    // 1️⃣ From vendor products — try BOTH casing variants
+    const s1 = await Product.distinct("subcategory", { category: decodedCategory });
+    const s2 = await Product.distinct("subCategory", { category: decodedCategory });
+    const s3 = await Product.distinct("subcategories", { category: decodedCategory });
+    const s4 = await Product.distinct("subCategories", { category: decodedCategory });
+    const fromProducts = [...s1, ...s2, ...s3, ...s4];
+
+    // 2️⃣ From admin Category collection
+    let fromAdmin = [];
+    try {
+      const adminCategory = await Category.findOne({
+        name: { $regex: new RegExp(`^${decodedCategory}$`, "i") },
+        status: "active"
+      }).select("subcategories");
+
+      if (adminCategory && Array.isArray(adminCategory.subcategories)) {
+        fromAdmin = adminCategory.subcategories
+          .filter(sc => sc.status === "active")
+          .map(sc => sc.name);
+      }
+    } catch (adminErr) {
+      console.warn("⚠️ Admin category lookup failed:", adminErr.message);
+    }
+
+    // 3️⃣ Merge + dedupe
+    const allSubCategories = [...fromProducts, ...fromAdmin];
+    const uniqueSubCategories = [...new Set(allSubCategories)]
+      .filter(s => s && typeof s === "string" && s.trim() !== "")
+      .map(s => s.trim());
+
     res.json({
       success: true,
-      category,
+      category: decodedCategory,
       subCategories: uniqueSubCategories
     });
   } catch (error) {
-    console.error("Error fetching sub-categories:", error);
+    console.error("❌ Error fetching sub-categories:", error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -317,12 +321,12 @@ router.get("/categories/:category/subcategories", async (req, res) => {
 router.get("/products/by-category/:category", async (req, res) => {
   try {
     const { category } = req.params;
-    
+
     const products = await Product.find({
       category: decodeURIComponent(category),
       isActive: true
-    }).select('subCategory subCategories name price');
-    
+    }).select('subcategory subcategories subCategory subCategories name price');
+
     res.json({
       success: true,
       products
@@ -335,6 +339,10 @@ router.get("/products/by-category/:category", async (req, res) => {
     });
   }
 });
+
+// ============================================================
+// CREATE COMPANY
+// ============================================================
 router.post("/company", async (req, res) => {
   try {
     const { name, description, logo, category } = req.body;
@@ -344,11 +352,11 @@ router.post("/company", async (req, res) => {
     const exists = await Company.findOne({ name });
     if (exists) return res.status(400).json({ message: "Company already exists" });
 
-    const company = await Company.create({ 
-      name, 
-      description, 
+    const company = await Company.create({
+      name,
+      description,
       logo,
-      category 
+      category
     });
     res.status(201).json(company);
   } catch (err) {
@@ -362,12 +370,19 @@ router.post("/company", async (req, res) => {
 // ============================================================
 router.get("/products", async (req, res) => {
   try {
-    const { company, category, search, inStock, minPrice, maxPrice } = req.query;
+    const { company, category, subcategory, search, inStock, minPrice, maxPrice } = req.query;
 
     let filter = {};
 
     if (company) filter.company = company;
     if (category) filter.category = category;
+    // 🆕 Filter by subcategory (matches both fields)
+    if (subcategory) {
+      filter.$or = [
+        { subcategory: subcategory },
+        { subcategories: subcategory } // array contains
+      ];
+    }
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -382,7 +397,7 @@ router.get("/products", async (req, res) => {
     }
 
     let products = await Product.find(filter).sort({ createdAt: -1 });
-   
+
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
     let suspendedVendorIds = [];
     if (vendorIds.length > 0) {
@@ -392,8 +407,8 @@ router.get("/products", async (req, res) => {
       }).select('_id');
       suspendedVendorIds = suspendedVendors.map(v => v._id.toString());
     }
-    
-    products = products.filter(p => 
+
+    products = products.filter(p =>
       !suspendedVendorIds.includes(p.vendorId?.toString())
     );
 
@@ -405,6 +420,8 @@ router.get("/products", async (req, res) => {
       const productObj = p.toObject ? p.toObject() : p;
       return {
         ...productObj,
+        subcategory: productObj.subcategory || productObj.subCategory || "",
+        subcategories: productObj.subcategories || productObj.subCategories || [],
         inStock: productObj.stockQuantity > 0,
         availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
         stockStatus: productObj.stockStatus || "out_of_stock"
@@ -425,25 +442,27 @@ router.get("/product/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
-    
+
     if (product.vendorId) {
       const vendor = await Vendor.findById(product.vendorId);
       if (vendor && vendor.status === 'suspended') {
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: "This product is currently unavailable",
           status: 'suspended'
         });
       }
     }
-   
+
     const productObj = product.toObject ? product.toObject() : product;
     const response = {
       ...productObj,
+      subcategory: productObj.subcategory || productObj.subCategory || "",
+      subcategories: productObj.subcategories || productObj.subCategories || [],
       inStock: productObj.stockQuantity > 0,
       availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
       stockStatus: productObj.stockStatus || "out_of_stock",
     };
-    
+
     res.json(response);
   } catch (err) {
     console.error(err);
@@ -456,7 +475,7 @@ router.get("/product/:id", async (req, res) => {
 // ============================================================
 router.get("/best-sellers", async (req, res) => {
   try {
-    const activeVendors = await Vendor.find({ 
+    const activeVendors = await Vendor.find({
       status: 'active',
       role: 'vendor'
     }).select('company');
@@ -465,22 +484,24 @@ router.get("/best-sellers", async (req, res) => {
     const companies = await Company.find({
       name: { $in: activeCompanyNames }
     }).sort({ createdAt: 1 }).limit(6);
-    
+
     const result = [];
 
     for (const company of companies) {
-      const product = await Product.findOne({ 
+      const product = await Product.findOne({
         company: company.name,
         vendorId: { $ne: null },
         stockQuantity: { $gt: 0 }
       }).sort({ createdAt: 1 });
-      
+
       if (product) {
         const vendor = await Vendor.findById(product.vendorId);
         if (vendor && vendor.status === 'active') {
           const productObj = product.toObject ? product.toObject() : product;
           result.push({
             ...productObj,
+            subcategory: productObj.subcategory || productObj.subCategory || "",
+            subcategories: productObj.subcategories || productObj.subCategories || [],
             inStock: productObj.stockQuantity > 0,
             availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
           });
@@ -500,24 +521,24 @@ router.get("/best-sellers", async (req, res) => {
 // ============================================================
 router.get("/arrival-best-sellers", async (req, res) => {
   try {
-    const activeVendors = await Vendor.find({ 
+    const activeVendors = await Vendor.find({
       status: 'active',
       role: 'vendor'
     }).select('company');
     const activeCompanyNames = activeVendors.map(v => v.company);
-    
+
     const companies = await Company.find({
       name: { $in: activeCompanyNames }
     }).sort({ createdAt: 1 }).limit(8);
-    
+
     const products = [];
 
     for (const company of companies) {
-      const product = await Product.findOne({ 
+      const product = await Product.findOne({
         company: company.name,
         vendorId: { $ne: null }
       }).sort({ createdAt: 1 });
-      
+
       if (product) {
         const vendor = await Vendor.findById(product.vendorId);
         if (vendor && vendor.status === 'active') {
@@ -529,6 +550,8 @@ router.get("/arrival-best-sellers", async (req, res) => {
             image: productObj.image,
             company: productObj.company,
             category: productObj.category,
+            subcategory: productObj.subcategory || productObj.subCategory || "",
+            subcategories: productObj.subcategories || productObj.subCategories || [],
             averageRating: productObj.averageRating,
             stockQuantity: productObj.stockQuantity || 0,
             stockStatus: productObj.stockStatus || "out_of_stock",
@@ -559,9 +582,9 @@ router.get("/arrival-best-sellers", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch arrival best sellers" 
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch arrival best sellers"
     });
   }
 });
@@ -588,8 +611,8 @@ router.get("/search", async (req, res) => {
       }).select('_id');
       suspendedVendorIds = suspendedVendors.map(v => v._id.toString());
     }
-    
-    products = products.filter(p => 
+
+    products = products.filter(p =>
       !suspendedVendorIds.includes(p.vendorId?.toString())
     );
 
@@ -597,6 +620,8 @@ router.get("/search", async (req, res) => {
       const productObj = p.toObject ? p.toObject() : p;
       return {
         ...productObj,
+        subcategory: productObj.subcategory || productObj.subCategory || "",
+        subcategories: productObj.subcategories || productObj.subCategories || [],
         inStock: productObj.stockQuantity > 0,
         availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
       };
@@ -621,30 +646,32 @@ router.get("/search", async (req, res) => {
 router.get("/products/company/:companyName", async (req, res) => {
   try {
     const { companyName } = req.params;
-    
-    const vendor = await Vendor.findOne({ 
+
+    const vendor = await Vendor.findOne({
       company: companyName,
       status: 'suspended'
     });
-    
+
     if (vendor) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: "This company is currently unavailable",
         status: 'suspended'
       });
     }
-    
+
     const products = await Product.find({ company: companyName });
-    
+
     const formattedProducts = products.map(p => {
       const productObj = p.toObject ? p.toObject() : p;
       return {
         ...productObj,
+        subcategory: productObj.subcategory || productObj.subCategory || "",
+        subcategories: productObj.subcategories || productObj.subCategories || [],
         inStock: productObj.stockQuantity > 0,
         availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
       };
     });
-    
+
     res.json(formattedProducts);
   } catch (err) {
     console.error(err);
@@ -657,11 +684,11 @@ router.get("/products/company/:companyName", async (req, res) => {
 // ============================================================
 router.get("/active-vendors", async (req, res) => {
   try {
-    const vendors = await Vendor.find({ 
+    const vendors = await Vendor.find({
       status: 'active',
       role: 'vendor'
     }).select('name company plan status createdAt');
-    
+
     res.json({
       success: true,
       vendors
@@ -678,21 +705,21 @@ router.get("/active-vendors", async (req, res) => {
 router.post("/cart/validate-stock", async (req, res) => {
   try {
     const { items } = req.body;
-    
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Please provide cart items"
       });
     }
-    
+
     const stockValidation = [];
     let allInStock = true;
-    
+
     for (const item of items) {
       const product = await Product.findById(item.productId)
         .select('name stockQuantity reservedStock stockStatus price vendorId');
-      
+
       if (!product) {
         stockValidation.push({
           productId: item.productId,
@@ -705,8 +732,7 @@ router.post("/cart/validate-stock", async (req, res) => {
         allInStock = false;
         continue;
       }
-      
-      // Check vendor status
+
       if (product.vendorId) {
         const vendor = await Vendor.findById(product.vendorId);
         if (vendor && vendor.status === 'suspended') {
@@ -722,11 +748,11 @@ router.post("/cart/validate-stock", async (req, res) => {
           continue;
         }
       }
-      
+
       const availableStock = Math.max(0, product.stockQuantity - (product.reservedStock || 0));
       const requested = item.quantity || 1;
       const inStock = availableStock >= requested;
-      
+
       stockValidation.push({
         productId: item.productId,
         name: product.name || item.name,
@@ -737,10 +763,10 @@ router.post("/cart/validate-stock", async (req, res) => {
         price: product.price,
         issue: inStock ? null : "Insufficient stock"
       });
-      
+
       if (!inStock) allInStock = false;
     }
-    
+
     res.json({
       success: true,
       allInStock: allInStock,
@@ -767,18 +793,18 @@ router.post("/cart/validate-stock", async (req, res) => {
 router.get("/low-stock-alerts", async (req, res) => {
   try {
     const threshold = parseInt(req.query.threshold) || 5;
-    
-    const activeVendors = await Vendor.find({ 
+
+    const activeVendors = await Vendor.find({
       status: 'active',
       role: 'vendor'
     }).select('_id');
     const activeVendorIds = activeVendors.map(v => v._id);
-    
+
     const products = await Product.find({
       vendorId: { $in: activeVendorIds },
       stockQuantity: { $lte: threshold, $gt: 0 }
     }).select('name stockQuantity lowStockThreshold company image');
-    
+
     res.json({
       success: true,
       count: products.length,
@@ -797,18 +823,18 @@ router.get("/low-stock-alerts", async (req, res) => {
 router.post("/products/stock/bulk", async (req, res) => {
   try {
     const { productIds } = req.body;
-    
+
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Please provide product IDs"
       });
     }
-    
+
     const products = await Product.find({
       _id: { $in: productIds }
     }).select('_id name stockQuantity reservedStock stockStatus price');
-    
+
     const stockData = products.map(p => ({
       productId: p._id,
       name: p.name,
@@ -819,7 +845,7 @@ router.post("/products/stock/bulk", async (req, res) => {
       inStock: p.stockQuantity > 0,
       price: p.price
     }));
-    
+
     res.json({
       success: true,
       products: stockData

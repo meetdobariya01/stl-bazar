@@ -23,6 +23,8 @@ import "./categorygrid.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BEND_URL = "https://api-vendor.native91.com";
 
+// const VENDOR_BEND_URL = "http://localhost:5177"; // Adjust this to your backend URL
+
 const formatImagePath = (image) => {
   if (!image) return "/images/placeholder.png";
   
