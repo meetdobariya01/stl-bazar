@@ -43,9 +43,7 @@ const Footer = () => {
                 />
 
                 <p className="footer-text">
-                  Native91 brings you handpicked, high-quality foods, crafted
-                  for taste lovers who value freshness, authenticity, and
-                  exceptional culinary experiences.
+                  Native91 is a curated marketplace for discovering and shopping exceptional homegrown Indian brands. Explore thoughtfully made products across home, lifestyle, fashion, beauty, food, gifting, and more, while supporting the people and stories behind them.
                 </p>
                 <div className="d-flex align-items-center gap-2">
                   <img
@@ -166,9 +164,7 @@ const Footer = () => {
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
-                Native91 brings you handpicked, high-quality foods, crafted for
-                taste lovers who value freshness, authenticity, and exceptional
-                culinary experiences.
+                Native91 is a curated marketplace for discovering and shopping exceptional homegrown Indian brands. Explore thoughtfully made products across home, lifestyle, fashion, beauty, food, gifting, and more, while supporting the people and stories behind them.
               </p>
               <div className="d-flex align-items-center gap-2">
                 <img
@@ -263,7 +259,7 @@ const Footer = () => {
                         <FaPinterestP />
                       </a> */}
                       <a
-                        href="https://www.instagram.com/brandel_india_official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                        href="https://www.instagram.com/native91.official?utm_source=ig_web_button_share_sheet&igsi=ZDNlZDc0MzIxNw=="
                         target="_blank"
                       >
                         <FaInstagram />

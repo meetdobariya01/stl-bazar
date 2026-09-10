@@ -217,6 +217,7 @@ const Productdetails = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   const [stock, setStock] = useState(0);
+  const [isImageFullscreen, setIsImageFullscreen] = useState(false);
 
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedColor, setSelectedColor] = useState("");
@@ -936,6 +937,8 @@ const Productdetails = () => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
+                    onClick={() => setIsImageFullscreen(true)}
+                    style={{ cursor: "zoom-in" }}
                   >
                     <img
                       src={activeImg || productImages[0] || "/images/placeholder.png"}

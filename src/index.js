@@ -39,7 +39,7 @@ root.render(
   <CartProvider>
     <WishlistProvider>
       <Router>
-        {/* <Breadcrumb /> */}
+        {/* <Breadcrumb /> */}  
         <BirdCursorFlock birdCount={1} />
         <Routes>
           <Route path="/" element={<Home />} />

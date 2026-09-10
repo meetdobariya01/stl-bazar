@@ -15,6 +15,7 @@ const bannerData = [
     button: "Shop Now",
     image: "./images/navaratri-edits.webp",
     link: "/company/The%20Humming%20Threads",
+    company: "The Humming Threads",
   },
   {
     subtitle: "Gift Guide",
@@ -23,6 +24,7 @@ const bannerData = [
     button: "Explore Gifts",
     image: "./images/gifting.webp",
     link: "/company/ECOPLUSHIE%2FNEELADRI%20FAB",
+    company: "Ecoplushie/Neeladri Fab",
   },
   {
     subtitle: "Brand Spotlight",
@@ -31,6 +33,7 @@ const bannerData = [
     button: "Discover Brands",
     image: "./images/brand-spotlight.webp",
     link: "/company/Koraluxury",
+    company: "Koraluxury",
   },
   {
     subtitle: "Wellness Picks",
@@ -39,6 +42,7 @@ const bannerData = [
     button: "Shop Now",
     image: "./images/wellness-picks.webp",
     link: "/company/Nuravia",
+    company: "Nuravia",
   },
 ];
 
@@ -66,6 +70,7 @@ const Boxes = () => {
                         <span>{item.subtitle}</span>
 
                         <h3>{item.title}</h3>
+                        <p className="m-0 fw-bold">{item.company}</p>
 
                         <p>{item.desc}</p>
                       </div>
@@ -114,6 +119,7 @@ const Boxes = () => {
                         <span>{item.subtitle}</span>
 
                         <h3>{item.title}</h3>
+                        <p className="m-0 fw-bold">{item.company}</p>
 
                         <p>{item.desc}</p>
                       </div>

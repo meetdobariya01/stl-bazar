@@ -18,6 +18,7 @@ import Email from "../../components/email/email";
 import StatsSection from "../../components/details/details";
 import CTASection from "../../components/email/email";
 import NativeHero from "../../components/banner/banner";
+import OfferMarquee from "../../components/label/label";
 
 const Home = () => {
   return (
@@ -25,6 +26,7 @@ const Home = () => {
       {/* header */}
       <Header />
 
+      <OfferMarquee />
       {/* carousel */}
       {/* <Carouselhero /> */}
       <NativeHero />

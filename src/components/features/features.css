@@ -1,226 +1,384 @@
-/* .feature-section {
-  background: #f9f7f3;
-}
+/* =========================================
+   JEWELLERY BRAND SECTION
+========================================= */
 
-.feature-card {
-  background: #fff;
-  padding: 18px 20px;
-  border-radius: 14px;
-  transition: all 0.4s ease;
-  position: relative;
-  overflow: hidden;
-  height: 100%;
-  border: 1px solid #eee;
-  animation: fadeUp 0.8s ease forwards;
-}
-
-.feature-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 0%;
-  height: 3px;
-  background: #c8a96b;
-  transition: 0.4s ease;
-}
-
-.feature-card:hover::before {
+.jewellery-brand-section {
   width: 100%;
+  overflow: hidden;
+  /* padding: 80px 0; */
 }
 
-.feature-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+.jewellery-brand-row {
+  min-height: 620px;
 }
 
-.feature-icon {
-  width: 55px;
-  height: 55px;
-  min-width: 55px;
-  border-radius: 50%;
-  background: rgba(200, 169, 107, 0.12);
+/* =========================================
+   LEFT IMAGE
+========================================= */
+
+.jewellery-image-col {
+  min-height: 620px;
+}
+
+.jewellery-left-image {
+  width: 100%;
+  height: 100%;
+  min-height: 620px;
+  overflow: hidden;
+}
+
+.jewellery-left-image img {
+  width: 100%;
+  height: 100%;
+  min-height: 620px;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+
+  transition: transform 1.2s ease;
+}
+
+.jewellery-left-image:hover img {
+  transform: scale(1.04);
+}
+
+/* =========================================
+   RIGHT SIDE
+========================================= */
+
+.jewellery-content-col {
+  position: relative;
+  min-height: 620px;
+
+  background-image:
+    url("../../../public/images/storycontent3.webp");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: #c8a96b;
-  transition: 0.4s ease;
 }
 
-.feature-card:hover .feature-icon {
-  transform: rotateY(180deg);
-  background: #c8a96b;
-  color: #fff;
+/* =========================================
+   CONTENT
+========================================= */
+
+.jewellery-content {
+  width: 100%;
+  max-width: 615px;
+  padding: 65px 40px;
+  /* margin: 0 auto; */
 }
 
-.feature-card h6 {
-  font-size: 16px;
+.jewellery-small-title {
+  display: inline-block;
+
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
   font-weight: 600;
-  color: #222;
+  letter-spacing: 4px;
+
+  color: #263c39;
 }
 
-.feature-card p {
-  font-size: 14px;
-  color: #777;
+.jewellery-line {
+  width: 70px;
+  height: 2px;
+
+  margin: 13px 0 20px;
+
+  background: #9a713c;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
+.jewellery-content h1 {
+  margin: 0 0 14px;
+
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(42px, 4vw, 64px);
+  font-weight: 500;
+  line-height: 1.05;
+
+  color: #8b6332;
+}
+
+.jewellery-content h2 {
+  margin: 0 0 20px;
+
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(27px, 2.5vw, 39px);
+  font-weight: 600;
+  line-height: 1.25;
+
+  color: #193b39;
+}
+
+.jewellery-content p {
+  max-width: 600px;
+  margin-bottom: 28px;
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: 0.2px;
+
+  color: #4c5050;
+}
+
+/* =========================================
+   BUTTON
+========================================= */
+
+.jewellery-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+
+  padding: 14px 25px;
+
+  background: #9a713c;
+  color: #ffffff;
+
+  text-decoration: none;
+
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+
+  border: 1px solid #9a713c;
+
+  transition: all 0.35s ease;
+}
+
+.jewellery-btn span {
+  font-size: 20px;
+  line-height: 1;
+
+  transition: transform 0.3s ease;
+}
+
+.jewellery-btn:hover {
+  background: #7c5a30;
+  border-color: #7c5a30;
+  color: #ffffff;
+}
+
+.jewellery-btn:hover span {
+  transform: translateX(5px);
+}
+
+/* =========================================
+   FEATURES
+========================================= */
+
+.jewellery-features {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  margin-top: 42px;
+  padding-top: 25px;
+
+  border-top: 1px solid rgba(50, 65, 60, 0.25);
+}
+
+.jewellery-feature {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  text-align: center;
+
+  padding: 0 15px;
+}
+
+.jewellery-feature:not(:last-child)::after {
+  content: "";
+
+  position: absolute;
+  right: 0;
+  top: 0;
+
+  width: 1px;
+  height: 70px;
+
+  background: rgba(50, 65, 60, 0.25);
+}
+
+.feature-icon-home {
+  margin-bottom: 10px;
+
+  font-size: 29px;
+  font-weight: 400;
+
+  color: #23413e;
+}
+
+.jewellery-feature span {
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+
+  color: #344441;
+}
+
+.jewellery-feature small {
+  margin-top: 3px;
+
+  font-family: "Montserrat", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+
+  color: #344441;
+}
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 1199px) {
+  .jewellery-brand-row,
+  .jewellery-image-col,
+  .jewellery-left-image,
+  .jewellery-content-col {
+    min-height: 560px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .jewellery-left-image img {
+    min-height: 560px;
+  }
+
+  .jewellery-content {
+    padding: 50px 45px;
+  }
+
+  .jewellery-content h1 {
+    font-size: 48px;
+  }
+
+  .jewellery-content h2 {
+    font-size: 30px;
+  }
+
+  .jewellery-content p {
+    font-size: 14px;
   }
 }
 
-@media (max-width: 768px) {
-  .feature-card {
-    padding: 16px;
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 991px) {
+  .jewellery-brand-row {
+    display: flex;
+    flex-direction: column;
   }
 
-  .feature-icon {
-    width: 48px;
-    height: 48px;
-    font-size: 18px;
+  .jewellery-image-col {
+    min-height: auto;
   }
 
-  .feature-card h6 {
+  .jewellery-left-image {
+    height: auto;
+    min-height: auto;
+  }
+
+  .jewellery-left-image img {
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+
+  .jewellery-content-col {
+    min-height: 600px;
+  }
+
+  .jewellery-content {
+    padding: 55px 35px;
+  }
+
+  .jewellery-content h1 {
+    font-size: 45px;
+  }
+
+  .jewellery-content h2 {
+    font-size: 29px;
+  }
+
+  .jewellery-features {
+    margin-top: 35px;
+  }
+}
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 575px) {
+  .jewellery-content-col {
+    min-height: auto;
+     background-image:   linear-gradient(
+      rgba(250, 244, 236, 0.72),
+      rgba(250, 244, 236, 0.72)
+    ),
+    url("../../../public/images/storycontent3.webp");
+
+  }
+
+  .jewellery-content {
+    padding: 45px 22px;
+  }
+
+  .jewellery-small-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+  }
+
+  .jewellery-content h1 {
+    font-size: 38px;
+  }
+
+  .jewellery-content h2 {
+    font-size: 25px;
+    line-height: 1.3;
+  }
+
+  .jewellery-content p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .jewellery-btn {
+    width: 100%;
+    padding: 14px 12px;
     font-size: 15px;
   }
 
-  .feature-card p {
-    font-size: 13px;
-  }
-} */
-
-
-
-/* Left Image */
-
-.story-left-image {
-  height: 100%;
-  overflow: hidden;
-}
-
-.story-left-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: 0.8s;
-}
-
-.story-left-image:hover img {
-  transform: scale(1.08);
-}
-
-/* Right Side */
-
-.story-content-wrapper {
-  /* min-height: 620px; */
-  background-image: url("../../../public/images/storycontent1.webp");
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  padding: 70px;
-}
-
-.story-content {
-  max-width: 450px;
-}
-
-.story-subtitle {
-  letter-spacing: 4px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #222;
-}
-
-.story-line {
-  width: 60px;
-  height: 2px;
-  background: #b08c5b;
-  margin: 22px 0;
-}
-
-.story-content h2 {
-  font-family: Georgia, serif;
-  font-size: 58px;
-  line-height: 1.2;
-  color: #222;
-  margin-bottom: 45px;
-}
-
-.story-btn {
-  border: none;
-  background: none;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  letter-spacing: 3px;
-  font-weight: 600;
-  transition: 0.4s;
-}
-
-.story-btn:hover {
-  gap: 28px;
-  color: #9b7646;
-}
-
-.story-content-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.story-content {
-  position: relative;
-  z-index: 2;
-}
-
-
-/* Tablet */
-
-@media (max-width: 991px) {
-  .story-content-wrapper {
-    min-height: 520px;
-    padding: 50px;
+  .jewellery-features {
+    /* grid-template-columns: repeat(2, 1fr); */
+    gap: 25px 0;
   }
 
-  .story-content h2 {
-    font-size: 44px;
-  }
-}
-
-/* Mobile */
-
-@media (max-width: 576px) {
-  .story-content-wrapper {
-    min-height: 420px;
-    padding: 35px 25px;
-    /* background-position: right; */
-    color: #000;
+  .jewellery-feature {
+    padding: 0 8px;
   }
 
-  .story-content {
-    max-width: 100%;
+  .jewellery-feature:nth-child(2)::after {
+    display: none;
   }
 
-  .story-content h2 {
-    font-size: 34px;
+  .jewellery-feature:nth-child(3)::after {
+    display: block;
   }
 
-  .story-subtitle {
-    font-size: 12px;
-    letter-spacing: 2px;
-  }
-
-  .story-btn {
-    font-size: 14px;
-    letter-spacing: 2px;
+  .jewellery-feature:nth-child(4)::after {
+    display: none;
   }
 }
