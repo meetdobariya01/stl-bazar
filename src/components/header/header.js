@@ -1,4 +1,4 @@
-// Header.jsx - WITH SUB-CATEGORY SUPPORT
+// Header.jsx - FIXED
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -26,7 +26,22 @@ import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import "./header.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
+// ✅ API URLs
+const VENDOR_API_URL = "https://api-vendor.native91.com/api";
+const ADMIN_API_URL = "https://api-admin.native91.com/api";
+// const VENDOR_API_URL = "http://localhost:9000/api";
+// const ADMIN_API_URL = "http://localhost:7001/api/category";
+
+
+// ✅ Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  };
+};
 
 const Header = () => {
   const navigate = useNavigate();
@@ -52,27 +67,44 @@ const Header = () => {
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
 
-  // Fetch categories
+  // Fetch categories from ADMIN API
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`${API_URL}/categories`);
-        if (response.data && Array.isArray(response.data)) {
-          setCategories(response.data);
-          // Fetch sub-categories for each category
-          await fetchAllSubCategories(response.data);
+        console.log("🔍 Fetching categories from Admin API...");
+        const response = await axios.get(`${ADMIN_API_URL}/categories`, {
+          ...getAuthHeaders()
+        });
+        
+        let categoriesData = [];
+        if (response.data.success && Array.isArray(response.data.categories)) {
+          categoriesData = response.data.categories;
+        } else if (Array.isArray(response.data)) {
+          categoriesData = response.data;
         }
-      } catch {
+        
+        const activeCategories = categoriesData.filter(cat => cat.status === "active");
+        setCategories(activeCategories);
+        console.log(`📂 Found ${activeCategories.length} categories`);
+        
+        // Fetch sub-categories for each category from VENDOR API
+        await fetchAllSubCategories(activeCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        // Fallback categories
         const defaultCategories = [
           { _id: "1", name: "Organic Food & Healthy Snacks" },
-          { _id: "2", name: "Natural Skin Care & Wellness" },
-          { _id: "3", name: "Gifts & Hamper" },
+          { _id: "2", name: "Beauty & Wellness" },
+          { _id: "3", name: "Gifts & Hampers" },
           { _id: "4", name: "Handmade Home Decor" },
           { _id: "5", name: "Sustainable Lifestyle" },
           { _id: "6", name: "Jewelry & Accessories" },
+          { _id: "7", name: "Pet Care" },
+          { _id: "8", name: "Kids Fashion & Toys" },
+          { _id: "9", name: "Desk Essentials" },
+          { _id: "10", name: "Ethnic Fashion" },
         ];
         setCategories(defaultCategories);
-        // Fetch sub-categories for default categories
         await fetchAllSubCategories(defaultCategories);
       } finally {
         setLoadingCategories(false);
@@ -81,26 +113,26 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // Fetch sub-categories for all categories
+  // Fetch sub-categories for all categories from VENDOR API
   const fetchAllSubCategories = async (categoriesList) => {
     const subMap = {};
     
     for (const category of categoriesList) {
       try {
-        const response = await axios.get(`${API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`);
+        console.log(`🔍 Fetching sub-categories for: ${category.name}`);
+        const response = await axios.get(
+          `${VENDOR_API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`,
+          {
+            ...getAuthHeaders()
+          }
+        );
+        
         if (response.data && response.data.subCategories) {
           subMap[category.name] = response.data.subCategories;
+          console.log(`✅ ${category.name}: ${response.data.subCategories.length} sub-categories`);
         } else {
-          // Fallback: try to get from products
-          const productsRes = await axios.get(`${API_URL}/products/by-category/${encodeURIComponent(category.name)}`);
-          if (productsRes.data && productsRes.data.products) {
-            const subs = new Set();
-            productsRes.data.products.forEach(p => {
-              if (p.subCategory) subs.add(p.subCategory);
-              if (p.subCategories) p.subCategories.forEach(s => subs.add(s));
-            });
-            subMap[category.name] = Array.from(subs);
-          }
+          subMap[category.name] = [];
+          console.log(`⚠️ ${category.name}: No sub-categories found`);
         }
       } catch (error) {
         console.error(`Error fetching sub-categories for ${category.name}:`, error);
@@ -109,6 +141,7 @@ const Header = () => {
     }
     
     setCategorySubCategories(subMap);
+    console.log("📂 Final sub-categories map:", subMap);
   };
 
   // Fetch sub-categories for a specific category on hover
@@ -120,7 +153,12 @@ const Header = () => {
     setLoadingSubCategories(prev => ({ ...prev, [categoryName]: true }));
     
     try {
-      const response = await axios.get(`${API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`);
+      const response = await axios.get(
+        `${VENDOR_API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`,
+        {
+          ...getAuthHeaders()
+        }
+      );
       const subs = response.data?.subCategories || [];
       
       setCategorySubCategories(prev => ({
@@ -194,10 +232,10 @@ const Header = () => {
 
     try {
       console.log(`🔍 Fetching suggestions for: "${query}"`);
-      
-      const response = await axios.get(`${API_URL}/search-suggestions`, {
+      const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
+        ...getAuthHeaders()
       });
 
       if (response.data?.products && response.data.products.length > 0) {
@@ -243,22 +281,16 @@ const Header = () => {
 
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/products/search`, {
+      const response = await axios.get(`${VENDOR_API_URL}/products/search`, {
         params: { keyword: searchQuery },
+        ...getAuthHeaders()
       });
       setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
       setShowRecommendations(false);
-    } catch {
-      try {
-        const response = await axios.get(`${API_URL}/search`, {
-          params: { keyword: searchQuery },
-        });
-        setSearchResults(response.data?.products || []);
-        setShowSearchResults(true);
-      } catch {
-        setSearchResults([]);
-      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
     } finally {
       setIsLoading(false);
     }
@@ -280,6 +312,7 @@ const Header = () => {
   }, []);
 
   const menu = [
+    { title: "Home", link: "/" },
     { title: "Brands", link: "/product" },
     {
       title: "Category",
@@ -293,7 +326,6 @@ const Header = () => {
     },
     { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
-    // { title: "FAQs", link: "/faqs" },
     { title: "About Us", link: "/aboutus" },
   ];
 

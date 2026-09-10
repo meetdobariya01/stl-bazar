@@ -630,14 +630,14 @@ const Product = () => {
   });
 
   // ✅ NEW UPGRADED IMAGE LOGIC (Handles Object, Array, String)
-  const getImageUrl = (logo) => {
+ const getImageUrl = (logo) => {
     if (!logo) return null;
 
     // Object handle karo
-    if (typeof logo === 'object' && !Array.isArray(logo)) {
-      if (logo.image && typeof logo.image === 'string') {
+    if (typeof logo === "object" && !Array.isArray(logo)) {
+      if (logo.image && typeof logo.image === "string") {
         logo = logo.image;
-      } else if (logo.url && typeof logo.url === 'string') {
+      } else if (logo.url && typeof logo.url === "string") {
         logo = logo.url;
       } else {
         return null;
@@ -649,18 +649,20 @@ const Product = () => {
       logo = logo[0];
     }
 
-    if (!logo || typeof logo !== 'string') return null;
+    if (!logo || typeof logo !== "string") return null;
 
     // Full URL check
     if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
 
     // Relative URL fix
-    if (logo.startsWith("/images")) return `http://localhost:5177${logo}`;
-    if (logo.startsWith("/uploads") || logo.startsWith("/public")) return `http://localhost:5177${logo}`;
+    if (logo.startsWith("/images")) return `https://api-admin.native91.com${logo}`;
+    if (logo.startsWith("/uploads") || logo.startsWith("/public"))
+      return `https://api-vendor.native91.com${logo}`;
 
     // Fallback
-    return `http://localhost:5177/uploads/${logo}`;
+    return `https://api-admin.native91.com/uploads/${logo}`;
   };
+
 
   const handleImageError = (brandId) => {
     setImageErrors(prev => ({ ...prev, [brandId]: true }));
