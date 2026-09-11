@@ -2,7 +2,7 @@
   position: relative;
   width: 100%;
   min-height: 100vh;
-  background-image: url("../../../public/images/banner.png");
+  background-image: url("../../../public/images/desktop-banner.webp");
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -99,8 +99,8 @@
 }
 
 .native-btn {
-  min-width: 255px;
-  padding: 17px 30px;
+  /* min-width: 255px; */
+  padding: 17px 25px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -204,7 +204,7 @@
   .native-hero {
     min-height: 100vh;
     /* DIFFERENT MOBILE IMAGE */
-    background-image: url("../../../public/images/3.png");
+    background-image: url("../../../public/images/mobile-banner.webp");
     background-position: center center;
     display: flex;
     align-items: center;

@@ -27,6 +27,7 @@ import { useWishlist } from "../../context/WishlistContext";
 import { createSlug } from "../../utils/slugUtils";
 import "./grid.css";
 import Details from "../../components/details/details";
+import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
@@ -102,7 +103,7 @@ const Grid = () => {
         setCategories(uniqueCategories);
         setMaterials(uniqueMaterials);
         setBrands(uniqueBrands);
-        
+
         // Fetch wishlist to check status
         fetchWishlist();
       })
@@ -178,13 +179,13 @@ const Grid = () => {
   // ✅ Updated toggleWishlist using context
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
-    
-    setIsTogglingWishlist(prev => ({ ...prev, [productId]: true }));
-    
+
+    setIsTogglingWishlist((prev) => ({ ...prev, [productId]: true }));
+
     try {
-      const product = products.find(p => p._id === productId);
+      const product = products.find((p) => p._id === productId);
       if (!product) return;
-      
+
       await toggleWishlist({
         productId: product._id,
         name: product.name,
@@ -192,15 +193,14 @@ const Grid = () => {
         image: Array.isArray(product.image) ? product.image[0] : product.image,
         company: product.company || "Native91",
       });
-      
+
       // Refetch wishlist to update UI
       await fetchWishlist();
-      
     } catch (error) {
       console.error("Error toggling wishlist:", error);
       alert("Something went wrong. Please try again.");
     } finally {
-      setIsTogglingWishlist(prev => ({ ...prev, [productId]: false }));
+      setIsTogglingWishlist((prev) => ({ ...prev, [productId]: false }));
     }
   };
 
@@ -277,6 +277,8 @@ const Grid = () => {
     <>
       <Header />
 
+      {/* <Breadcrumb /> */}
+
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
           {/* 🔹 Category Description Section */}
@@ -284,10 +286,10 @@ const Grid = () => {
             <div className="category-description mb-4 p-4 bg-light rounded text-center">
               <h2 className="h4 mb-3 funnel-sans">{decodedName}</h2>
               <p className="text-muted mb-0">
-                Explore our collection of premium {decodedName.toLowerCase()} products.
-                From everyday essentials to luxury items, find the perfect match
-                for your needs. Browse through our curated selection and enjoy
-                quality craftsmanship at competitive prices.
+                Explore our collection of premium {decodedName.toLowerCase()}{" "}
+                products. From everyday essentials to luxury items, find the
+                perfect match for your needs. Browse through our curated
+                selection and enjoy quality craftsmanship at competitive prices.
               </p>
             </div>
           )}
@@ -570,12 +572,23 @@ const Grid = () => {
                               />
                               <div
                                 className="wishlist-btn-grid"
-                                onClick={(e) => handleToggleWishlist(e, item._id)}
-                                style={{ cursor: isToggling ? 'not-allowed' : 'pointer' }}
+                                onClick={(e) =>
+                                  handleToggleWishlist(e, item._id)
+                                }
+                                style={{
+                                  cursor: isToggling
+                                    ? "not-allowed"
+                                    : "pointer",
+                                }}
                               >
                                 {isToggling ? (
-                                  <div className="spinner-border spinner-border-sm" role="status">
-                                    <span className="visually-hidden">Loading...</span>
+                                  <div
+                                    className="spinner-border spinner-border-sm"
+                                    role="status"
+                                  >
+                                    <span className="visually-hidden">
+                                      Loading...
+                                    </span>
                                   </div>
                                 ) : inWishlist ? (
                                   <FaHeart color="#e74c3c" />

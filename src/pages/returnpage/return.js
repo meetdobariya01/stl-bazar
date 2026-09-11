@@ -500,7 +500,7 @@ const Return = () => {
                 <h2>Customer Satisfaction Comes First</h2>
 
                 <p>
-                  At <strong>Your Store Name</strong>, customer satisfaction is
+                  At <strong>Native91</strong>, customer satisfaction is
                   our priority. This policy explains the conditions under which
                   returns, refunds and cancellations are accepted.
                 </p>

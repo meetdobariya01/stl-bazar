@@ -50,6 +50,7 @@ import Footer from "../../components/footer/footer";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import "./productdetails.css";
+import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL =
@@ -1122,7 +1123,8 @@ const Productdetails = () => {
 
       <div className="product-details-page">
         <Container className="py-5 lexend">
-          <Row className="g-5">
+          <Breadcrumb />
+          <Row className="g-5 mt-3">
             {/* LEFT SIDE - IMAGE GALLERY */}
             <Col lg={6}>
               <div className="product-gallery">
@@ -1513,17 +1515,17 @@ const Productdetails = () => {
                           </span>
                         </div>
                       )}
-                      {product.sku && (
+                      {/* {product.sku && (
                         <div className="d-flex align-items-center">
                           <FaTag className="me-1 text-muted" />
                           <span>
                             <strong>SKU:</strong> {product.sku}
                           </span>
                         </div>
-                      )}
+                      )} */}
                       {product.variant && (
                         <div className="d-flex align-items-center">
-                          <FaRulerCombined className="me-1 text-muted" />
+                          {/* <FaRulerCombined className="me-1 text-muted" /> */}
                           <span>
                             <strong>Variant:</strong> {product.variant}
                           </span>
@@ -2292,14 +2294,22 @@ const Productdetails = () => {
             <details>
               <summary className="funnel-sans">Returns Policy</summary>
               <p>
-                Easy 7-day returns available. Items must be unused and in
-                original packaging.
-                <a
+                We do not accept{" "}
+                <a href="/return-policy#section1" className="text-dark">
+                  Returns
+                </a>{" "}
+                for any products. However, customers may request an exchange in
+                accordance with our{" "}
+                <a href="/return-policy#section2" className="text-dark">
+                  Exchange
+                </a>{" "}
+                Policy and applicable eligibility conditions.
+                {/* <a
                   href="/returns-policy"
                   className="text-decoration-none text-primary ms-2"
                 >
                   Learn more
-                </a>
+                </a> */}
               </p>
             </details>
 
