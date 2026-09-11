@@ -1,4 +1,4 @@
-// Mainnavbar.js - WITH SUB-CATEGORY SUPPORT
+// Mainnavbar.js - WITH ADMIN + VENDOR SUB-CATEGORY MERGE
 
 import React, { useState, useEffect, useRef } from "react";
 import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
@@ -7,18 +7,24 @@ import { FaSearch, FaTimes, FaClock, FaSitemap } from "react-icons/fa";
 import axios from "axios";
 import "./navbar.css";
 
-// ✅ API URLs
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
-const ADMIN_API_URL = "https://api-admin.native91.com/api";
+//const ADMIN_API_URL = "https://api-admin.native91.com/api";
 
-// ✅ Helper function to get auth headers
+const ADMIN_API_URL = "https://api-admin.native91.com/api/category";
+
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
     headers: {
-      Authorization: `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   };
+};
+
+// ✅ Helper: Merge admin + vendor subcategories (unique)
+const mergeSubcategories = (adminSubs, vendorSubs) => {
+  const merged = [...new Set([...adminSubs, ...vendorSubs])];
+  return merged.filter((s) => s && typeof s === "string" && s.trim() !== "");
 };
 
 const Mainnavbar = () => {
@@ -27,12 +33,10 @@ const Mainnavbar = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🆕 Sub-category states
   const [categorySubCategories, setCategorySubCategories] = useState({});
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [loadingSubCategories, setLoadingSubCategories] = useState({});
 
-  // Search states
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -42,7 +46,6 @@ const Mainnavbar = () => {
   const searchTimeout = useRef(null);
   const categoryMenuTimeout = useRef(null);
 
-  // Load recent searches from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("recentSearches");
     if (saved) {
@@ -54,7 +57,6 @@ const Mainnavbar = () => {
     }
   }, []);
 
-  // Fetch categories from ADMIN API
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -64,9 +66,8 @@ const Mainnavbar = () => {
       setLoading(true);
       setError(null);
 
-      // ✅ Use ADMIN API for categories
       const response = await axios.get(`${ADMIN_API_URL}/categories`, {
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
       });
 
       let categoriesData = [];
@@ -76,16 +77,15 @@ const Mainnavbar = () => {
         categoriesData = response.data;
       }
 
-      const activeCategories = categoriesData.filter(cat => cat.status === "active");
+      const activeCategories = categoriesData.filter(
+        (cat) => cat.status === "active"
+      );
       setCategories(activeCategories);
 
-      // 🆕 Fetch sub-categories for each category from VENDOR API
       await fetchAllSubCategories(activeCategories);
-
     } catch (error) {
       console.error("Error fetching categories:", error);
       setError(error.message);
-      // Fallback categories
       const defaultCategories = [
         { _id: "1", name: "Organic Food & Healthy Snacks" },
         { _id: "2", name: "Beauty & Wellness" },
@@ -105,29 +105,47 @@ const Mainnavbar = () => {
     }
   };
 
-  // 🆕 Fetch sub-categories for all categories from VENDOR API
+  // ✅ FIXED: Merge ADMIN + VENDOR subcategories
   const fetchAllSubCategories = async (categoriesList) => {
     const subMap = {};
 
     for (const category of categoriesList) {
       try {
-        console.log(`🔍 Fetching sub-categories for: ${category.name}`);
-        const response = await axios.get(
-          `${VENDOR_API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`,
-          {
-            ...getAuthHeaders()
-          }
-        );
+        console.log(`🔍 Subcategories for: ${category.name}`);
 
-        if (response.data && response.data.subCategories) {
-          subMap[category.name] = response.data.subCategories;
-          console.log(`✅ ${category.name}: ${response.data.subCategories.length} sub-categories`);
-        } else {
-          subMap[category.name] = [];
-          console.log(`⚠️ ${category.name}: No sub-categories found`);
+        // ✅ SOURCE 1: Admin panel subcategories
+        const adminSubs = (category.subcategories || [])
+          .filter((sc) => sc.status === "active")
+          .map((sc) => sc.name);
+
+        console.log(`   📦 Admin: ${adminSubs.length}`, adminSubs);
+
+        // ✅ SOURCE 2: Vendor API subcategories
+        let vendorSubs = [];
+        try {
+          const response = await axios.get(
+            `${VENDOR_API_URL}/categories/${encodeURIComponent(
+              category.name
+            )}/subcategories`,
+            {
+              ...getAuthHeaders(),
+            }
+          );
+          vendorSubs = response.data?.subCategories || [];
+          console.log(`   📦 Vendor: ${vendorSubs.length}`);
+        } catch (err) {
+          console.warn(`   ⚠️ Vendor API failed for ${category.name}`);
         }
+
+        // ✅ MERGE both
+        const merged = mergeSubcategories(adminSubs, vendorSubs);
+        subMap[category.name] = merged;
+        console.log(`✅ ${category.name}: ${merged.length} total`, merged);
       } catch (error) {
-        console.error(`Error fetching sub-categories for ${category.name}:`, error);
+        console.error(
+          `Error fetching subcategories for ${category.name}:`,
+          error
+        );
         subMap[category.name] = [];
       }
     }
@@ -136,38 +154,55 @@ const Mainnavbar = () => {
     console.log("📂 Final sub-categories map:", subMap);
   };
 
-  // 🆕 Fetch sub-categories for a specific category on hover
+  // ✅ FIXED: Fetch subcategories on hover
   const fetchSubCategoriesForCategory = async (categoryName) => {
-    if (categorySubCategories[categoryName] && categorySubCategories[categoryName].length > 0) {
+    if (
+      categorySubCategories[categoryName] &&
+      categorySubCategories[categoryName].length > 0
+    ) {
       return categorySubCategories[categoryName];
     }
 
-    setLoadingSubCategories(prev => ({ ...prev, [categoryName]: true }));
+    setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: true }));
 
     try {
-      const response = await axios.get(
-        `${VENDOR_API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`,
-        {
-          ...getAuthHeaders()
-        }
-      );
-      const subs = response.data?.subCategories || [];
+      const categoryObj = categories.find((c) => c.name === categoryName);
 
-      setCategorySubCategories(prev => ({
+      const adminSubs = (categoryObj?.subcategories || [])
+        .filter((sc) => sc.status === "active")
+        .map((sc) => sc.name);
+
+      let vendorSubs = [];
+      try {
+        const response = await axios.get(
+          `${VENDOR_API_URL}/categories/${encodeURIComponent(
+            categoryName
+          )}/subcategories`,
+          {
+            ...getAuthHeaders(),
+          }
+        );
+        vendorSubs = response.data?.subCategories || [];
+      } catch (err) {
+        console.warn(`Vendor API failed for ${categoryName}`);
+      }
+
+      const merged = mergeSubcategories(adminSubs, vendorSubs);
+
+      setCategorySubCategories((prev) => ({
         ...prev,
-        [categoryName]: subs
+        [categoryName]: merged,
       }));
 
-      return subs;
+      return merged;
     } catch (error) {
-      console.error(`Error fetching sub-categories for ${categoryName}:`, error);
+      console.error(`Error: ${categoryName}`, error);
       return [];
     } finally {
-      setLoadingSubCategories(prev => ({ ...prev, [categoryName]: false }));
+      setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: false }));
     }
   };
 
-  // 🆕 Handle category hover
   const handleCategoryHover = (categoryName) => {
     if (categoryMenuTimeout.current) {
       clearTimeout(categoryMenuTimeout.current);
@@ -176,14 +211,13 @@ const Mainnavbar = () => {
     fetchSubCategoriesForCategory(categoryName);
   };
 
-  // 🆕 Handle category leave
   const handleCategoryLeave = () => {
     categoryMenuTimeout.current = setTimeout(() => {
       setHoveredCategory(null);
     }, 300);
   };
 
-  // Auto-search while typing with debounce
+  // Auto-search with debounce
   useEffect(() => {
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
@@ -209,7 +243,6 @@ const Mainnavbar = () => {
     };
   }, [searchTerm]);
 
-  // Click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -220,18 +253,13 @@ const Mainnavbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch search suggestions from API
   const fetchSearchSuggestions = async (query) => {
     try {
-      console.log(`🔍 Fetching suggestions for: "${query}"`);
-
       const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
       });
-
-      console.log("📥 Suggestions response:", response.data);
 
       if (response.data.success && response.data.products) {
         setSearchResults(response.data.products);
@@ -249,11 +277,13 @@ const Mainnavbar = () => {
     }
   };
 
-  // Handle search submission
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      const updated = [searchTerm.trim(), ...recentSearches.filter(s => s !== searchTerm.trim())].slice(0, 5);
+      const updated = [
+        searchTerm.trim(),
+        ...recentSearches.filter((s) => s !== searchTerm.trim()),
+      ].slice(0, 5);
       setRecentSearches(updated);
       localStorage.setItem("recentSearches", JSON.stringify(updated));
 
@@ -262,11 +292,13 @@ const Mainnavbar = () => {
     }
   };
 
-  // Handle suggestion click
   const handleSuggestionClick = (product) => {
     const name = product.name || product.ProductName;
     if (name) {
-      const updated = [name, ...recentSearches.filter(s => s !== name)].slice(0, 5);
+      const updated = [
+        name,
+        ...recentSearches.filter((s) => s !== name),
+      ].slice(0, 5);
       setRecentSearches(updated);
       localStorage.setItem("recentSearches", JSON.stringify(updated));
     }
@@ -275,7 +307,6 @@ const Mainnavbar = () => {
     navigate(`/product/${product.slug || product._id}`);
   };
 
-  // Handle search input change
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -287,21 +318,25 @@ const Mainnavbar = () => {
     }
   };
 
-  // Clear search
   const clearSearch = () => {
     setSearchTerm("");
     setSearchResults([]);
     setShowSuggestions(false);
   };
 
-  // Render search suggestions dropdown
   const renderSuggestions = () => {
     if (!showSuggestions) return null;
 
     const hasResults = searchResults && searchResults.length > 0;
-    const hasRecent = recentSearches && recentSearches.length > 0 && searchTerm.length < 2;
+    const hasRecent =
+      recentSearches && recentSearches.length > 0 && searchTerm.length < 2;
 
-    if (!hasResults && !hasRecent && searchTerm.length >= 2 && !searchLoading) {
+    if (
+      !hasResults &&
+      !hasRecent &&
+      searchTerm.length >= 2 &&
+      !searchLoading
+    ) {
       return (
         <div className="navbar-search-suggestions">
           <div className="suggestion-item no-results">
@@ -340,10 +375,14 @@ const Mainnavbar = () => {
                 <div className="suggestion-product-info">
                   <div className="suggestion-product-name">{product.name}</div>
                   {product.company && (
-                    <div className="suggestion-product-company">{product.company}</div>
+                    <div className="suggestion-product-company">
+                      {product.company}
+                    </div>
                   )}
                   {product.price && (
-                    <div className="suggestion-product-price">₹{product.price}</div>
+                    <div className="suggestion-product-price">
+                      ₹{product.price}
+                    </div>
                   )}
                 </div>
                 {product.inStock && (
@@ -382,9 +421,14 @@ const Mainnavbar = () => {
                   className="remove-recent"
                   onClick={(e) => {
                     e.stopPropagation();
-                    const updated = recentSearches.filter((_, i) => i !== index);
+                    const updated = recentSearches.filter(
+                      (_, i) => i !== index
+                    );
                     setRecentSearches(updated);
-                    localStorage.setItem("recentSearches", JSON.stringify(updated));
+                    localStorage.setItem(
+                      "recentSearches",
+                      JSON.stringify(updated)
+                    );
                   }}
                 >
                   <FaTimes size={12} />
@@ -415,7 +459,6 @@ const Mainnavbar = () => {
       <Navbar className="desktop-navbar lexend" expand="lg">
         <Container fluid>
           <Nav className="mx-auto nav-links">
-            {/* Category Dropdown with Sub-Categories */}
             <NavDropdown
               title="Category"
               id="category-dropdown"
@@ -426,11 +469,15 @@ const Mainnavbar = () => {
             >
               {loading ? (
                 <NavDropdown.Item disabled className="dropdown-item-custom">
-                  <span className="dropdown-loading">Loading categories...</span>
+                  <span className="dropdown-loading">
+                    Loading categories...
+                  </span>
                 </NavDropdown.Item>
               ) : error ? (
                 <NavDropdown.Item disabled className="dropdown-item-custom">
-                  <span className="dropdown-error">Failed to load categories</span>
+                  <span className="dropdown-error">
+                    Failed to load categories
+                  </span>
                 </NavDropdown.Item>
               ) : categories.length > 0 ? (
                 <>
@@ -443,75 +490,83 @@ const Mainnavbar = () => {
                   </NavDropdown.Item>
                   <NavDropdown.Divider />
                   {categories.map((category) => {
-                    const subCategories = categorySubCategories[category.name] || [];
+                    const subCategories =
+                      categorySubCategories[category.name] || [];
                     const hasSubCategories = subCategories.length > 0;
 
                     return (
                       <div key={category._id} className="category-with-sub">
-
-                        <Nav.Link
-                          as={NavLink}
-                          to="/"
-                          className="nav-link"
-                        >
-                          Home
-                        </Nav.Link>
                         <NavDropdown.Item
                           as={NavLink}
                           to={`/category/${encodeURIComponent(category.name)}`}
                           className="dropdown-item-custom category-main-item"
-                          onMouseEnter={() => handleCategoryHover(category.name)}
+                          onMouseEnter={() =>
+                            handleCategoryHover(category.name)
+                          }
                         >
-                          <span className="category-name">{category.name}</span>
-                          {category.productCount !== undefined && category.productCount > 0 && (
-                            <span className="product-count">({category.productCount})</span>
-                          )}
+                          <span className="category-name">
+                            {category.name}
+                          </span>
+                          {category.productCount !== undefined &&
+                            category.productCount > 0 && (
+                              <span className="product-count">
+                                ({category.productCount})
+                              </span>
+                            )}
                           {hasSubCategories && (
                             <span className="sub-category-arrow">›</span>
                           )}
                         </NavDropdown.Item>
 
-                        {/* 🆕 Sub-categories dropdown */}
-                        {hasSubCategories && hoveredCategory === category.name && (
-                          <div className="sub-category-dropdown">
-                            <div className="sub-category-header">
-                              <FaSitemap className="me-2" />
-                              <span className="sub-category-title">{category.name}</span>
-                              <span className="sub-category-count">
-                                {subCategories.length} sub-categories
-                              </span>
-                            </div>
-                            {loadingSubCategories[category.name] ? (
-                              <div className="sub-category-loading">
-                                <span>Loading...</span>
+                        {hasSubCategories &&
+                          hoveredCategory === category.name && (
+                            <div className="sub-category-dropdown">
+                              <div className="sub-category-header">
+                                <FaSitemap className="me-2" />
+                                <span className="sub-category-title">
+                                  {category.name}
+                                </span>
+                                <span className="sub-category-count">
+                                  {subCategories.length} sub-categories
+                                </span>
                               </div>
-                            ) : (
-                              <div className="sub-category-list">
-                                {subCategories.map((sub, idx) => (
-                                  <NavLink
-                                    key={idx}
-                                    to={`/category/${encodeURIComponent(category.name)}/${encodeURIComponent(sub)}`}
-                                    className="sub-category-item"
-                                    onClick={() => {
-                                      setShowSuggestions(false);
-                                    }}
-                                  >
-                                    <span className="sub-category-dot">•</span>
-                                    {sub}
-                                  </NavLink>
-                                ))}
+                              {loadingSubCategories[category.name] ? (
+                                <div className="sub-category-loading">
+                                  <span>Loading...</span>
+                                </div>
+                              ) : (
+                                <div className="sub-category-list">
+                                  {subCategories.map((sub, idx) => (
+                                    <NavLink
+                                      key={idx}
+                                      to={`/category/${encodeURIComponent(
+                                        category.name
+                                      )}/${encodeURIComponent(sub)}`}
+                                      className="sub-category-item"
+                                      onClick={() => {
+                                        setShowSuggestions(false);
+                                      }}
+                                    >
+                                      <span className="sub-category-dot">
+                                        •
+                                      </span>
+                                      {sub}
+                                    </NavLink>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="sub-category-footer">
+                                <NavLink
+                                  to={`/category/${encodeURIComponent(
+                                    category.name
+                                  )}`}
+                                  className="view-all-subcategories"
+                                >
+                                  View All Products in {category.name} →
+                                </NavLink>
                               </div>
-                            )}
-                            <div className="sub-category-footer">
-                              <NavLink
-                                to={`/category/${encodeURIComponent(category.name)}`}
-                                className="view-all-subcategories"
-                              >
-                                View All Products in {category.name} →
-                              </NavLink>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     );
                   })}
@@ -523,11 +578,7 @@ const Mainnavbar = () => {
               )}
             </NavDropdown>
 
-            <Nav.Link
-              as={NavLink}
-              to="/product"
-              className="nav-link"
-            >
+            <Nav.Link as={NavLink} to="/product" className="nav-link">
               Brands
             </Nav.Link>
 
@@ -548,7 +599,7 @@ const Mainnavbar = () => {
             </Nav.Link>
           </Nav>
 
-          {/* Search Bar with Auto-Suggestions */}
+          {/* Search Bar */}
           <div className="navbar-search-container" ref={searchRef}>
             <form onSubmit={handleSearch} className="navbar-search-form">
               <div className="navbar-search-wrapper">
@@ -560,9 +611,15 @@ const Mainnavbar = () => {
                   value={searchTerm}
                   onChange={handleSearchChange}
                   onFocus={() => {
-                    if (searchTerm.trim().length >= 2 && searchResults.length > 0) {
+                    if (
+                      searchTerm.trim().length >= 2 &&
+                      searchResults.length > 0
+                    ) {
                       setShowSuggestions(true);
-                    } else if (recentSearches.length > 0 && searchTerm.length === 0) {
+                    } else if (
+                      recentSearches.length > 0 &&
+                      searchTerm.length === 0
+                    ) {
                       setShowSuggestions(true);
                     }
                   }}

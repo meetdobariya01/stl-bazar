@@ -1,4 +1,4 @@
-// Header.jsx - FIXED
+// Header.jsx - FIXED (Admin + Vendor Subcategories Merge)
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -27,20 +27,26 @@ import { useWishlist } from "../../context/WishlistContext";
 import "./header.css";
 
 // ✅ API URLs
+const ADMIN_API_URL = "https://api-admin.native91.com/api/category";
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
-const ADMIN_API_URL = "https://api-admin.native91.com/api";
+//const ADMIN_API_URL = "https://api-admin.native91.com/api";
 // const VENDOR_API_URL = "http://localhost:9000/api";
-// const ADMIN_API_URL = "http://localhost:7001/api/category";
-
+// const ADMIN_API_URL = "http://localhost:7001/api";
 
 // ✅ Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
     headers: {
-      Authorization: `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   };
+};
+
+// ✅ Helper: Merge admin + vendor subcategories (unique)
+const mergeSubcategories = (adminSubs, vendorSubs) => {
+  const merged = [...new Set([...adminSubs, ...vendorSubs])];
+  return merged.filter((s) => s && typeof s === "string" && s.trim() !== "");
 };
 
 const Header = () => {
@@ -59,7 +65,7 @@ const Header = () => {
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [categorySubCategories, setCategorySubCategories] = useState({});
   const [loadingSubCategories, setLoadingSubCategories] = useState({});
-  
+
   const searchTimeout = useRef(null);
   const searchRef = useRef(null);
   const categoryMenuTimeout = useRef(null);
@@ -73,25 +79,25 @@ const Header = () => {
       try {
         console.log("🔍 Fetching categories from Admin API...");
         const response = await axios.get(`${ADMIN_API_URL}/categories`, {
-          ...getAuthHeaders()
+          ...getAuthHeaders(),
         });
-        
+
         let categoriesData = [];
         if (response.data.success && Array.isArray(response.data.categories)) {
           categoriesData = response.data.categories;
         } else if (Array.isArray(response.data)) {
           categoriesData = response.data;
         }
-        
-        const activeCategories = categoriesData.filter(cat => cat.status === "active");
+
+        const activeCategories = categoriesData.filter(
+          (cat) => cat.status === "active"
+        );
         setCategories(activeCategories);
         console.log(`📂 Found ${activeCategories.length} categories`);
-        
-        // Fetch sub-categories for each category from VENDOR API
+
         await fetchAllSubCategories(activeCategories);
       } catch (error) {
         console.error("Error fetching categories:", error);
-        // Fallback categories
         const defaultCategories = [
           { _id: "1", name: "Organic Food & Healthy Snacks" },
           { _id: "2", name: "Beauty & Wellness" },
@@ -113,65 +119,100 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // Fetch sub-categories for all categories from VENDOR API
+  // ✅ FIXED: Merge ADMIN + VENDOR subcategories
   const fetchAllSubCategories = async (categoriesList) => {
     const subMap = {};
-    
+
     for (const category of categoriesList) {
       try {
-        console.log(`🔍 Fetching sub-categories for: ${category.name}`);
-        const response = await axios.get(
-          `${VENDOR_API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`,
-          {
-            ...getAuthHeaders()
-          }
-        );
-        
-        if (response.data && response.data.subCategories) {
-          subMap[category.name] = response.data.subCategories;
-          console.log(`✅ ${category.name}: ${response.data.subCategories.length} sub-categories`);
-        } else {
-          subMap[category.name] = [];
-          console.log(`⚠️ ${category.name}: No sub-categories found`);
+        console.log(`🔍 Subcategories for: ${category.name}`);
+
+        // ✅ SOURCE 1: Admin panel subcategories (from category object)
+        const adminSubs = (category.subcategories || [])
+          .filter((sc) => sc.status === "active")
+          .map((sc) => sc.name);
+
+        console.log(`   📦 Admin: ${adminSubs.length}`, adminSubs);
+
+        // ✅ SOURCE 2: Product-based subcategories from VENDOR API
+        let vendorSubs = [];
+        try {
+          const response = await axios.get(
+            `${VENDOR_API_URL}/categories/${encodeURIComponent(
+              category.name
+            )}/subcategories`,
+            {
+              ...getAuthHeaders(),
+            }
+          );
+          vendorSubs = response.data?.subCategories || [];
+          console.log(`   📦 Vendor: ${vendorSubs.length}`);
+        } catch (err) {
+          console.warn(`   ⚠️ Vendor API failed for ${category.name}`);
         }
+
+        // ✅ MERGE both
+        const merged = mergeSubcategories(adminSubs, vendorSubs);
+        subMap[category.name] = merged;
+        console.log(`✅ ${category.name}: ${merged.length} total`, merged);
       } catch (error) {
-        console.error(`Error fetching sub-categories for ${category.name}:`, error);
+        console.error(`Error fetching subcategories for ${category.name}:`, error);
         subMap[category.name] = [];
       }
     }
-    
+
     setCategorySubCategories(subMap);
-    console.log("📂 Final sub-categories map:", subMap);
+    console.log("📂 Final map:", subMap);
   };
 
-  // Fetch sub-categories for a specific category on hover
+  // ✅ FIXED: Fetch subcategories on hover (Admin + Vendor merge)
   const fetchSubCategoriesForCategory = async (categoryName) => {
-    if (categorySubCategories[categoryName] && categorySubCategories[categoryName].length > 0) {
+    if (
+      categorySubCategories[categoryName] &&
+      categorySubCategories[categoryName].length > 0
+    ) {
       return categorySubCategories[categoryName];
     }
-    
-    setLoadingSubCategories(prev => ({ ...prev, [categoryName]: true }));
-    
+
+    setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: true }));
+
     try {
-      const response = await axios.get(
-        `${VENDOR_API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`,
-        {
-          ...getAuthHeaders()
-        }
-      );
-      const subs = response.data?.subCategories || [];
-      
-      setCategorySubCategories(prev => ({
+      const categoryObj = categories.find((c) => c.name === categoryName);
+
+      // Admin subcategories
+      const adminSubs = (categoryObj?.subcategories || [])
+        .filter((sc) => sc.status === "active")
+        .map((sc) => sc.name);
+
+      // Vendor subcategories
+      let vendorSubs = [];
+      try {
+        const response = await axios.get(
+          `${VENDOR_API_URL}/categories/${encodeURIComponent(
+            categoryName
+          )}/subcategories`,
+          {
+            ...getAuthHeaders(),
+          }
+        );
+        vendorSubs = response.data?.subCategories || [];
+      } catch (err) {
+        console.warn(`Vendor API failed for ${categoryName}`);
+      }
+
+      const merged = mergeSubcategories(adminSubs, vendorSubs);
+
+      setCategorySubCategories((prev) => ({
         ...prev,
-        [categoryName]: subs
+        [categoryName]: merged,
       }));
-      
-      return subs;
+
+      return merged;
     } catch (error) {
-      console.error(`Error fetching sub-categories for ${categoryName}:`, error);
+      console.error(`Error: ${categoryName}`, error);
       return [];
     } finally {
-      setLoadingSubCategories(prev => ({ ...prev, [categoryName]: false }));
+      setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: false }));
     }
   };
 
@@ -210,7 +251,7 @@ const Header = () => {
     };
   }, [fetchCart, fetchWishlist]);
 
-  // Click outside to close suggestions
+  // Click outside to close
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -231,21 +272,18 @@ const Header = () => {
     }
 
     try {
-      console.log(`🔍 Fetching suggestions for: "${query}"`);
       const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
       });
 
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
-        console.log(`✅ Found ${response.data.products.length} products`);
       } else {
         setRecommendations([]);
         setShowRecommendations(false);
-        console.log("❌ No products found");
       }
     } catch (error) {
       console.error("Live search error:", error);
@@ -257,7 +295,6 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    console.log(`🔍 Typing: "${value}"`);
 
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
@@ -283,7 +320,7 @@ const Header = () => {
     try {
       const response = await axios.get(`${VENDOR_API_URL}/products/search`, {
         params: { keyword: searchQuery },
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
       });
       setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
@@ -424,7 +461,9 @@ const Header = () => {
                           className="view-all-btn"
                           onClick={() => {
                             setShowSearch(false);
-                            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+                            navigate(
+                              `/search?q=${encodeURIComponent(searchQuery)}`
+                            );
                           }}
                         >
                           View all results for "{searchQuery}"
@@ -478,7 +517,7 @@ const Header = () => {
               {menu.map((item, index) => (
                 <motion.div key={index} whileHover={{ y: -3 }}>
                   {item.dropdown ? (
-                    <Dropdown 
+                    <Dropdown
                       className="premium-dropdown category-dropdown"
                       onMouseEnter={() => handleCategoryHover(item.title)}
                       onMouseLeave={handleCategoryLeave}
@@ -510,13 +549,16 @@ const Header = () => {
                           </Dropdown.Item>
                         ) : (
                           <div className="category-menu-wrapper">
-                            {/* Categories Column */}
                             <div className="category-list-column">
                               {item.dropdown.map((sub, i) => (
                                 <div
                                   key={i}
-                                  className={`category-menu-item ${hoveredCategory === sub.title ? 'active' : ''}`}
-                                  onMouseEnter={() => handleCategoryHover(sub.title)}
+                                  className={`category-menu-item ${
+                                    hoveredCategory === sub.title ? "active" : ""
+                                  }`}
+                                  onMouseEnter={() =>
+                                    handleCategoryHover(sub.title)
+                                  }
                                 >
                                   <NavLink
                                     to={sub.link}
@@ -529,15 +571,17 @@ const Header = () => {
                                         ({sub.productCount})
                                       </span>
                                     )}
-                                    {sub.subCategories && sub.subCategories.length > 0 && (
-                                      <span className="sub-category-arrow">›</span>
-                                    )}
+                                    {sub.subCategories &&
+                                      sub.subCategories.length > 0 && (
+                                        <span className="sub-category-arrow">
+                                          ›
+                                        </span>
+                                      )}
                                   </NavLink>
                                 </div>
                               ))}
                             </div>
 
-                            {/* Sub-Categories Column */}
                             {hoveredCategory && (
                               <div className="subcategory-list-column">
                                 <div className="subcategory-header">
@@ -545,7 +589,9 @@ const Header = () => {
                                     {hoveredCategory}
                                   </span>
                                   <span className="subcategory-count">
-                                    {categorySubCategories[hoveredCategory]?.length || 0} sub-categories
+                                    {categorySubCategories[hoveredCategory]
+                                      ?.length || 0}{" "}
+                                    sub-categories
                                   </span>
                                 </div>
                                 {loadingSubCategories[hoveredCategory] ? (
@@ -555,18 +601,25 @@ const Header = () => {
                                   </div>
                                 ) : (
                                   <div className="subcategory-grid">
-                                    {categorySubCategories[hoveredCategory]?.length > 0 ? (
-                                      categorySubCategories[hoveredCategory].map((sub, idx) => (
-                                        <NavLink
-                                          key={idx}
-                                          to={`/category/${encodeURIComponent(hoveredCategory)}/${encodeURIComponent(sub)}`}
-                                          className="subcategory-item"
-                                          onClick={() => setShowMenu(false)}
-                                        >
-                                          <span className="subcategory-dot">•</span>
-                                          {sub}
-                                        </NavLink>
-                                      ))
+                                    {categorySubCategories[hoveredCategory]
+                                      ?.length > 0 ? (
+                                      categorySubCategories[hoveredCategory].map(
+                                        (sub, idx) => (
+                                          <NavLink
+                                            key={idx}
+                                            to={`/category/${encodeURIComponent(
+                                              hoveredCategory
+                                            )}/${encodeURIComponent(sub)}`}
+                                            className="subcategory-item"
+                                            onClick={() => setShowMenu(false)}
+                                          >
+                                            <span className="subcategory-dot">
+                                              •
+                                            </span>
+                                            {sub}
+                                          </NavLink>
+                                        )
+                                      )
                                     ) : (
                                       <div className="subcategory-empty">
                                         No sub-categories available
@@ -576,7 +629,9 @@ const Header = () => {
                                 )}
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${encodeURIComponent(hoveredCategory)}`}
+                                    to={`/category/${encodeURIComponent(
+                                      hoveredCategory
+                                    )}`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >
@@ -699,18 +754,27 @@ const Header = () => {
                       <div className="mobile-link">
                         {item.title}
                         {loadingCategories && (
-                          <span className="ms-1" style={{ fontSize: "12px" }}>
+                          <span
+                            className="ms-1"
+                            style={{ fontSize: "12px" }}
+                          >
                             ...
                           </span>
                         )}
                       </div>
 
                       {loadingCategories ? (
-                        <div className="mobile-sublink text-muted" style={{ paddingLeft: "20px" }}>
+                        <div
+                          className="mobile-sublink text-muted"
+                          style={{ paddingLeft: "20px" }}
+                        >
                           Loading categories...
                         </div>
                       ) : item.dropdown.length === 0 ? (
-                        <div className="mobile-sublink text-danger" style={{ paddingLeft: "20px" }}>
+                        <div
+                          className="mobile-sublink text-danger"
+                          style={{ paddingLeft: "20px" }}
+                        >
                           No categories available
                         </div>
                       ) : (
@@ -728,21 +792,25 @@ const Header = () => {
                                 </span>
                               )}
                             </NavLink>
-                            {/* Mobile Sub-Categories */}
-                            {categorySubCategories[sub.title] && categorySubCategories[sub.title].length > 0 && (
-                              <div className="mobile-sub-subcategories">
-                                {categorySubCategories[sub.title].map((subCat, idx) => (
-                                  <NavLink
-                                    key={idx}
-                                    to={`/category/${encodeURIComponent(sub.title)}/${encodeURIComponent(subCat)}`}
-                                    className="mobile-sub-sublink"
-                                    onClick={() => setShowMenu(false)}
-                                  >
-                                    • {subCat}
-                                  </NavLink>
-                                ))}
-                              </div>
-                            )}
+                            {categorySubCategories[sub.title] &&
+                              categorySubCategories[sub.title].length > 0 && (
+                                <div className="mobile-sub-subcategories">
+                                  {categorySubCategories[sub.title].map(
+                                    (subCat, idx) => (
+                                      <NavLink
+                                        key={idx}
+                                        to={`/category/${encodeURIComponent(
+                                          sub.title
+                                        )}/${encodeURIComponent(subCat)}`}
+                                        className="mobile-sub-sublink"
+                                        onClick={() => setShowMenu(false)}
+                                      >
+                                        • {subCat}
+                                      </NavLink>
+                                    )
+                                  )}
+                                </div>
+                              )}
                           </div>
                         ))
                       )}

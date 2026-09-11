@@ -3,6 +3,14 @@ const Cart = require("../Models/Cart");
 
 const router = express.Router();
 
+// Helper: normalize variantId (string → trimmed, or null)
+const normalizeVariantId = (v) => {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (s === "" || s === "null" || s === "undefined") return null;
+  return s;
+};
+
 router.get("/:guestId", async (req, res) => {
   try {
     const cart = await Cart.findOne({ guestId: req.params.guestId });
@@ -70,47 +78,13 @@ router.post("/add", async (req, res) => {
       cart = new Cart({ guestId, items: [] });
     }
 
-    const rawNewVariantId = productData.variantId;
-    const newVariantId =
-      rawNewVariantId &&
-      String(rawNewVariantId).trim() !== "" &&
-      String(rawNewVariantId) !== "null" &&
-      String(rawNewVariantId) !== "undefined"
-        ? String(rawNewVariantId).trim()
-        : null;
-
+    const newVariantId = normalizeVariantId(productData.variantId);
     const newProductId = String(productData.productId);
-
-    console.log("🔍 Cart add debug:", {
-      newProductId,
-      newVariantId,
-      price: productData.price,
-      existingItems: cart.items.length,
-    });
 
     const itemIndex = cart.items.findIndex((item) => {
       const sameProduct = String(item.productId) === newProductId;
-
-      const rawItemVariantId = item.variantId;
-      const itemVariantId =
-        rawItemVariantId &&
-        String(rawItemVariantId).trim() !== "" &&
-        String(rawItemVariantId) !== "null" &&
-        String(rawItemVariantId) !== "undefined"
-          ? String(rawItemVariantId).trim()
-          : null;
-
-      const match = sameProduct && itemVariantId === newVariantId;
-
-      console.log("  Compare:", {
-        itemVariantId,
-        newVariantId,
-        sameProduct,
-        variantMatch: itemVariantId === newVariantId,
-        finalMatch: match,
-      });
-
-      return match;
+      const itemVariantId = normalizeVariantId(item.variantId);
+      return sameProduct && itemVariantId === newVariantId;
     });
 
     if (itemIndex > -1) {
@@ -127,12 +101,17 @@ router.post("/add", async (req, res) => {
           cart.items[itemIndex].price = productData.price;
         }
 
+        // ✅ Always update variant fields if variantId present
         if (newVariantId) {
           cart.items[itemIndex].variantId = newVariantId;
-          cart.items[itemIndex].selectedColor = productData.selectedColor || "";
-          cart.items[itemIndex].selectedSize = productData.selectedSize || "";
-          cart.items[itemIndex].variantImage = productData.variantImage || "";
-          cart.items[itemIndex].variantPrice = productData.variantPrice || 0;
+          if (productData.selectedColor !== undefined)
+            cart.items[itemIndex].selectedColor = productData.selectedColor || "";
+          if (productData.selectedSize !== undefined)
+            cart.items[itemIndex].selectedSize = productData.selectedSize || "";
+          if (productData.variantImage !== undefined)
+            cart.items[itemIndex].variantImage = productData.variantImage || "";
+          if (productData.variantPrice !== undefined)
+            cart.items[itemIndex].variantPrice = productData.variantPrice || 0;
         }
       }
     } else {
@@ -141,8 +120,10 @@ router.post("/add", async (req, res) => {
           productId: productData.productId,
           name: productData.name,
           price: productData.price,
-          originalPrice: originalPrice || productData.originalPrice || productData.price,
-          discountAmount: discountAmount || productData.discountAmount || 0,
+          originalPrice:
+            originalPrice || productData.originalPrice || productData.price,
+          discountAmount:
+            discountAmount || productData.discountAmount || 0,
           couponCode: couponCode || productData.couponCode || "",
           quantity: productData.quantity || 1,
           image: Array.isArray(productData.image)
@@ -151,7 +132,7 @@ router.post("/add", async (req, res) => {
           vendorId: productData.vendorId || null,
           company: productData.company || "N/A",
           stock: productData.stock || 0,
-          variantId: newVariantId,
+          variantId: newVariantId, // ✅ normalized
           selectedColor: productData.selectedColor || "",
           selectedSize: productData.selectedSize || "",
           variantImage: productData.variantImage || "",
@@ -178,13 +159,14 @@ router.delete("/remove/:guestId/:productId", async (req, res) => {
       return res.status(404).json({ success: false, message: "Cart not found" });
     }
 
-    if (variantId) {
+    const targetVariantId = normalizeVariantId(variantId);
+
+    if (targetVariantId) {
       cart.items = cart.items.filter(
         (item) =>
           !(
             String(item.productId) === productId &&
-            item.variantId &&
-            String(item.variantId) === variantId
+            normalizeVariantId(item.variantId) === targetVariantId
           )
       );
     } else {

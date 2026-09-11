@@ -24,7 +24,7 @@ import "./productdetails.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_IMAGE_BASE = "http://localhost:5177";
+const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
