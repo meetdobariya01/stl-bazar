@@ -15,13 +15,54 @@ const Category = require("../Models/Category");
 // ============================================================
 // 🆕 HELPER: Format product consistently (adds variants)
 // ============================================================
+// ✅ FIXED: Helper to clean subcategory strings
+const cleanSubString = (s) => {
+  if (!s) return "";
+  return String(s).replace(/[\[\]"']/g, "").trim();
+};
+
+const collectSubcategories = (productObj) => {
+  const allSubs = [];
+
+  // 1. subCategory
+  if (productObj.subCategory) allSubs.push(cleanSubString(productObj.subCategory));
+  
+  // 2. subcategory
+  if (productObj.subcategory) allSubs.push(cleanSubString(productObj.subcategory));
+  
+  // 3. subCategories array
+  if (Array.isArray(productObj.subCategories)) {
+    productObj.subCategories.forEach(s => allSubs.push(cleanSubString(s)));
+  }
+  
+  // 4. subcategories array
+  if (Array.isArray(productObj.subcategories)) {
+    productObj.subcategories.forEach(s => allSubs.push(cleanSubString(s)));
+  }
+  
+  // 5. categorySubcategoryMap
+  if (productObj.categorySubcategoryMap && typeof productObj.categorySubcategoryMap === "object") {
+    Object.values(productObj.categorySubcategoryMap).forEach(arr => {
+      if (Array.isArray(arr)) arr.forEach(s => allSubs.push(cleanSubString(s)));
+    });
+  }
+
+  // Remove empty + duplicates
+  return [...new Set(allSubs.filter(Boolean))];
+};
+
 const formatProduct = (p) => {
   const productObj = p.toObject ? p.toObject() : p;
+  const cleanSubs = collectSubcategories(productObj);
+
   return {
     ...productObj,
-    subcategory: productObj.subcategory || productObj.subCategory || "",
-    subcategories: productObj.subcategories || productObj.subCategories || [],
-    variants: productObj.variants || [],   // 🆕
+    // ✅ Synced fields (all same value)
+    subCategory: cleanSubs[0] || "",
+    subcategory: cleanSubs[0] || "",
+    subCategories: cleanSubs,
+    subcategories: cleanSubs,
+    variants: productObj.variants || [],
     inStock: productObj.stockQuantity > 0,
     availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
     stockStatus: productObj.stockStatus || "out_of_stock"
@@ -254,13 +295,17 @@ router.get("/categories/:category/subcategories", async (req, res) => {
   try {
     const { category } = req.params;
     const decodedCategory = decodeURIComponent(category);
+const s1 = await Product.distinct("subcategory", { category: decodedCategory });
+const s2 = await Product.distinct("subCategory", { category: decodedCategory });
+const s3 = await Product.distinct("subcategories", { category: decodedCategory });
+const s4 = await Product.distinct("subCategories", { category: decodedCategory });
+let fromProducts = [...s1, ...s2, ...s3, ...s4];
 
-    const s1 = await Product.distinct("subcategory", { category: decodedCategory });
-    const s2 = await Product.distinct("subCategory", { category: decodedCategory });
-    const s3 = await Product.distinct("subcategories", { category: decodedCategory });
-    const s4 = await Product.distinct("subCategories", { category: decodedCategory });
-    const fromProducts = [...s1, ...s2, ...s3, ...s4];
-
+// ✅ Clean each (remove brackets, quotes)
+fromProducts = fromProducts
+  .filter(Boolean)
+  .map(s => String(s).replace(/[\[\]"']/g, "").trim())
+  .filter(Boolean);
     let fromAdmin = [];
     try {
       const adminCategory = await Category.findOne({
@@ -343,12 +388,15 @@ router.get("/products", async (req, res) => {
 
     if (company) filter.company = company;
     if (category) filter.category = category;
-    if (subcategory) {
-      filter.$or = [
-        { subcategory: subcategory },
-        { subcategories: subcategory }
-      ];
-    }
+   if (subcategory) {
+  // ✅ Check all possible fields
+  filter.$or = [
+    { subcategory: subcategory },
+    { subCategory: subcategory },
+    { subcategories: subcategory },
+    { subCategories: subcategory },
+  ];
+}
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -392,31 +440,82 @@ router.get("/products", async (req, res) => {
 });
 
 // ============================================================
-// GET PRODUCT BY ID
+// GET PRODUCT BY ID  (✅ variant-aware stock — FIXED)
+// ============================================================
+// ============================================================
+// GET PRODUCT BY ID  (✅ variant-aware stock — FINAL FIX)
 // ============================================================
 router.get("/product/:id", async (req, res) => {
   try {
+    const { variantId } = req.query;
+
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     if (product.vendorId) {
       const vendor = await Vendor.findById(product.vendorId);
-      if (vendor && vendor.status === 'suspended') {
+      if (vendor && vendor.status === "suspended") {
         return res.status(403).json({
           message: "This product is currently unavailable",
-          status: 'suspended'
+          status: "suspended",
         });
       }
     }
 
     const response = formatProduct(product);
+
+    // ✅ FIX: Use string comparison for both ObjectId and string IDs
+    if (variantId && product.variants && product.variants.length > 0) {
+      const targetId = String(variantId).trim();
+
+      console.log("🔍 Variant lookup:", {
+        targetId,
+        availableIds: product.variants.map((v) =>
+          v._id ? v._id.toString() : null
+        ),
+      });
+
+      const variant = product.variants.find((v) => {
+        if (!v._id) return false;
+        return v._id.toString() === targetId;
+      });
+
+      if (variant) {
+        const variantStock = Math.max(
+          0,
+          (variant.stock || 0) - (variant.reservedStock || 0)
+        );
+
+        response.stock = variantStock;
+        response.stockQuantity = variantStock;
+        response.variantStock = variantStock;
+        response.variantId = variant._id;
+        response.inStock = variantStock > 0;
+        response.availableStock = variantStock;
+        response.stockStatus =
+          variantStock > 0 ? "in_stock" : "out_of_stock";
+
+        if (variant.price) response.price = variant.price;
+        if (variant.image) response.image = [variant.image];
+
+        console.log(`✅ Found variant, stock = ${variantStock}`);
+      } else {
+        console.log(`❌ Variant NOT found for ID: ${targetId}`);
+      }
+    } else {
+      console.log(
+        `⚠️ Skipping variant override. variantId="${variantId}", variants=${
+          product.variants?.length || 0
+        }`
+      );
+    }
+
     res.json(response);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Get product error:", err);
     res.status(500).json({ message: "Failed to fetch product" });
   }
 });
-
 // ============================================================
 // GET BEST SELLERS
 // ============================================================

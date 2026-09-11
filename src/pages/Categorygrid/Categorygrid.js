@@ -27,13 +27,13 @@ const VENDOR_BEND_URL = "https://api-vendor.native91.com";
 
 const formatImagePath = (image) => {
   if (!image) return "/images/placeholder.png";
-  
+
   let imgPath = image;
   if (Array.isArray(image)) {
     if (image.length === 0) return "/images/placeholder.png";
     imgPath = image[0];
   }
-  
+
   if (typeof imgPath !== "string") return "/images/placeholder.png";
   if (imgPath.trim() === "") return "/images/placeholder.png";
   if (imgPath.startsWith("http")) return imgPath;
@@ -83,7 +83,7 @@ const CategoryProducts = () => {
     if (!decodedCategory) return;
 
     setLoading(true);
-    
+
     const fetchProducts = async () => {
       try {
         let url = `${API_URL}/products`;
@@ -98,19 +98,44 @@ const CategoryProducts = () => {
         }
 
         // Filter by sub-category if specified (from URL)
+        // Filter by sub-category if specified (from URL)
+        // ✅ FIXED: Filter by sub-category - check ALL possible fields
         if (decodedSubCategory) {
+          const targetSub = decodedSubCategory.toLowerCase().trim();
+
           allProducts = allProducts.filter((p) => {
-            if (p.subCategory && p.subCategory.toLowerCase() === decodedSubCategory.toLowerCase()) {
-              return true;
+            // Collect ALL subcategories from all possible fields
+            const allSubs = [];
+
+            // 1. subCategory (camelCase)
+            if (p.subCategory) allSubs.push(p.subCategory);
+
+            // 2. subcategory (lowercase)
+            if (p.subcategory) allSubs.push(p.subcategory);
+
+            // 3. subCategories (camelCase array)
+            if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
+
+            // 4. subcategories (lowercase array)
+            if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
+
+            // 5. categorySubcategoryMap
+            if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+              Object.values(p.categorySubcategoryMap).forEach(arr => {
+                if (Array.isArray(arr)) allSubs.push(...arr);
+              });
             }
-            if (p.subCategories && Array.isArray(p.subCategories)) {
-              return p.subCategories.some(
-                (sub) => sub.toLowerCase() === decodedSubCategory.toLowerCase()
-              );
-            }
-            return false;
+
+            // Clean each subcategory (remove brackets, quotes, extra spaces)
+            const cleanSubs = allSubs
+              .filter(Boolean)
+              .map(s => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
+              .filter(Boolean);
+
+            // Check if any matches
+            return cleanSubs.includes(targetSub);
           });
-          // Set the selected sub-category filter to match URL
+
           setSelectedSubCategories([decodedSubCategory]);
         }
 
@@ -138,7 +163,7 @@ const CategoryProducts = () => {
 
         const subMap = {};
         const categories = catRes.data || [];
-        
+
         for (const cat of categories) {
           try {
             const subRes = await axios.get(`${API_URL}/categories/${encodeURIComponent(cat.name)}/subcategories`);
@@ -161,7 +186,7 @@ const CategoryProducts = () => {
             }
           }
         }
-        
+
         setAllSubCategories(subMap);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -178,27 +203,40 @@ const CategoryProducts = () => {
     // Filter by selected categories
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
-        selectedCategories.some(cat => 
+        selectedCategories.some(cat =>
           p.category && p.category.toLowerCase() === cat.toLowerCase()
         )
       );
     }
 
     // Filter by selected sub-categories - FIXED
+    // ✅ FIXED: Filter by selected sub-categories - check ALL fields
     if (selectedSubCategories.length > 0) {
       filtered = filtered.filter((p) => {
-        // Check if product matches ANY selected sub-category
-        return selectedSubCategories.some(selectedSub => {
-          // Check primary subCategory
-          if (p.subCategory && p.subCategory.toLowerCase() === selectedSub.toLowerCase()) {
-            return true;
-          }
-          // Check subCategories array
-          if (p.subCategories && Array.isArray(p.subCategories)) {
-            return p.subCategories.some(s => s.toLowerCase() === selectedSub.toLowerCase());
-          }
-          return false;
-        });
+        // Collect ALL subcategories from product
+        const allSubs = [];
+
+        if (p.subCategory) allSubs.push(p.subCategory);
+        if (p.subcategory) allSubs.push(p.subcategory);
+        if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
+        if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
+
+        if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+          Object.values(p.categorySubcategoryMap).forEach(arr => {
+            if (Array.isArray(arr)) allSubs.push(...arr);
+          });
+        }
+
+        // Clean
+        const cleanSubs = allSubs
+          .filter(Boolean)
+          .map(s => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
+          .filter(Boolean);
+
+        // Check if ANY selected subcategory matches
+        return selectedSubCategories.some(selectedSub =>
+          cleanSubs.includes(selectedSub.toLowerCase().trim())
+        );
       });
     }
 
@@ -289,13 +327,13 @@ const CategoryProducts = () => {
 
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
-    
+
     setIsTogglingWishlist(prev => ({ ...prev, [productId]: true }));
-    
+
     try {
       const product = products.find(p => p._id === productId);
       if (!product) return;
-      
+
       await toggleWishlist({
         productId: product._id,
         name: product.name,
@@ -303,9 +341,9 @@ const CategoryProducts = () => {
         image: Array.isArray(product.image) ? product.image[0] : product.image,
         company: product.company || "Native91",
       });
-      
+
       await fetchWishlist();
-      
+
     } catch (error) {
       console.error("Error toggling wishlist:", error);
       alert("Something went wrong. Please try again.");
@@ -316,9 +354,9 @@ const CategoryProducts = () => {
 
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
-    
+
     setIsAddingToCart(prev => ({ ...prev, [item._id]: true }));
-    
+
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
@@ -435,7 +473,7 @@ const CategoryProducts = () => {
                 </h1>
                 {decodedSubCategory && (
                   <p className="hero-breadcrumb">
-                    <span 
+                    <span
                       onClick={() => navigate(`/category/${encodeURIComponent(decodedCategory)}`)}
                       style={{ cursor: "pointer", color: "#0D3B2E", textDecoration: "underline" }}
                     >
@@ -658,7 +696,7 @@ const CategoryProducts = () => {
                 <div className="text-center py-5">
                   <h5>No products found</h5>
                   <p className="text-muted">
-                    {decodedSubCategory 
+                    {decodedSubCategory
                       ? `No products found in "${decodedSubCategory}" under "${decodedCategory}"`
                       : `No products found in "${decodedCategory}"`
                     }
@@ -714,11 +752,35 @@ const CategoryProducts = () => {
                                 )}
                               </div>
                               {/* Sub-Category Badge */}
-                              {item.subCategory && (
-                                <div className="sub-category-badge">
-                                  {item.subCategory}
-                                </div>
-                              )}
+                              {(() => {
+                                // Collect all subcategories
+                                const allSubs = [];
+                                if (item.subCategory) allSubs.push(item.subCategory);
+                                if (item.subcategory) allSubs.push(item.subcategory);
+                                if (Array.isArray(item.subCategories)) allSubs.push(...item.subCategories);
+                                if (Array.isArray(item.subcategories)) allSubs.push(...item.subcategories);
+                                if (item.categorySubcategoryMap && typeof item.categorySubcategoryMap === "object") {
+                                  Object.values(item.categorySubcategoryMap).forEach(arr => {
+                                    if (Array.isArray(arr)) allSubs.push(...arr);
+                                  });
+                                }
+
+                                const cleanSubs = allSubs
+                                  .filter(Boolean)
+                                  .map(s => String(s).replace(/[\[\]"']/g, "").trim())
+                                  .filter(Boolean);
+
+                                const uniqueSubs = [...new Set(cleanSubs)];
+
+                                if (uniqueSubs.length === 0) return null;
+
+                                return (
+                                  <div className="sub-category-badge">
+                                    {uniqueSubs[0]}
+                                    {uniqueSubs.length > 1 && ` +${uniqueSubs.length - 1}`}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <Card.Body>
                               <div className="product-brand">
@@ -744,7 +806,7 @@ const CategoryProducts = () => {
                               <div className="product-price">
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
-                              <Button 
+                              <Button
                                 className="add-to-cart-btn-category"
                                 onClick={(e) => handleAddToCart(e, item)}
                                 disabled={isAdding}

@@ -25,6 +25,9 @@ import "./productdetails.css";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_IMAGE_BASE = "http://localhost:5177";
+// const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
+const ADMIN_IMAGE_BASE = "http://localhost:7001";
+
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -250,23 +253,114 @@ const Productdetails = () => {
     isMounted.current = true;
     return () => { isMounted.current = false; };
   }, []);
-
+  // ✅ FIXED: Use /companies endpoint (same as product.js)
   const fetchBrandDetails = useCallback(async (companyName) => {
     if (!companyName) return;
     setBrandLoading(true);
+
+    // ✅ Helper: Normalize image URL (same as product.js)
+    const normalizeImageUrl = (logo) => {
+      if (!logo) return null;
+
+      // Object handle karo
+      if (typeof logo === "object" && !Array.isArray(logo)) {
+        if (logo.image && typeof logo.image === "string") {
+          logo = logo.image;
+        } else if (logo.url && typeof logo.url === "string") {
+          logo = logo.url;
+        } else {
+          return null;
+        }
+      }
+
+      // Array handle karo
+      if (Array.isArray(logo)) {
+        logo = logo[0];
+      }
+
+      if (!logo || typeof logo !== "string") return null;
+
+      // Full URL check
+      if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
+
+      // Relative URL fix (same as product.js)
+      if (logo.startsWith("/images")) return `${ADMIN_IMAGE_BASE}${logo}`;
+      if (logo.startsWith("/uploads") || logo.startsWith("/public"))
+        return `${VENDOR_IMAGE_BASE}${logo}`;
+
+      return `${ADMIN_IMAGE_BASE}/uploads/${logo}`;
+    };
+
     try {
-      const response = await axios.get(`${API_URL}/company/details/${encodeURIComponent(companyName)}`);
-      if (response.data && response.data.success) {
-        const company = response.data.company;
-        setBrandName(company.name || companyName);
-        setBrandDescription(company.description || `${company.name} - Premium brand on Native91`);
-        setBrandLogo(company.logo || null);
+      console.log("🔍 Fetching brand details for:", companyName);
+
+      // ✅ Use /companies endpoint (SAME AS product.js)
+      const response = await axios.get(`${API_URL}/companies`, {
+        timeout: 15000,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      });
+
+      console.log("📦 Companies API response:", response.data);
+
+      // ✅ Extract companies array (multiple formats support)
+      let companiesData = [];
+      if (response.data) {
+        if (response.data.success && Array.isArray(response.data.companies)) {
+          companiesData = response.data.companies;
+        } else if (Array.isArray(response.data)) {
+          companiesData = response.data;
+        } else if (response.data.companies && Array.isArray(response.data.companies)) {
+          companiesData = response.data.companies;
+        }
+      }
+
+      console.log(`📦 Found ${companiesData.length} companies`);
+
+      // ✅ Find matching company (case-insensitive)
+      const matchedCompany = companiesData.find((c) => {
+        const cName = (c.name || "").toLowerCase().trim();
+        const targetName = companyName.toLowerCase().trim();
+        return cName === targetName;
+      });
+
+      if (matchedCompany) {
+        console.log("✅ Matched company:", matchedCompany);
+
+        setBrandName(matchedCompany.name || companyName);
+
+        // ✅ Use description from API (same as product.js)
+        const description =
+          matchedCompany.description ||
+          `${matchedCompany.name} - Premium brand on Native91`;
+
+        setBrandDescription(description);
+
+        // ✅ Normalize logo URL (same as product.js)
+        setBrandLogo(
+          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
+        );
+
+        console.log("✅ Brand data set:", {
+          name: matchedCompany.name,
+          description,
+          logo: matchedCompany.logo,
+        });
       } else {
+        console.warn(`⚠️ Company "${companyName}" not found in list`);
         setBrandName(companyName);
         setBrandDescription(`${companyName} - Premium brand on Native91`);
         setBrandLogo(null);
       }
     } catch (err) {
+      console.error("❌ Brand fetch error:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+
       setBrandName(companyName);
       setBrandDescription(`${companyName} - Premium brand on Native91`);
       setBrandLogo(null);
@@ -402,23 +496,35 @@ const Productdetails = () => {
     }
   }, [product]);
 
+  // ✅ Product images — VENDOR thi aave chhe
   const getImageUrl = useCallback((image) => {
     if (!image) return "/images/placeholder.png";
+    
     let img = image;
     if (Array.isArray(image)) {
       if (image.length === 0) return "/images/placeholder.png";
       img = image[0];
     }
-    const imgStr = String(img).trim();
+    
+    if (!img || typeof img !== "string") return "/images/placeholder.png";
+    
+    const imgStr = img.trim();
+    if (!imgStr) return "/images/placeholder.png";
+
+    // Full URL — as is
     if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) return imgStr;
+
+    // ✅ Product images → VENDOR
     if (imgStr.startsWith("/uploads")) return `${VENDOR_IMAGE_BASE}${imgStr}`;
-    if (imgStr.startsWith("/images")) return imgStr;
-    if (!imgStr.startsWith("/") && !imgStr.startsWith("http")) {
+    if (imgStr.startsWith("/images")) return `${VENDOR_IMAGE_BASE}${imgStr}`;
+
+    // Relative path → Vendor uploads
+    if (!imgStr.startsWith("/")) {
       return `${VENDOR_IMAGE_BASE}/uploads/${imgStr}`;
     }
-    return `${API_URL}${imgStr}`;
-  }, []);
 
+    return `${VENDOR_IMAGE_BASE}${imgStr}`;
+  }, []);
   const getVariantImageUrl = useCallback((imagePath) => {
     if (!imagePath) return "/images/placeholder.png";
     return getImageUrl(imagePath);

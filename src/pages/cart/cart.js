@@ -35,10 +35,9 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// const VENDOR_BACKEND_URL =
-//   "https://api-vendor.native91.com";
+const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
 
-const VENDOR_BACKEND_URL = "http://localhost:5177"; // Adjust this to your backend URL
+// const VENDOR_BACKEND_URL = "http://localhost:5177"; // Adjust this to your backend URL
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -124,39 +123,69 @@ const Cart = () => {
   const fetchAllProductStocks = async (items) => {
     const stockPromises = items.map(async (item) => {
       try {
-        const response = await axios.get(`${API_URL}/product/${item.productId}`);
-        return { productId: item.productId, stock: response.data.stock || 0 };
+        // ✅ Convert ObjectId to string safely
+        const variantIdStr =
+          item.variantId && item.variantId.toString
+            ? item.variantId.toString()
+            : item.variantId || null;
+
+        const url = variantIdStr
+          ? `${API_URL}/product/${item.productId}?variantId=${variantIdStr}`
+          : `${API_URL}/product/${item.productId}`;
+
+        const response = await axios.get(url);
+        return {
+          key: `${item.productId}_${variantIdStr || "default"}`,
+          stock: response.data.stock ?? 0,
+        };
       } catch (err) {
         console.error(`Failed to fetch stock for ${item.productId}:`, err);
-        return { productId: item.productId, stock: item.quantity || 0 };
+        const variantIdStr =
+          item.variantId && item.variantId.toString
+            ? item.variantId.toString()
+            : item.variantId || null;
+        return {
+          key: `${item.productId}_${variantIdStr || "default"}`,
+          stock: item.quantity || 0,
+        };
       }
     });
 
     try {
       const results = await Promise.all(stockPromises);
       const stockMap = {};
-      results.forEach(({ productId, stock }) => {
-        stockMap[productId] = stock;
+      results.forEach(({ key, stock }) => {
+        stockMap[key] = stock;
       });
+      console.log("📦 Stock map keys:", Object.keys(stockMap), stockMap);
       setProductStock(stockMap);
     } catch (err) {
       console.error("Failed to fetch product stocks:", err);
     }
   };
-
   // ✅ Fetch single product stock
-  const fetchProductStock = async (productId) => {
+  const fetchProductStock = async (productId, variantId = null) => {
+    const variantIdStr =
+      variantId && variantId.toString ? variantId.toString() : variantId;
+
+    const key = `${productId}_${variantIdStr || "default"}`;
+
     try {
-      setStockLoading(prev => ({ ...prev, [productId]: true }));
-      const response = await axios.get(`${API_URL}/product/${productId}`);
-      const stock = response.data.stock || 0;
-      setProductStock(prev => ({ ...prev, [productId]: stock }));
+      setStockLoading((prev) => ({ ...prev, [key]: true }));
+
+      const url = variantIdStr
+        ? `${API_URL}/product/${productId}?variantId=${variantIdStr}`
+        : `${API_URL}/product/${productId}`;
+
+      const response = await axios.get(url);
+      const stock = response.data.stock ?? 0;
+      setProductStock((prev) => ({ ...prev, [key]: stock }));
       return stock;
     } catch (err) {
       console.error(`Failed to fetch stock for ${productId}:`, err);
       return 0;
     } finally {
-      setStockLoading(prev => ({ ...prev, [productId]: false }));
+      setStockLoading((prev) => ({ ...prev, [key]: false }));
     }
   };
 
@@ -495,13 +524,23 @@ const Cart = () => {
                 ) : (
                   <>
                     {cart.items.map((item, index) => {
-                      const stock = productStock[item.productId] !== undefined 
-                        ? productStock[item.productId] 
-                        : item.quantity;
+                      // ✅ Convert ObjectId → string for safe key building
+                      const variantIdStr =
+                        item.variantId && item.variantId.toString
+                          ? item.variantId.toString()
+                          : item.variantId || "default";
+
+                      const stockKey = `${item.productId}_${variantIdStr}`;
+
+                      const stock =
+                        productStock[stockKey] !== undefined
+                          ? productStock[stockKey]
+                          : item.quantity;
+
                       const stockStatus = getStockStatus(stock);
                       const isLowStock = stock > 0 && stock <= 10;
                       const isOutOfStock = stock === 0;
-                      
+
                       return (
                         <motion.div
                           key={`${item.productId}_${item.variantId || 'default'}`}
@@ -556,12 +595,12 @@ const Cart = () => {
                                     <h5 className="funnel-sans">
                                       ₹{formatPrice(item.price)}
                                     </h5>
-                                    
+
                                     {/* ✅ Stock Status Badge */}
-                                    {stockLoading[item.productId] ? (
+                                    {stockLoading[stockKey] ? (
                                       <Spinner animation="border" size="sm" className="mb-2" />
                                     ) : (
-                                      <Badge 
+                                      <Badge
                                         bg={stockStatus.color}
                                         className="mb-2 d-inline-block"
                                         style={{ fontSize: '12px', padding: '5px 10px' }}
