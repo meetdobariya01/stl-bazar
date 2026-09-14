@@ -55,7 +55,8 @@ import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL =
   process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_IMAGE_BASE = "http://localhost:5177";
+// const VENDOR_IMAGE_BASE = "http://localhost:5177";
+const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -295,7 +296,8 @@ const Productdetails = () => {
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   const [stock, setStock] = useState(0);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
-
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
@@ -1152,88 +1154,58 @@ const Productdetails = () => {
                 )}
 
                 <div
-                  className="main-image-container"
-                  style={{ position: "relative" }}
+                  className={`main-image-box ${isImageZoomed ? "image-zoom-active" : ""}`}
+                  onMouseEnter={() => setIsImageZoomed(true)}
+                  onMouseLeave={() => {
+                    setIsImageZoomed(false);
+                    setZoomPosition({ x: 50, y: 50 });
+                  }}
+                  onMouseMove={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                    setZoomPosition({
+                      x: Math.max(0, Math.min(100, x)),
+                      y: Math.max(0, Math.min(100, y)),
+                    });
+                  }}
+                  onClick={() => setIsImageFullscreen(true)}
+                  style={{
+                    position: "relative",
+                    overflow: "hidden",
+                    cursor: isImageZoomed ? "zoom-out" : "zoom-in",
+                  }}
                 >
-                  <motion.div
-                    className="main-image-box"
-                    key={`main-img-${activeImg}`}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    onClick={() => setIsImageFullscreen(true)}
-                    style={{ cursor: "zoom-in" }}
-                  >
-                    <img
-                      src={
-                        activeImg ||
-                        productImages[0] ||
-                        "/images/placeholder.png"
-                      }
-                      alt={product.name}
-                      className="main-product-image"
-                      onError={(e) => {
-                        e.target.src = "/images/placeholder.png";
-                      }}
-                    />
-                  </motion.div>
+                  <img
+                    src={
+                      activeImg || productImages[0] || "/images/placeholder.png"
+                    }
+                    alt={product.name}
+                    className="main-product-image"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      transform: isImageZoomed ? "scale(2)" : "scale(1)",
+                      transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                      transition: isImageZoomed
+                        ? "transform 0.1s ease-out"
+                        : "transform 0.3s ease-out",
+                    }}
+                    onError={(e) => {
+                      e.target.src = "/images/placeholder.png";
+                    }}
+                  />
 
-                  {hasMultipleImages && (
-                    <>
-                      <button
-                        className="gallery-nav prev"
-                        onClick={prevImage}
-                        style={{
-                          position: "absolute",
-                          left: "10px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          background: "transparent",
-                          color: "black",
-                          border: "none",
-                          borderRadius: "50%",
-                          width: "40px",
-                          height: "40px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          zIndex: 10,
-                        }}
-                      >
-                        <FaChevronLeft />
-                      </button>
-                      <button
-                        className="gallery-nav next"
-                        onClick={nextImage}
-                        style={{
-                          position: "absolute",
-                          right: "10px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          background: "transparent",
-                          color: "black",
-                          border: "none",
-                          borderRadius: "50%",
-                          width: "40px",
-                          height: "40px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          zIndex: 10,
-                        }}
-                      >
-                        <FaChevronRight />
-                      </button>
-                    </>
-                  )}
-
-                  {hasMultipleImages && (
-                    <div className="image-counter">
-                      {currentImageIndex + 1} / {productImages.length}
+                  {/* Zoom indicator */}
+                  {/* {!isImageZoomed && (
+                    <div className="image-zoom-hint">
+                      <span>🔍</span>
+                      Hover to zoom
                     </div>
-                  )}
+                  )} */}
                 </div>
               </div>
             </Col>
