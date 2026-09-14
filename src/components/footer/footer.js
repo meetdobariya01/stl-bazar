@@ -43,7 +43,11 @@ const Footer = () => {
                 />
 
                 <p className="footer-text">
-                  Native91 is a curated marketplace for discovering and shopping exceptional homegrown Indian brands. Explore thoughtfully made products across home, lifestyle, fashion, beauty, food, gifting, and more, while supporting the people and stories behind them.
+                  Native91 is a curated marketplace for discovering and shopping
+                  exceptional homegrown Indian brands. Explore thoughtfully made
+                  products across home, lifestyle, fashion, beauty, food,
+                  gifting, and more, while supporting the people and stories
+                  behind them.
                 </p>
                 <div className="d-flex align-items-center gap-2">
                   <img
@@ -93,8 +97,18 @@ const Footer = () => {
                   <NavLink to="#"> E-Gift Voucher</NavLink>
                 </li>
               </ul>
+              <div className="d-flex align-items-center gap-3 mt-4 social-icons">
+                <h5 className="mb-0 lexend ">FOLLOW US ON</h5>
 
-              <h5 className="mt-4 lexend">FOLLOW US ON</h5>
+                <a
+                  href="https://www.instagram.com/native91.official?utm_source=ig_web_button_share_sheet&igsi=ZDNlZDc0MzIxNw=="
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Follow us on Instagram"
+                >
+                  <FaInstagram />
+                </a>
+              </div>{" "}
               <div className="social-icons">
                 {/* <a href="https://facebook.com" target="_blank">
                   <FaFacebookF />
@@ -102,12 +116,12 @@ const Footer = () => {
                 <a href="https://pinterest.com" target="_blank">
                   <FaPinterestP />
                 </a> */}
-                <a
+                {/* <a
                   href="https://www.instagram.com/native91.official?utm_source=ig_web_button_share_sheet&igsi=ZDNlZDc0MzIxNw=="
                   target="_blank"
                 >
                   <FaInstagram />
-                </a>
+                </a> */}
                 {/* <a href="mailto:support@native91.com" target="_blank">
                   <FaEnvelope />
                 </a>
@@ -164,7 +178,10 @@ const Footer = () => {
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
-                Native91 is a curated marketplace for discovering and shopping exceptional homegrown Indian brands. Explore thoughtfully made products across home, lifestyle, fashion, beauty, food, gifting, and more, while supporting the people and stories behind them.
+                Native91 is a curated marketplace for discovering and shopping
+                exceptional homegrown Indian brands. Explore thoughtfully made
+                products across home, lifestyle, fashion, beauty, food, gifting,
+                and more, while supporting the people and stories behind them.
               </p>
               <div className="d-flex align-items-center gap-2">
                 <img
@@ -281,7 +298,7 @@ const Footer = () => {
 
       {/* WHATSAPP BUTTON */}
       <a
-        href="https://wa.me/919824018555?text=Hello%20Native91,%20I%20have%20a%20query%20about%20your%20products."
+        href="https://wa.me/919998323998?text=Hello%20Native91,%20I%20have%20a%20query%20about%20your%20products."
         target="_blank"
         className="whatsapp-btn"
       >
