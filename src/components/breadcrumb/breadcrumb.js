@@ -24,10 +24,17 @@ const Breadcrumb = () => {
             {/* Other Pages */}
             {pathnames.map((name, index) => {
               const routeTo = `/${pathnames.slice(0, index + 1).join("/")}`;
-
               const isLast = index === pathnames.length - 1;
 
-              const pageName = name
+              // 🆕 Decode URL + format
+              let decoded = name;
+              try {
+                decoded = decodeURIComponent(name);
+              } catch (e) {
+                decoded = name;
+              }
+
+              const pageName = decoded
                 .replace(/-/g, " ")
                 .replace(/\b\w/g, (char) => char.toUpperCase());
 
