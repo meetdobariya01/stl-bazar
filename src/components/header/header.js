@@ -1,4 +1,4 @@
-// Header.jsx - FIXED
+// Header.jsx - FULLY FIXED — slug links + Admin API path
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -24,23 +24,94 @@ import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
+import { createSlug } from "../../utils/slugUtils";
 import "./header.css";
 
-// ✅ API URLs
+// ✅ API URLs — FIXED admin path
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
-const ADMIN_API_URL = "https://api-admin.native91.com/api";
-// const VENDOR_API_URL = "http://localhost:9000/api";
-// const ADMIN_API_URL = "http://localhost:7001/api/category";
+const ADMIN_API_URL = "https://api-admin.native91.com/api/category";
 
-
-// ✅ Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+    headers: { Authorization: `Bearer ${token}` },
   };
+};
+
+// 🆕 Parse sub-categories — handles objects, arrays, nested strings
+const parseSubCategories = (input, depth = 0) => {
+  if (!input || depth > 10) return [];
+
+  if (Array.isArray(input)) {
+    const out = [];
+    input.forEach((item) => {
+      const parsed = parseSubCategories(item, depth + 1);
+      parsed.forEach((p) => {
+        if (p && !out.includes(p)) out.push(p);
+      });
+    });
+    return out;
+  }
+
+  if (typeof input === "object" && input !== null) {
+    if (input.status === "inactive") return [];
+    if (typeof input.name === "string") {
+      return parseSubCategories(input.name, depth + 1);
+    }
+    return [];
+  }
+
+  if (typeof input === "string") {
+    let s = input.trim();
+    if (!s) return [];
+
+    if (
+      (s.startsWith("[") && s.endsWith("]")) ||
+      (s.startsWith("{") && s.endsWith("}")) ||
+      (s.startsWith('"') && s.endsWith('"'))
+    ) {
+      try {
+        const parsed = JSON.parse(s);
+        const result = parseSubCategories(parsed, depth + 1);
+        if (result.length > 0) return result;
+      } catch {}
+    }
+
+    let cleaned = s;
+    let prev = null;
+    while (cleaned !== prev) {
+      prev = cleaned;
+      cleaned = cleaned
+        .replace(/^[\[\]\\"]+/, "")
+        .replace(/[\[\]\\"]+$/, "")
+        .trim();
+    }
+
+    if (cleaned.length === 0 || cleaned.length > 200) return [];
+
+    if (cleaned.includes(",") && !cleaned.includes(" & ")) {
+      const parts = cleaned
+        .split(",")
+        .map((p) => p.replace(/^[\[\]\\"]+|[\[\]\\"]+$/g, "").trim())
+        .filter((p) => p.length > 0 && p.length < 100);
+      if (parts.length > 1) return parts;
+    }
+
+    return [cleaned];
+  }
+
+  return [];
+};
+
+const pickSubsFromResponse = (data) => {
+  if (!data) return [];
+  return (
+    data.subCategories ||
+    data.subcategories ||
+    data.sub_categories ||
+    data.subCategoryList ||
+    []
+  );
 };
 
 const Header = () => {
@@ -59,7 +130,7 @@ const Header = () => {
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [categorySubCategories, setCategorySubCategories] = useState({});
   const [loadingSubCategories, setLoadingSubCategories] = useState({});
-  
+
   const searchTimeout = useRef(null);
   const searchRef = useRef(null);
   const categoryMenuTimeout = useRef(null);
@@ -67,45 +138,57 @@ const Header = () => {
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
 
-  // Fetch categories from ADMIN API
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         console.log("🔍 Fetching categories from Admin API...");
         const response = await axios.get(`${ADMIN_API_URL}/categories`, {
-          ...getAuthHeaders()
+          ...getAuthHeaders(),
         });
-        
+
         let categoriesData = [];
         if (response.data.success && Array.isArray(response.data.categories)) {
           categoriesData = response.data.categories;
         } else if (Array.isArray(response.data)) {
           categoriesData = response.data;
         }
-        
-        const activeCategories = categoriesData.filter(cat => cat.status === "active");
+
+        const activeCategories = categoriesData.filter(
+          (cat) => cat.status === "active"
+        );
         setCategories(activeCategories);
         console.log(`📂 Found ${activeCategories.length} categories`);
-        
-        // Fetch sub-categories for each category from VENDOR API
-        await fetchAllSubCategories(activeCategories);
+
+        // 🆕 Admin categories પાસેથી જ sub-categories already છે
+        const subMap = {};
+        activeCategories.forEach((cat) => {
+          if (Array.isArray(cat.subcategories)) {
+            subMap[cat.name] = cat.subcategories
+              .filter((sc) => !sc.status || sc.status === "active")
+              .map((sc) => (typeof sc === "string" ? sc : sc.name))
+              .filter(Boolean);
+          } else {
+            subMap[cat.name] = [];
+          }
+        });
+        setCategorySubCategories(subMap);
+        console.log("📂 Sub-categories from Admin API:", subMap);
       } catch (error) {
         console.error("Error fetching categories:", error);
-        // Fallback categories
         const defaultCategories = [
           { _id: "1", name: "Organic Food & Healthy Snacks" },
           { _id: "2", name: "Beauty & Wellness" },
           { _id: "3", name: "Gifts & Hampers" },
           { _id: "4", name: "Handmade Home Decor" },
           { _id: "5", name: "Sustainable Lifestyle" },
-          { _id: "6", name: "Jewelry & Accessories" },
+          { _id: "6", name: "Jewellery & Accessories" },
           { _id: "7", name: "Pet Care" },
           { _id: "8", name: "Kids Fashion & Toys" },
           { _id: "9", name: "Desk Essentials" },
           { _id: "10", name: "Ethnic Fashion" },
         ];
         setCategories(defaultCategories);
-        await fetchAllSubCategories(defaultCategories);
       } finally {
         setLoadingCategories(false);
       }
@@ -113,69 +196,34 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // Fetch sub-categories for all categories from VENDOR API
-  const fetchAllSubCategories = async (categoriesList) => {
-    const subMap = {};
-    
-    for (const category of categoriesList) {
-      try {
-        console.log(`🔍 Fetching sub-categories for: ${category.name}`);
-        const response = await axios.get(
-          `${VENDOR_API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`,
-          {
-            ...getAuthHeaders()
-          }
-        );
-        
-        if (response.data && response.data.subCategories) {
-          subMap[category.name] = response.data.subCategories;
-          console.log(`✅ ${category.name}: ${response.data.subCategories.length} sub-categories`);
-        } else {
-          subMap[category.name] = [];
-          console.log(`⚠️ ${category.name}: No sub-categories found`);
-        }
-      } catch (error) {
-        console.error(`Error fetching sub-categories for ${category.name}:`, error);
-        subMap[category.name] = [];
-      }
-    }
-    
-    setCategorySubCategories(subMap);
-    console.log("📂 Final sub-categories map:", subMap);
-  };
-
-  // Fetch sub-categories for a specific category on hover
+  // 🆕 Fetch sub-categories on hover (fallback — if not loaded)
   const fetchSubCategoriesForCategory = async (categoryName) => {
     if (categorySubCategories[categoryName] && categorySubCategories[categoryName].length > 0) {
       return categorySubCategories[categoryName];
     }
-    
-    setLoadingSubCategories(prev => ({ ...prev, [categoryName]: true }));
-    
+
+    setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: true }));
+
     try {
       const response = await axios.get(
         `${VENDOR_API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`,
-        {
-          ...getAuthHeaders()
-        }
+        { ...getAuthHeaders() }
       );
-      const subs = response.data?.subCategories || [];
-      
-      setCategorySubCategories(prev => ({
+      const subs = parseSubCategories(pickSubsFromResponse(response.data));
+
+      setCategorySubCategories((prev) => ({
         ...prev,
-        [categoryName]: subs
+        [categoryName]: subs,
       }));
-      
       return subs;
     } catch (error) {
-      console.error(`Error fetching sub-categories for ${categoryName}:`, error);
+      console.warn(`Sub-categories fetch failed for ${categoryName}:`, error.message);
       return [];
     } finally {
-      setLoadingSubCategories(prev => ({ ...prev, [categoryName]: false }));
+      setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: false }));
     }
   };
 
-  // Handle category hover
   const handleCategoryHover = (categoryName) => {
     if (categoryMenuTimeout.current) {
       clearTimeout(categoryMenuTimeout.current);
@@ -184,7 +232,6 @@ const Header = () => {
     fetchSubCategoriesForCategory(categoryName);
   };
 
-  // Handle category leave
   const handleCategoryLeave = () => {
     categoryMenuTimeout.current = setTimeout(() => {
       setHoveredCategory(null);
@@ -210,7 +257,6 @@ const Header = () => {
     };
   }, [fetchCart, fetchWishlist]);
 
-  // Click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -222,30 +268,24 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Live search
   const fetchLiveSuggestions = async (query) => {
     if (!query || query.trim().length < 2) {
       setRecommendations([]);
       setShowRecommendations(false);
       return;
     }
-
     try {
-      console.log(`🔍 Fetching suggestions for: "${query}"`);
       const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
       });
-
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
-        console.log(`✅ Found ${response.data.products.length} products`);
       } else {
         setRecommendations([]);
         setShowRecommendations(false);
-        console.log("❌ No products found");
       }
     } catch (error) {
       console.error("Live search error:", error);
@@ -257,12 +297,7 @@ const Header = () => {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    console.log(`🔍 Typing: "${value}"`);
-
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
-    }
-
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => {
       if (value.trim().length >= 2) {
         fetchLiveSuggestions(value);
@@ -278,12 +313,11 @@ const Header = () => {
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
     setIsLoading(true);
     try {
       const response = await axios.get(`${VENDOR_API_URL}/products/search`, {
         params: { keyword: searchQuery },
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
       });
       setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
@@ -302,7 +336,7 @@ const Header = () => {
     setShowRecommendations(false);
     setSearchQuery("");
     setRecommendations([]);
-    navigate(`/product/${product._id}`);
+    navigate(`/product/${createSlug(product.name)}`);
   };
 
   useEffect(() => {
@@ -311,6 +345,7 @@ const Header = () => {
     };
   }, []);
 
+  // 🆕 MENU with SLUG links
   const menu = [
     { title: "Home", link: "/" },
     { title: "Brands", link: "/product" },
@@ -318,7 +353,7 @@ const Header = () => {
       title: "Category",
       dropdown: categories.map((cat) => ({
         title: cat.name,
-        link: `/category/${encodeURIComponent(cat.name)}`,
+        link: `/category/${createSlug(cat.name)}`, // ✅ slug
         productCount: cat.productCount || 0,
         subCategories: categorySubCategories[cat.name] || [],
         loading: loadingSubCategories[cat.name] || false,
@@ -343,7 +378,6 @@ const Header = () => {
   return (
     <>
       <div className="lexend">
-        {/* SEARCH OVERLAY */}
         <AnimatePresence>
           {showSearch && (
             <motion.div
@@ -369,20 +403,9 @@ const Header = () => {
                       className="ms-2"
                       disabled={isLoading}
                     >
-                      {isLoading ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : (
-                        "Search"
-                      )}
+                      {isLoading ? <Spinner animation="border" size="sm" /> : "Search"}
                     </Button>
                   </Form>
-
-                  {isLoading && !recommendations.length && (
-                    <div className="search-loading">
-                      <Spinner animation="border" size="sm" />
-                      <span className="ms-2">Searching...</span>
-                    </div>
-                  )}
 
                   {showRecommendations && recommendations.length > 0 && (
                     <div className="search-recommendations-dropdown">
@@ -407,42 +430,16 @@ const Header = () => {
                             />
                           </div>
                           <div className="recommendation-info">
-                            <div className="recommendation-name">
-                              {product.name}
-                            </div>
-                            <div className="recommendation-price">
-                              ₹{product.price}
-                            </div>
+                            <div className="recommendation-name">{product.name}</div>
+                            <div className="recommendation-price">₹{product.price}</div>
                             <div className="recommendation-company">
                               {product.company || "Native91"}
                             </div>
                           </div>
                         </div>
                       ))}
-                      <div className="recommendations-footer">
-                        <button
-                          className="view-all-btn"
-                          onClick={() => {
-                            setShowSearch(false);
-                            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-                          }}
-                        >
-                          View all results for "{searchQuery}"
-                        </button>
-                      </div>
                     </div>
                   )}
-
-                  {!isLoading &&
-                    searchQuery.length >= 2 &&
-                    !showRecommendations &&
-                    !showSearchResults &&
-                    recommendations.length === 0 &&
-                    searchResults.length === 0 && (
-                      <div className="search-no-results">
-                        <span>No products found for "{searchQuery}"</span>
-                      </div>
-                    )}
 
                   <button
                     className="close-search"
@@ -463,7 +460,6 @@ const Header = () => {
           )}
         </AnimatePresence>
 
-        {/* HEADER */}
         <Navbar
           expand="lg"
           className={`premium-navbar ${isScrolled ? "navbar-scrolled" : ""}`}
@@ -478,7 +474,7 @@ const Header = () => {
               {menu.map((item, index) => (
                 <motion.div key={index} whileHover={{ y: -3 }}>
                   {item.dropdown ? (
-                    <Dropdown 
+                    <Dropdown
                       className="premium-dropdown category-dropdown"
                       onMouseEnter={() => handleCategoryHover(item.title)}
                       onMouseLeave={handleCategoryLeave}
@@ -488,11 +484,6 @@ const Header = () => {
                         className="premium-link dropdown-toggle-custom"
                       >
                         {item.title}
-                        {loadingCategories && (
-                          <span className="ms-1" style={{ fontSize: "10px" }}>
-                            ...
-                          </span>
-                        )}
                       </Dropdown.Toggle>
 
                       <Dropdown.Menu className="category-mega-menu">
@@ -502,20 +493,15 @@ const Header = () => {
                               Loading categories...
                             </span>
                           </Dropdown.Item>
-                        ) : item.dropdown.length === 0 ? (
-                          <Dropdown.Item className="dropdown-item-custom text-center">
-                            <span className="dropdown-error">
-                              No categories available
-                            </span>
-                          </Dropdown.Item>
                         ) : (
                           <div className="category-menu-wrapper">
-                            {/* Categories Column */}
                             <div className="category-list-column">
                               {item.dropdown.map((sub, i) => (
                                 <div
                                   key={i}
-                                  className={`category-menu-item ${hoveredCategory === sub.title ? 'active' : ''}`}
+                                  className={`category-menu-item ${
+                                    hoveredCategory === sub.title ? "active" : ""
+                                  }`}
                                   onMouseEnter={() => handleCategoryHover(sub.title)}
                                 >
                                   <NavLink
@@ -524,20 +510,15 @@ const Header = () => {
                                     onClick={() => setShowMenu(false)}
                                   >
                                     {sub.title}
-                                    {sub.productCount > 0 && (
-                                      <span className="product-count">
-                                        ({sub.productCount})
-                                      </span>
-                                    )}
-                                    {sub.subCategories && sub.subCategories.length > 0 && (
-                                      <span className="sub-category-arrow">›</span>
-                                    )}
+                                    {sub.subCategories &&
+                                      sub.subCategories.length > 0 && (
+                                        <span className="sub-category-arrow">›</span>
+                                      )}
                                   </NavLink>
                                 </div>
                               ))}
                             </div>
 
-                            {/* Sub-Categories Column */}
                             {hoveredCategory && (
                               <div className="subcategory-list-column">
                                 <div className="subcategory-header">
@@ -545,38 +526,36 @@ const Header = () => {
                                     {hoveredCategory}
                                   </span>
                                   <span className="subcategory-count">
-                                    {categorySubCategories[hoveredCategory]?.length || 0} sub-categories
+                                    {categorySubCategories[hoveredCategory]?.length || 0}{" "}
+                                    sub-categories
                                   </span>
                                 </div>
-                                {loadingSubCategories[hoveredCategory] ? (
-                                  <div className="subcategory-loading">
-                                    <Spinner animation="border" size="sm" />
-                                    <span>Loading sub-categories...</span>
-                                  </div>
-                                ) : (
-                                  <div className="subcategory-grid">
-                                    {categorySubCategories[hoveredCategory]?.length > 0 ? (
-                                      categorySubCategories[hoveredCategory].map((sub, idx) => (
+                                <div className="subcategory-grid">
+                                  {categorySubCategories[hoveredCategory]?.length > 0 ? (
+                                    categorySubCategories[hoveredCategory].map(
+                                      (sub, idx) => (
                                         <NavLink
                                           key={idx}
-                                          to={`/category/${encodeURIComponent(hoveredCategory)}/${encodeURIComponent(sub)}`}
+                                          to={`/category/${createSlug(
+                                            hoveredCategory
+                                          )}/${createSlug(sub)}`}
                                           className="subcategory-item"
                                           onClick={() => setShowMenu(false)}
                                         >
                                           <span className="subcategory-dot">•</span>
                                           {sub}
                                         </NavLink>
-                                      ))
-                                    ) : (
-                                      <div className="subcategory-empty">
-                                        No sub-categories available
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                      )
+                                    )
+                                  ) : (
+                                    <div className="subcategory-empty">
+                                      No sub-categories available
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${encodeURIComponent(hoveredCategory)}`}
+                                    to={`/category/${createSlug(hoveredCategory)}`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >
@@ -598,18 +577,15 @@ const Header = () => {
               ))}
             </Nav>
 
-            {/* Desktop Icons */}
             <div className="desktop-icons">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
               </button>
-
               <NavLink to="/login" className="icon-link">
                 <button type="button">
                   <HiOutlineUser />
                 </button>
               </NavLink>
-
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
@@ -620,7 +596,6 @@ const Header = () => {
                   )}
                 </button>
               </NavLink>
-
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -633,40 +608,10 @@ const Header = () => {
               </NavLink>
             </div>
 
-            {/* Mobile Right */}
             <div className="mobile-right">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
               </button>
-
-              <NavLink to="/login" className="icon-link">
-                <button type="button">
-                  <HiOutlineUser />
-                </button>
-              </NavLink>
-
-              <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
-                <button type="button" className="cart-btn-with-badge">
-                  <HiOutlineHeart className="cart-icon" />
-                  {wishlistCount > 0 && (
-                    <span className="cart-badge wishlist-badge">
-                      {wishlistCount > 99 ? "99+" : wishlistCount}
-                    </span>
-                  )}
-                </button>
-              </NavLink>
-
-              <NavLink to="/cart" className="icon-link cart-icon-wrapper">
-                <button type="button" className="cart-btn-with-badge">
-                  <FiShoppingBag className="cart-icon" />
-                  {cartCount > 0 && (
-                    <span className="cart-badge">
-                      {cartCount > 99 ? "99+" : cartCount}
-                    </span>
-                  )}
-                </button>
-              </NavLink>
-
               <button onClick={() => setShowMenu(true)}>
                 <HiOutlineMenuAlt3 />
               </button>
@@ -674,7 +619,6 @@ const Header = () => {
           </Container>
         </Navbar>
 
-        {/* MOBILE MENU */}
         <Offcanvas
           show={showMenu}
           placement="end"
@@ -696,56 +640,37 @@ const Header = () => {
                 <div key={index}>
                   {item.dropdown ? (
                     <>
-                      <div className="mobile-link">
-                        {item.title}
-                        {loadingCategories && (
-                          <span className="ms-1" style={{ fontSize: "12px" }}>
-                            ...
-                          </span>
-                        )}
-                      </div>
-
-                      {loadingCategories ? (
-                        <div className="mobile-sublink text-muted" style={{ paddingLeft: "20px" }}>
-                          Loading categories...
-                        </div>
-                      ) : item.dropdown.length === 0 ? (
-                        <div className="mobile-sublink text-danger" style={{ paddingLeft: "20px" }}>
-                          No categories available
-                        </div>
-                      ) : (
-                        item.dropdown.map((sub, i) => (
-                          <div key={i}>
-                            <NavLink
-                              to={sub.link}
-                              className="mobile-sublink"
-                              onClick={() => setShowMenu(false)}
-                            >
-                              {sub.title}
-                              {sub.productCount > 0 && (
-                                <span className="product-count">
-                                  ({sub.productCount})
-                                </span>
-                              )}
-                            </NavLink>
-                            {/* Mobile Sub-Categories */}
-                            {categorySubCategories[sub.title] && categorySubCategories[sub.title].length > 0 && (
+                      <div className="mobile-link">{item.title}</div>
+                      {item.dropdown.map((sub, i) => (
+                        <div key={i}>
+                          <NavLink
+                            to={sub.link}
+                            className="mobile-sublink"
+                            onClick={() => setShowMenu(false)}
+                          >
+                            {sub.title}
+                          </NavLink>
+                          {categorySubCategories[sub.title] &&
+                            categorySubCategories[sub.title].length > 0 && (
                               <div className="mobile-sub-subcategories">
-                                {categorySubCategories[sub.title].map((subCat, idx) => (
-                                  <NavLink
-                                    key={idx}
-                                    to={`/category/${encodeURIComponent(sub.title)}/${encodeURIComponent(subCat)}`}
-                                    className="mobile-sub-sublink"
-                                    onClick={() => setShowMenu(false)}
-                                  >
-                                    • {subCat}
-                                  </NavLink>
-                                ))}
+                                {categorySubCategories[sub.title].map(
+                                  (subCat, idx) => (
+                                    <NavLink
+                                      key={idx}
+                                      to={`/category/${createSlug(
+                                        sub.title
+                                      )}/${createSlug(subCat)}`}
+                                      className="mobile-sub-sublink"
+                                      onClick={() => setShowMenu(false)}
+                                    >
+                                      • {subCat}
+                                    </NavLink>
+                                  )
+                                )}
                               </div>
                             )}
-                          </div>
-                        ))
-                      )}
+                        </div>
+                      ))}
                     </>
                   ) : (
                     <NavLink
@@ -759,46 +684,6 @@ const Header = () => {
                 </div>
               ))}
             </Nav>
-
-            <hr />
-
-            <div className="mobile-bottom-icons lexend">
-              <NavLink
-                to="/wishlist"
-                className="mobile-icon-btn"
-                onClick={() => setShowMenu(false)}
-              >
-                <FiHeart />
-                <span>Wishlist</span>
-                {wishlistCount > 0 && (
-                  <Badge
-                    pill
-                    className="ms-1"
-                    style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
-                  >
-                    {wishlistCount}
-                  </Badge>
-                )}
-              </NavLink>
-
-              <NavLink
-                to="/cart"
-                className="mobile-icon-btn"
-                onClick={() => setShowMenu(false)}
-              >
-                <FiShoppingBag />
-                <span>Cart</span>
-                {cartCount > 0 && (
-                  <Badge
-                    pill
-                    className="ms-1"
-                    style={{ fontSize: "10px", backgroundColor: "#0f5132" }}
-                  >
-                    {cartCount}
-                  </Badge>
-                )}
-              </NavLink>
-            </div>
           </Offcanvas.Body>
         </Offcanvas>
       </div>

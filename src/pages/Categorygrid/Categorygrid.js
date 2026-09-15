@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
@@ -7,11 +7,9 @@ import {
   FaHeart,
   FaRegHeart,
   FaFilter,
-  FaChevronRight,
-  FaShoppingCart,
   FaSitemap,
+  FaShoppingCart,
 } from "react-icons/fa";
-import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
@@ -19,22 +17,18 @@ import { createSlug } from "../../utils/slugUtils";
 import { useWishlist } from "../../context/WishlistContext";
 import { useCart } from "../../context/CartContext";
 import "./categorygrid.css";
-import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BEND_URL = "https://api-vendor.native91.com";
-
-// const VENDOR_BEND_URL = "http://localhost:5177"; // Adjust this to your backend URL
+const ADMIN_CATEGORY_API = "https://api-admin.native91.com/api/category";
 
 const formatImagePath = (image) => {
   if (!image) return "/images/placeholder.png";
-
   let imgPath = image;
   if (Array.isArray(image)) {
     if (image.length === 0) return "/images/placeholder.png";
     imgPath = image[0];
   }
-
   if (typeof imgPath !== "string") return "/images/placeholder.png";
   if (imgPath.trim() === "") return "/images/placeholder.png";
   if (imgPath.startsWith("http")) return imgPath;
@@ -45,24 +39,20 @@ const formatImagePath = (image) => {
 
 const CategoryProducts = () => {
   const { pathname } = useLocation();
+  const { categoryName: categorySlug, subCategoryName: subCategorySlug } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "instant",
-    });
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
-
-  const { categoryName, subCategoryName } = useParams();
-  const decodedCategory = decodeURIComponent(categoryName || "All");
-  const decodedSubCategory = subCategoryName
-    ? decodeURIComponent(subCategoryName)
-    : null;
-  const navigate = useNavigate();
 
   const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
   const { addToCart, setShowCart } = useCart();
+
+  // 🆕 RESOLVED names from slug
+  const [decodedCategory, setDecodedCategory] = useState("All");
+  const [decodedSubCategory, setDecodedSubCategory] = useState(null);
+  const [resolvingNames, setResolvingNames] = useState(true);
 
   const [products, setProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
@@ -81,8 +71,90 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // Fetch products
+  // ============================================================
+  // 🆕 RESOLVE SLUGS → REAL NAMES
+  // ============================================================
   useEffect(() => {
+    const resolveSlugs = async () => {
+      setResolvingNames(true);
+      try {
+        if (!categorySlug || categorySlug === "All") {
+          setDecodedCategory("All");
+          setDecodedSubCategory(null);
+          setResolvingNames(false);
+          return;
+        }
+
+        const res = await axios.get(`${ADMIN_CATEGORY_API}/categories`);
+        const cats = res.data?.categories || [];
+
+        // Try slug match first
+        let matchedCat = cats.find(
+          (c) => createSlug(c.name) === categorySlug
+        );
+
+        // Fallback — encoded name match
+        if (!matchedCat) {
+          const decoded = decodeURIComponent(categorySlug);
+          matchedCat = cats.find(
+            (c) => c.name.toLowerCase() === decoded.toLowerCase()
+          );
+        }
+
+        if (matchedCat) {
+          setDecodedCategory(matchedCat.name);
+
+          if (subCategorySlug && matchedCat.subcategories) {
+            // Try slug match
+            let matchedSub = matchedCat.subcategories.find(
+              (sc) => createSlug(sc.name) === subCategorySlug
+            );
+
+            // Fallback — encoded name
+            if (!matchedSub) {
+              const decodedSub = decodeURIComponent(subCategorySlug);
+              matchedSub = matchedCat.subcategories.find(
+                (sc) => sc.name.toLowerCase() === decodedSub.toLowerCase()
+              );
+            }
+
+            // Final fallback — rough slug conversion
+            if (!matchedSub) {
+              const rough = decodeURIComponent(subCategorySlug)
+                .replace(/-/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase());
+              setDecodedSubCategory(rough);
+            } else {
+              setDecodedSubCategory(matchedSub.name);
+            }
+          }
+        } else {
+          // Total fallback
+          setDecodedCategory(decodeURIComponent(categorySlug));
+          if (subCategorySlug) {
+            setDecodedSubCategory(decodeURIComponent(subCategorySlug));
+          }
+        }
+      } catch (err) {
+        console.warn("Slug resolve failed:", err.message);
+        // Fallback to raw params
+        setDecodedCategory(decodeURIComponent(categorySlug || "All"));
+        if (subCategorySlug) {
+          setDecodedSubCategory(decodeURIComponent(subCategorySlug));
+        }
+      } finally {
+        setResolvingNames(false);
+      }
+    };
+
+    resolveSlugs();
+  }, [categorySlug, subCategorySlug]);
+
+  // ============================================================
+  // FETCH PRODUCTS (જ્યારે names resolve થાય)
+  // ============================================================
+  useEffect(() => {
+    if (resolvingNames) return;
     if (!decodedCategory) return;
 
     setLoading(true);
@@ -98,46 +170,34 @@ const CategoryProducts = () => {
           allProducts = allProducts.filter(
             (p) =>
               p.category &&
-              p.category.toLowerCase() === decodedCategory.toLowerCase(),
+              p.category.toLowerCase() === decodedCategory.toLowerCase()
           );
         }
 
-        // Filter by sub-category if specified (from URL)
-        // Filter by sub-category if specified (from URL)
-        // ✅ FIXED: Filter by sub-category - check ALL possible fields
+        // Filter by sub-category
         if (decodedSubCategory) {
           const targetSub = decodedSubCategory.toLowerCase().trim();
 
           allProducts = allProducts.filter((p) => {
-            // Collect ALL subcategories from all possible fields
             const allSubs = [];
-
-            // 1. subCategory (camelCase)
             if (p.subCategory) allSubs.push(p.subCategory);
-
-            // 2. subcategory (lowercase)
             if (p.subcategory) allSubs.push(p.subcategory);
-
-            // 3. subCategories (camelCase array)
             if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
-
-            // 4. subcategories (lowercase array)
             if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
 
-            // 5. categorySubcategoryMap
             if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
-              Object.values(p.categorySubcategoryMap).forEach(arr => {
+              Object.values(p.categorySubcategoryMap).forEach((arr) => {
                 if (Array.isArray(arr)) allSubs.push(...arr);
               });
             }
 
-            // Clean each subcategory (remove brackets, quotes, extra spaces)
             const cleanSubs = allSubs
               .filter(Boolean)
-              .map(s => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
+              .map((s) =>
+                String(s).replace(/[\[\]"']/g, "").trim().toLowerCase()
+              )
               .filter(Boolean);
 
-            // Check if any matches
             return cleanSubs.includes(targetSub);
           });
 
@@ -157,9 +217,11 @@ const CategoryProducts = () => {
     };
 
     fetchProducts();
-  }, [decodedCategory, decodedSubCategory, fetchWishlist]);
+  }, [decodedCategory, decodedSubCategory, resolvingNames, fetchWishlist]);
 
-  // Fetch categories and sub-categories
+  // ============================================================
+  // FETCH CATEGORIES + SUB-CATEGORIES (for filter drawer)
+  // ============================================================
   useEffect(() => {
     const fetchCategoriesAndSubs = async () => {
       try {
@@ -172,28 +234,13 @@ const CategoryProducts = () => {
         for (const cat of categories) {
           try {
             const subRes = await axios.get(
-              `${API_URL}/categories/${encodeURIComponent(cat.name)}/subcategories`,
+              `${API_URL}/categories/${encodeURIComponent(cat.name)}/subcategories`
             );
             if (subRes.data && subRes.data.subCategories) {
               subMap[cat.name] = subRes.data.subCategories;
             }
           } catch (err) {
-            try {
-              const prodRes = await axios.get(
-                `${API_URL}/products/by-category/${encodeURIComponent(cat.name)}`,
-              );
-              if (prodRes.data && prodRes.data.products) {
-                const subs = new Set();
-                prodRes.data.products.forEach((p) => {
-                  if (p.subCategory) subs.add(p.subCategory);
-                  if (p.subCategories)
-                    p.subCategories.forEach((s) => subs.add(s));
-                });
-                subMap[cat.name] = Array.from(subs);
-              }
-            } catch (prodErr) {
-              subMap[cat.name] = [];
-            }
+            subMap[cat.name] = [];
           }
         }
 
@@ -206,51 +253,45 @@ const CategoryProducts = () => {
     fetchCategoriesAndSubs();
   }, []);
 
-  // Apply filters - FIXED
+  // ============================================================
+  // APPLY FILTERS
+  // ============================================================
   useEffect(() => {
     let filtered = [...products];
 
-    // Filter by selected categories
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
-        selectedCategories.some(cat =>
-          p.category && p.category.toLowerCase() === cat.toLowerCase()
+        selectedCategories.some(
+          (cat) => p.category && p.category.toLowerCase() === cat.toLowerCase()
         )
       );
     }
 
-    // Filter by selected sub-categories - FIXED
-    // ✅ FIXED: Filter by selected sub-categories - check ALL fields
     if (selectedSubCategories.length > 0) {
       filtered = filtered.filter((p) => {
-        // Collect ALL subcategories from product
         const allSubs = [];
-
         if (p.subCategory) allSubs.push(p.subCategory);
         if (p.subcategory) allSubs.push(p.subcategory);
         if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
         if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
 
         if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
-          Object.values(p.categorySubcategoryMap).forEach(arr => {
+          Object.values(p.categorySubcategoryMap).forEach((arr) => {
             if (Array.isArray(arr)) allSubs.push(...arr);
           });
         }
 
-        // Clean
         const cleanSubs = allSubs
           .filter(Boolean)
-          .map(s => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
+          .map((s) => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
           .filter(Boolean);
 
-        // Check if ANY selected subcategory matches
-        return selectedSubCategories.some(selectedSub =>
+        return selectedSubCategories.some((selectedSub) =>
           cleanSubs.includes(selectedSub.toLowerCase().trim())
         );
       });
     }
 
-    // Filter by price range
     if (selectedPriceRange) {
       switch (selectedPriceRange) {
         case "under-500":
@@ -280,11 +321,8 @@ const CategoryProducts = () => {
       }
     }
 
-    // Filter by rating
     if (selectedRating > 0) {
-      filtered = filtered.filter(
-        (p) => (p.averageRating || 0) >= selectedRating,
-      );
+      filtered = filtered.filter((p) => (p.averageRating || 0) >= selectedRating);
     }
 
     setFilteredProducts(filtered);
@@ -298,52 +336,48 @@ const CategoryProducts = () => {
     products,
   ]);
 
-  // Get sorted products
+  // ============================================================
+  // SORT
+  // ============================================================
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
     switch (sortBy) {
       case "alphabetical-a-z":
-        return sorted.sort((a, b) => {
-          const nameA = a.name?.toLowerCase() || "";
-          const nameB = b.name?.toLowerCase() || "";
-          return nameA.localeCompare(nameB);
-        });
+        return sorted.sort((a, b) =>
+          (a.name?.toLowerCase() || "").localeCompare(b.name?.toLowerCase() || "")
+        );
       case "alphabetical-z-a":
-        return sorted.sort((a, b) => {
-          const nameA = a.name?.toLowerCase() || "";
-          const nameB = b.name?.toLowerCase() || "";
-          return nameB.localeCompare(nameA);
-        });
+        return sorted.sort((a, b) =>
+          (b.name?.toLowerCase() || "").localeCompare(a.name?.toLowerCase() || "")
+        );
       case "price-low-high":
         return sorted.sort((a, b) => a.price - b.price);
       case "price-high-low":
         return sorted.sort((a, b) => b.price - a.price);
       case "newest":
         return sorted.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
       case "rating":
         return sorted.sort(
-          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0)
         );
       default:
-        return sorted.sort((a, b) => {
-          const nameA = a.name?.toLowerCase() || "";
-          const nameB = b.name?.toLowerCase() || "";
-          return nameA.localeCompare(nameB);
-        });
+        return sorted.sort((a, b) =>
+          (a.name?.toLowerCase() || "").localeCompare(b.name?.toLowerCase() || "")
+        );
     }
   };
 
+  // ============================================================
+  // HANDLERS
+  // ============================================================
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
-
-    setIsTogglingWishlist(prev => ({ ...prev, [productId]: true }));
-
+    setIsTogglingWishlist((prev) => ({ ...prev, [productId]: true }));
     try {
       const product = products.find((p) => p._id === productId);
       if (!product) return;
-
       await toggleWishlist({
         productId: product._id,
         name: product.name,
@@ -351,7 +385,6 @@ const CategoryProducts = () => {
         image: Array.isArray(product.image) ? product.image[0] : product.image,
         company: product.company || "Native91",
       });
-
       await fetchWishlist();
     } catch (error) {
       console.error("Error toggling wishlist:", error);
@@ -363,9 +396,7 @@ const CategoryProducts = () => {
 
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
-
-    setIsAddingToCart(prev => ({ ...prev, [item._id]: true }));
-
+    setIsAddingToCart((prev) => ({ ...prev, [item._id]: true }));
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
@@ -404,12 +435,11 @@ const CategoryProducts = () => {
     if (category === "All") {
       navigate("/category/All");
     } else {
-      navigate(`/category/${encodeURIComponent(category)}`);
+      navigate(`/category/${createSlug(category)}`);
     }
     setShowMobileFilters(false);
   };
 
-  // Handle sub-category checkbox change - FIXED
   const handleSubCategoryToggle = (subCategory) => {
     setSelectedSubCategories((prev) => {
       if (prev.includes(subCategory)) {
@@ -420,7 +450,6 @@ const CategoryProducts = () => {
     });
   };
 
-  // Handle "All Sub-Categories" toggle
   const handleAllSubCategoriesToggle = () => {
     setSelectedSubCategories([]);
   };
@@ -436,11 +465,8 @@ const CategoryProducts = () => {
 
   const sortedProducts = getSortedProducts();
 
-  const checkIsInWishlist = (productId) => {
-    return isInWishlist(productId);
-  };
+  const checkIsInWishlist = (productId) => isInWishlist(productId);
 
-  // Get unique sub-categories for the current category
   const getCategorySubCategories = () => {
     if (decodedCategory === "All") {
       const allSubs = new Set();
@@ -454,7 +480,10 @@ const CategoryProducts = () => {
 
   const categorySubCategories = getCategorySubCategories();
 
-  if (loading) {
+  // ============================================================
+  // LOADING STATES
+  // ============================================================
+  if (resolvingNames || loading) {
     return (
       <>
         <Header />
@@ -462,18 +491,19 @@ const CategoryProducts = () => {
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
-          <p>Loading products...</p>
+          <p>{resolvingNames ? "Loading category..." : "Loading products..."}</p>
         </div>
         <Footer />
       </>
     );
   }
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
     <>
       <Header />
-
-      {/* <Breadcrumb /> */}
 
       <div className="category-background lexend px-2">
         <Container className="category-page">
@@ -486,8 +516,14 @@ const CategoryProducts = () => {
                 {decodedSubCategory && (
                   <p className="hero-breadcrumb">
                     <span
-                      onClick={() => navigate(`/category/${encodeURIComponent(decodedCategory)}`)}
-                      style={{ cursor: "pointer", color: "#0D3B2E", textDecoration: "underline" }}
+                      onClick={() =>
+                        navigate(`/category/${createSlug(decodedCategory)}`)
+                      }
+                      style={{
+                        cursor: "pointer",
+                        color: "#0D3B2E",
+                        textDecoration: "underline",
+                      }}
                     >
                       {decodedCategory}
                     </span>
@@ -539,6 +575,7 @@ const CategoryProducts = () => {
           </div>
 
           <Row className="g-4">
+            {/* MOBILE FILTER DRAWER */}
             {showMobileFilters && (
               <div
                 className="mobile-filters-overlay"
@@ -559,7 +596,7 @@ const CategoryProducts = () => {
                     </Button>
                   </div>
                   <div className="drawer-body">
-                    {/* Categories Filter */}
+                    {/* Categories */}
                     <div className="filter-group">
                       <h6>Categories</h6>
                       <div className="category-list">
@@ -581,7 +618,7 @@ const CategoryProducts = () => {
                       </div>
                     </div>
 
-                    {/* Sub-Categories Filter - Now inside the filter drawer */}
+                    {/* Sub-Categories */}
                     {categorySubCategories.length > 0 && (
                       <div className="filter-group">
                         <h6>
@@ -604,81 +641,43 @@ const CategoryProducts = () => {
                             />
                           ))}
                         </div>
-                        {selectedSubCategories.length > 0 && (
-                          <div className="selected-filters-info">
-                            <small className="text-muted">
-                              {selectedSubCategories.length} sub-category(s)
-                              selected
-                            </small>
-                          </div>
-                        )}
                       </div>
                     )}
 
-                    {/* Price Filter */}
+                    {/* Price */}
                     <div className="filter-group">
                       <h6>Price</h6>
-                      <Form.Check
-                        type="radio"
-                        name="priceRangeMobile"
-                        label="Under ₹500"
-                        checked={selectedPriceRange === "under-500"}
-                        onChange={() => setSelectedPriceRange("under-500")}
-                      />
-                      <Form.Check
-                        type="radio"
-                        name="priceRangeMobile"
-                        label="₹500 - ₹1,000"
-                        checked={selectedPriceRange === "500-1000"}
-                        onChange={() => setSelectedPriceRange("500-1000")}
-                      />
-                      <Form.Check
-                        type="radio"
-                        name="priceRangeMobile"
-                        label="₹1,000 - ₹2,000"
-                        checked={selectedPriceRange === "1000-2000"}
-                        onChange={() => setSelectedPriceRange("1000-2000")}
-                      />
-                      <Form.Check
-                        type="radio"
-                        name="priceRangeMobile"
-                        label="₹2,000 - ₹5,000"
-                        checked={selectedPriceRange === "2000-5000"}
-                        onChange={() => setSelectedPriceRange("2000-5000")}
-                      />
-                      <Form.Check
-                        type="radio"
-                        name="priceRangeMobile"
-                        label="Above ₹5,000"
-                        checked={selectedPriceRange === "above-5000"}
-                        onChange={() => setSelectedPriceRange("above-5000")}
-                      />
+                      {[
+                        { val: "under-500", label: "Under ₹500" },
+                        { val: "500-1000", label: "₹500 - ₹1,000" },
+                        { val: "1000-2000", label: "₹1,000 - ₹2,000" },
+                        { val: "2000-5000", label: "₹2,000 - ₹5,000" },
+                        { val: "above-5000", label: "Above ₹5,000" },
+                      ].map(({ val, label }) => (
+                        <Form.Check
+                          key={val}
+                          type="radio"
+                          name="priceRangeMobile"
+                          label={label}
+                          checked={selectedPriceRange === val}
+                          onChange={() => setSelectedPriceRange(val)}
+                        />
+                      ))}
                     </div>
 
-                    {/* Rating Filter */}
+                    {/* Rating */}
                     <div className="filter-group">
                       <h6>Rating</h6>
-                      <Form.Check
-                        type="radio"
-                        name="ratingMobile"
-                        label="4★ & above"
-                        checked={selectedRating === 4}
-                        onChange={() => setSelectedRating(4)}
-                      />
-                      <Form.Check
-                        type="radio"
-                        name="ratingMobile"
-                        label="3★ & above"
-                        checked={selectedRating === 3}
-                        onChange={() => setSelectedRating(3)}
-                      />
-                      <Form.Check
-                        type="radio"
-                        name="ratingMobile"
-                        label="2★ & above"
-                        checked={selectedRating === 2}
-                        onChange={() => setSelectedRating(2)}
-                      />
+                      {[4, 3, 2].map((r) => (
+                        <Form.Check
+                          key={r}
+                          type="radio"
+                          name="ratingMobile"
+                          label={`${r}★ & above`}
+                          checked={selectedRating === r}
+                          onChange={() => setSelectedRating(r)}
+                        />
+                      ))}
                       <Form.Check
                         type="radio"
                         name="ratingMobile"
@@ -703,7 +702,7 @@ const CategoryProducts = () => {
               </div>
             )}
 
-            {/* Products Grid */}
+            {/* PRODUCTS GRID */}
             <Col lg={12}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
@@ -712,9 +711,6 @@ const CategoryProducts = () => {
                     {decodedSubCategory
                       ? `No products found in "${decodedSubCategory}" under "${decodedCategory}"`
                       : `No products found in "${decodedCategory}"`}
-                  </p>
-                  <p className="text-muted">
-                    Try adjusting your filters or select another category
                   </p>
                   <Button
                     variant="outline-dark"
@@ -761,13 +757,9 @@ const CategoryProducts = () => {
                               />
                               <div
                                 className="wishlist-btn-category"
-                                onClick={(e) =>
-                                  handleToggleWishlist(e, item._id)
-                                }
+                                onClick={(e) => handleToggleWishlist(e, item._id)}
                                 style={{
-                                  cursor: isToggling
-                                    ? "not-allowed"
-                                    : "pointer",
+                                  cursor: isToggling ? "not-allowed" : "pointer",
                                 }}
                               >
                                 {isToggling ? (
@@ -785,33 +777,42 @@ const CategoryProducts = () => {
                                   <FaRegHeart />
                                 )}
                               </div>
+
                               {/* Sub-Category Badge */}
                               {(() => {
-                                // Collect all subcategories
                                 const allSubs = [];
                                 if (item.subCategory) allSubs.push(item.subCategory);
                                 if (item.subcategory) allSubs.push(item.subcategory);
-                                if (Array.isArray(item.subCategories)) allSubs.push(...item.subCategories);
-                                if (Array.isArray(item.subcategories)) allSubs.push(...item.subcategories);
-                                if (item.categorySubcategoryMap && typeof item.categorySubcategoryMap === "object") {
-                                  Object.values(item.categorySubcategoryMap).forEach(arr => {
-                                    if (Array.isArray(arr)) allSubs.push(...arr);
-                                  });
+                                if (Array.isArray(item.subCategories))
+                                  allSubs.push(...item.subCategories);
+                                if (Array.isArray(item.subcategories))
+                                  allSubs.push(...item.subcategories);
+                                if (
+                                  item.categorySubcategoryMap &&
+                                  typeof item.categorySubcategoryMap === "object"
+                                ) {
+                                  Object.values(item.categorySubcategoryMap).forEach(
+                                    (arr) => {
+                                      if (Array.isArray(arr)) allSubs.push(...arr);
+                                    }
+                                  );
                                 }
 
                                 const cleanSubs = allSubs
                                   .filter(Boolean)
-                                  .map(s => String(s).replace(/[\[\]"']/g, "").trim())
+                                  .map((s) =>
+                                    String(s).replace(/[\[\]"']/g, "").trim()
+                                  )
                                   .filter(Boolean);
 
                                 const uniqueSubs = [...new Set(cleanSubs)];
-
                                 if (uniqueSubs.length === 0) return null;
 
                                 return (
                                   <div className="sub-category-badge">
                                     {uniqueSubs[0]}
-                                    {uniqueSubs.length > 1 && ` +${uniqueSubs.length - 1}`}
+                                    {uniqueSubs.length > 1 &&
+                                      ` +${uniqueSubs.length - 1}`}
                                   </div>
                                 );
                               })()}
