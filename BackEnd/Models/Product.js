@@ -46,3 +46,4 @@ categorySubcategoryMap: { type: Map, of: [String], default: {} },
 );
 
 module.exports = mongoose.model("Product", ProductSchema);
+
