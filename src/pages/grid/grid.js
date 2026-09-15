@@ -277,7 +277,7 @@ const Grid = () => {
     <>
       <Header />
 
-      {/* <Breadcrumb /> */}
+      <Breadcrumb />
 
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
