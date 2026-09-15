@@ -1,4 +1,4 @@
-// Header.jsx - FIXED (Admin + Vendor Subcategories Merge)
+// Header.jsx - FULLY FIXED — Merges Admin + Vendor sub-categories
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -27,26 +27,96 @@ import { useWishlist } from "../../context/WishlistContext";
 import "./header.css";
 
 // ✅ API URLs
-const ADMIN_API_URL = "https://api-admin.native91.com/api/category";
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
 //const ADMIN_API_URL = "https://api-admin.native91.com/api";
-// const VENDOR_API_URL = "http://localhost:9000/api";
-// const ADMIN_API_URL = "http://localhost:7001/api";
-
-// ✅ Helper function to get auth headers
+const ADMIN_API_URL = "https://api-admin.native91.com/api/category";
+// ✅ Auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
     headers: {
-      Authorization: `Bearer ${token}`,
-    },
+      Authorization: `Bearer ${token}`
+    }
   };
 };
 
-// ✅ Helper: Merge admin + vendor subcategories (unique)
-const mergeSubcategories = (adminSubs, vendorSubs) => {
-  const merged = [...new Set([...adminSubs, ...vendorSubs])];
-  return merged.filter((s) => s && typeof s === "string" && s.trim() !== "");
+// 🆕 SUPER parseSubCategories
+const parseSubCategories = (input, depth = 0) => {
+  if (!input || depth > 10) return [];
+
+  if (Array.isArray(input)) {
+    const out = [];
+    input.forEach((item) => {
+      const parsed = parseSubCategories(item, depth + 1);
+      parsed.forEach((p) => {
+        if (p && !out.includes(p)) out.push(p);
+      });
+    });
+    return out;
+  }
+
+  if (typeof input === 'object' && input !== null) {
+    if (input.status === 'inactive') return [];
+    if (typeof input.name === 'string') {
+      return parseSubCategories(input.name, depth + 1);
+    }
+    return [];
+  }
+
+  if (typeof input === 'string') {
+    let s = input.trim();
+    if (!s) return [];
+
+    if (
+      (s.startsWith('[') && s.endsWith(']')) ||
+      (s.startsWith('{') && s.endsWith('}')) ||
+      (s.startsWith('"') && s.endsWith('"'))
+    ) {
+      try {
+        const parsed = JSON.parse(s);
+        const result = parseSubCategories(parsed, depth + 1);
+        if (result.length > 0) return result;
+      } catch {
+        // not JSON
+      }
+    }
+
+    let cleaned = s;
+    let prev = null;
+    while (cleaned !== prev) {
+      prev = cleaned;
+      cleaned = cleaned
+        .replace(/^[\[\]\\"]+/, '')
+        .replace(/[\[\]\\"]+$/, '')
+        .trim();
+    }
+
+    if (cleaned.length === 0 || cleaned.length > 200) return [];
+
+    if (cleaned.includes(',') && !cleaned.includes(' & ')) {
+      const parts = cleaned
+        .split(',')
+        .map(p => p.replace(/^[\[\]\\"]+|[\[\]\\"]+$/g, '').trim())
+        .filter(p => p.length > 0 && p.length < 100);
+      if (parts.length > 1) return parts;
+    }
+
+    return [cleaned];
+  }
+
+  return [];
+};
+
+// 🆕 Pick subs from response with multiple field names
+const pickSubsFromResponse = (data) => {
+  if (!data) return [];
+  return (
+    data.subCategories ||
+    data.subcategories ||
+    data.sub_categories ||
+    data.subCategoryList ||
+    []
+  );
 };
 
 const Header = () => {
@@ -73,13 +143,13 @@ const Header = () => {
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
 
-  // Fetch categories from ADMIN API
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         console.log("🔍 Fetching categories from Admin API...");
         const response = await axios.get(`${ADMIN_API_URL}/categories`, {
-          ...getAuthHeaders(),
+          ...getAuthHeaders()
         });
 
         let categoriesData = [];
@@ -89,9 +159,7 @@ const Header = () => {
           categoriesData = response.data;
         }
 
-        const activeCategories = categoriesData.filter(
-          (cat) => cat.status === "active"
-        );
+        const activeCategories = categoriesData.filter(cat => cat.status === "active");
         setCategories(activeCategories);
         console.log(`📂 Found ${activeCategories.length} categories`);
 
@@ -119,101 +187,95 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // ✅ FIXED: Merge ADMIN + VENDOR subcategories
+  // ============================================================
+  // ✅ MERGED: Admin sub-categories + Vendor products sub-categories
+  // ============================================================
   const fetchAllSubCategories = async (categoriesList) => {
     const subMap = {};
 
     for (const category of categoriesList) {
+      const merged = new Set();
+
+      // 1️⃣ Admin predefined sub-categories
       try {
-        console.log(`🔍 Subcategories for: ${category.name}`);
-
-        // ✅ SOURCE 1: Admin panel subcategories (from category object)
-        const adminSubs = (category.subcategories || [])
-          .filter((sc) => sc.status === "active")
-          .map((sc) => sc.name);
-
-        console.log(`   📦 Admin: ${adminSubs.length}`, adminSubs);
-
-        // ✅ SOURCE 2: Product-based subcategories from VENDOR API
-        let vendorSubs = [];
-        try {
-          const response = await axios.get(
-            `${VENDOR_API_URL}/categories/${encodeURIComponent(
-              category.name
-            )}/subcategories`,
-            {
-              ...getAuthHeaders(),
-            }
-          );
-          vendorSubs = response.data?.subCategories || [];
-          console.log(`   📦 Vendor: ${vendorSubs.length}`);
-        } catch (err) {
-          console.warn(`   ⚠️ Vendor API failed for ${category.name}`);
-        }
-
-        // ✅ MERGE both
-        const merged = mergeSubcategories(adminSubs, vendorSubs);
-        subMap[category.name] = merged;
-        console.log(`✅ ${category.name}: ${merged.length} total`, merged);
+        const response = await axios.get(
+          `${VENDOR_API_URL}/categories/${encodeURIComponent(category.name)}/subcategories`,
+          { ...getAuthHeaders() }
+        );
+        const adminSubs = parseSubCategories(pickSubsFromResponse(response.data));
+        adminSubs.forEach(s => merged.add(s));
+        console.log(`✅ [Admin] ${category.name}: ${adminSubs.length}`);
       } catch (error) {
-        console.error(`Error fetching subcategories for ${category.name}:`, error);
-        subMap[category.name] = [];
+        console.warn(`⚠️ [Admin] failed ${category.name}:`, error.message);
       }
+
+      // 2️⃣ Vendor products sub-categories (PUBLIC — no auth)
+      try {
+        const prodRes = await axios.get(
+          `${VENDOR_API_URL}/products/public/categories/${encodeURIComponent(category.name)}/subcategories`,
+          { ...getAuthHeaders() }
+        );
+        const productSubs = parseSubCategories(pickSubsFromResponse(prodRes.data));
+        productSubs.forEach(s => merged.add(s));
+        console.log(`✅ [Products] ${category.name}: ${productSubs.length}`);
+      } catch (error) {
+        console.warn(`⚠️ [Products] failed ${category.name}:`, error.message);
+      }
+
+      const finalSubs = Array.from(merged).filter(s => s && s.length < 200);
+      subMap[category.name] = finalSubs;
+      console.log(`📦 [Merged] ${category.name}:`, finalSubs);
     }
 
     setCategorySubCategories(subMap);
-    console.log("📂 Final map:", subMap);
+    console.log("📂 Final sub-categories map:", subMap);
   };
 
-  // ✅ FIXED: Fetch subcategories on hover (Admin + Vendor merge)
+  // ============================================================
+  // ✅ MERGED: Fetch on hover
+  // ============================================================
   const fetchSubCategoriesForCategory = async (categoryName) => {
-    if (
-      categorySubCategories[categoryName] &&
-      categorySubCategories[categoryName].length > 0
-    ) {
+    if (categorySubCategories[categoryName] && categorySubCategories[categoryName].length > 0) {
       return categorySubCategories[categoryName];
     }
 
-    setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: true }));
+    setLoadingSubCategories(prev => ({ ...prev, [categoryName]: true }));
 
+    const merged = new Set();
+
+    // 1️⃣ Admin
     try {
-      const categoryObj = categories.find((c) => c.name === categoryName);
-
-      // Admin subcategories
-      const adminSubs = (categoryObj?.subcategories || [])
-        .filter((sc) => sc.status === "active")
-        .map((sc) => sc.name);
-
-      // Vendor subcategories
-      let vendorSubs = [];
-      try {
-        const response = await axios.get(
-          `${VENDOR_API_URL}/categories/${encodeURIComponent(
-            categoryName
-          )}/subcategories`,
-          {
-            ...getAuthHeaders(),
-          }
-        );
-        vendorSubs = response.data?.subCategories || [];
-      } catch (err) {
-        console.warn(`Vendor API failed for ${categoryName}`);
-      }
-
-      const merged = mergeSubcategories(adminSubs, vendorSubs);
-
-      setCategorySubCategories((prev) => ({
-        ...prev,
-        [categoryName]: merged,
-      }));
-
-      return merged;
+      const response = await axios.get(
+        `${VENDOR_API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`,
+        { ...getAuthHeaders() }
+      );
+      const adminSubs = parseSubCategories(pickSubsFromResponse(response.data));
+      adminSubs.forEach(s => merged.add(s));
     } catch (error) {
-      console.error(`Error: ${categoryName}`, error);
-      return [];
-    } finally {
-      setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: false }));
+      console.warn(`⚠️ [Admin] failed ${categoryName}:`, error.message);
     }
+
+    // 2️⃣ Products (public)
+    try {
+      const prodRes = await axios.get(
+        `${VENDOR_API_URL}/products/public/categories/${encodeURIComponent(categoryName)}/subcategories`,
+        { ...getAuthHeaders() }
+      );
+      const productSubs = parseSubCategories(pickSubsFromResponse(prodRes.data));
+      productSubs.forEach(s => merged.add(s));
+    } catch (error) {
+      console.warn(`⚠️ [Products] failed ${categoryName}:`, error.message);
+    }
+
+    const subs = Array.from(merged).filter(s => s && s.length < 200);
+
+    setCategorySubCategories(prev => ({
+      ...prev,
+      [categoryName]: subs
+    }));
+
+    setLoadingSubCategories(prev => ({ ...prev, [categoryName]: false }));
+    return subs;
   };
 
   // Handle category hover
@@ -251,7 +313,6 @@ const Header = () => {
     };
   }, [fetchCart, fetchWishlist]);
 
-  // Click outside to close
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -263,7 +324,6 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Live search
   const fetchLiveSuggestions = async (query) => {
     if (!query || query.trim().length < 2) {
       setRecommendations([]);
@@ -275,7 +335,7 @@ const Header = () => {
       const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
-        ...getAuthHeaders(),
+        ...getAuthHeaders()
       });
 
       if (response.data?.products && response.data.products.length > 0) {
@@ -320,7 +380,7 @@ const Header = () => {
     try {
       const response = await axios.get(`${VENDOR_API_URL}/products/search`, {
         params: { keyword: searchQuery },
-        ...getAuthHeaders(),
+        ...getAuthHeaders()
       });
       setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
@@ -380,7 +440,6 @@ const Header = () => {
   return (
     <>
       <div className="lexend">
-        {/* SEARCH OVERLAY */}
         <AnimatePresence>
           {showSearch && (
             <motion.div
@@ -461,9 +520,7 @@ const Header = () => {
                           className="view-all-btn"
                           onClick={() => {
                             setShowSearch(false);
-                            navigate(
-                              `/search?q=${encodeURIComponent(searchQuery)}`
-                            );
+                            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
                           }}
                         >
                           View all results for "{searchQuery}"
@@ -502,7 +559,6 @@ const Header = () => {
           )}
         </AnimatePresence>
 
-        {/* HEADER */}
         <Navbar
           expand="lg"
           className={`premium-navbar ${isScrolled ? "navbar-scrolled" : ""}`}
@@ -553,12 +609,8 @@ const Header = () => {
                               {item.dropdown.map((sub, i) => (
                                 <div
                                   key={i}
-                                  className={`category-menu-item ${
-                                    hoveredCategory === sub.title ? "active" : ""
-                                  }`}
-                                  onMouseEnter={() =>
-                                    handleCategoryHover(sub.title)
-                                  }
+                                  className={`category-menu-item ${hoveredCategory === sub.title ? 'active' : ''}`}
+                                  onMouseEnter={() => handleCategoryHover(sub.title)}
                                 >
                                   <NavLink
                                     to={sub.link}
@@ -571,12 +623,9 @@ const Header = () => {
                                         ({sub.productCount})
                                       </span>
                                     )}
-                                    {sub.subCategories &&
-                                      sub.subCategories.length > 0 && (
-                                        <span className="sub-category-arrow">
-                                          ›
-                                        </span>
-                                      )}
+                                    {sub.subCategories && sub.subCategories.length > 0 && (
+                                      <span className="sub-category-arrow">›</span>
+                                    )}
                                   </NavLink>
                                 </div>
                               ))}
@@ -589,9 +638,7 @@ const Header = () => {
                                     {hoveredCategory}
                                   </span>
                                   <span className="subcategory-count">
-                                    {categorySubCategories[hoveredCategory]
-                                      ?.length || 0}{" "}
-                                    sub-categories
+                                    {categorySubCategories[hoveredCategory]?.length || 0} sub-categories
                                   </span>
                                 </div>
                                 {loadingSubCategories[hoveredCategory] ? (
@@ -601,25 +648,18 @@ const Header = () => {
                                   </div>
                                 ) : (
                                   <div className="subcategory-grid">
-                                    {categorySubCategories[hoveredCategory]
-                                      ?.length > 0 ? (
-                                      categorySubCategories[hoveredCategory].map(
-                                        (sub, idx) => (
-                                          <NavLink
-                                            key={idx}
-                                            to={`/category/${encodeURIComponent(
-                                              hoveredCategory
-                                            )}/${encodeURIComponent(sub)}`}
-                                            className="subcategory-item"
-                                            onClick={() => setShowMenu(false)}
-                                          >
-                                            <span className="subcategory-dot">
-                                              •
-                                            </span>
-                                            {sub}
-                                          </NavLink>
-                                        )
-                                      )
+                                    {categorySubCategories[hoveredCategory]?.length > 0 ? (
+                                      categorySubCategories[hoveredCategory].map((sub, idx) => (
+                                        <NavLink
+                                          key={idx}
+                                          to={`/category/${encodeURIComponent(hoveredCategory)}/${encodeURIComponent(sub)}`}
+                                          className="subcategory-item"
+                                          onClick={() => setShowMenu(false)}
+                                        >
+                                          <span className="subcategory-dot">•</span>
+                                          {sub}
+                                        </NavLink>
+                                      ))
                                     ) : (
                                       <div className="subcategory-empty">
                                         No sub-categories available
@@ -629,9 +669,7 @@ const Header = () => {
                                 )}
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${encodeURIComponent(
-                                      hoveredCategory
-                                    )}`}
+                                    to={`/category/${encodeURIComponent(hoveredCategory)}`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >
@@ -653,7 +691,6 @@ const Header = () => {
               ))}
             </Nav>
 
-            {/* Desktop Icons */}
             <div className="desktop-icons">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -688,7 +725,6 @@ const Header = () => {
               </NavLink>
             </div>
 
-            {/* Mobile Right */}
             <div className="mobile-right">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
@@ -729,7 +765,6 @@ const Header = () => {
           </Container>
         </Navbar>
 
-        {/* MOBILE MENU */}
         <Offcanvas
           show={showMenu}
           placement="end"
@@ -754,27 +789,18 @@ const Header = () => {
                       <div className="mobile-link">
                         {item.title}
                         {loadingCategories && (
-                          <span
-                            className="ms-1"
-                            style={{ fontSize: "12px" }}
-                          >
+                          <span className="ms-1" style={{ fontSize: "12px" }}>
                             ...
                           </span>
                         )}
                       </div>
 
                       {loadingCategories ? (
-                        <div
-                          className="mobile-sublink text-muted"
-                          style={{ paddingLeft: "20px" }}
-                        >
+                        <div className="mobile-sublink text-muted" style={{ paddingLeft: "20px" }}>
                           Loading categories...
                         </div>
                       ) : item.dropdown.length === 0 ? (
-                        <div
-                          className="mobile-sublink text-danger"
-                          style={{ paddingLeft: "20px" }}
-                        >
+                        <div className="mobile-sublink text-danger" style={{ paddingLeft: "20px" }}>
                           No categories available
                         </div>
                       ) : (
@@ -792,25 +818,20 @@ const Header = () => {
                                 </span>
                               )}
                             </NavLink>
-                            {categorySubCategories[sub.title] &&
-                              categorySubCategories[sub.title].length > 0 && (
-                                <div className="mobile-sub-subcategories">
-                                  {categorySubCategories[sub.title].map(
-                                    (subCat, idx) => (
-                                      <NavLink
-                                        key={idx}
-                                        to={`/category/${encodeURIComponent(
-                                          sub.title
-                                        )}/${encodeURIComponent(subCat)}`}
-                                        className="mobile-sub-sublink"
-                                        onClick={() => setShowMenu(false)}
-                                      >
-                                        • {subCat}
-                                      </NavLink>
-                                    )
-                                  )}
-                                </div>
-                              )}
+                            {categorySubCategories[sub.title] && categorySubCategories[sub.title].length > 0 && (
+                              <div className="mobile-sub-subcategories">
+                                {categorySubCategories[sub.title].map((subCat, idx) => (
+                                  <NavLink
+                                    key={idx}
+                                    to={`/category/${encodeURIComponent(sub.title)}/${encodeURIComponent(subCat)}`}
+                                    className="mobile-sub-sublink"
+                                    onClick={() => setShowMenu(false)}
+                                  >
+                                    • {subCat}
+                                  </NavLink>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))
                       )}

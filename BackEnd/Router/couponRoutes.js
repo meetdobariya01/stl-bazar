@@ -10,74 +10,77 @@
   // Get coupons for a specific product - Updated
   // Get coupons for a specific product - Updated to ONLY show product-specific coupons
   // Get coupons for a specific product - Updated to use 'products' field
-  router.get("/public/product/:productId", async (req, res) => {
-    try {
-      const { productId } = req.params;
-      
-      // console.log(`Fetching coupons for product: ${productId}`);
-      
-      // First, get the product to know its vendor/company
-      const Product = require("../Models/Product");
-      const product = await Product.findById(productId);
-      
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: "Product not found"
-        });
-      }
-      
-      // Get the vendor name from the product
-      const vendorName = product.company || product.vendor || product.vendorName;
-      
-      // IMPORTANT: Check BOTH 'products' and 'productIds' fields
-      // Use 'products' as the primary field since that's where your data is
-      const query = {
-        isActive: true,
-        expiryDate: { $gte: new Date() },
-        // Must have products array that includes this specific product
-        $or: [
-          { products: { $in: [productId] } },
-          { productIds: { $in: [productId] } } // For backward compatibility
-        ],
-        // Must belong to this vendor
-        $or: [
-          { company: vendorName },
-          { vendorName: vendorName }
-        ]
-      };
-      
-      const coupons = await Coupon.find(query).sort({ createdAt: -1 });
+ router.get("/public/product/:productId", async (req, res) => {
+  try {
+    const { productId } = req.params;
 
-      // console.log(`Found ${coupons.length} coupons specifically for product ${productId} from vendor ${vendorName}`);
-      
-      res.json({
-        success: true,
-        coupons: coupons.map(c => ({
-          _id: c._id,
-          code: c.code,
-          description: c.description || `${c.discountValue || c.discount || 0}% off`,
-          discountType: c.discountType || c.type || 'percentage',
-          discountValue: c.discountValue || c.discount || 0,
-          minOrderAmount: c.minOrderAmount || 0,
-          maxDiscount: c.maxDiscount || 0,
-          company: c.company || c.vendorName || null,
-          expiryDate: c.expiryDate,
-          discount: c.discount || c.discountValue || 0,
-          type: c.type || c.discountType || 'percentage',
-          isActive: c.isActive,
-          products: c.products || [], // Include products in response
-          productIds: c.productIds || [] // Include productIds in response
-        }))
-      });
-    } catch (err) {
-      console.error("Error fetching product coupons:", err);
-      res.status(500).json({
+    // First, get the product to know its vendor/company
+    const Product = require("../Models/Product");
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
         success: false,
-        message: "Server error"
+        message: "Product not found",
       });
     }
-  });
+
+    // Get the vendor name from the product
+    const vendorName = product.company || product.vendor || product.vendorName;
+
+    // ✅ FIXED: single $and containing both $or conditions
+    const query = {
+      isActive: true,
+      expiryDate: { $gte: new Date() },
+      $and: [
+        {
+          // Must have products array that includes this specific product
+          $or: [
+            { products: { $in: [productId] } },
+            { productIds: { $in: [productId] } }, // backward compat
+          ],
+        },
+        {
+          // Must belong to this vendor
+          $or: [
+            { company: vendorName },
+            { vendorName: vendorName },
+          ],
+        },
+      ],
+    };
+
+    const coupons = await Coupon.find(query).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      coupons: coupons.map((c) => ({
+        _id: c._id,
+        code: c.code,
+        description:
+          c.description ||
+          `${c.discountValue || c.discount || 0}% off`,
+        discountType: c.discountType || c.type || "percentage",
+        discountValue: c.discountValue || c.discount || 0,
+        minOrderAmount: c.minOrderAmount || 0,
+        maxDiscount: c.maxDiscount || 0,
+        company: c.company || c.vendorName || null,
+        expiryDate: c.expiryDate,
+        discount: c.discount || c.discountValue || 0,
+        type: c.type || c.discountType || "percentage",
+        isActive: c.isActive,
+        products: c.products || [],
+        productIds: c.productIds || [],
+      })),
+    });
+  } catch (err) {
+    console.error("Error fetching product coupons:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
   // Get coupons by company name - Updated
   // Get coupons by company name - Updated
   // Get coupons by company name - Updated with product filtering using 'products' field

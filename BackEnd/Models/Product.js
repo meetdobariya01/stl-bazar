@@ -20,13 +20,12 @@ const ProductSchema = new mongoose.Schema(
     categoryIcon: { type: String, default: "FaBoxOpen" },
 
     // Sub-category
-    
+ // Sub-category (ALL fields synced)
 subcategory: { type: String, default: "" },
 subcategories: { type: [String], default: [] },
 subCategory: { type: String, default: "" },
 subCategories: { type: [String], default: [] },
 categorySubcategoryMap: { type: Map, of: [String], default: {} },
-
     // 🆕 VARIANTS
     variants: { type: [variantSchema], default: [] },
 
@@ -47,3 +46,4 @@ categorySubcategoryMap: { type: Map, of: [String], default: {} },
 );
 
 module.exports = mongoose.model("Product", ProductSchema);
+

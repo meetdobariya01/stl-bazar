@@ -1,6 +1,7 @@
 import React from "react";
 import { FaGem, FaLeaf, FaHeart } from "react-icons/fa";
 import { GiLotus } from "react-icons/gi";
+import { NavLink } from "react-router-dom";
 import "./features.css";
 
 const StorySection = () => {
@@ -40,10 +41,13 @@ const StorySection = () => {
                 timeless elegance.
               </p>
 
-              <a href="/company/NEEPA%20HIREN%20JEWELS" className="jewellery-btn">
+              <NavLink
+                to="/company/NEEPA%20HIREN%20JEWELS"
+                className="jewellery-btn"
+              >
                 EXPLORE NEEPAHIREN JEWELS
                 <span>→</span>
-              </a>
+              </NavLink>
 
               {/* FEATURES */}
               <div className="jewellery-features">
