@@ -62,6 +62,42 @@ const logoutUser = (email) => {
   return false;
 };
 
+
+
+// Backend: routes/auth.js
+router.post("/force-logout", async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email is required" 
+      });
+    }
+
+    // ✅ Delete all sessions for this email
+    await Session.deleteMany({ email });
+    
+    // ✅ Or if you use activeSession field:
+    // await User.updateOne({ email }, { $unset: { activeSession: 1 } });
+
+    return res.status(200).json({
+      success: true,
+      message: "All sessions cleared",
+    });
+  } catch (err) {
+    console.error("Force logout error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
+
+
+
 // ============================================
 // REGISTER
 // ============================================

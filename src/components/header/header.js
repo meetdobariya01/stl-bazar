@@ -1,4 +1,4 @@
-// Header.jsx - FULLY FIXED — slug links + Admin API path
+// Header.jsx - FULLY FIXED — email initial (Google + normal login, JWT decode fix)
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -10,7 +10,6 @@ import {
   Button,
   Dropdown,
   Spinner,
-  Badge,
 } from "react-bootstrap";
 import {
   HiOutlineHeart,
@@ -18,16 +17,16 @@ import {
   HiOutlineSearch,
   HiOutlineUser,
 } from "react-icons/hi";
-import { FiHeart, FiShoppingBag, FiX } from "react-icons/fi";
+import { FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { createSlug } from "../../utils/slugUtils";
 import "./header.css";
 
-// ✅ API URLs — FIXED admin path
+// ✅ API URLs
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
 const ADMIN_API_URL = "https://api-admin.native91.com/api/category";
 
@@ -38,7 +37,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// 🆕 Parse sub-categories — handles objects, arrays, nested strings
+// 🆕 Parse sub-categories
 const parseSubCategories = (input, depth = 0) => {
   if (!input || depth > 10) return [];
 
@@ -114,8 +113,121 @@ const pickSubsFromResponse = (data) => {
   );
 };
 
+// 🆕 Decode JWT token — FULLY ROBUST (base64 padding + UTF-8)
+const decodeJWT = (token) => {
+  try {
+    if (!token || typeof token !== "string") return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    // ✅ URL-safe base64 → standard base64
+    let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+
+    // ✅ Padding add
+    while (base64.length % 4) {
+      base64 += "=";
+    }
+
+    // ✅ UTF-8 safe decode
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const decodedStr = new TextDecoder("utf-8").decode(bytes);
+
+    return JSON.parse(decodedStr);
+  } catch (err) {
+    console.warn("JWT decode failed:", err);
+    return null;
+  }
+};
+
+// 🆕 Extract first letter from user object OR JWT — EMAIL PRIORITY
+const extractInitial = (userObj, token = null) => {
+  // ✅ Step 1: EMAIL first (from user object)
+  if (userObj && typeof userObj === "object") {
+    const email =
+      userObj.email ||
+      userObj.userEmail ||
+      userObj.emailId ||
+      userObj.mail;
+
+    if (email && typeof email === "string" && email.trim().length > 0) {
+      const ch = email.trim().charAt(0);
+      if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
+    }
+  }
+
+  // ✅ Step 2: EMAIL from JWT
+  if (token) {
+    const decoded = decodeJWT(token);
+    if (decoded && decoded.email) {
+      const ch = String(decoded.email).trim().charAt(0);
+      if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
+    }
+  }
+
+  // ✅ Step 3: Fallback — other fields
+  if (userObj && typeof userObj === "object") {
+    const fallbacks = [
+      userObj.username,
+      userObj.userName,
+      userObj.phone,
+      userObj.mobile,
+      userObj.name,
+      userObj.fullName,
+      userObj.firstName,
+      userObj.given_name,
+    ];
+
+    for (const val of fallbacks) {
+      if (val && typeof val === "string" && val.trim().length > 0) {
+        const ch = val.trim().charAt(0);
+        if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
+      }
+    }
+  }
+
+  // ✅ Step 4: JWT other fields
+  if (token) {
+    const decoded = decodeJWT(token);
+    if (decoded) {
+      const jwtFallbacks = [
+        decoded.username,
+        decoded.name,
+        decoded.given_name,
+        decoded.sub,
+      ];
+
+      for (const val of jwtFallbacks) {
+        if (val && typeof val === "string" && val.trim().length > 0) {
+          const ch = val.trim().charAt(0);
+          if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
+        }
+      }
+    }
+  }
+
+  return "U";
+};
+
+// 🆕 Build user object from JWT — for Google login
+const buildUserFromJWT = (token) => {
+  const decoded = decodeJWT(token);
+  if (!decoded) return null;
+  return {
+    _id: decoded.id || decoded.sub || decoded._id || "",
+    email: decoded.email || "",
+    name: decoded.name || decoded.given_name || "",
+    picture: decoded.picture || "",
+    provider: decoded.provider || "google",
+  };
+};
+
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -131,12 +243,125 @@ const Header = () => {
   const [categorySubCategories, setCategorySubCategories] = useState({});
   const [loadingSubCategories, setLoadingSubCategories] = useState({});
 
+  // 🆕 Login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInitial, setUserInitial] = useState("");
+
   const searchTimeout = useRef(null);
   const searchRef = useRef(null);
   const categoryMenuTimeout = useRef(null);
 
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
+
+  // ══════════════════════════════════════════════
+  // 🆕 GLOBAL TOKEN HANDLER — કોઈ પણ page પર token process
+  // ══════════════════════════════════════════════
+  useEffect(() => {
+    const processToken = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token");
+
+        if (token) {
+          console.log("🔍 Header: Token detected in URL");
+
+          // ✅ Save token
+          localStorage.setItem("token", token);
+
+          // ✅ Decode JWT → build user object
+          const userObj = buildUserFromJWT(token);
+
+          if (userObj && userObj.email) {
+            localStorage.setItem("user", JSON.stringify(userObj));
+            console.log("✅ Header: User saved from JWT:", userObj);
+          } else {
+            console.warn("⚠️ Header: JWT decode failed or email missing");
+          }
+
+          // ✅ Notify navbar + cart + wishlist
+          window.dispatchEvent(new Event("userUpdated"));
+          window.dispatchEvent(new Event("cartUpdated"));
+          window.dispatchEvent(new Event("wishlistUpdated"));
+
+          // ✅ Clean URL (remove token from address bar)
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      } catch (err) {
+        console.error("Header processToken error:", err);
+      }
+    };
+
+    processToken();
+  }, [location.search]);
+
+  // ══════════════════════════════════════════════
+  // 🆕 Track login state — PRODUCTION SAFE with JWT
+  // ══════════════════════════════════════════════
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const token = localStorage.getItem("token");
+        const userData =
+          localStorage.getItem("user") || localStorage.getItem("userData");
+
+        if (!token) {
+          setIsLoggedIn(false);
+          setUserInitial("");
+          return;
+        }
+
+        let parsed = null;
+        if (userData) {
+          try {
+            parsed = JSON.parse(userData);
+          } catch (e) {
+            console.warn("User data parse failed:", e);
+          }
+        }
+
+        setIsLoggedIn(true);
+        const initial = extractInitial(parsed, token);
+        console.log("🔍 Header initial:", initial);
+        setUserInitial(initial);
+      } catch (err) {
+        console.error("Header loadUser error:", err);
+        setIsLoggedIn(false);
+        setUserInitial("");
+      }
+    };
+
+    loadUser();
+
+    // ✅ Debounced reload
+    let debounceTimer = null;
+    const debouncedLoad = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(loadUser, 50);
+    };
+
+    // Delayed loads — production timing fix
+    const t1 = setTimeout(loadUser, 100);
+    const t2 = setTimeout(loadUser, 500);
+    const t3 = setTimeout(loadUser, 1500);
+
+    window.addEventListener("storage", debouncedLoad);
+    window.addEventListener("userUpdated", debouncedLoad);
+    window.addEventListener("focus", debouncedLoad);
+    window.addEventListener("pageshow", debouncedLoad);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener("storage", debouncedLoad);
+      window.removeEventListener("userUpdated", debouncedLoad);
+      window.removeEventListener("focus", debouncedLoad);
+      window.removeEventListener("pageshow", debouncedLoad);
+    };
+  }, []);
 
   // Fetch categories
   useEffect(() => {
@@ -160,7 +385,6 @@ const Header = () => {
         setCategories(activeCategories);
         console.log(`📂 Found ${activeCategories.length} categories`);
 
-        // 🆕 Admin categories પાસેથી જ sub-categories already છે
         const subMap = {};
         activeCategories.forEach((cat) => {
           if (Array.isArray(cat.subcategories)) {
@@ -173,7 +397,6 @@ const Header = () => {
           }
         });
         setCategorySubCategories(subMap);
-        console.log("📂 Sub-categories from Admin API:", subMap);
       } catch (error) {
         console.error("Error fetching categories:", error);
         const defaultCategories = [
@@ -196,9 +419,12 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // 🆕 Fetch sub-categories on hover (fallback — if not loaded)
+  // Fetch sub-categories on hover
   const fetchSubCategoriesForCategory = async (categoryName) => {
-    if (categorySubCategories[categoryName] && categorySubCategories[categoryName].length > 0) {
+    if (
+      categorySubCategories[categoryName] &&
+      categorySubCategories[categoryName].length > 0
+    ) {
       return categorySubCategories[categoryName];
     }
 
@@ -206,7 +432,9 @@ const Header = () => {
 
     try {
       const response = await axios.get(
-        `${VENDOR_API_URL}/categories/${encodeURIComponent(categoryName)}/subcategories`,
+        `${VENDOR_API_URL}/categories/${encodeURIComponent(
+          categoryName
+        )}/subcategories`,
         { ...getAuthHeaders() }
       );
       const subs = parseSubCategories(pickSubsFromResponse(response.data));
@@ -217,7 +445,10 @@ const Header = () => {
       }));
       return subs;
     } catch (error) {
-      console.warn(`Sub-categories fetch failed for ${categoryName}:`, error.message);
+      console.warn(
+        `Sub-categories fetch failed for ${categoryName}:`,
+        error.message
+      );
       return [];
     } finally {
       setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: false }));
@@ -345,7 +576,6 @@ const Header = () => {
     };
   }, []);
 
-  // 🆕 MENU with SLUG links
   const menu = [
     { title: "Home", link: "/" },
     { title: "Brands", link: "/product" },
@@ -353,7 +583,7 @@ const Header = () => {
       title: "Category",
       dropdown: categories.map((cat) => ({
         title: cat.name,
-        link: `/category/${createSlug(cat.name)}`, // ✅ slug
+        link: `/category/${createSlug(cat.name)}`,
         productCount: cat.productCount || 0,
         subCategories: categorySubCategories[cat.name] || [],
         loading: loadingSubCategories[cat.name] || false,
@@ -374,6 +604,26 @@ const Header = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  // 🆕 User icon block
+  const renderUserIcon = () => {
+    if (isLoggedIn) {
+      return (
+        <NavLink to="/orderhistory" className="icon-link" title="My Profile">
+          <button type="button" className="user-btn">
+            <span className="user-initial-badge">{userInitial || "U"}</span>
+          </button>
+        </NavLink>
+      );
+    }
+    return (
+      <NavLink to="/login" className="icon-link" title="Login">
+        <button type="button" className="user-btn">
+          <HiOutlineUser />
+        </button>
+      </NavLink>
+    );
+  };
 
   return (
     <>
@@ -403,7 +653,11 @@ const Header = () => {
                       className="ms-2"
                       disabled={isLoading}
                     >
-                      {isLoading ? <Spinner animation="border" size="sm" /> : "Search"}
+                      {isLoading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        "Search"
+                      )}
                     </Button>
                   </Form>
 
@@ -421,7 +675,9 @@ const Header = () => {
                         >
                           <div className="recommendation-img">
                             <img
-                              src={product.image?.[0] || "/images/placeholder.png"}
+                              src={
+                                product.image?.[0] || "/images/placeholder.png"
+                              }
                               alt={product.name}
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -430,8 +686,12 @@ const Header = () => {
                             />
                           </div>
                           <div className="recommendation-info">
-                            <div className="recommendation-name">{product.name}</div>
-                            <div className="recommendation-price">₹{product.price}</div>
+                            <div className="recommendation-name">
+                              {product.name}
+                            </div>
+                            <div className="recommendation-price">
+                              ₹{product.price}
+                            </div>
                             <div className="recommendation-company">
                               {product.company || "Native91"}
                             </div>
@@ -500,9 +760,13 @@ const Header = () => {
                                 <div
                                   key={i}
                                   className={`category-menu-item ${
-                                    hoveredCategory === sub.title ? "active" : ""
+                                    hoveredCategory === sub.title
+                                      ? "active"
+                                      : ""
                                   }`}
-                                  onMouseEnter={() => handleCategoryHover(sub.title)}
+                                  onMouseEnter={() =>
+                                    handleCategoryHover(sub.title)
+                                  }
                                 >
                                   <NavLink
                                     to={sub.link}
@@ -512,7 +776,9 @@ const Header = () => {
                                     {sub.title}
                                     {sub.subCategories &&
                                       sub.subCategories.length > 0 && (
-                                        <span className="sub-category-arrow">›</span>
+                                        <span className="sub-category-arrow">
+                                          ›
+                                        </span>
                                       )}
                                   </NavLink>
                                 </div>
@@ -526,12 +792,14 @@ const Header = () => {
                                     {hoveredCategory}
                                   </span>
                                   <span className="subcategory-count">
-                                    {categorySubCategories[hoveredCategory]?.length || 0}{" "}
+                                    {categorySubCategories[hoveredCategory]
+                                      ?.length || 0}{" "}
                                     sub-categories
                                   </span>
                                 </div>
                                 <div className="subcategory-grid">
-                                  {categorySubCategories[hoveredCategory]?.length > 0 ? (
+                                  {categorySubCategories[hoveredCategory]
+                                    ?.length > 0 ? (
                                     categorySubCategories[hoveredCategory].map(
                                       (sub, idx) => (
                                         <NavLink
@@ -542,7 +810,9 @@ const Header = () => {
                                           className="subcategory-item"
                                           onClick={() => setShowMenu(false)}
                                         >
-                                          <span className="subcategory-dot">•</span>
+                                          <span className="subcategory-dot">
+                                            •
+                                          </span>
                                           {sub}
                                         </NavLink>
                                       )
@@ -555,7 +825,9 @@ const Header = () => {
                                 </div>
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${createSlug(hoveredCategory)}`}
+                                    to={`/category/${createSlug(
+                                      hoveredCategory
+                                    )}`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >
@@ -577,15 +849,14 @@ const Header = () => {
               ))}
             </Nav>
 
+            {/* ✅ DESKTOP ICONS */}
             <div className="desktop-icons">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
               </button>
-              <NavLink to="/login" className="icon-link">
-                <button type="button">
-                  <HiOutlineUser />
-                </button>
-              </NavLink>
+
+              {renderUserIcon()}
+
               <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <HiOutlineHeart className="cart-icon" />
@@ -596,6 +867,7 @@ const Header = () => {
                   )}
                 </button>
               </NavLink>
+
               <NavLink to="/cart" className="icon-link cart-icon-wrapper">
                 <button type="button" className="cart-btn-with-badge">
                   <FiShoppingBag className="cart-icon" />
@@ -608,10 +880,36 @@ const Header = () => {
               </NavLink>
             </div>
 
+            {/* ✅ MOBILE ICONS */}
             <div className="mobile-right">
               <button onClick={() => setShowSearch(true)}>
                 <HiOutlineSearch />
               </button>
+
+              {renderUserIcon()}
+
+              <NavLink to="/wishlist" className="icon-link cart-icon-wrapper">
+                <button type="button" className="cart-btn-with-badge">
+                  <HiOutlineHeart className="cart-icon" />
+                  {wishlistCount > 0 && (
+                    <span className="cart-badge wishlist-badge">
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </span>
+                  )}
+                </button>
+              </NavLink>
+
+              <NavLink to="/cart" className="icon-link cart-icon-wrapper">
+                <button type="button" className="cart-btn-with-badge">
+                  <FiShoppingBag className="cart-icon" />
+                  {cartCount > 0 && (
+                    <span className="cart-badge">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
+                </button>
+              </NavLink>
+
               <button onClick={() => setShowMenu(true)}>
                 <HiOutlineMenuAlt3 />
               </button>
@@ -635,6 +933,30 @@ const Header = () => {
           </Offcanvas.Header>
 
           <Offcanvas.Body>
+            <div className="offcanvas-user-row mb-3">
+              {isLoggedIn ? (
+                <NavLink
+                  to="/orderhistory"
+                  className="mobile-link d-flex align-items-center gap-2"
+                  onClick={() => setShowMenu(false)}
+                >
+                  <span className="user-initial-badge">
+                    {userInitial || "U"}
+                  </span>
+                  <span>My Profile</span>
+                </NavLink>
+              ) : (
+                <NavLink
+                  to="/login"
+                  className="mobile-link d-flex align-items-center gap-2"
+                  onClick={() => setShowMenu(false)}
+                >
+                  <HiOutlineUser />
+                  <span>Login</span>
+                </NavLink>
+              )}
+            </div>
+
             <Nav className="flex-column lexend">
               {menu.map((item, index) => (
                 <div key={index}>
