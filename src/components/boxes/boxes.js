@@ -44,6 +44,15 @@ const bannerData = [
     link: "/company/Nuravia",
     company: "Nuravia",
   },
+  {
+    subtitle: "Handcrafted Beauty",
+    title: "Little Wishes, Beautiful Finds",
+    desc: "Thoughtfully crafted by hand, these charming crochet blooms bring a little warmth, joy, and beauty to every space.",
+    button: "Discover Brands",
+    image: "./images/creativebugsbysapnaa.jpg",
+    link: "/company/Creativebugsbysapnaa",
+    company: "Creativebugsbysapnaa",
+  },
 ];
 
 const Boxes = () => {
@@ -51,12 +60,26 @@ const Boxes = () => {
     <div>
       <section className="promo-section py-5 lexend">
         <Container fluid>
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap container">
+            <h2 className="section-title-seller funnel-sans">
+              Most Loved Picks
+            </h2>
+
+            <a
+              href="/category/All"
+              className="view-all-link d-flex align-items-center"
+            >
+              View all products
+              <FaArrowRight className="ms-2" />
+            </a>
+          </div>
           {/* Desktop */}
 
+          {/* Desktop - 5 Boxes Full Width */}
           <div className="d-none d-lg-block">
-            <Row className="g-4">
+            <Row className="g-4 five-columns">
               {bannerData.map((item, index) => (
-                <Col lg={3} key={index}>
+                <Col key={index} className="five-col">
                   <div
                     className="promo-card"
                     style={{
@@ -70,6 +93,7 @@ const Boxes = () => {
                         <span>{item.subtitle}</span>
 
                         <h3>{item.title}</h3>
+
                         <p className="m-0 fw-bold">{item.company}</p>
 
                         <p>{item.desc}</p>

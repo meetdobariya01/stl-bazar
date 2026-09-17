@@ -49,7 +49,7 @@ const Home = () => {
       <Arrival />
 
       {/* best seller */}
-      <Bestseller />
+      {/* <Bestseller /> */}
 
       {/* boxes */}
       <Boxes />
