@@ -6,7 +6,27 @@ import "./breadcrumb.css";
 const Breadcrumb = () => {
   const location = useLocation();
 
-  const pathnames = location.pathname.split("/").filter((x) => x);
+  // Get breadcrumb history passed through navigation
+  const breadcrumbHistory = location.state?.breadcrumbHistory || [];
+
+  // Current page name
+  const getPageName = (pathname) => {
+    const name = pathname.split("/").filter(Boolean).pop();
+
+    if (!name) return "Home";
+
+    let decoded = name;
+
+    try {
+      decoded = decodeURIComponent(name);
+    } catch (e) {
+      decoded = name;
+    }
+
+    return decoded
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
 
   return (
     <div className="breadcrumb-wrapper">
@@ -21,39 +41,48 @@ const Breadcrumb = () => {
               </Link>
             </li>
 
-            {/* Other Pages */}
-            {pathnames.map((name, index) => {
-              const routeTo = `/${pathnames.slice(0, index + 1).join("/")}`;
-              const isLast = index === pathnames.length - 1;
+            {breadcrumbHistory.map((item, index) => (
+              <React.Fragment key={`${item.path}-${index}`}>
+                <li className="breadcrumb-separator">
+                  <FaChevronRight />
+                </li>
 
-              // 🆕 Decode URL + format
-              let decoded = name;
-              try {
-                decoded = decodeURIComponent(name);
-              } catch (e) {
-                decoded = name;
-              }
+                <li
+                  className={`breadcrumb-item ${
+                    index === breadcrumbHistory.length - 1 ? "active" : ""
+                  }`}
+                >
+                  {index === breadcrumbHistory.length - 1 ? (
+                    <span>{item.name}</span>
+                  ) : (
+                    <Link
+                      to={item.path}
+                      state={{
+                        breadcrumbHistory: breadcrumbHistory.slice(
+                          0,
+                          index + 1,
+                        ),
+                      }}
+                    >
+                      {item.name}
+                    </Link>
+                  )}
+                </li>
+              </React.Fragment>
+            ))}
 
-              const pageName = decoded
-                .replace(/-/g, " ")
-                .replace(/\b\w/g, (char) => char.toUpperCase());
+            {/* Fallback when no history exists */}
+            {breadcrumbHistory.length === 0 && location.pathname !== "/" && (
+              <>
+                <li className="breadcrumb-separator">
+                  <FaChevronRight />
+                </li>
 
-              return (
-                <React.Fragment key={routeTo}>
-                  <li className="breadcrumb-separator">
-                    <FaChevronRight />
-                  </li>
-
-                  <li className={`breadcrumb-item ${isLast ? "active" : ""}`}>
-                    {isLast ? (
-                      <span>{pageName}</span>
-                    ) : (
-                      <Link to={routeTo}>{pageName}</Link>
-                    )}
-                  </li>
-                </React.Fragment>
-              );
-            })}
+                <li className="breadcrumb-item active">
+                  <span>{getPageName(location.pathname)}</span>
+                </li>
+              </>
+            )}
           </ol>
         </nav>
       </div>

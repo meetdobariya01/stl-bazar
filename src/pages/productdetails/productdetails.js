@@ -358,7 +358,8 @@ const Productdetails = () => {
 
       if (!logo || typeof logo !== "string") return null;
 
-      if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
+      if (logo.startsWith("http://") || logo.startsWith("https://"))
+        return logo;
 
       if (logo.startsWith("/images")) return `${ADMIN_IMAGE_BASE}${logo}`;
       if (logo.startsWith("/uploads") || logo.startsWith("/public"))
@@ -386,7 +387,10 @@ const Productdetails = () => {
           companiesData = response.data.companies;
         } else if (Array.isArray(response.data)) {
           companiesData = response.data;
-        } else if (response.data.companies && Array.isArray(response.data.companies)) {
+        } else if (
+          response.data.companies &&
+          Array.isArray(response.data.companies)
+        ) {
           companiesData = response.data.companies;
         }
       }
@@ -411,7 +415,7 @@ const Productdetails = () => {
         setBrandDescription(description);
 
         setBrandLogo(
-          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
+          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null,
         );
 
         console.log("✅ Brand data set:", {
@@ -625,10 +629,13 @@ const Productdetails = () => {
     return `${VENDOR_IMAGE_BASE}${imgStr}`;
   }, []);
 
-  const getVariantImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "/images/placeholder.png";
-    return getImageUrl(imagePath);
-  }, [getImageUrl]);
+  const getVariantImageUrl = useCallback(
+    (imagePath) => {
+      if (!imagePath) return "/images/placeholder.png";
+      return getImageUrl(imagePath);
+    },
+    [getImageUrl],
+  );
 
   // ✅ FIXED: getAllImagesFromProduct — order preserve, NO dedupe, correct field priority
   const getAllImagesFromProduct = useCallback(
@@ -650,7 +657,10 @@ const Productdetails = () => {
           if (Array.isArray(product[field]) && product[field].length > 0) {
             rawImages.push(...product[field]);
             break;
-          } else if (typeof product[field] === "string" && product[field].trim()) {
+          } else if (
+            typeof product[field] === "string" &&
+            product[field].trim()
+          ) {
             rawImages.push(product[field]);
             break;
           }
@@ -1299,7 +1309,7 @@ const Productdetails = () => {
             {/* RIGHT SIDE - PRODUCT INFO */}
             <Col lg={6}>
               <div className="product-content">
-                <span className="best-seller-badge">Bestseller</span>
+                {/* <span className="best-seller-badge">Bestseller</span> */}
 
                 <h1 className="funnel-sans">{String(product.name)}</h1>
                 <div className="product-brand">
@@ -1401,12 +1411,12 @@ const Productdetails = () => {
                 {/* VARIANT SELECTOR */}
                 {variants.length > 0 && (
                   <div
-                    className="variant-selector-section mt-3 mb-3 p-3 border rounded"
+                    className="variant-selector-section mt-3 mb-3 "
                     style={{ background: "#f8f9fa" }}
                   >
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h6 className="mb-0 fw-bold">
-                        <FaPalette className="me-2 text-primary" />
+                        {/* <FaPalette className="me-2 text-primary" /> */}
                         Select Variant
                         <Badge bg="secondary" className="ms-2">
                           {variants.length} options
@@ -1597,7 +1607,7 @@ const Productdetails = () => {
                 )}
 
                 {/* INGREDIENTS */}
-                {(hasIngredients || hasAllergens) && (
+                {/* {(hasIngredients || hasAllergens) && (
                   <div
                     className="ingredients-section mt-3 p-3 border rounded"
                     style={{ background: "#fafafa" }}
@@ -1637,7 +1647,7 @@ const Productdetails = () => {
                       </div>
                     )}
                   </div>
-                )}
+                )} */}
 
                 {/* NUTRITIONAL INFO */}
                 {hasNutritionalInfo && (
@@ -1803,7 +1813,7 @@ const Productdetails = () => {
                         </div>
                         <span>{effectiveStock} / 10</span>
                       </div>
-                      <div className="progress" style={{ height: "6px" }}>
+                      <div className="progress mt-2" style={{ height: "6px" }}>
                         <div
                           className={`progress-bar bg-${effectiveStock <= 5 ? "warning" : "info"}`}
                           style={{ width: `${(effectiveStock / 10) * 100}%` }}
@@ -2085,15 +2095,15 @@ const Productdetails = () => {
               hasDietaryInfo) && (
               <details>
                 <summary className="funnel-sans">
-                  <FaInfoCircle className="me-2" /> Ingredients & Nutrition
+                  Ingredients & Nutrition
                 </summary>
                 <div className="ingredients-accordion p-3">
                   {hasIngredients && (
                     <div className="mb-3">
-                      <h6 className="fw-bold">
+                      {/* <h6 className="fw-bold">
                         <FaUtensils className="me-2 text-primary" />
                         Ingredients
-                      </h6>
+                      </h6> */}
                       <p className="mb-0">{product.ingredients}</p>
                       {product.ingredientsList &&
                         product.ingredientsList.length > 0 && (
