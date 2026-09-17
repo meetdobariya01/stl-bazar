@@ -66,7 +66,7 @@ export const CartProvider = ({ children }) => {
     }
   }, [getGuestId]);
 
-  // ✅ NESTED product payload with variant fields
+  // ✅ NESTED product payload with variant + custom field
   const addToCart = useCallback(async (product) => {
     try {
       const guestId = getGuestId();
@@ -81,6 +81,8 @@ export const CartProvider = ({ children }) => {
         variantId: strictVariantId,
         selectedColor: product.selectedColor,
         variantPrice: product.variantPrice,
+        customFieldLabel: product.customFieldLabel,
+        customFieldValue: product.customFieldValue,
       });
 
       const payload = {
@@ -109,6 +111,10 @@ export const CartProvider = ({ children }) => {
           stock: product.stock || 0,
           company: product.company || "N/A",
           vendorId: product.vendorId || null,
+
+          // 🆕 CUSTOM FIELD — MUST be forwarded!
+          customFieldLabel: product.customFieldLabel || null,
+          customFieldValue: product.customFieldValue || null,
         },
       };
 
@@ -176,6 +182,10 @@ export const CartProvider = ({ children }) => {
             stock: item.stock || 0,
             company: item.company || "N/A",
             vendorId: item.vendorId || null,
+
+            // 🆕 Forward existing custom field on qty update
+            customFieldLabel: item.customFieldLabel || null,
+            customFieldValue: item.customFieldValue || null,
           },
         });
 

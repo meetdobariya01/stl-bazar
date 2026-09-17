@@ -409,7 +409,7 @@ const Header = () => {
       return;
     }
     try {
-      const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
+      const response = await axios.get(`https://api.native91.com/api/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
         ...getAuthHeaders(),
@@ -449,7 +449,7 @@ const Header = () => {
     if (!searchQuery.trim()) return;
     setIsLoading(true);
     try {
-      const response = await axios.get(`${VENDOR_API_URL}/products/search`, {
+      const response = await axios.get(`https://api.native91.com/api/products/search`, {
         params: { keyword: searchQuery },
         ...getAuthHeaders(),
       });
@@ -577,7 +577,7 @@ const Header = () => {
                           onClick={() => handleRecommendationClick(product)}
                         >
                           <div className="recommendation-img">
-                            <img
+                            {/* <img
                               src={
                                 product.image?.[0] || "/images/placeholder.png"
                               }
@@ -586,7 +586,7 @@ const Header = () => {
                                 e.target.onerror = null;
                                 e.target.src = "/images/placeholder.png";
                               }}
-                            />
+                            /> */}
                           </div>
                           <div className="recommendation-info">
                             <div className="recommendation-name">

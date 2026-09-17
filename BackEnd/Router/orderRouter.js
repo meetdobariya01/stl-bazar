@@ -1,4 +1,4 @@
-// Router/orderRouter.js - COMPLETE UPDATED WITH VARIANT SUPPORT
+// Router/orderRouter.js - COMPLETE UPDATED WITH VARIANT + CUSTOM FIELD SUPPORT
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
@@ -14,12 +14,14 @@ const {
   getCustomerOrderEmail,
   getAdminOrderEmail,
   getVendorOrderEmail,
-  emailMode
+  emailMode,
 } = require("../Comfig/emailConfig");
 
 const shiprocketService = require("../utils/shiprocketService");
 
-const VENDOR_API_URL = process.env.VENDOR_API_URL || "https://api.brandelvendor.starlighttechlabsindia.com/api";
+const VENDOR_API_URL =
+  process.env.VENDOR_API_URL ||
+  "https://api.brandelvendor.starlighttechlabsindia.com/api";
 
 // ============================================
 // ✅ HELPER: Get complete vendor data from SellerDocument
@@ -36,17 +38,17 @@ async function getCompleteVendorData(vendorId) {
       name: vendor.name || vendor.company,
       company: vendor.company || "N/A",
       email: vendor.email,
-      phone: vendor.phone || sellerDoc?.contact?.phone || '9876543210',
-      address: sellerDoc?.contact?.address || 'Default Address',
-      city: sellerDoc?.contact?.city || 'Mumbai',
-      state: sellerDoc?.contact?.state || 'Maharashtra',
-      pincode: sellerDoc?.contact?.pincode || '400001',
-      country: sellerDoc?.contact?.country || 'India',
+      phone: vendor.phone || sellerDoc?.contact?.phone || "9876543210",
+      address: sellerDoc?.contact?.address || "Default Address",
+      city: sellerDoc?.contact?.city || "Mumbai",
+      state: sellerDoc?.contact?.state || "Maharashtra",
+      pincode: sellerDoc?.contact?.pincode || "400001",
+      country: sellerDoc?.contact?.country || "India",
     };
 
     return vendorData;
   } catch (error) {
-    console.error('Error fetching vendor data:', error.message);
+    console.error("Error fetching vendor data:", error.message);
     return null;
   }
 }
@@ -60,7 +62,7 @@ router.post("/place", async (req, res) => {
   if (!guestId || !shippingAddress) {
     return res.status(400).json({
       success: false,
-      message: "Incomplete data"
+      message: "Incomplete data",
     });
   }
 
@@ -70,18 +72,17 @@ router.post("/place", async (req, res) => {
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Cart is empty"
+        message: "Cart is empty",
       });
     }
 
     // ✅ Get full product details including vendor company and vendorId
     const itemsWithVendorInfo = await Promise.all(
       cart.items.map(async (item) => {
-        const product = await Product.findById(item.productId)
-          .populate({
-            path: 'vendorId',
-            select: 'company name email _id'
-          });
+        const product = await Product.findById(item.productId).populate({
+          path: "vendorId",
+          select: "company name email _id",
+        });
 
         let company = null;
         let vendorId = null;
@@ -89,7 +90,10 @@ router.post("/place", async (req, res) => {
         if (product?.vendorId) {
           if (product.vendorId._id) {
             vendorId = product.vendorId._id;
-          } else if (typeof product.vendorId === 'string' || product.vendorId instanceof mongoose.Types.ObjectId) {
+          } else if (
+            typeof product.vendorId === "string" ||
+            product.vendorId instanceof mongoose.Types.ObjectId
+          ) {
             vendorId = product.vendorId;
           } else {
             vendorId = product.vendorId;
@@ -102,7 +106,7 @@ router.post("/place", async (req, res) => {
 
         if (!vendorId && item.company) {
           const vendorByCompany = await Vendor.findOne({
-            company: { $regex: new RegExp(`^${item.company}$`, "i") }
+            company: { $regex: new RegExp(`^${item.company}$`, "i") },
           });
           if (vendorByCompany) {
             vendorId = vendorByCompany._id;
@@ -137,6 +141,10 @@ router.post("/place", async (req, res) => {
         const variantImage = item.variantImage || null;
         const variantPrice = item.variantPrice || 0;
 
+        // 🆕 Resolve custom field
+        const customFieldLabel = item.customFieldLabel || null;
+        const customFieldValue = item.customFieldValue || null;
+
         return {
           productId: item.productId,
           name: item.name || product?.name || "Unknown Product",
@@ -145,7 +153,9 @@ router.post("/place", async (req, res) => {
           stock: product?.stock || 0,
           image: variantImage
             ? variantImage
-            : (Array.isArray(item.image) ? item.image[0] : (item.image || product?.image?.[0] || null)),
+            : Array.isArray(item.image)
+            ? item.image[0]
+            : item.image || product?.image?.[0] || null,
           vendorId: vendorId,
           company: company || "N/A",
           weight: product?.weight || 0.5,
@@ -156,6 +166,10 @@ router.post("/place", async (req, res) => {
           selectedSize: item.selectedSize || "",
           variantImage: item.variantImage || "",
           variantPrice: variantPrice,
+
+          // 🆕 CUSTOM FIELD FROM CART
+          customFieldLabel: customFieldLabel,
+          customFieldValue: customFieldValue,
         };
       })
     );
@@ -169,7 +183,7 @@ router.post("/place", async (req, res) => {
       if (!product) {
         return res.status(404).json({
           success: false,
-          message: `Product not found: ${item.name}`
+          message: `Product not found: ${item.name}`,
         });
       }
 
@@ -179,13 +193,13 @@ router.post("/place", async (req, res) => {
         if (!variant) {
           return res.status(400).json({
             success: false,
-            message: `Variant not found for ${product.name}`
+            message: `Variant not found for ${product.name}`,
           });
         }
         if (variant.stock < item.quantity) {
           return res.status(400).json({
             success: false,
-            message: `Insufficient stock for ${product.name} (${variant.color} ${variant.size}). Available: ${variant.stock}`
+            message: `Insufficient stock for ${product.name} (${variant.color} ${variant.size}). Available: ${variant.stock}`,
           });
         }
       } else {
@@ -193,7 +207,7 @@ router.post("/place", async (req, res) => {
         if (product.stock < item.quantity) {
           return res.status(400).json({
             success: false,
-            message: `Insufficient stock for ${product.name}. Available: ${product.stock}`
+            message: `Insufficient stock for ${product.name}. Available: ${product.stock}`,
           });
         }
       }
@@ -223,9 +237,13 @@ router.post("/place", async (req, res) => {
         });
 
         if (coupon) {
-          const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
-          const usageLimitReached = coupon.usageLimit && (coupon.usageCount || 0) >= coupon.usageLimit;
-          const minOrderNotMet = coupon.minOrderAmount && subtotal < coupon.minOrderAmount;
+          const isExpired =
+            coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+          const usageLimitReached =
+            coupon.usageLimit &&
+            (coupon.usageCount || 0) >= coupon.usageLimit;
+          const minOrderNotMet =
+            coupon.minOrderAmount && subtotal < coupon.minOrderAmount;
 
           if (!isExpired && !usageLimitReached && !minOrderNotMet) {
             let discountAmount = 0;
@@ -233,7 +251,10 @@ router.post("/place", async (req, res) => {
             if (coupon.discountType === "percentage") {
               discountAmount = (subtotal * coupon.discountValue) / 100;
               if (coupon.maxDiscountAmount) {
-                discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+                discountAmount = Math.min(
+                  discountAmount,
+                  coupon.maxDiscountAmount
+                );
               }
             } else {
               discountAmount = Math.min(coupon.discountValue, subtotal);
@@ -258,10 +279,10 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    // ✅ Create order with variant info
+    // ✅ Create order with variant + custom field info
     const order = new Order({
       guestId,
-      items: itemsWithVendorInfo.map(item => ({
+      items: itemsWithVendorInfo.map((item) => ({
         productId: item.productId,
         name: item.name,
         price: item.price,
@@ -278,6 +299,10 @@ router.post("/place", async (req, res) => {
         selectedSize: item.selectedSize || "",
         variantImage: item.variantImage || "",
         variantPrice: item.variantPrice || 0,
+
+        // 🆕 CUSTOM FIELD
+        customFieldLabel: item.customFieldLabel || null,
+        customFieldValue: item.customFieldValue || null,
       })),
       shippingAddress,
       paymentMethod: paymentMethod || "COD",
@@ -301,10 +326,9 @@ router.post("/place", async (req, res) => {
         );
       } else {
         // Deduct product base stock
-        await Product.findByIdAndUpdate(
-          item.productId,
-          { $inc: { stock: -item.quantity } }
-        );
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: -item.quantity },
+        });
       }
     }
 
@@ -319,11 +343,11 @@ router.post("/place", async (req, res) => {
     // ✅ SHIPROCKET INTEGRATION - CREATE SHIPMENTS
     // ============================================
     let shipmentResults = [];
-    let shiprocketSyncStatus = 'pending';
+    let shiprocketSyncStatus = "pending";
 
     try {
-      if (process.env.SHIPROCKET_ENABLED === 'true') {
-        console.log('🚀 Creating Shiprocket shipments for order:', orderId);
+      if (process.env.SHIPROCKET_ENABLED === "true") {
+        console.log("🚀 Creating Shiprocket shipments for order:", orderId);
 
         const vendorItemsMap = {};
 
@@ -335,7 +359,7 @@ router.post("/place", async (req, res) => {
             }
             vendorItemsMap[vendorId].push({
               ...item,
-              weight: item.weight || 0.5
+              weight: item.weight || 0.5,
             });
           }
         }
@@ -343,18 +367,22 @@ router.post("/place", async (req, res) => {
         const vendorIds = Object.keys(vendorItemsMap);
 
         if (vendorIds.length > 0) {
-          console.log(`📦 Creating shipments for ${vendorIds.length} vendor(s)`);
+          console.log(
+            `📦 Creating shipments for ${vendorIds.length} vendor(s)`
+          );
 
           for (const vendorId of vendorIds) {
             try {
               const vendorData = await getCompleteVendorData(vendorId);
 
               if (!vendorData) {
-                console.warn(`⚠️ Vendor ${vendorId} not found, skipping shipment`);
+                console.warn(
+                  `⚠️ Vendor ${vendorId} not found, skipping shipment`
+                );
                 shipmentResults.push({
                   vendorId,
                   success: false,
-                  error: 'Vendor not found'
+                  error: "Vendor not found",
                 });
                 continue;
               }
@@ -371,60 +399,70 @@ router.post("/place", async (req, res) => {
               shipmentResults.push(result);
 
               if (result.success) {
-                console.log(`✅ Shipment created for ${vendorData.company}: ${result.shipmentId}`);
+                console.log(
+                  `✅ Shipment created for ${vendorData.company}: ${result.shipmentId}`
+                );
               } else {
-                console.error(`❌ Failed to create shipment for ${vendorData.company}:`, result.error);
+                console.error(
+                  `❌ Failed to create shipment for ${vendorData.company}:`,
+                  result.error
+                );
               }
-
             } catch (vendorError) {
-              console.error(`❌ Error processing vendor ${vendorId}:`, vendorError.message);
+              console.error(
+                `❌ Error processing vendor ${vendorId}:`,
+                vendorError.message
+              );
               shipmentResults.push({
                 vendorId,
                 success: false,
-                error: vendorError.message
+                error: vendorError.message,
               });
             }
           }
 
-          const successfulShipments = shipmentResults.filter(r => r.success);
-          order.shipments = successfulShipments.map(r => ({
+          const successfulShipments = shipmentResults.filter((r) => r.success);
+          order.shipments = successfulShipments.map((r) => ({
             vendorId: r.vendorId,
             company: r.company,
             shipmentId: r.shipmentId,
             orderId: r.orderId,
             awbCode: r.awbCode,
             labelUrl: r.labelUrl,
-            status: 'created',
-            createdAt: new Date()
+            status: "created",
+            createdAt: new Date(),
           }));
 
           if (successfulShipments.length === shipmentResults.length) {
-            shiprocketSyncStatus = 'synced';
+            shiprocketSyncStatus = "synced";
           } else if (successfulShipments.length > 0) {
-            shiprocketSyncStatus = 'partial';
+            shiprocketSyncStatus = "partial";
           } else {
-            shiprocketSyncStatus = 'failed';
-            order.shiprocketError = 'All vendor shipments failed';
+            shiprocketSyncStatus = "failed";
+            order.shiprocketError = "All vendor shipments failed";
           }
 
           order.shiprocketSyncStatus = shiprocketSyncStatus;
           await order.save();
         } else {
-          console.log('ℹ️ No vendors found in order, skipping Shiprocket');
-          shiprocketSyncStatus = 'skipped';
-          order.shiprocketSyncStatus = 'skipped';
+          console.log("ℹ️ No vendors found in order, skipping Shiprocket");
+          shiprocketSyncStatus = "skipped";
+          order.shiprocketSyncStatus = "skipped";
           await order.save();
         }
       } else {
-        console.log('ℹ️ Shiprocket is disabled (SHIPROCKET_ENABLED=false)');
-        shiprocketSyncStatus = 'disabled';
-        order.shiprocketSyncStatus = 'disabled';
+        console.log("ℹ️ Shiprocket is disabled (SHIPROCKET_ENABLED=false)");
+        shiprocketSyncStatus = "disabled";
+        order.shiprocketSyncStatus = "disabled";
         await order.save();
       }
     } catch (shiprocketError) {
-      console.error('❌ Shiprocket integration error:', shiprocketError.message);
-      shiprocketSyncStatus = 'failed';
-      order.shiprocketSyncStatus = 'failed';
+      console.error(
+        "❌ Shiprocket integration error:",
+        shiprocketError.message
+      );
+      shiprocketSyncStatus = "failed";
+      order.shiprocketSyncStatus = "failed";
       order.shiprocketError = shiprocketError.message;
       await order.save();
     }
@@ -435,7 +473,7 @@ router.post("/place", async (req, res) => {
     const emailResults = {
       customer: false,
       admin: false,
-      vendors: []
+      vendors: [],
     };
 
     // 1. SEND EMAIL TO CUSTOMER
@@ -495,12 +533,12 @@ router.post("/place", async (req, res) => {
         let vendorName = company;
 
         vendor = await Vendor.findOne({
-          company: company
+          company: company,
         }).select("email name company phone");
 
         if (!vendor) {
           vendor = await Vendor.findOne({
-            company: { $regex: new RegExp(`^${company}$`, "i") }
+            company: { $regex: new RegExp(`^${company}$`, "i") },
           }).select("email name company phone");
         }
 
@@ -511,12 +549,17 @@ router.post("/place", async (req, res) => {
 
         if (vendorEmail) {
           const vendorItems = vendorData.items;
-          const vendorHtml = getVendorOrderEmail(order, orderId, vendorItems, {
-            name: vendorName,
-            email: vendorEmail,
-            shopName: company,
-            phone: vendor?.phone || "N/A",
-          });
+          const vendorHtml = getVendorOrderEmail(
+            order,
+            orderId,
+            vendorItems,
+            {
+              name: vendorName,
+              email: vendorEmail,
+              shopName: company,
+              phone: vendor?.phone || "N/A",
+            }
+          );
 
           const result = await sendEmail(
             vendorEmail,
@@ -527,21 +570,24 @@ router.post("/place", async (req, res) => {
           emailResults.vendors.push({
             company: company,
             email: vendorEmail,
-            success: result.success
+            success: result.success,
           });
         } else {
           emailResults.vendors.push({
             company: company,
             success: false,
-            error: "No email found"
+            error: "No email found",
           });
         }
       } catch (vendorErr) {
-        console.error(`Error sending email to vendor ${company}:`, vendorErr.message);
+        console.error(
+          `Error sending email to vendor ${company}:`,
+          vendorErr.message
+        );
         emailResults.vendors.push({
           company: company,
           success: false,
-          error: vendorErr.message
+          error: vendorErr.message,
         });
       }
     }
@@ -557,44 +603,55 @@ router.post("/place", async (req, res) => {
         }, 0);
 
         const vendorShipment = shipmentResults.find(
-          s => s.company === company && s.success
+          (s) => s.company === company && s.success
         );
 
         const notificationData = {
           company: company,
           title: "🛒 New Order Received!",
-          message: `You have received a new order #${orderId.toString().slice(-6)}.\n\n` +
-                   `Total Amount: ₹${vendorTotal}\n` +
-                   `Items: ${vendorItems.length} product(s)\n` +
-                   `Customer: ${shippingAddress?.name || "Customer"}\n` +
-                   `Phone: ${shippingAddress?.phone || "N/A"}\n` +
-                   `Order Date: ${new Date().toLocaleString()}\n` +
-                   (vendorShipment ? `\n📦 Shipment Details:\n` +
-                   `AWB: ${vendorShipment.awbCode || 'N/A'}\n` +
-                   `Tracking: ${vendorShipment.shipmentId || 'N/A'}\n` : '') +
-                   `\nPlease check and process the order.`,
+          message:
+            `You have received a new order #${orderId
+              .toString()
+              .slice(-6)}.\n\n` +
+            `Total Amount: ₹${vendorTotal}\n` +
+            `Items: ${vendorItems.length} product(s)\n` +
+            `Customer: ${shippingAddress?.name || "Customer"}\n` +
+            `Phone: ${shippingAddress?.phone || "N/A"}\n` +
+            `Order Date: ${new Date().toLocaleString()}\n` +
+            (vendorShipment
+              ? `\n📦 Shipment Details:\n` +
+                `AWB: ${vendorShipment.awbCode || "N/A"}\n` +
+                `Tracking: ${vendorShipment.shipmentId || "N/A"}\n`
+              : "") +
+            `\nPlease check and process the order.`,
           read: false,
           orderId: orderId,
         };
 
-        await axios.post(`${VENDOR_API_URL}/notifications/create`, notificationData, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: 5000,
-        });
+        await axios.post(
+          `${VENDOR_API_URL}/notifications/create`,
+          notificationData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            timeout: 5000,
+          }
+        );
 
         notificationResults.push({
           company,
-          success: true
+          success: true,
         });
-
       } catch (vendorError) {
-        console.error(`Failed to create notification for ${company}:`, vendorError.message);
+        console.error(
+          `Failed to create notification for ${company}:`,
+          vendorError.message
+        );
         notificationResults.push({
           company,
           success: false,
-          error: vendorError.message
+          error: vendorError.message,
         });
       }
     }
@@ -618,15 +675,17 @@ router.post("/place", async (req, res) => {
       emailResults: emailResults,
       notificationResults: notificationResults,
       vendorCount: vendorGroups.size,
-      emailMode: emailMode
+      emailMode: emailMode,
     });
-
   } catch (err) {
     console.error("Order placement error:", err);
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: process.env.NODE_ENV === "development" ? err.message : "Internal server error"
+      error:
+        process.env.NODE_ENV === "development"
+          ? err.message
+          : "Internal server error",
     });
   }
 });
@@ -652,7 +711,9 @@ router.get("/single/:orderId", async (req, res) => {
 // ============================================
 router.get("/guest/:guestId", async (req, res) => {
   try {
-    const orders = await Order.find({ guestId: req.params.guestId }).sort({ createdAt: -1 });
+    const orders = await Order.find({
+      guestId: req.params.guestId,
+    }).sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) {
     console.error(err);
@@ -665,7 +726,9 @@ router.get("/guest/:guestId", async (req, res) => {
 // ============================================
 router.get("/user/:userId", async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.params.userId }).sort({ createdAt: -1 });
+    const orders = await Order.find({
+      userId: req.params.userId,
+    }).sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) {
     console.error(err);
@@ -683,7 +746,7 @@ router.get("/admin/commission/:orderId", async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order not found"
+        message: "Order not found",
       });
     }
 
@@ -694,7 +757,7 @@ router.get("/admin/commission/:orderId", async (req, res) => {
     for (const item of order.items) {
       if (item.vendorId) {
         const vendorIdStr = item.vendorId.toString();
-        const vendor = await Vendor.findById(item.vendorId).populate('planId');
+        const vendor = await Vendor.findById(item.vendorId).populate("planId");
 
         let commissionPercentage = 8;
         if (vendor && vendor.planId) {
@@ -710,10 +773,10 @@ router.get("/admin/commission/:orderId", async (req, res) => {
 
         if (!vendorBreakdown[vendorIdStr]) {
           vendorBreakdown[vendorIdStr] = {
-            company: item.company || 'Unknown',
+            company: item.company || "Unknown",
             vendorId: item.vendorId,
-            vendorName: vendor?.name || 'Unknown',
-            vendorEmail: vendor?.email || 'N/A',
+            vendorName: vendor?.name || "Unknown",
+            vendorEmail: vendor?.email || "N/A",
             commissionPercentage: commissionPercentage,
             items: [],
             totalItemValue: 0,
@@ -734,10 +797,15 @@ router.get("/admin/commission/:orderId", async (req, res) => {
           selectedColor: item.selectedColor || "",
           selectedSize: item.selectedSize || "",
           variantImage: item.variantImage || "",
+
+          // 🆕 CUSTOM FIELD in breakdown
+          customFieldLabel: item.customFieldLabel || null,
+          customFieldValue: item.customFieldValue || null,
         });
 
         vendorBreakdown[vendorIdStr].totalItemValue += itemTotal;
-        vendorBreakdown[vendorIdStr].totalVendorCommission += vendorCommission;
+        vendorBreakdown[vendorIdStr].totalVendorCommission +=
+          vendorCommission;
         vendorBreakdown[vendorIdStr].totalAdminCommission += adminCommission;
       }
     }
@@ -760,12 +828,16 @@ router.get("/admin/commission/:orderId", async (req, res) => {
       commissionSummary: {
         totalAdminCommission: totalAdminCommission,
         totalVendorCommission: totalVendorCommission,
-        platformCommissionRate: order.totalPrice > 0 ?
-          ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' :
-          '0%',
-        vendorCommissionRate: order.totalPrice > 0 ?
-          ((totalVendorCommission / order.totalPrice) * 100).toFixed(2) + '%' :
-          '0%',
+        platformCommissionRate:
+          order.totalPrice > 0
+            ? ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) +
+              "%"
+            : "0%",
+        vendorCommissionRate:
+          order.totalPrice > 0
+            ? ((totalVendorCommission / order.totalPrice) * 100).toFixed(2) +
+              "%"
+            : "0%",
       },
       vendorBreakdown: Object.values(vendorBreakdown),
     });
@@ -774,7 +846,7 @@ router.get("/admin/commission/:orderId", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -798,8 +870,7 @@ router.get("/admin/commissions", async (req, res) => {
       filter.orderStatus = status;
     }
 
-    const orders = await Order.find(filter)
-      .sort({ createdAt: -1 });
+    const orders = await Order.find(filter).sort({ createdAt: -1 });
 
     const orderSummaries = [];
     let totalAdminCommission = 0;
@@ -815,7 +886,9 @@ router.get("/admin/commissions", async (req, res) => {
         if (item.vendorId) {
           vendorSet.add(item.vendorId.toString());
 
-          const vendor = await Vendor.findById(item.vendorId).populate('planId');
+          const vendor = await Vendor.findById(item.vendorId).populate(
+            "planId"
+          );
 
           let commissionPercentage = 8;
           if (vendor && vendor.planId) {
@@ -844,12 +917,14 @@ router.get("/admin/commissions", async (req, res) => {
         createdAt: order.createdAt,
         vendorCount: vendorSet.size,
         shipmentCount: order.shipments?.length || 0,
-        shiprocketSyncStatus: order.shiprocketSyncStatus || 'pending',
+        shiprocketSyncStatus: order.shiprocketSyncStatus || "pending",
         adminCommission: orderAdminCommission,
         vendorCommission: orderVendorCommission,
-        platformCommissionRate: order.totalPrice > 0 ?
-          ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' :
-          '0%',
+        platformCommissionRate:
+          order.totalPrice > 0
+            ? ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) +
+              "%"
+            : "0%",
       });
     }
 
@@ -857,7 +932,7 @@ router.get("/admin/commissions", async (req, res) => {
     if (vendorId) {
       const filteredOrders = await Order.find({
         ...filter,
-        'items.vendorId': vendorId
+        "items.vendorId": vendorId,
       }).sort({ createdAt: -1 });
 
       const filteredResults = [];
@@ -874,14 +949,18 @@ router.get("/admin/commissions", async (req, res) => {
           if (item.vendorId && item.vendorId.toString() === vendorId) {
             vendorSet.add(item.vendorId.toString());
 
-            const vendor = await Vendor.findById(item.vendorId).populate('planId');
+            const vendor = await Vendor.findById(item.vendorId).populate(
+              "planId"
+            );
             let commissionPercentage = 8;
             if (vendor && vendor.planId) {
-              commissionPercentage = vendor.planId.commissionPercentage || 8;
+              commissionPercentage =
+                vendor.planId.commissionPercentage || 8;
             }
 
             const itemTotal = item.price * item.quantity;
-            const vendorCommission = (itemTotal * commissionPercentage) / 100;
+            const vendorCommission =
+              (itemTotal * commissionPercentage) / 100;
             const adminCommission = itemTotal - vendorCommission;
 
             orderVendorCommission += vendorCommission;
@@ -902,12 +981,15 @@ router.get("/admin/commissions", async (req, res) => {
           createdAt: order.createdAt,
           vendorCount: vendorSet.size,
           shipmentCount: order.shipments?.length || 0,
-          shiprocketSyncStatus: order.shiprocketSyncStatus || 'pending',
+          shiprocketSyncStatus: order.shiprocketSyncStatus || "pending",
           adminCommission: orderAdminCommission,
           vendorCommission: orderVendorCommission,
-          platformCommissionRate: order.totalPrice > 0 ?
-            ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + '%' :
-            '0%',
+          platformCommissionRate:
+            order.totalPrice > 0
+              ? ((orderAdminCommission / order.totalPrice) * 100).toFixed(
+                  2
+                ) + "%"
+              : "0%",
         });
       }
 
@@ -924,9 +1006,10 @@ router.get("/admin/commissions", async (req, res) => {
         totalRevenue: totalRevenue,
         totalAdminCommission: totalAdminCommission,
         totalVendorCommission: totalVendorCommission,
-        platformCommissionRate: totalRevenue > 0 ?
-          ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + '%' :
-          '0%',
+        platformCommissionRate:
+          totalRevenue > 0
+            ? ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + "%"
+            : "0%",
       },
       orders: filteredSummaries,
     });
@@ -935,7 +1018,7 @@ router.get("/admin/commissions", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -946,12 +1029,19 @@ router.get("/admin/commissions", async (req, res) => {
 router.put("/admin/status/:orderId", async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    const validStatuses = [
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
+    ];
 
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Allowed: Pending, Processing, Shipped, Delivered, Cancelled",
+        message:
+          "Invalid status. Allowed: Pending, Processing, Shipped, Delivered, Cancelled",
       });
     }
 
@@ -1007,13 +1097,13 @@ router.post("/send-confirmation", async (req, res) => {
       shippingAddress,
       paymentMethod,
       shippingMethod,
-      orderDate
+      orderDate,
     } = req.body;
 
     if (!to) {
       return res.status(400).json({
         success: false,
-        message: "Recipient email is required"
+        message: "Recipient email is required",
       });
     }
 
@@ -1035,28 +1125,43 @@ router.post("/send-confirmation", async (req, res) => {
           .order-details strong { color: #28a745; }
           .items-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
           .items-table th { background: #f8f9fa; padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6; }
-          .items-table td { padding: 10px; border-bottom: 1px solid #dee2e6; }
+          .items-table td { padding: 10px; border-bottom: 1px solid #dee2e6; vertical-align: top; }
           .total-row { font-weight: bold; font-size: 18px; }
           .total-amount { color: #28a745; font-size: 24px; }
           .badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 14px; }
           .shipping-info { margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
           .free-shipping { color: #28a745; font-weight: bold; }
+          .variant-info { font-size: 12px; color: #666; margin-top: 2px; }
+          .custom-field-info {
+            font-size: 12px;
+            color: #7a5c00;
+            background: #fff9e6;
+            border: 1px solid #ffd966;
+            border-radius: 6px;
+            padding: 3px 8px;
+            margin-top: 4px;
+            display: inline-block;
+          }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🎉 Order Confirmed!</h1>
-            <p>Thank you for your order, ${customerName || 'Customer'}!</p>
+            <p>Thank you for your order, ${customerName || "Customer"}!</p>
           </div>
 
           <div style="padding: 20px;">
             <div class="order-details">
               <p><strong>📋 Order #:</strong> ${orderId}</p>
-              <p><strong>📅 Order Date:</strong> ${orderDate || new Date().toLocaleString()}</p>
-              <p><strong>💳 Payment Method:</strong> ${paymentMethod || 'COD'}</p>
-              <p><strong>🚚 Shipping Method:</strong> ${shippingMethod || 'Standard'}</p>
+              <p><strong>📅 Order Date:</strong> ${
+                orderDate || new Date().toLocaleString()
+              }</p>
+              <p><strong>💳 Payment Method:</strong> ${paymentMethod || "COD"}</p>
+              <p><strong>🚚 Shipping Method:</strong> ${
+                shippingMethod || "Standard"
+              }</p>
               <p><strong>📦 Status:</strong> <span class="badge">Pending</span></p>
             </div>
 
@@ -1071,22 +1176,54 @@ router.post("/send-confirmation", async (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${(items || []).map(item => `
-                  <tr>
-                    <td>
-                      ${item.name}
-                      ${(item.selectedColor || item.selectedSize) ?
-                        `<div style="font-size: 12px; color: #666; margin-top: 2px;">
-                          ${item.selectedColor ? `🎨 ${item.selectedColor}` : ''}
-                          ${item.selectedColor && item.selectedSize ? ' • ' : ''}
-                          ${item.selectedSize ? `📏 ${item.selectedSize}` : ''}
-                        </div>` : ''}
-                    </td>
-                    <td>${item.quantity}</td>
-                    <td style="text-align: right;">₹${(item.price || 0).toFixed(2)}</td>
-                    <td style="text-align: right;">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
-                  </tr>
-                `).join('')}
+                ${(items || [])
+                  .map((item) => {
+                    const variantHtml =
+                      item.selectedColor || item.selectedSize
+                        ? `<div class="variant-info">
+                            ${
+                              item.selectedColor
+                                ? `🎨 ${item.selectedColor}`
+                                : ""
+                            }
+                            ${
+                              item.selectedColor && item.selectedSize
+                                ? " • "
+                                : ""
+                            }
+                            ${
+                              item.selectedSize
+                                ? `📏 ${item.selectedSize}`
+                                : ""
+                            }
+                          </div>`
+                        : "";
+
+                    const customFieldHtml =
+                      item.customFieldLabel && item.customFieldValue
+                        ? `<div class="custom-field-info">
+                            <strong>${item.customFieldLabel}:</strong> ${item.customFieldValue}
+                          </div>`
+                        : "";
+
+                    return `
+                    <tr>
+                      <td>
+                        ${item.name}
+                        ${variantHtml}
+                        ${customFieldHtml}
+                      </td>
+                      <td>${item.quantity}</td>
+                      <td style="text-align: right;">₹${(
+                        item.price || 0
+                      ).toFixed(2)}</td>
+                      <td style="text-align: right;">₹${(
+                        (item.price || 0) * (item.quantity || 1)
+                      ).toFixed(2)}</td>
+                    </tr>
+                  `;
+                  })
+                  .join("")}
               </tbody>
             </table>
 
@@ -1095,15 +1232,23 @@ router.post("/send-confirmation", async (req, res) => {
                 <span>Subtotal</span>
                 <span>₹${(subtotal || 0).toFixed(2)}</span>
               </div>
-              ${couponDiscount > 0 ? `
+              ${
+                couponDiscount > 0
+                  ? `
               <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #28a745;">
                 <span>🎟️ Coupon Discount</span>
                 <span>-₹${(couponDiscount || 0).toFixed(2)}</span>
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
               <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                 <span>🚚 Shipping</span>
-                <span>${shippingCost === 0 ? '<span class="free-shipping">FREE</span>' : `₹${(shippingCost || 0).toFixed(2)}`}</span>
+                <span>${
+                  shippingCost === 0
+                    ? '<span class="free-shipping">FREE</span>'
+                    : `₹${(shippingCost || 0).toFixed(2)}`
+                }</span>
               </div>
               <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 20px; font-weight: bold; border-top: 2px solid #28a745;">
                 <span>Total</span>
@@ -1113,12 +1258,20 @@ router.post("/send-confirmation", async (req, res) => {
 
             <div class="shipping-info">
               <h4>📦 Shipping Address</h4>
-              <p><strong>Name:</strong> ${shippingAddress?.name || 'N/A'}</p>
-              <p><strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}</p>
-              <p><strong>Address:</strong> ${shippingAddress?.address || 'N/A'}</p>
-              <p><strong>City:</strong> ${shippingAddress?.city || 'N/A'}</p>
-              <p><strong>State:</strong> ${shippingAddress?.state || 'N/A'}</p>
-              <p><strong>Pincode:</strong> ${shippingAddress?.pincode || 'N/A'}</p>
+              <p><strong>Name:</strong> ${shippingAddress?.name || "N/A"}</p>
+              <p><strong>Phone:</strong> ${
+                shippingAddress?.phone || "N/A"
+              }</p>
+              <p><strong>Address:</strong> ${
+                shippingAddress?.address || "N/A"
+              }</p>
+              <p><strong>City:</strong> ${shippingAddress?.city || "N/A"}</p>
+              <p><strong>State:</strong> ${
+                shippingAddress?.state || "N/A"
+              }</p>
+              <p><strong>Pincode:</strong> ${
+                shippingAddress?.pincode || "N/A"
+              }</p>
             </div>
 
             <div class="footer">
@@ -1132,7 +1285,11 @@ router.post("/send-confirmation", async (req, res) => {
       </html>
     `;
 
-    const result = await sendEmail(to, subject || `Order Confirmation - #${orderId}`, html);
+    const result = await sendEmail(
+      to,
+      subject || `Order Confirmation - #${orderId}`,
+      html
+    );
 
     if (result.success) {
       res.json({
@@ -1147,7 +1304,6 @@ router.post("/send-confirmation", async (req, res) => {
         error: result.error || "Unknown error",
       });
     }
-
   } catch (err) {
     console.error("Send confirmation error:", err);
     res.status(500).json({
@@ -1157,4 +1313,5 @@ router.post("/send-confirmation", async (req, res) => {
     });
   }
 });
+
 module.exports = router;

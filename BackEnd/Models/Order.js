@@ -1,4 +1,4 @@
-// Models/Order.js - UPDATED WITH VARIANT SUPPORT
+// Models/Order.js - UPDATED WITH VARIANT & CUSTOM FIELD SUPPORT
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -22,6 +22,10 @@ const orderSchema = new mongoose.Schema({
       selectedSize: { type: String, default: "" },
       variantImage: { type: String, default: "" },
       variantPrice: { type: Number, default: 0 },
+
+      // 🆕 CUSTOM FIELD (Customer Input)
+      customFieldLabel: { type: String, default: null },
+      customFieldValue: { type: String, default: null }
     },
   ],
   shippingAddress: {

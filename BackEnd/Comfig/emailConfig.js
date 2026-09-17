@@ -294,25 +294,50 @@ const getAdminOrderEmail = (order, orderId) => {
 // ============================================================
 // VENDOR ORDER EMAIL
 // ============================================================
-const getVendorOrderEmail = (order, orderId, vendorItems, vendor, customerName = "Brandel") => {
-  const itemsList = (vendorItems || []).map(item => `
+const getVendorOrderEmail = (
+  order,
+  orderId,
+  vendorItems,
+  vendor,
+  customerName = "Brandel"
+) => {
+  const itemsList = (vendorItems || [])
+    .map((item) => {
+      const variantHtml =
+        item.selectedColor || item.selectedSize
+          ? `<div style="font-size: 12px; color: #666; margin-top: 3px;">
+              ${item.selectedColor ? `🎨 ${item.selectedColor}` : ""}
+              ${item.selectedColor && item.selectedSize ? " • " : ""}
+              ${item.selectedSize ? `📏 ${item.selectedSize}` : ""}
+            </div>`
+          : "";
+
+      const customFieldHtml =
+        item.customFieldLabel && item.customFieldValue
+          ? `<div style="font-size: 12px; color: #7a5c00; background: #fff9e6; border: 1px solid #ffd966; border-radius: 6px; padding: 3px 8px; margin-top: 4px; display: inline-block;">
+              <strong>${item.customFieldLabel}:</strong> ${item.customFieldValue}
+            </div>`
+          : "";
+
+      return `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #ddd; font-family:Arial,sans-serif; font-size:14px;">
         ${item.name}
-        ${(item.selectedColor || item.selectedSize) ?
-          `<div style="font-size: 12px; color: #666; margin-top: 3px;">
-            ${item.selectedColor ? `🎨 ${item.selectedColor}` : ''}
-            ${item.selectedColor && item.selectedSize ? ' • ' : ''}
-            ${item.selectedSize ? `📏 ${item.selectedSize}` : ''}
-          </div>` : ''}
+        ${variantHtml}
+        ${customFieldHtml}
       </td>
       <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center; font-family:Arial,sans-serif; font-size:14px;">${item.quantity}</td>
       <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-family:Arial,sans-serif; font-size:14px;">₹${item.price}</td>
       <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-family:Arial,sans-serif; font-size:14px;">₹${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
-  `).join("");
+  `;
+    })
+    .join("");
 
-  const vendorTotal = (vendorItems || []).reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const vendorTotal = (vendorItems || []).reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   return `
     <!DOCTYPE html>
@@ -417,11 +442,11 @@ const getVendorOrderEmail = (order, orderId, vendorItems, vendor, customerName =
                     </tr>
                     <tr>
                       <td style="font-family:Arial,sans-serif;font-size:14px;color:#666;">Courier</td>
-                      <td align="right" style="font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#222;">${order.courier || 'Delhivery'}</td>
+                      <td align="right" style="font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#222;">${order.courier || "Delhivery"}</td>
                     </tr>
                     <tr>
                       <td style="font-family:Arial,sans-serif;font-size:14px;color:#666;">Tracking ID</td>
-                      <td align="right" style="font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#222;">${order.trackingId || '1234567890'}</td>
+                      <td align="right" style="font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#222;">${order.trackingId || "1234567890"}</td>
                     </tr>
                   </table>
                 </td>
@@ -470,7 +495,7 @@ const getVendorOrderEmail = (order, orderId, vendorItems, vendor, customerName =
                   <table cellpadding="0" cellspacing="0" border="0">
                     <tr>
                       <td bgcolor="#0D3B2E" style="border-radius:6px;">
-                        <a href="${process.env.FRONTEND_URL || 'https://native91.com'}/vendor/orders/${orderId}"
+                        <a href="${process.env.FRONTEND_URL || "https://native91.com"}/vendor/orders/${orderId}"
                            style="display:inline-block;padding:14px 40px;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;">
                           VIEW ORDER →
                         </a>
@@ -505,7 +530,6 @@ const getVendorOrderEmail = (order, orderId, vendorItems, vendor, customerName =
     </html>
   `;
 };
-
 
 // ============================================================
 // EXPORTS
