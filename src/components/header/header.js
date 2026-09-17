@@ -467,7 +467,7 @@ const Header = () => {
         >
           <Container>
             <Navbar.Brand as={NavLink} to="/">
-              <img src="/images/native.png" alt="Native91" className="logo" />
+              c
             </Navbar.Brand>
 
             <Nav className="mx-auto desktop-menu">
