@@ -22,6 +22,64 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BEND_URL = "https://api-vendor.native91.com";
 const ADMIN_CATEGORY_API = "https://api-admin.native91.com/api/category";
 
+// ============================================================
+// 🆕 CLEAN SUBCATEGORY STRING — removes garbage
+// ============================================================
+const cleanSubcat = (s) => {
+  if (!s) return "";
+  if (typeof s !== "string") s = String(s);
+
+  let cleaned = s.trim();
+  if (!cleaned) return "";
+
+  // Parse JSON arrays (nested)
+  let iter = 0;
+  while ((cleaned.startsWith("[") || cleaned.startsWith('"')) && iter < 5) {
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) cleaned = String(parsed[0] || "").trim();
+      else if (typeof parsed === "string") cleaned = parsed.trim();
+      else break;
+    } catch {
+      break;
+    }
+    iter++;
+  }
+
+  // Strip leading/trailing brackets, quotes, backslashes, slashes, spaces
+  let prev = null;
+  let stripIter = 0;
+  while (cleaned !== prev && stripIter < 15) {
+    prev = cleaned;
+    cleaned = cleaned
+      .replace(/^[\s\[\]"'\\\/]+/, "")
+      .replace(/[\s\[\]"'\\\/]+$/, "")
+      .trim();
+    stripIter++;
+  }
+
+  // Remove internal backslashes
+  cleaned = cleaned.replace(/\\+/g, "").trim();
+
+  // Remove trailing brackets/quotes
+  cleaned = cleaned
+    .replace(/^[\[\]"']+/, "")
+    .replace(/[\[\]"']+$/, "")
+    .trim();
+
+  // Handle comma-separated — take first
+  if (cleaned.includes(",") && !cleaned.includes(" & ")) {
+    const parts = cleaned.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 1) cleaned = parts[0];
+  }
+
+  // Validation
+  if (cleaned.length === 0 || cleaned.length > 100) return "";
+  if (/^[\\\/\[\]"'\s]+$/.test(cleaned)) return "";
+
+  return cleaned;
+};
+
 const formatImagePath = (image) => {
   if (!image) return "/images/placeholder.png";
   let imgPath = image;
@@ -49,7 +107,6 @@ const CategoryProducts = () => {
   const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
   const { addToCart, setShowCart } = useCart();
 
-  // 🆕 RESOLVED names from slug
   const [decodedCategory, setDecodedCategory] = useState("All");
   const [decodedSubCategory, setDecodedSubCategory] = useState(null);
   const [resolvingNames, setResolvingNames] = useState(true);
@@ -72,7 +129,7 @@ const CategoryProducts = () => {
   const [sortBy, setSortBy] = useState("featured");
 
   // ============================================================
-  // 🆕 RESOLVE SLUGS → REAL NAMES
+  // RESOLVE SLUGS → REAL NAMES
   // ============================================================
   useEffect(() => {
     const resolveSlugs = async () => {
@@ -88,12 +145,8 @@ const CategoryProducts = () => {
         const res = await axios.get(`${ADMIN_CATEGORY_API}/categories`);
         const cats = res.data?.categories || [];
 
-        // Try slug match first
-        let matchedCat = cats.find(
-          (c) => createSlug(c.name) === categorySlug
-        );
+        let matchedCat = cats.find((c) => createSlug(c.name) === categorySlug);
 
-        // Fallback — encoded name match
         if (!matchedCat) {
           const decoded = decodeURIComponent(categorySlug);
           matchedCat = cats.find(
@@ -105,31 +158,28 @@ const CategoryProducts = () => {
           setDecodedCategory(matchedCat.name);
 
           if (subCategorySlug && matchedCat.subcategories) {
-            // Try slug match
             let matchedSub = matchedCat.subcategories.find(
-              (sc) => createSlug(sc.name) === subCategorySlug
+              (sc) => createSlug(sc.name || sc) === subCategorySlug
             );
 
-            // Fallback — encoded name
             if (!matchedSub) {
               const decodedSub = decodeURIComponent(subCategorySlug);
               matchedSub = matchedCat.subcategories.find(
-                (sc) => sc.name.toLowerCase() === decodedSub.toLowerCase()
+                (sc) =>
+                  String(sc.name || sc).toLowerCase() === decodedSub.toLowerCase()
               );
             }
 
-            // Final fallback — rough slug conversion
             if (!matchedSub) {
               const rough = decodeURIComponent(subCategorySlug)
                 .replace(/-/g, " ")
                 .replace(/\b\w/g, (l) => l.toUpperCase());
               setDecodedSubCategory(rough);
             } else {
-              setDecodedSubCategory(matchedSub.name);
+              setDecodedSubCategory(matchedSub.name || matchedSub);
             }
           }
         } else {
-          // Total fallback
           setDecodedCategory(decodeURIComponent(categorySlug));
           if (subCategorySlug) {
             setDecodedSubCategory(decodeURIComponent(subCategorySlug));
@@ -137,7 +187,6 @@ const CategoryProducts = () => {
         }
       } catch (err) {
         console.warn("Slug resolve failed:", err.message);
-        // Fallback to raw params
         setDecodedCategory(decodeURIComponent(categorySlug || "All"));
         if (subCategorySlug) {
           setDecodedSubCategory(decodeURIComponent(subCategorySlug));
@@ -151,7 +200,7 @@ const CategoryProducts = () => {
   }, [categorySlug, subCategorySlug]);
 
   // ============================================================
-  // FETCH PRODUCTS (જ્યારે names resolve થાય)
+  // FETCH PRODUCTS
   // ============================================================
   useEffect(() => {
     if (resolvingNames) return;
@@ -165,7 +214,6 @@ const CategoryProducts = () => {
         let response = await axios.get(url);
         let allProducts = response.data || [];
 
-        // Filter by category
         if (decodedCategory !== "All") {
           allProducts = allProducts.filter(
             (p) =>
@@ -174,7 +222,6 @@ const CategoryProducts = () => {
           );
         }
 
-        // Filter by sub-category
         if (decodedSubCategory) {
           const targetSub = decodedSubCategory.toLowerCase().trim();
 
@@ -193,9 +240,7 @@ const CategoryProducts = () => {
 
             const cleanSubs = allSubs
               .filter(Boolean)
-              .map((s) =>
-                String(s).replace(/[\[\]"']/g, "").trim().toLowerCase()
-              )
+              .map((s) => cleanSubcat(String(s)).toLowerCase())
               .filter(Boolean);
 
             return cleanSubs.includes(targetSub);
@@ -220,7 +265,7 @@ const CategoryProducts = () => {
   }, [decodedCategory, decodedSubCategory, resolvingNames, fetchWishlist]);
 
   // ============================================================
-  // FETCH CATEGORIES + SUB-CATEGORIES (for filter drawer)
+  // FETCH CATEGORIES + SUB-CATEGORIES
   // ============================================================
   useEffect(() => {
     const fetchCategoriesAndSubs = async () => {
@@ -283,11 +328,11 @@ const CategoryProducts = () => {
 
         const cleanSubs = allSubs
           .filter(Boolean)
-          .map((s) => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
+          .map((s) => cleanSubcat(String(s)).toLowerCase())
           .filter(Boolean);
 
         return selectedSubCategories.some((selectedSub) =>
-          cleanSubs.includes(selectedSub.toLowerCase().trim())
+          cleanSubs.includes(cleanSubcat(selectedSub).toLowerCase())
         );
       });
     }
@@ -467,21 +512,38 @@ const CategoryProducts = () => {
 
   const checkIsInWishlist = (productId) => isInWishlist(productId);
 
+  // 🆕 CLEANED subcategories with dedupe + sort
   const getCategorySubCategories = () => {
+    let rawSubs = [];
+
     if (decodedCategory === "All") {
       const allSubs = new Set();
       Object.values(allSubCategories).forEach((subs) => {
         subs.forEach((s) => allSubs.add(s));
       });
-      return Array.from(allSubs);
+      rawSubs = Array.from(allSubs);
+    } else {
+      rawSubs = allSubCategories[decodedCategory] || [];
     }
-    return allSubCategories[decodedCategory] || [];
+
+    const seen = new Set();
+    const cleaned = [];
+    rawSubs.forEach((s) => {
+      const val = cleanSubcat(s);
+      if (!val) return;
+      const key = val.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      cleaned.push(val);
+    });
+
+    return cleaned.sort((a, b) => a.localeCompare(b));
   };
 
   const categorySubCategories = getCategorySubCategories();
 
   // ============================================================
-  // LOADING STATES
+  // LOADING
   // ============================================================
   if (resolvingNames || loading) {
     return (
@@ -575,7 +637,6 @@ const CategoryProducts = () => {
           </div>
 
           <Row className="g-4">
-            {/* MOBILE FILTER DRAWER */}
             {showMobileFilters && (
               <div
                 className="mobile-filters-overlay"
@@ -596,7 +657,6 @@ const CategoryProducts = () => {
                     </Button>
                   </div>
                   <div className="drawer-body">
-                    {/* Categories */}
                     <div className="filter-group">
                       <h6>Categories</h6>
                       <div className="category-list">
@@ -618,7 +678,6 @@ const CategoryProducts = () => {
                       </div>
                     </div>
 
-                    {/* Sub-Categories */}
                     {categorySubCategories.length > 0 && (
                       <div className="filter-group">
                         <h6>
@@ -644,7 +703,6 @@ const CategoryProducts = () => {
                       </div>
                     )}
 
-                    {/* Price */}
                     <div className="filter-group">
                       <h6>Price</h6>
                       {[
@@ -665,7 +723,6 @@ const CategoryProducts = () => {
                       ))}
                     </div>
 
-                    {/* Rating */}
                     <div className="filter-group">
                       <h6>Rating</h6>
                       {[4, 3, 2].map((r) => (
@@ -702,7 +759,6 @@ const CategoryProducts = () => {
               </div>
             )}
 
-            {/* PRODUCTS GRID */}
             <Col lg={12}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
@@ -778,7 +834,6 @@ const CategoryProducts = () => {
                                 )}
                               </div>
 
-                              {/* Sub-Category Badge */}
                               {(() => {
                                 const allSubs = [];
                                 if (item.subCategory) allSubs.push(item.subCategory);
@@ -800,9 +855,7 @@ const CategoryProducts = () => {
 
                                 const cleanSubs = allSubs
                                   .filter(Boolean)
-                                  .map((s) =>
-                                    String(s).replace(/[\[\]"']/g, "").trim()
-                                  )
+                                  .map((s) => cleanSubcat(String(s)))
                                   .filter(Boolean);
 
                                 const uniqueSubs = [...new Set(cleanSubs)];

@@ -1,4 +1,4 @@
-// Header.jsx - FULLY FIXED — email initial (Google + normal login, JWT decode fix)
+// Header.jsx - FULLY FIXED — email initial (Google + normal login)
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -19,7 +19,7 @@ import {
 } from "react-icons/hi";
 import { FiShoppingBag, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
@@ -113,64 +113,31 @@ const pickSubsFromResponse = (data) => {
   );
 };
 
-// 🆕 Decode JWT token — FULLY ROBUST (base64 padding + UTF-8)
+// 🆕 Decode JWT token
 const decodeJWT = (token) => {
   try {
     if (!token || typeof token !== "string") return null;
     const parts = token.split(".");
     if (parts.length !== 3) return null;
 
-    // ✅ URL-safe base64 → standard base64
-    let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-
-    // ✅ Padding add
-    while (base64.length % 4) {
-      base64 += "=";
-    }
-
-    // ✅ UTF-8 safe decode
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    const decodedStr = new TextDecoder("utf-8").decode(bytes);
-
-    return JSON.parse(decodedStr);
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
   } catch (err) {
     console.warn("JWT decode failed:", err);
     return null;
   }
 };
 
-// 🆕 Extract first letter from user object OR JWT — EMAIL PRIORITY
+// 🆕 Extract first letter from user object OR JWT
 const extractInitial = (userObj, token = null) => {
-  // ✅ Step 1: EMAIL first (from user object)
+  // Step 1: User object
   if (userObj && typeof userObj === "object") {
-    const email =
-      userObj.email ||
-      userObj.userEmail ||
-      userObj.emailId ||
-      userObj.mail;
-
-    if (email && typeof email === "string" && email.trim().length > 0) {
-      const ch = email.trim().charAt(0);
-      if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
-    }
-  }
-
-  // ✅ Step 2: EMAIL from JWT
-  if (token) {
-    const decoded = decodeJWT(token);
-    if (decoded && decoded.email) {
-      const ch = String(decoded.email).trim().charAt(0);
-      if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
-    }
-  }
-
-  // ✅ Step 3: Fallback — other fields
-  if (userObj && typeof userObj === "object") {
-    const fallbacks = [
+    const candidates = [
+      userObj.email,
+      userObj.userEmail,
+      userObj.emailId,
+      userObj.mail,
       userObj.username,
       userObj.userName,
       userObj.phone,
@@ -181,7 +148,7 @@ const extractInitial = (userObj, token = null) => {
       userObj.given_name,
     ];
 
-    for (const val of fallbacks) {
+    for (const val of candidates) {
       if (val && typeof val === "string" && val.trim().length > 0) {
         const ch = val.trim().charAt(0);
         if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
@@ -189,18 +156,20 @@ const extractInitial = (userObj, token = null) => {
     }
   }
 
-  // ✅ Step 4: JWT other fields
+  // Step 2: JWT fallback
   if (token) {
     const decoded = decodeJWT(token);
     if (decoded) {
-      const jwtFallbacks = [
+      const jwtCandidates = [
+        decoded.email,
+        decoded.userEmail,
         decoded.username,
         decoded.name,
         decoded.given_name,
         decoded.sub,
       ];
 
-      for (const val of jwtFallbacks) {
+      for (const val of jwtCandidates) {
         if (val && typeof val === "string" && val.trim().length > 0) {
           const ch = val.trim().charAt(0);
           if (/[a-zA-Z0-9]/.test(ch)) return ch.toUpperCase();
@@ -212,22 +181,8 @@ const extractInitial = (userObj, token = null) => {
   return "U";
 };
 
-// 🆕 Build user object from JWT — for Google login
-const buildUserFromJWT = (token) => {
-  const decoded = decodeJWT(token);
-  if (!decoded) return null;
-  return {
-    _id: decoded.id || decoded.sub || decoded._id || "",
-    email: decoded.email || "",
-    name: decoded.name || decoded.given_name || "",
-    picture: decoded.picture || "",
-    provider: decoded.provider || "google",
-  };
-};
-
 const Header = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -254,51 +209,7 @@ const Header = () => {
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
 
-  // ══════════════════════════════════════════════
-  // 🆕 GLOBAL TOKEN HANDLER — કોઈ પણ page પર token process
-  // ══════════════════════════════════════════════
-  useEffect(() => {
-    const processToken = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get("token");
-
-        if (token) {
-          console.log("🔍 Header: Token detected in URL");
-
-          // ✅ Save token
-          localStorage.setItem("token", token);
-
-          // ✅ Decode JWT → build user object
-          const userObj = buildUserFromJWT(token);
-
-          if (userObj && userObj.email) {
-            localStorage.setItem("user", JSON.stringify(userObj));
-            console.log("✅ Header: User saved from JWT:", userObj);
-          } else {
-            console.warn("⚠️ Header: JWT decode failed or email missing");
-          }
-
-          // ✅ Notify navbar + cart + wishlist
-          window.dispatchEvent(new Event("userUpdated"));
-          window.dispatchEvent(new Event("cartUpdated"));
-          window.dispatchEvent(new Event("wishlistUpdated"));
-
-          // ✅ Clean URL (remove token from address bar)
-          const cleanUrl = window.location.origin + window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
-        }
-      } catch (err) {
-        console.error("Header processToken error:", err);
-      }
-    };
-
-    processToken();
-  }, [location.search]);
-
-  // ══════════════════════════════════════════════
   // 🆕 Track login state — PRODUCTION SAFE with JWT
-  // ══════════════════════════════════════════════
   useEffect(() => {
     const loadUser = () => {
       try {
@@ -312,6 +223,7 @@ const Header = () => {
           return;
         }
 
+        // Try parse user data (may be missing for Google login)
         let parsed = null;
         if (userData) {
           try {
@@ -323,7 +235,6 @@ const Header = () => {
 
         setIsLoggedIn(true);
         const initial = extractInitial(parsed, token);
-        console.log("🔍 Header initial:", initial);
         setUserInitial(initial);
       } catch (err) {
         console.error("Header loadUser error:", err);
@@ -334,32 +245,24 @@ const Header = () => {
 
     loadUser();
 
-    // ✅ Debounced reload
-    let debounceTimer = null;
-    const debouncedLoad = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(loadUser, 50);
-    };
-
     // Delayed loads — production timing fix
     const t1 = setTimeout(loadUser, 100);
     const t2 = setTimeout(loadUser, 500);
     const t3 = setTimeout(loadUser, 1500);
 
-    window.addEventListener("storage", debouncedLoad);
-    window.addEventListener("userUpdated", debouncedLoad);
-    window.addEventListener("focus", debouncedLoad);
-    window.addEventListener("pageshow", debouncedLoad);
+    window.addEventListener("storage", loadUser);
+    window.addEventListener("userUpdated", loadUser);
+    window.addEventListener("focus", loadUser);
+    window.addEventListener("pageshow", loadUser);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
-      if (debounceTimer) clearTimeout(debounceTimer);
-      window.removeEventListener("storage", debouncedLoad);
-      window.removeEventListener("userUpdated", debouncedLoad);
-      window.removeEventListener("focus", debouncedLoad);
-      window.removeEventListener("pageshow", debouncedLoad);
+      window.removeEventListener("storage", loadUser);
+      window.removeEventListener("userUpdated", loadUser);
+      window.removeEventListener("focus", loadUser);
+      window.removeEventListener("pageshow", loadUser);
     };
   }, []);
 
@@ -506,7 +409,7 @@ const Header = () => {
       return;
     }
     try {
-      const response = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
+      const response = await axios.get(`https://api.native91.com/api/search-suggestions`, {
         params: { q: query },
         timeout: 5000,
         ...getAuthHeaders(),
@@ -546,7 +449,7 @@ const Header = () => {
     if (!searchQuery.trim()) return;
     setIsLoading(true);
     try {
-      const response = await axios.get(`${VENDOR_API_URL}/products/search`, {
+      const response = await axios.get(`https://api.native91.com/api/products/search`, {
         params: { keyword: searchQuery },
         ...getAuthHeaders(),
       });
@@ -674,7 +577,7 @@ const Header = () => {
                           onClick={() => handleRecommendationClick(product)}
                         >
                           <div className="recommendation-img">
-                            <img
+                            {/* <img
                               src={
                                 product.image?.[0] || "/images/placeholder.png"
                               }
@@ -683,7 +586,7 @@ const Header = () => {
                                 e.target.onerror = null;
                                 e.target.src = "/images/placeholder.png";
                               }}
-                            />
+                            /> */}
                           </div>
                           <div className="recommendation-info">
                             <div className="recommendation-name">
