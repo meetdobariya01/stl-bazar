@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE FIXED VERSION
+// pages/Productdetails/Productdetails.js - COMPLETE FIXED VERSION + IMAGE ORDER FIX
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -58,7 +58,6 @@ const COUPON_API_URL =
 // const VENDOR_IMAGE_BASE = "http://localhost:5177";
 const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
 const ADMIN_IMAGE_BASE = "http://localhost:7001";
-
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -181,11 +180,10 @@ const generateFallbackId = (color, size, price, idx) => {
   return base ? `fb_${base.replace(/[^a-zA-Z0-9]/g, "_")}` : `fb_idx_${idx}`;
 };
 
-// ✅ Helper: Normalize variants from different possible product structures
+// ✅ Helper: Normalize variants
 const normalizeVariants = (product) => {
   if (!product) return [];
 
-  // Priority 1: product.variants
   if (
     product.variants &&
     Array.isArray(product.variants) &&
@@ -212,7 +210,6 @@ const normalizeVariants = (product) => {
     });
   }
 
-  // Priority 2: product.colors
   if (
     product.colors &&
     Array.isArray(product.colors) &&
@@ -252,7 +249,6 @@ const normalizeVariants = (product) => {
     });
   }
 
-  // Priority 3: product.variantColors
   if (
     product.variantColors &&
     Array.isArray(product.variantColors) &&
@@ -337,16 +333,15 @@ const Productdetails = () => {
       isMounted.current = false;
     };
   }, []);
+
   // ✅ FIXED: Use /companies endpoint (same as product.js)
   const fetchBrandDetails = useCallback(async (companyName) => {
     if (!companyName) return;
     setBrandLoading(true);
 
-    // ✅ Helper: Normalize image URL (same as product.js)
     const normalizeImageUrl = (logo) => {
       if (!logo) return null;
 
-      // Object handle karo
       if (typeof logo === "object" && !Array.isArray(logo)) {
         if (logo.image && typeof logo.image === "string") {
           logo = logo.image;
@@ -357,17 +352,14 @@ const Productdetails = () => {
         }
       }
 
-      // Array handle karo
       if (Array.isArray(logo)) {
         logo = logo[0];
       }
 
       if (!logo || typeof logo !== "string") return null;
 
-      // Full URL check
       if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
 
-      // Relative URL fix (same as product.js)
       if (logo.startsWith("/images")) return `${ADMIN_IMAGE_BASE}${logo}`;
       if (logo.startsWith("/uploads") || logo.startsWith("/public"))
         return `${VENDOR_IMAGE_BASE}${logo}`;
@@ -378,7 +370,6 @@ const Productdetails = () => {
     try {
       console.log("🔍 Fetching brand details for:", companyName);
 
-      // ✅ Use /companies endpoint (SAME AS product.js)
       const response = await axios.get(`${API_URL}/companies`, {
         timeout: 15000,
         headers: {
@@ -389,7 +380,6 @@ const Productdetails = () => {
 
       console.log("📦 Companies API response:", response.data);
 
-      // ✅ Extract companies array (multiple formats support)
       let companiesData = [];
       if (response.data) {
         if (response.data.success && Array.isArray(response.data.companies)) {
@@ -403,7 +393,6 @@ const Productdetails = () => {
 
       console.log(`📦 Found ${companiesData.length} companies`);
 
-      // ✅ Find matching company (case-insensitive)
       const matchedCompany = companiesData.find((c) => {
         const cName = (c.name || "").toLowerCase().trim();
         const targetName = companyName.toLowerCase().trim();
@@ -415,14 +404,12 @@ const Productdetails = () => {
 
         setBrandName(matchedCompany.name || companyName);
 
-        // ✅ Use description from API (same as product.js)
         const description =
           matchedCompany.description ||
           `${matchedCompany.name} - Premium brand on Native91`;
 
         setBrandDescription(description);
 
-        // ✅ Normalize logo URL (same as product.js)
         setBrandLogo(
           matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
         );
@@ -616,10 +603,10 @@ const Productdetails = () => {
     }
   }, [product]);
 
-  // ✅ Product images — VENDOR thi aave chhe
+  // ✅ Image URL helper
   const getImageUrl = useCallback((image) => {
     if (!image) return "/images/placeholder.png";
-    
+
     let img = image;
     if (Array.isArray(image)) {
       if (image.length === 0) return "/images/placeholder.png";
@@ -631,41 +618,54 @@ const Productdetails = () => {
     if (imgStr.startsWith("/uploads")) return `${VENDOR_IMAGE_BASE}${imgStr}`;
     if (imgStr.startsWith("/images")) return `${VENDOR_IMAGE_BASE}${imgStr}`;
 
-    // Relative path → Vendor uploads
     if (!imgStr.startsWith("/")) {
       return `${VENDOR_IMAGE_BASE}/uploads/${imgStr}`;
     }
 
     return `${VENDOR_IMAGE_BASE}${imgStr}`;
   }, []);
+
   const getVariantImageUrl = useCallback((imagePath) => {
     if (!imagePath) return "/images/placeholder.png";
     return getImageUrl(imagePath);
   }, [getImageUrl]);
 
+  // ✅ FIXED: getAllImagesFromProduct — order preserve, NO dedupe, correct field priority
   const getAllImagesFromProduct = useCallback(
     (product) => {
       if (!product) return ["/images/placeholder.png"];
-      let images = [];
-      const imageFields = ["images", "image", "productImages", "gallery"];
-      for (const field of imageFields) {
-        if (product[field]) {
-          if (Array.isArray(product[field])) {
-            const validImages = product[field]
-              .filter((img) => img && typeof img === "string" && img.trim())
-              .map((img) => getImageUrl(img));
-            images = [...images, ...validImages];
-          } else if (
-            typeof product[field] === "string" &&
-            product[field].trim()
-          ) {
-            images.push(getImageUrl(product[field]));
+
+      // ✅ Priority 1: Backend `image` array (order preserved by backend sort)
+      const rawImages = [];
+      if (Array.isArray(product.image) && product.image.length > 0) {
+        rawImages.push(...product.image);
+      } else if (typeof product.image === "string" && product.image.trim()) {
+        rawImages.push(product.image);
+      }
+
+      // ✅ Fallback: only if `image` is empty
+      if (rawImages.length === 0) {
+        const fallbackFields = ["images", "productImages", "gallery"];
+        for (const field of fallbackFields) {
+          if (Array.isArray(product[field]) && product[field].length > 0) {
+            rawImages.push(...product[field]);
+            break;
+          } else if (typeof product[field] === "string" && product[field].trim()) {
+            rawImages.push(product[field]);
+            break;
           }
         }
       }
-      images = [...new Set(images)];
-      if (images.length === 0) images = ["/images/placeholder.png"];
-      return images;
+
+      // ✅ Convert to URLs — keep order, keep duplicates (vendor's intent)
+      const validImages = rawImages
+        .filter((img) => img && typeof img === "string" && img.trim())
+        .map((img) => getImageUrl(img));
+
+      if (validImages.length === 0) {
+        validImages.push("/images/placeholder.png");
+      }
+      return validImages;
     },
     [getImageUrl],
   );
@@ -833,6 +833,7 @@ const Productdetails = () => {
     }
   };
 
+  // ✅ FIXED: handleVariantSelect — sync index for variant images
   const handleVariantSelect = (variant) => {
     if (!variant || variant.isAvailable === false || variant.stock === 0)
       return;
@@ -856,9 +857,17 @@ const Productdetails = () => {
     setStock(variant.stock || 0);
     if (qty > variant.stock) setQty(Math.max(1, variant.stock));
 
+    // ✅ Sync both activeImg AND currentImageIndex if variant image exists in productImages
     if (variant.image) {
       const variantImgUrl = getVariantImageUrl(variant.image);
       setActiveImg(variantImgUrl);
+
+      const variantIdx = productImages.findIndex(
+        (img) => img === variantImgUrl,
+      );
+      if (variantIdx !== -1) {
+        setCurrentImageIndex(variantIdx);
+      }
     }
   };
 
@@ -929,7 +938,6 @@ const Productdetails = () => {
     setActiveImg(productImages[newIndex]);
   };
 
-  // ✅ handleAddToCart — Variant OPTIONAL, strict variantId
   const handleAddToCart = async () => {
     if (!product) return;
 
@@ -942,13 +950,11 @@ const Productdetails = () => {
         localStorage.setItem("guestId", guestId);
       }
 
-      // ✅ Strict variant ID — String conversion guaranteed
       const strictVariantId =
         selectedVariant && selectedVariant._id
           ? String(selectedVariant._id)
           : null;
 
-      // 🔍 Debug log
       console.log("🎯 handleAddToCart debug:", {
         selectedVariant,
         strictVariantId,
@@ -982,7 +988,6 @@ const Productdetails = () => {
         couponCode: appliedCoupon ? appliedCoupon.code : null,
         stock: stock,
 
-        // ✅ FIXED: variantId on separate line
         variantId: strictVariantId,
         selectedColor: selectedVariant?.color || "",
         selectedSize: selectedVariant?.size || "",
@@ -1008,7 +1013,6 @@ const Productdetails = () => {
     }
   };
 
-  // ✅ handleBuyNow — Variant OPTIONAL, strict variantId (SINGLE VERSION)
   const handleBuyNow = async () => {
     const effectiveStockCheck = selectedVariant
       ? selectedVariant.stock || 0
@@ -1225,7 +1229,7 @@ const Productdetails = () => {
                     {productImages.map((img, i) => (
                       <div
                         key={`thumb-${i}`}
-                        className={`thumb-box ${activeImg === img ? "active" : ""}`}
+                        className={`thumb-box ${currentImageIndex === i ? "active" : ""}`}
                         onClick={() => {
                           setActiveImg(img);
                           setCurrentImageIndex(i);
@@ -1252,10 +1256,8 @@ const Productdetails = () => {
                   }}
                   onMouseMove={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
-
                     const x = ((e.clientX - rect.left) / rect.width) * 100;
                     const y = ((e.clientY - rect.top) / rect.height) * 100;
-
                     setZoomPosition({
                       x: Math.max(0, Math.min(100, x)),
                       y: Math.max(0, Math.min(100, y)),
@@ -1270,7 +1272,9 @@ const Productdetails = () => {
                 >
                   <img
                     src={
-                      activeImg || productImages[0] || "/images/placeholder.png"
+                      productImages[currentImageIndex] ||
+                      activeImg ||
+                      "/images/placeholder.png"
                     }
                     alt={product.name}
                     className="main-product-image"
@@ -1288,14 +1292,6 @@ const Productdetails = () => {
                       e.target.src = "/images/placeholder.png";
                     }}
                   />
-
-                  {/* Zoom indicator */}
-                  {/* {!isImageZoomed && (
-                    <div className="image-zoom-hint">
-                      <span>🔍</span>
-                      Hover to zoom
-                    </div>
-                  )} */}
                 </div>
               </div>
             </Col>
@@ -1577,17 +1573,8 @@ const Productdetails = () => {
                           </span>
                         </div>
                       )}
-                      {/* {product.sku && (
-                        <div className="d-flex align-items-center">
-                          <FaTag className="me-1 text-muted" />
-                          <span>
-                            <strong>SKU:</strong> {product.sku}
-                          </span>
-                        </div>
-                      )} */}
                       {product.variant && (
                         <div className="d-flex align-items-center">
-                          {/* <FaRulerCombined className="me-1 text-muted" /> */}
                           <span>
                             <strong>Variant:</strong> {product.variant}
                           </span>
@@ -1802,47 +1789,8 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* SHIPPING CARD */}
-                {/* {shippingInfo && (
-                  <div className="shipping-info-card mt-3 p-3 border rounded" style={{ background: '#f8f9fa' }}>
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="shipping-icon">
-                        <FaTruck size={24} className="text-primary" />
-                      </div>
-                      <div className="shipping-details flex-grow-1">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span className="fw-bold">Delivery</span>
-                          <span className="text-success fw-bold">{shippingInfo.chargeText}</span>
-                        </div>
-                        <div className="d-flex align-items-center gap-3 mt-1">
-                          <span className="small">
-                            <FaClock className="me-1 text-muted" />
-                            {shippingInfo.deliveryRange}
-                          </span>
-                          <span className="small text-muted">|</span>
-                          <span className="small">
-                            <FaBox className="me-1 text-muted" />
-                            {shippingInfo.shippingText}
-                          </span>
-                        </div>
-                        {!shippingInfo.isFree && shippingInfo.charge > 0 && (
-                          <Badge bg="info" className="mt-1">
-                            <FaRupeeSign className="me-1" /> ₹{shippingInfo.charge} Shipping
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )} */}
-
                 {/* STOCK STATUS */}
                 <div className="stock-status mt-3">
-                  {/* <Badge
-                    bg={stockStatus.color}
-                    style={{ fontSize: "16px", padding: "8px 16px" }}
-                  >
-                    {stockStatus.icon} {stockStatus.label}
-                  </Badge> */}
                   {effectiveStock > 0 && effectiveStock <= 10 && (
                     <div className="mt-2">
                       <div className="d-flex justify-content-between small">
@@ -1864,8 +1812,6 @@ const Productdetails = () => {
                     </div>
                   )}
                 </div>
-
-                {/* PRICE */}
 
                 {/* COUPON BADGE */}
                 {appliedCoupon && discountedPrice && (
@@ -2366,12 +2312,6 @@ const Productdetails = () => {
                   Exchange
                 </a>{" "}
                 Policy and applicable eligibility conditions.
-                {/* <a
-                  href="/returns-policy"
-                  className="text-decoration-none text-primary ms-2"
-                >
-                  Learn more
-                </a> */}
               </p>
             </details>
 

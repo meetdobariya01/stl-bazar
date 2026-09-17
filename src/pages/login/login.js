@@ -1,14 +1,66 @@
-// Login.js - UPDATED WITH SESSION MANAGEMENT HANDLING
+// Login.js - FULLY FIXED — Google + normal login (email initial + force logout)
 
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Button, Card, Modal } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaGoogle, FaEye, FaEyeSlash, FaExclamationTriangle } from "react-icons/fa";
+import {
+  FaEnvelope,
+  FaLock,
+  FaGoogle,
+  FaEye,
+  FaEyeSlash,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 import "./login.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+
+// 🆕 Decode JWT token
+const decodeJWT = (token) => {
+  try {
+    if (!token || typeof token !== "string") return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
+  } catch (err) {
+    console.warn("JWT decode failed:", err);
+    return null;
+  }
+};
+
+// 🆕 Build user object from JWT + fallback
+const buildUserObject = (token, fallbackEmail = "", fallbackName = "") => {
+  const decoded = decodeJWT(token);
+  return {
+    _id: decoded?.id || decoded?.sub || decoded?._id || "",
+    email: decoded?.email || fallbackEmail || "",
+    name: decoded?.name || decoded?.given_name || fallbackName || "",
+    picture: decoded?.picture || "",
+    provider: decoded?.provider || "local",
+    ...(decoded || {}),
+  };
+};
+
+// 🆕 Save session + notify navbar
+const saveSession = (token, userObj) => {
+  localStorage.setItem("token", token);
+  if (userObj) {
+    localStorage.setItem("user", JSON.stringify(userObj));
+  }
+  // ✅ Notify all listeners
+  window.dispatchEvent(new Event("userUpdated"));
+  window.dispatchEvent(new Event("cartUpdated"));
+  window.dispatchEvent(new Event("wishlistUpdated"));
+
+  console.log("✅ Session saved:", {
+    token: token ? "✓" : "✗",
+    user: userObj,
+  });
+};
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -22,16 +74,21 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check for Google OAuth callback
+  // ============================================
+  // Google OAuth callback — token from URL
+  // ============================================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get("token");
     const error = params.get("error");
+    const emailParam = params.get("email");
 
     if (token) {
-      // Save Google token
-      localStorage.setItem("token", token);
-      // Immediately go to home page and remove token from URL
+      // ✅ Build user from JWT
+      const userObj = buildUserObject(token, emailParam || "");
+      saveSession(token, userObj);
+
+      // Clean URL
       window.history.replaceState({}, document.title, "/");
       navigate("/", { replace: true });
     }
@@ -39,6 +96,15 @@ const Login = () => {
     if (error === "already_logged_in") {
       setErrorMessage("This account is already logged in from another device.");
       setShowForceLogoutModal(true);
+
+      // Store email for retry
+      if (emailParam) {
+        setPendingLoginData({
+          email: emailParam,
+          password: null,
+          isGoogle: true,
+        });
+      }
     }
 
     if (error && error !== "already_logged_in") {
@@ -46,117 +112,198 @@ const Login = () => {
     }
   }, [location.search, navigate]);
 
-  // Handle Submit Login
+  // ============================================
+  // Normal Login submit
+  // ============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage("");
 
     try {
-      console.log("Attempting login with:", { email, password: password ? "***" : "missing" });
+      console.log("Attempting login:", { email, password: "***" });
 
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/login`,
         { email, password },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
 
       console.log("Login response:", response.data);
 
       if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        // ✅ Backend user object
+        let userObj = response.data.user;
+
+        // ⚠️ Fallback — જો email missing → JWT decode
+        if (!userObj || !userObj.email) {
+          userObj = buildUserObject(
+            response.data.token,
+            email,
+            email.split("@")[0]
+          );
+        } else {
+          // Backend `id` field → `_id` (consistency)
+          userObj = {
+            _id: userObj.id || userObj._id,
+            ...userObj,
+          };
+        }
+
+        saveSession(response.data.token, userObj);
         navigate("/");
       } else {
         setErrorMessage("Login failed: No token received");
       }
     } catch (error) {
-      console.error("Login error details:", {
+      console.error("Login error:", {
         status: error.response?.status,
         data: error.response?.data,
-        message: error.message
       });
 
-      // ✅ Handle "already logged in" error
-      if (error.response?.status === 409 && error.response?.data?.code === "ALREADY_LOGGED_IN") {
-        setErrorMessage(error.response?.data?.message || "This account is already logged in from another device.");
+      if (
+        error.response?.status === 409 &&
+        error.response?.data?.code === "ALREADY_LOGGED_IN"
+      ) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "This account is already logged in from another device."
+        );
         setShowForceLogoutModal(true);
-        // Store login data for retry after force logout
-        setPendingLoginData({ email, password });
+        setPendingLoginData({ email, password, isGoogle: false });
       } else {
-        const message = error.response?.data?.message || "Something went wrong! Try again.";
-        setErrorMessage(message);
+        setErrorMessage(
+          error.response?.data?.message || "Something went wrong! Try again."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Handle Force Logout from other devices
+  // ============================================
+  // Force Logout + Retry Login
+  // ============================================
   const handleForceLogout = async () => {
+    console.log("🚀 Force logout START");
+    console.log("pendingLoginData:", pendingLoginData);
+
     setShowForceLogoutModal(false);
     setLoading(true);
+    setErrorMessage("");
 
-    try {
-      // Call logout endpoint to clear session
-      await axios.post(
-        `${process.env.REACT_APP_API_URL}/auth/logout`,
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
+    const targetEmail = pendingLoginData?.email;
+
+    // Step 1: Try backend /force-logout (fail થાય તો પણ continue)
+    if (targetEmail) {
+      try {
+        console.log("📡 Calling /auth/force-logout...");
+        const res = await axios.post(
+          `${process.env.REACT_APP_API_URL}/auth/force-logout`,
+          { email: targetEmail },
+          {
+            headers: { "Content-Type": "application/json" },
+            timeout: 5000,
           }
-        }
-      );
+        );
+        console.log("✅ Backend force-logout:", res.data);
+      } catch (forceErr) {
+        console.warn(
+          "⚠️ Backend force-logout failed (continuing):",
+          forceErr?.response?.status,
+          forceErr?.message
+        );
+      }
+    }
 
-      // Now retry login with stored credentials
-      if (pendingLoginData) {
+    // Step 2: ALWAYS clear local
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userData");
+    localStorage.removeItem("guestId");
+    window.dispatchEvent(new Event("userUpdated"));
+    window.dispatchEvent(new Event("cartUpdated"));
+    window.dispatchEvent(new Event("wishlistUpdated"));
+    console.log("✅ Local session cleared");
+
+    // Step 3: Retry login (only if password available)
+    if (pendingLoginData?.email && pendingLoginData?.password) {
+      try {
+        console.log("📡 Retrying login...");
         const response = await axios.post(
           `${process.env.REACT_APP_API_URL}/auth/login`,
-          { 
-            email: pendingLoginData.email, 
-            password: pendingLoginData.password 
+          {
+            email: pendingLoginData.email,
+            password: pendingLoginData.password,
           },
           {
-            headers: {
-              'Content-Type': 'application/json',
-            }
+            headers: { "Content-Type": "application/json" },
+            timeout: 8000,
           }
         );
 
         if (response.data.token) {
-          localStorage.setItem("token", response.data.token);
-          localStorage.setItem("user", JSON.stringify(response.data.user));
+          let userObj = response.data.user;
+          if (!userObj || !userObj.email) {
+            userObj = buildUserObject(
+              response.data.token,
+              pendingLoginData.email,
+              pendingLoginData.email.split("@")[0]
+            );
+          } else {
+            userObj = {
+              _id: userObj.id || userObj._id,
+              ...userObj,
+            };
+          }
+
+          saveSession(response.data.token, userObj);
           setPendingLoginData(null);
           navigate("/");
+          console.log("✅ Login retry successful");
         }
+      } catch (loginErr) {
+        console.error(
+          "❌ Retry login failed:",
+          loginErr.response?.data || loginErr.message
+        );
+        setErrorMessage(
+          loginErr.response?.data?.message ||
+            "Backend still has active session. Please try again later."
+        );
       }
-    } catch (error) {
-      console.error("Force logout error:", error);
-      setErrorMessage("Failed to force logout. Please try again.");
-    } finally {
-      setLoading(false);
+    } else if (pendingLoginData?.isGoogle) {
+      // Google login — redirect to OAuth
+      console.log("📡 Google login — redirecting to OAuth");
+      setPendingLoginData(null);
+      window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+      return;
+    } else {
+      console.warn("⚠️ No password — cannot retry");
+      setErrorMessage("Other device logged out. Please login again.");
     }
+
+    setLoading(false);
+    console.log("🏁 Force logout END");
   };
 
-  // Handle Cancel Force Logout
   const handleCancelForceLogout = () => {
     setShowForceLogoutModal(false);
     setPendingLoginData(null);
     setErrorMessage("");
   };
 
-  // Handle Google Login
+  // ============================================
+  // Google login (redirect to backend OAuth)
+  // ============================================
   const handleGoogleLogin = () => {
     setErrorMessage("");
     window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
   };
 
+  // ============================================
   // Initialize Google One-Tap
+  // ============================================
   useEffect(() => {
     if (window.google) {
       window.google.accounts.id.initialize({
@@ -166,7 +313,6 @@ const Login = () => {
         cancel_on_tap_outside: true,
       });
 
-      // Render Google button
       window.google.accounts.id.renderButton(
         document.getElementById("googleLoginBtn"),
         {
@@ -181,6 +327,9 @@ const Login = () => {
     }
   }, []);
 
+  // ============================================
+  // Google One-Tap credential response
+  // ============================================
   const handleGoogleCredentialResponse = async (response) => {
     setGoogleLoading(true);
     setErrorMessage("");
@@ -191,33 +340,57 @@ const Login = () => {
         { credential: response.credential }
       );
 
-      localStorage.setItem("token", result.data.token);
-      localStorage.setItem("user", JSON.stringify(result.data.user));
+      let userObj = result.data.user;
+
+      // ⚠️ Fallback — JWT decode
+      if (!userObj || !userObj.email) {
+        userObj = buildUserObject(result.data.token);
+      } else {
+        userObj = {
+          _id: userObj.id || userObj._id,
+          ...userObj,
+        };
+      }
+
+      saveSession(result.data.token, userObj);
       navigate("/");
     } catch (error) {
       console.error("Google login error:", error);
-      
-      // ✅ Handle "already logged in" error for Google login
-      if (error.response?.status === 409 && error.response?.data?.code === "ALREADY_LOGGED_IN") {
-        setErrorMessage(error.response?.data?.message || "This account is already logged in from another device.");
+
+      if (
+        error.response?.status === 409 &&
+        error.response?.data?.code === "ALREADY_LOGGED_IN"
+      ) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "This account is already logged in from another device."
+        );
         setShowForceLogoutModal(true);
+
+        const emailFromErr = error.response?.data?.email;
+        if (emailFromErr) {
+          setPendingLoginData({
+            email: emailFromErr,
+            password: null,
+            isGoogle: true,
+          });
+        }
       } else {
-        const message = error.response?.data?.message || "Google login failed";
-        setErrorMessage(message);
+        setErrorMessage(
+          error.response?.data?.message || "Google login failed"
+        );
       }
     } finally {
       setGoogleLoading(false);
     }
   };
 
+  // ============================================
+  // Scroll to top on route change
+  // ============================================
   const { pathname } = useLocation();
-
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "instant",
-    });
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
   return (
@@ -241,9 +414,11 @@ const Login = () => {
                   Login to continue shopping
                 </p>
 
-                {/* ✅ Error Message Display */}
                 {errorMessage && !showForceLogoutModal && (
-                  <div className="alert alert-danger d-flex align-items-center" role="alert">
+                  <div
+                    className="alert alert-danger d-flex align-items-center"
+                    role="alert"
+                  >
                     <FaExclamationTriangle className="me-2" />
                     <span>{errorMessage}</span>
                     <button
@@ -354,7 +529,11 @@ const Login = () => {
       </Container>
 
       {/* ✅ Force Logout Modal */}
-      <Modal show={showForceLogoutModal} onHide={handleCancelForceLogout} centered>
+      <Modal
+        show={showForceLogoutModal}
+        onHide={handleCancelForceLogout}
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title>
             <FaExclamationTriangle className="text-warning me-2" />
@@ -363,13 +542,17 @@ const Login = () => {
         </Modal.Header>
         <Modal.Body>
           <p>
-            <strong>This account is already logged in from another device.</strong>
+            <strong>
+              This account is already logged in from another device.
+            </strong>
           </p>
           <p className="text-muted">
-            For security reasons, only one active session is allowed per account.
+            For security reasons, only one active session is allowed per
+            account.
           </p>
           <p className="text-muted">
-            Would you like to log out from the other device and continue with this login?
+            Would you like to log out from the other device and continue with
+            this login?
           </p>
           <div className="mt-3 p-3 bg-light rounded">
             <small className="text-muted">
@@ -386,7 +569,11 @@ const Login = () => {
           <Button variant="secondary" onClick={handleCancelForceLogout}>
             Cancel
           </Button>
-          <Button variant="warning" onClick={handleForceLogout} disabled={loading}>
+          <Button
+            variant="warning"
+            onClick={handleForceLogout}
+            disabled={loading}
+          >
             {loading ? "Processing..." : "Logout Other Device & Login"}
           </Button>
         </Modal.Footer>
