@@ -13,9 +13,8 @@ const SellerDocument = require("../Models/SellerDocument");
 const Category = require("../Models/Category");
 
 // ============================================================
-// 🆕 HELPER: Format product consistently (adds variants)
+// HELPERS
 // ============================================================
-// ✅ FIXED: Helper to clean subcategory strings
 const cleanSubString = (s) => {
   if (!s) return "";
   return String(s).replace(/[\[\]"']/g, "").trim();
@@ -24,30 +23,22 @@ const cleanSubString = (s) => {
 const collectSubcategories = (productObj) => {
   const allSubs = [];
 
-  // 1. subCategory
   if (productObj.subCategory) allSubs.push(cleanSubString(productObj.subCategory));
-  
-  // 2. subcategory
   if (productObj.subcategory) allSubs.push(cleanSubString(productObj.subcategory));
-  
-  // 3. subCategories array
+
   if (Array.isArray(productObj.subCategories)) {
     productObj.subCategories.forEach(s => allSubs.push(cleanSubString(s)));
   }
-  
-  // 4. subcategories array
   if (Array.isArray(productObj.subcategories)) {
     productObj.subcategories.forEach(s => allSubs.push(cleanSubString(s)));
   }
-  
-  // 5. categorySubcategoryMap
+
   if (productObj.categorySubcategoryMap && typeof productObj.categorySubcategoryMap === "object") {
     Object.values(productObj.categorySubcategoryMap).forEach(arr => {
       if (Array.isArray(arr)) arr.forEach(s => allSubs.push(cleanSubString(s)));
     });
   }
 
-  // Remove empty + duplicates
   return [...new Set(allSubs.filter(Boolean))];
 };
 
@@ -55,17 +46,42 @@ const formatProduct = (p) => {
   const productObj = p.toObject ? p.toObject() : p;
   const cleanSubs = collectSubcategories(productObj);
 
+  // ✅ Custom Field — only enabled + label
+  const cf = productObj.customField || {};
+  const cfEnabled =
+    cf.enabled === true ||
+    cf.enabled === "true" ||
+    cf.enabled === 1 ||
+    cf.enabled === "1";
+
+  const stockValue =
+    typeof productObj.stockQuantity === "number"
+      ? productObj.stockQuantity
+      : (typeof productObj.stock === "number" ? productObj.stock : 0);
+
+  const reserved = productObj.reservedStock || 0;
+
   return {
     ...productObj,
-    // ✅ Synced fields (all same value)
     subCategory: cleanSubs[0] || "",
     subcategory: cleanSubs[0] || "",
     subCategories: cleanSubs,
     subcategories: cleanSubs,
     variants: productObj.variants || [],
-    inStock: productObj.stockQuantity > 0,
-    availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
-    stockStatus: productObj.stockStatus || "out_of_stock"
+
+    inStock: stockValue > 0,
+    availableStock: Math.max(0, stockValue - reserved),
+    stockStatus: productObj.stockStatus || (stockValue > 0 ? "in_stock" : "out_of_stock"),
+
+    // 🆕 CUSTOM FIELD — only enabled + label (customer types the value)
+    customField: {
+      enabled: cfEnabled,
+      label:   cf.label || ""
+    },
+
+    shippingTime: productObj.shippingTime || "3-5 days",
+    customShippingTime: productObj.customShippingTime || "",
+    estimatedDeliveryDays: productObj.estimatedDeliveryDays || { min: 3, max: 5 }
   };
 };
 
@@ -95,7 +111,7 @@ router.get("/search-suggestions", async (req, res) => {
       isActive: true
     })
       .limit(10)
-      .select("name ProductName price image company vendorId _id stockQuantity stockStatus category subcategory subcategories variants")
+      .select("name ProductName price image company vendorId _id stockQuantity stockStatus category subcategory subcategories variants shippingTime customShippingTime")
       .lean();
 
     const vendorIds = products.map(p => p.vendorId).filter(id => id);
@@ -130,10 +146,12 @@ router.get("/search-suggestions", async (req, res) => {
           category: p.category || "",
           subcategory: p.subcategory || p.subCategory || "",
           subcategories: p.subcategories || p.subCategories || [],
-          variants: p.variants || [],   // 🆕
+          variants: p.variants || [],
           stockQuantity: p.stockQuantity || 0,
           stockStatus: p.stockStatus || "out_of_stock",
           inStock: p.stockQuantity > 0,
+          shippingTime: p.shippingTime || "3-5 days",
+          customShippingTime: p.customShippingTime || "",
           slug: p.slug || p._id
         };
       });
@@ -295,17 +313,17 @@ router.get("/categories/:category/subcategories", async (req, res) => {
   try {
     const { category } = req.params;
     const decodedCategory = decodeURIComponent(category);
-const s1 = await Product.distinct("subcategory", { category: decodedCategory });
-const s2 = await Product.distinct("subCategory", { category: decodedCategory });
-const s3 = await Product.distinct("subcategories", { category: decodedCategory });
-const s4 = await Product.distinct("subCategories", { category: decodedCategory });
-let fromProducts = [...s1, ...s2, ...s3, ...s4];
+    const s1 = await Product.distinct("subcategory", { category: decodedCategory });
+    const s2 = await Product.distinct("subCategory", { category: decodedCategory });
+    const s3 = await Product.distinct("subcategories", { category: decodedCategory });
+    const s4 = await Product.distinct("subCategories", { category: decodedCategory });
+    let fromProducts = [...s1, ...s2, ...s3, ...s4];
 
-// ✅ Clean each (remove brackets, quotes)
-fromProducts = fromProducts
-  .filter(Boolean)
-  .map(s => String(s).replace(/[\[\]"']/g, "").trim())
-  .filter(Boolean);
+    fromProducts = fromProducts
+      .filter(Boolean)
+      .map(s => String(s).replace(/[\[\]"']/g, "").trim())
+      .filter(Boolean);
+
     let fromAdmin = [];
     try {
       const adminCategory = await Category.findOne({
@@ -339,7 +357,7 @@ fromProducts = fromProducts
 });
 
 // ============================================================
-// GET PRODUCTS BY CATEGORY (fallback)
+// GET PRODUCTS BY CATEGORY
 // ============================================================
 router.get("/products/by-category/:category", async (req, res) => {
   try {
@@ -388,15 +406,15 @@ router.get("/products", async (req, res) => {
 
     if (company) filter.company = company;
     if (category) filter.category = category;
-   if (subcategory) {
-  // ✅ Check all possible fields
-  filter.$or = [
-    { subcategory: subcategory },
-    { subCategory: subcategory },
-    { subcategories: subcategory },
-    { subCategories: subcategory },
-  ];
-}
+
+    if (subcategory) {
+      filter.$or = [
+        { subcategory: subcategory },
+        { subCategory: subcategory },
+        { subcategories: subcategory },
+        { subCategories: subcategory },
+      ];
+    }
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -440,10 +458,7 @@ router.get("/products", async (req, res) => {
 });
 
 // ============================================================
-// GET PRODUCT BY ID  (✅ variant-aware stock — FIXED)
-// ============================================================
-// ============================================================
-// GET PRODUCT BY ID  (✅ variant-aware stock — FINAL FIX)
+// GET PRODUCT BY ID (variant-aware stock)
 // ============================================================
 router.get("/product/:id", async (req, res) => {
   try {
@@ -464,7 +479,6 @@ router.get("/product/:id", async (req, res) => {
 
     const response = formatProduct(product);
 
-    // ✅ FIX: Use string comparison for both ObjectId and string IDs
     if (variantId && product.variants && product.variants.length > 0) {
       const targetId = String(variantId).trim();
 
@@ -502,12 +516,6 @@ router.get("/product/:id", async (req, res) => {
       } else {
         console.log(`❌ Variant NOT found for ID: ${targetId}`);
       }
-    } else {
-      console.log(
-        `⚠️ Skipping variant override. variantId="${variantId}", variants=${
-          product.variants?.length || 0
-        }`
-      );
     }
 
     res.json(response);
@@ -516,6 +524,7 @@ router.get("/product/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch product" });
   }
 });
+
 // ============================================================
 // GET BEST SELLERS
 // ============================================================
@@ -591,12 +600,21 @@ router.get("/arrival-best-sellers", async (req, res) => {
             category: productObj.category,
             subcategory: productObj.subcategory || productObj.subCategory || "",
             subcategories: productObj.subcategories || productObj.subCategories || [],
-            variants: productObj.variants || [],   // 🆕
+            variants: productObj.variants || [],
             averageRating: productObj.averageRating,
             stockQuantity: productObj.stockQuantity || 0,
             stockStatus: productObj.stockStatus || "out_of_stock",
             inStock: productObj.stockQuantity > 0,
-            availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0))
+            availableStock: Math.max(0, productObj.stockQuantity - (productObj.reservedStock || 0)),
+            shippingTime: productObj.shippingTime || "3-5 days",
+            customShippingTime: productObj.customShippingTime || "",
+            // 🆕 Custom Field — only enabled + label
+            customField: {
+              enabled:
+                productObj.customField?.enabled === true ||
+                productObj.customField?.enabled === "true",
+              label: productObj.customField?.label || ""
+            }
           });
         }
       }
@@ -758,7 +776,6 @@ router.post("/cart/validate-stock", async (req, res) => {
         }
       }
 
-      // 🆕 Check variant stock if variantId provided
       let availableStock;
       if (item.variantId && product.variants && product.variants.length > 0) {
         const variant = product.variants.id(item.variantId);

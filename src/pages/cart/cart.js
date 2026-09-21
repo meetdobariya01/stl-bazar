@@ -27,7 +27,6 @@ import {
   FaStore,
   FaExclamationTriangle,
   FaCheckCircle,
-  FaBox,
 } from "react-icons/fa";
 import axios from "axios";
 import "./cart.css";
@@ -37,8 +36,6 @@ import Footer from "../../components/footer/footer";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
 
-// const VENDOR_BACKEND_URL = "http://localhost:5177"; // Adjust this to your backend URL
-
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
   const numPrice = typeof price === "string" ? parseFloat(price) : price;
@@ -47,48 +44,29 @@ const formatPrice = (price) => {
 };
 
 const formatImagePath = (image) => {
-  if (!image) {
-    return "/images/placeholder.png";
-  }
-
+  if (!image) return "/images/placeholder.png";
   let imgPath = image;
-
   if (Array.isArray(image)) {
-    if (image.length === 0) {
-      return "/images/placeholder.png";
-    }
+    if (image.length === 0) return "/images/placeholder.png";
     imgPath = image[0];
   }
-
-  if (typeof imgPath !== "string") {
-    return "/images/placeholder.png";
-  }
-
-  if (imgPath.trim() === "") {
-    return "/images/placeholder.png";
-  }
-
-  if (imgPath.startsWith("http")) {
-    return imgPath;
-  }
-
-  if (imgPath.startsWith("/uploads")) {
-    return `${VENDOR_BACKEND_URL}${imgPath}`;
-  }
-
-  if (imgPath.startsWith("/images")) {
-    return imgPath;
-  }
-
+  if (typeof imgPath !== "string") return "/images/placeholder.png";
+  if (imgPath.trim() === "") return "/images/placeholder.png";
+  if (imgPath.startsWith("http")) return imgPath;
+  if (imgPath.startsWith("/uploads")) return `${VENDOR_BACKEND_URL}${imgPath}`;
+  if (imgPath.startsWith("/images")) return imgPath;
   return `${VENDOR_BACKEND_URL}${imgPath}`;
 };
 
-// ✅ Stock status helper
 const getStockStatus = (stock) => {
-  if (!stock && stock !== 0) return { label: "In Stock", color: "success", icon: "✅" };
-  if (stock === 0) return { label: "Out of Stock", color: "danger", icon: "❌" };
-  if (stock <= 5) return { label: `Only ${stock} left!`, color: "warning", icon: "⚠️" };
-  if (stock <= 10) return { label: `${stock} in stock`, color: "info", icon: "📦" };
+  if (!stock && stock !== 0)
+    return { label: "In Stock", color: "success", icon: "✅" };
+  if (stock === 0)
+    return { label: "Out of Stock", color: "danger", icon: "❌" };
+  if (stock <= 5)
+    return { label: `Only ${stock} left!`, color: "warning", icon: "⚠️" };
+  if (stock <= 10)
+    return { label: `${stock} in stock`, color: "info", icon: "📦" };
   return { label: `${stock} in stock`, color: "success", icon: "✅" };
 };
 
@@ -110,7 +88,6 @@ const Cart = () => {
       const cartData = res.data || { items: [], appliedCoupon: null };
       setCart(cartData);
 
-      // ✅ Fetch stock for each item in cart
       if (cartData.items && cartData.items.length > 0) {
         fetchAllProductStocks(cartData.items);
       }
@@ -119,11 +96,9 @@ const Cart = () => {
     }
   };
 
-  // ✅ Fetch stock for all products in cart
   const fetchAllProductStocks = async (items) => {
     const stockPromises = items.map(async (item) => {
       try {
-        // ✅ Convert ObjectId to string safely
         const variantIdStr =
           item.variantId && item.variantId.toString
             ? item.variantId.toString()
@@ -157,13 +132,12 @@ const Cart = () => {
       results.forEach(({ key, stock }) => {
         stockMap[key] = stock;
       });
-      console.log("📦 Stock map keys:", Object.keys(stockMap), stockMap);
       setProductStock(stockMap);
     } catch (err) {
       console.error("Failed to fetch product stocks:", err);
     }
   };
-  // ✅ Fetch single product stock
+
   const fetchProductStock = async (productId, variantId = null) => {
     const variantIdStr =
       variantId && variantId.toString ? variantId.toString() : variantId;
@@ -193,9 +167,7 @@ const Cart = () => {
     fetchCart();
   }, [guestId]);
 
-  // ✅ Update quantity with stock validation — variant-aware (optional variantId)
   const updateQty = async (productId, type, variantId = null) => {
-    // ✅ Find item matching BOTH productId AND variantId (null-safe)
     const item = cart.items.find((i) => {
       const sameProduct = i.productId === productId;
       const itemVariant = i.variantId ? i.variantId.toString() : null;
@@ -204,9 +176,11 @@ const Cart = () => {
     });
     if (!item) return;
 
-    // ✅ Check stock when adding
     if (type === "inc") {
-      const stock = productStock[productId] !== undefined ? productStock[productId] : await fetchProductStock(productId);
+      const stock =
+        productStock[productId] !== undefined
+          ? productStock[productId]
+          : await fetchProductStock(productId);
       if (item.quantity >= stock) {
         alert(`❌ Only ${stock} items available in stock!`);
         return;
@@ -229,25 +203,26 @@ const Cart = () => {
           price: item.price,
           image: item.image,
           quantity: type === "inc" ? 1 : -1,
-          // ✅ PASS VARIANT FIELDS (null/empty if not set — optional)
           variantId: item.variantId || null,
           selectedColor: item.selectedColor || "",
           selectedSize: item.selectedSize || "",
           variantImage: item.variantImage || "",
           variantPrice: item.variantPrice || 0,
+          // 🆕 Preserve custom field on qty change
+          customFieldLabel: item.customFieldLabel || null,
+          customFieldValue: item.customFieldValue || null,
         },
       });
       fetchCart();
     } catch (err) {
       console.error(
         "Update quantity error:",
-        err.response?.data || err.message,
+        err.response?.data || err.message
       );
       alert("Failed to update quantity. Please try again.");
     }
   };
 
-  // ✅ Remove item — variant-aware (optional variantId)
   const removeItem = async (productId, variantId = null) => {
     try {
       const url = variantId
@@ -262,7 +237,7 @@ const Cart = () => {
 
   const subtotal = cart.items.reduce(
     (acc, item) => acc + item.price * item.quantity,
-    0,
+    0
   );
 
   const FREE_SHIPPING_THRESHOLD = 1500;
@@ -284,11 +259,14 @@ const Cart = () => {
     setCouponMessage({ type: "", text: "" });
 
     try {
-      const validateRes = await axios.post(`${API_URL}/coupons/user/validate`, {
-        code: couponCode,
-        guestId,
-        subtotal: subtotal,
-      });
+      const validateRes = await axios.post(
+        `${API_URL}/coupons/user/validate`,
+        {
+          code: couponCode,
+          guestId,
+          subtotal: subtotal,
+        }
+      );
 
       if (validateRes.data.success) {
         const applyRes = await axios.post(`${API_URL}/coupons/user/apply`, {
@@ -300,7 +278,9 @@ const Cart = () => {
         if (applyRes.data.success) {
           setCouponMessage({
             type: "success",
-            text: `Coupon applied! You saved ₹${formatPrice(validateRes.data.coupon.discountAmount)}`
+            text: `Coupon applied! You saved ₹${formatPrice(
+              validateRes.data.coupon.discountAmount
+            )}`,
           });
 
           await fetchCart();
@@ -333,7 +313,7 @@ const Cart = () => {
   const removeCoupon = async () => {
     try {
       const response = await axios.delete(
-        `${API_URL}/coupons/user/remove/${guestId}`,
+        `${API_URL}/coupons/user/remove/${guestId}`
       );
 
       if (response.data.success) {
@@ -379,7 +359,7 @@ const Cart = () => {
   const amountToFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
   const shippingProgress = Math.min(
     (subtotal / FREE_SHIPPING_THRESHOLD) * 100,
-    100,
+    100
   );
 
   return (
@@ -419,7 +399,8 @@ const Cart = () => {
                     cart.appliedCoupon.discountAmount > 0 && (
                       <div className="summary-row coupon-applied">
                         <span>
-                          <FaTag className="me-1" /> Coupon ({cart.appliedCoupon.code})
+                          <FaTag className="me-1" /> Coupon (
+                          {cart.appliedCoupon.code})
                         </span>
                         <span className="discount">
                           -₹{formatPrice(cart.appliedCoupon.discountAmount)}
@@ -461,17 +442,11 @@ const Cart = () => {
                   </div>
 
                   {cart.appliedCoupon && cart.appliedCoupon.discountAmount > 0 ? (
-                    <button
-                      className="coupon-btn applied"
-                      onClick={removeCoupon}
-                    >
+                    <button className="coupon-btn applied" onClick={removeCoupon}>
                       <FaTag /> Remove Coupon
                     </button>
                   ) : (
-                    <button
-                      className="coupon-btn"
-                      onClick={handleOpenCouponModal}
-                    >
+                    <button className="coupon-btn" onClick={handleOpenCouponModal}>
                       <FaTag /> Apply Coupon
                     </button>
                   )}
@@ -524,7 +499,6 @@ const Cart = () => {
                 ) : (
                   <>
                     {cart.items.map((item, index) => {
-                      // ✅ Convert ObjectId → string for safe key building
                       const variantIdStr =
                         item.variantId && item.variantId.toString
                           ? item.variantId.toString()
@@ -543,24 +517,30 @@ const Cart = () => {
 
                       return (
                         <motion.div
-                          key={`${item.productId}_${item.variantId || 'default'}`}
+                          key={`${item.productId}_${item.variantId || "default"}`}
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.1 }}
                           className="cart-card"
                         >
-                          <Card className={`border-0 ${isOutOfStock ? 'opacity-50' : ''}`}>
+                          <Card
+                            className={`border-0 ${
+                              isOutOfStock ? "opacity-50" : ""
+                            }`}
+                          >
                             <Card.Body>
                               <Row className="align-items-center">
                                 <Col md={3} xs={4}>
                                   <div className="cart-img">
-                                    {/* ✅ Use variant image if available, else product image */}
                                     <img
-                                      src={formatImagePath(item.variantImage || item.image)}
+                                      src={formatImagePath(
+                                        item.variantImage || item.image
+                                      )}
                                       alt={item.name}
                                       onError={(e) => {
                                         e.target.onerror = null;
-                                        e.target.src = "/images/placeholder.png";
+                                        e.target.src =
+                                          "/images/placeholder.png";
                                       }}
                                     />
                                   </div>
@@ -569,14 +549,18 @@ const Cart = () => {
                                   <div className="cart-info">
                                     <h4>{item.name}</h4>
 
-                                    {/* ✅ VARIANT COLOR/SIZE BADGES — display only if selected */}
-                                    {(item.selectedColor || item.selectedSize) && (
+                                    {/* VARIANT BADGES */}
+                                    {(item.selectedColor ||
+                                      item.selectedSize) && (
                                       <div className="cart-variant-info mb-1">
                                         {item.selectedColor && (
                                           <Badge
                                             bg="dark"
                                             className="me-1"
-                                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                                            style={{
+                                              fontSize: "11px",
+                                              padding: "4px 8px",
+                                            }}
                                           >
                                             🎨 {item.selectedColor}
                                           </Badge>
@@ -584,7 +568,10 @@ const Cart = () => {
                                         {item.selectedSize && (
                                           <Badge
                                             bg="secondary"
-                                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                                            style={{
+                                              fontSize: "11px",
+                                              padding: "4px 8px",
+                                            }}
                                           >
                                             📏 {item.selectedSize}
                                           </Badge>
@@ -592,40 +579,83 @@ const Cart = () => {
                                       </div>
                                     )}
 
+                                    {/* 🆕 CUSTOM FIELD DISPLAY */}
+                                    {item.customFieldLabel &&
+                                      item.customFieldValue && (
+                                        <div
+                                          className="cart-custom-field mb-2"
+                                          style={{ fontSize: "12px" }}
+                                        >
+                                          <span
+                                            style={{
+                                              background: "#fff9e6",
+                                              border: "1px solid #ffd966",
+                                              borderRadius: "6px",
+                                              padding: "3px 8px",
+                                              color: "#7a5c00",
+                                              display: "inline-block",
+                                            }}
+                                          >
+                                            <strong>
+                                              {item.customFieldLabel}:
+                                            </strong>{" "}
+                                            {item.customFieldValue}
+                                          </span>
+                                        </div>
+                                      )}
+
                                     <h5 className="funnel-sans">
                                       ₹{formatPrice(item.price)}
                                     </h5>
 
-                                    {/* ✅ Stock Status Badge */}
                                     {stockLoading[stockKey] ? (
-                                      <Spinner animation="border" size="sm" className="mb-2" />
+                                      <Spinner
+                                        animation="border"
+                                        size="sm"
+                                        className="mb-2"
+                                      />
                                     ) : (
                                       <Badge
                                         bg={stockStatus.color}
                                         className="mb-2 d-inline-block"
-                                        style={{ fontSize: '12px', padding: '5px 10px' }}
+                                        style={{
+                                          fontSize: "12px",
+                                          padding: "5px 10px",
+                                        }}
                                       >
                                         {stockStatus.icon} {stockStatus.label}
                                       </Badge>
                                     )}
 
-                                    {/* ✅ Low Stock Progress Bar */}
                                     {isLowStock && !isOutOfStock && (
-                                      <div className="mt-1 mb-2" style={{ maxWidth: '150px' }}>
+                                      <div
+                                        className="mt-1 mb-2"
+                                        style={{ maxWidth: "150px" }}
+                                      >
                                         <div className="d-flex justify-content-between small">
-                                          <span className="text-muted">Stock</span>
-                                          <span className="text-muted">{stock} / 10</span>
+                                          <span className="text-muted">
+                                            Stock
+                                          </span>
+                                          <span className="text-muted">
+                                            {stock} / 10
+                                          </span>
                                         </div>
-                                        <div className="progress" style={{ height: "4px" }}>
+                                        <div
+                                          className="progress"
+                                          style={{ height: "4px" }}
+                                        >
                                           <div
-                                            className={`progress-bar bg-${stock <= 5 ? 'warning' : 'info'}`}
-                                            style={{ width: `${(stock / 10) * 100}%` }}
+                                            className={`progress-bar bg-${
+                                              stock <= 5 ? "warning" : "info"
+                                            }`}
+                                            style={{
+                                              width: `${(stock / 10) * 100}%`,
+                                            }}
                                           />
                                         </div>
                                       </div>
                                     )}
 
-                                    {/* ✅ Out of Stock Warning */}
                                     {isOutOfStock && (
                                       <div className="text-danger small mb-1">
                                         <FaExclamationTriangle className="me-1" />
@@ -639,13 +669,19 @@ const Cart = () => {
                                     <div className="item-total">
                                       <small>
                                         Item Total: ₹
-                                        {formatPrice(item.price * item.quantity)}
+                                        {formatPrice(
+                                          item.price * item.quantity
+                                        )}
                                       </small>
                                     </div>
                                     <div className="cart-actions">
-                                      {/* ✅ Pass variantId for variant-aware remove */}
                                       <button
-                                        onClick={() => removeItem(item.productId, item.variantId)}
+                                        onClick={() =>
+                                          removeItem(
+                                            item.productId,
+                                            item.variantId
+                                          )
+                                        }
                                         disabled={isOutOfStock}
                                       >
                                         <FaTrash /> Remove
@@ -655,10 +691,13 @@ const Cart = () => {
                                 </Col>
                                 <Col md={3} xs={12}>
                                   <div className="qty-box">
-                                    {/* ✅ Pass variantId for variant-aware update */}
                                     <button
                                       onClick={() =>
-                                        updateQty(item.productId, "dec", item.variantId)
+                                        updateQty(
+                                          item.productId,
+                                          "dec",
+                                          item.variantId
+                                        )
                                       }
                                       disabled={isOutOfStock}
                                     >
@@ -667,9 +706,15 @@ const Cart = () => {
                                     <span>{item.quantity}</span>
                                     <button
                                       onClick={() =>
-                                        updateQty(item.productId, "inc", item.variantId)
+                                        updateQty(
+                                          item.productId,
+                                          "inc",
+                                          item.variantId
+                                        )
                                       }
-                                      disabled={item.quantity >= stock || isOutOfStock}
+                                      disabled={
+                                        item.quantity >= stock || isOutOfStock
+                                      }
                                     >
                                       <FaPlus />
                                     </button>
@@ -715,7 +760,9 @@ const Cart = () => {
                         }
                         className="mt-3"
                         dismissible
-                        onClose={() => setCouponMessage({ type: "", text: "" })}
+                        onClose={() =>
+                          setCouponMessage({ type: "", text: "" })
+                        }
                       >
                         {couponMessage.text}
                       </Alert>
@@ -768,7 +815,8 @@ const Cart = () => {
                     {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD && (
                       <div className="summary-row shipping-note">
                         <small>
-                          Add ₹{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
+                          Add ₹
+                          {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
                           more for free shipping
                         </small>
                       </div>
@@ -900,7 +948,11 @@ const Cart = () => {
                         </div>
                         <p className="small mb-1">
                           {coupon.description ||
-                            `${coupon.discountType === "percentage" ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}`}
+                            `${
+                              coupon.discountType === "percentage"
+                                ? `${coupon.discountValue}% OFF`
+                                : `₹${coupon.discountValue} OFF`
+                            }`}
                         </p>
                         <div className="d-flex justify-content-between align-items-center mt-2">
                           <span className="text-success fw-bold">

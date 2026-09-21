@@ -1,196 +1,166 @@
-const express = require("express");
-const Cart = require("../Models/Cart");
+  // routes/cart.js - UPDATED WITH CUSTOM FIELD SUPPORT
+  const express = require("express");
+  const router = express.Router();
+  const Cart = require("../Models/Cart");
 
-const router = express.Router();
+  // ============================================================
+  // ADD / UPDATE ITEM IN CART
+  // ============================================================
+  router.post("/add", async (req, res) => {
+    try {
+      const { guestId, product } = req.body;
 
-// Helper: normalize variantId (string → trimmed, or null)
-const normalizeVariantId = (v) => {
-  if (!v) return null;
-  const s = String(v).trim();
-  if (s === "" || s === "null" || s === "undefined") return null;
-  return s;
-};
-
-router.get("/:guestId", async (req, res) => {
-  try {
-    const cart = await Cart.findOne({ guestId: req.params.guestId });
-    res.json(cart || { guestId: req.params.guestId, items: [] });
-  } catch (err) {
-    console.error("Get cart error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-router.post("/add", async (req, res) => {
-  try {
-    const {
-      guestId,
-      productId,
-      quantity,
-      name,
-      price,
-      image,
-      product,
-      originalPrice,
-      discountAmount,
-      couponCode,
-      variantId: flatVariantId,
-      selectedColor: flatSelectedColor,
-      selectedSize: flatSelectedSize,
-      variantImage: flatVariantImage,
-      variantPrice: flatVariantPrice,
-      stock: flatStock,
-      company: flatCompany,
-      vendorId: flatVendorId,
-    } = req.body;
-
-    let productData = product;
-    if (!productData && productId) {
-      productData = {
-        productId,
-        name: name || "Product",
-        price: price || 0,
-        image: image || [],
-        quantity: quantity || 1,
-        originalPrice,
-        discountAmount,
-        couponCode,
-        variantId: flatVariantId || null,
-        selectedColor: flatSelectedColor || "",
-        selectedSize: flatSelectedSize || "",
-        variantImage: flatVariantImage || "",
-        variantPrice: flatVariantPrice || 0,
-        stock: flatStock || 0,
-        company: flatCompany || "N/A",
-        vendorId: flatVendorId || null,
-      };
-    }
-
-    if (!guestId || !productData?.productId) {
-      return res.status(400).json({
-        success: false,
-        message: "guestId and productId required",
-      });
-    }
-
-    let cart = await Cart.findOne({ guestId });
-    if (!cart) {
-      cart = new Cart({ guestId, items: [] });
-    }
-
-    const newVariantId = normalizeVariantId(productData.variantId);
-    const newProductId = String(productData.productId);
-
-    const itemIndex = cart.items.findIndex((item) => {
-      const sameProduct = String(item.productId) === newProductId;
-      const itemVariantId = normalizeVariantId(item.variantId);
-      return sameProduct && itemVariantId === newVariantId;
-    });
-
-    if (itemIndex > -1) {
-      const currentQty = cart.items[itemIndex].quantity;
-      const delta = productData.quantity || 1;
-      const newQty = currentQty + delta;
-
-      if (newQty < 1) {
-        cart.items.splice(itemIndex, 1);
-      } else {
-        cart.items[itemIndex].quantity = newQty;
-
-        if (productData.price !== undefined) {
-          cart.items[itemIndex].price = productData.price;
-        }
-
-        // ✅ Always update variant fields if variantId present
-        if (newVariantId) {
-          cart.items[itemIndex].variantId = newVariantId;
-          if (productData.selectedColor !== undefined)
-            cart.items[itemIndex].selectedColor = productData.selectedColor || "";
-          if (productData.selectedSize !== undefined)
-            cart.items[itemIndex].selectedSize = productData.selectedSize || "";
-          if (productData.variantImage !== undefined)
-            cart.items[itemIndex].variantImage = productData.variantImage || "";
-          if (productData.variantPrice !== undefined)
-            cart.items[itemIndex].variantPrice = productData.variantPrice || 0;
-        }
+      if (!guestId || !product || !product.productId) {
+        return res.status(400).json({ message: "guestId and product required" });
       }
-    } else {
-      if ((productData.quantity || 1) > 0) {
+
+      let cart = await Cart.findOne({ guestId });
+      if (!cart) {
+        cart = new Cart({ guestId, items: [], appliedCoupon: null });
+      }
+
+      // ✅ Find existing item — variant-aware match
+      const existingIndex = cart.items.findIndex((item) => {
+        const sameProduct =
+          item.productId.toString() === product.productId.toString();
+
+        const itemVariant = item.variantId ? item.variantId.toString() : null;
+        const newVariant = product.variantId
+          ? product.variantId.toString()
+          : null;
+
+        // Match by variantId if present, otherwise match by color+size
+        if (itemVariant && newVariant) {
+          return sameProduct && itemVariant === newVariant;
+        }
+
+        const sameColor =
+          (item.selectedColor || "") === (product.selectedColor || "");
+        const sameSize =
+          (item.selectedSize || "") === (product.selectedSize || "");
+
+        return sameProduct && !itemVariant && !newVariant && sameColor && sameSize;
+      });
+
+      if (existingIndex > -1) {
+        // Update quantity
+        const newQty = cart.items[existingIndex].quantity + (product.quantity || 1);
+
+        if (newQty <= 0) {
+          cart.items.splice(existingIndex, 1);
+        } else {
+          cart.items[existingIndex].quantity = newQty;
+
+          // ✅ Refresh price/stock/custom field in case they changed
+          if (product.price) cart.items[existingIndex].price = product.price;
+          if (product.stock !== undefined) cart.items[existingIndex].stock = product.stock;
+          if (product.customFieldLabel !== undefined)
+            cart.items[existingIndex].customFieldLabel = product.customFieldLabel;
+          if (product.customFieldValue !== undefined)
+            cart.items[existingIndex].customFieldValue = product.customFieldValue;
+        }
+      } else {
+        // ✅ Add new item — include ALL fields
         cart.items.push({
-          productId: productData.productId,
-          name: productData.name,
-          price: productData.price,
-          originalPrice:
-            originalPrice || productData.originalPrice || productData.price,
-          discountAmount:
-            discountAmount || productData.discountAmount || 0,
-          couponCode: couponCode || productData.couponCode || "",
-          quantity: productData.quantity || 1,
-          image: Array.isArray(productData.image)
-            ? productData.image
-            : [productData.image].filter(Boolean),
-          vendorId: productData.vendorId || null,
-          company: productData.company || "N/A",
-          stock: productData.stock || 0,
-          variantId: newVariantId, // ✅ normalized
-          selectedColor: productData.selectedColor || "",
-          selectedSize: productData.selectedSize || "",
-          variantImage: productData.variantImage || "",
-          variantPrice: productData.variantPrice || 0,
+          productId: product.productId,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice || product.price,
+          discountAmount: product.discountAmount || 0,
+          couponCode: product.couponCode || null,
+          quantity: product.quantity || 1,
+          image: Array.isArray(product.image) ? product.image : [product.image],
+
+          // Vendor
+          vendorId: product.vendorId || null,
+          company: product.company || "N/A",
+          stock: product.stock || 0,
+
+          // Variant
+          variantId: product.variantId || null,
+          selectedColor: product.selectedColor || "",
+          selectedSize: product.selectedSize || "",
+          variantImage: product.variantImage || "",
+          variantPrice: product.variantPrice || 0,
+
+          // 🆕 Custom field
+          customFieldLabel: product.customFieldLabel || null,
+          customFieldValue: product.customFieldValue || null,
         });
       }
+
+      await cart.save();
+      res.json({ success: true, cart });
+    } catch (err) {
+      console.error("Cart add error:", err);
+      res.status(500).json({ success: false, message: err.message });
     }
+  });
 
-    await cart.save();
-    res.json({ success: true, message: "Added to cart", cart });
-  } catch (err) {
-    console.error("Add to cart error:", err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-router.delete("/remove/:guestId/:productId", async (req, res) => {
-  try {
-    const { guestId, productId } = req.params;
-    const { variantId } = req.query;
-
-    const cart = await Cart.findOne({ guestId });
-    if (!cart) {
-      return res.status(404).json({ success: false, message: "Cart not found" });
+  // ============================================================
+  // GET CART
+  // ============================================================
+  router.get("/:guestId", async (req, res) => {
+    try {
+      const cart = await Cart.findOne({ guestId: req.params.guestId });
+      if (!cart) {
+        return res.json({ items: [], appliedCoupon: null });
+      }
+      res.json(cart);
+    } catch (err) {
+      console.error("Cart fetch error:", err);
+      res.status(500).json({ message: err.message });
     }
+  });
 
-    const targetVariantId = normalizeVariantId(variantId);
+  // ============================================================
+  // REMOVE ITEM — variant-aware
+  // ============================================================
+  router.delete("/remove/:guestId/:productId", async (req, res) => {
+    try {
+      const { guestId, productId } = req.params;
+      const { variantId } = req.query;
 
-    if (targetVariantId) {
-      cart.items = cart.items.filter(
-        (item) =>
-          !(
-            String(item.productId) === productId &&
-            normalizeVariantId(item.variantId) === targetVariantId
-          )
+      const cart = await Cart.findOne({ guestId });
+      if (!cart) return res.status(404).json({ message: "Cart not found" });
+
+      cart.items = cart.items.filter((item) => {
+        const sameProduct = item.productId.toString() === productId;
+
+        if (!variantId) {
+          // Remove all matches (legacy behaviour)
+          return !sameProduct;
+        }
+
+        const itemVariant = item.variantId ? item.variantId.toString() : null;
+        const sameVariant = itemVariant === variantId;
+
+        // Keep items that DON'T match product+variant
+        return !(sameProduct && sameVariant);
+      });
+
+      await cart.save();
+      res.json({ success: true, cart });
+    } catch (err) {
+      console.error("Cart remove error:", err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ============================================================
+  // CLEAR CART
+  // ============================================================
+  router.delete("/clear/:guestId", async (req, res) => {
+    try {
+      await Cart.findOneAndUpdate(
+        { guestId: req.params.guestId },
+        { items: [], appliedCoupon: null }
       );
-    } else {
-      cart.items = cart.items.filter(
-        (item) => String(item.productId) !== productId
-      );
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Cart clear error:", err);
+      res.status(500).json({ message: err.message });
     }
+  });
 
-    await cart.save();
-    res.json({ success: true, message: "Item removed from cart", cart });
-  } catch (err) {
-    console.error("Remove item error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-router.delete("/clear/:guestId", async (req, res) => {
-  try {
-    await Cart.findOneAndDelete({ guestId: req.params.guestId });
-    res.json({ success: true, message: "Cart cleared" });
-  } catch (err) {
-    console.error("Clear cart error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-module.exports = router;
+  module.exports = router;
