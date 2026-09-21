@@ -576,8 +576,8 @@ const Header = () => {
                           className="search-recommendation-item"
                           onClick={() => handleRecommendationClick(product)}
                         >
-                          <div className="recommendation-img">
-                            {/* <img
+                          {/* <div className="recommendation-img">
+                            <img
                               src={
                                 product.image?.[0] || "/images/placeholder.png"
                               }
@@ -586,8 +586,8 @@ const Header = () => {
                                 e.target.onerror = null;
                                 e.target.src = "/images/placeholder.png";
                               }}
-                            /> */}
-                          </div>
+                            />
+                          </div> */}
                           <div className="recommendation-info">
                             <div className="recommendation-name">
                               {product.name}
