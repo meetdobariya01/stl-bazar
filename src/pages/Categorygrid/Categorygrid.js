@@ -39,7 +39,8 @@ const formatImagePath = (image) => {
 
 const CategoryProducts = () => {
   const { pathname } = useLocation();
-  const { categoryName: categorySlug, subCategoryName: subCategorySlug } = useParams();
+  const { categoryName: categorySlug, subCategoryName: subCategorySlug } =
+    useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,6 +71,26 @@ const CategoryProducts = () => {
   const [priceMax, setPriceMax] = useState("");
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
+
+  // ============================================================
+  // ✅ FIX #1: RESET ALL FILTERS + PRODUCT STATE WHEN URL CHANGES
+  // This is the PRIMARY fix. It runs before slug resolution and
+  // guarantees no stale filter state persists across navigations
+  // (including browser Back button).
+  // ============================================================
+  useEffect(() => {
+    setSelectedCategories([]);
+    setSelectedSubCategories([]);
+    setSelectedPriceRange("");
+    setPriceMin("");
+    setPriceMax("");
+    setSelectedRating(0);
+    setSortBy("featured");
+    setProducts([]);
+    setFilteredProducts([]);
+    setLoading(true);
+    setResolvingNames(true); // force re-resolution of slugs
+  }, [categorySlug, subCategorySlug]);
 
   // ============================================================
   // 🆕 RESOLVE SLUGS → REAL NAMES
@@ -104,6 +125,9 @@ const CategoryProducts = () => {
         if (matchedCat) {
           setDecodedCategory(matchedCat.name);
 
+          // ✅ FIX #2: Always reset decodedSubCategory first
+          setDecodedSubCategory(null);
+
           if (subCategorySlug && matchedCat.subcategories) {
             // Try slug match
             let matchedSub = matchedCat.subcategories.find(
@@ -128,11 +152,14 @@ const CategoryProducts = () => {
               setDecodedSubCategory(matchedSub.name);
             }
           }
+          // ✅ FIX #2 (continued): else → decodedSubCategory stays null
         } else {
           // Total fallback
           setDecodedCategory(decodeURIComponent(categorySlug));
           if (subCategorySlug) {
             setDecodedSubCategory(decodeURIComponent(subCategorySlug));
+          } else {
+            setDecodedSubCategory(null);
           }
         }
       } catch (err) {
@@ -141,6 +168,8 @@ const CategoryProducts = () => {
         setDecodedCategory(decodeURIComponent(categorySlug || "All"));
         if (subCategorySlug) {
           setDecodedSubCategory(decodeURIComponent(subCategorySlug));
+        } else {
+          setDecodedSubCategory(null);
         }
       } finally {
         setResolvingNames(false);
@@ -151,7 +180,7 @@ const CategoryProducts = () => {
   }, [categorySlug, subCategorySlug]);
 
   // ============================================================
-  // FETCH PRODUCTS (જ્યારે names resolve થાય)
+  // FETCH PRODUCTS
   // ============================================================
   useEffect(() => {
     if (resolvingNames) return;
@@ -185,7 +214,10 @@ const CategoryProducts = () => {
             if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
             if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
 
-            if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+            if (
+              p.categorySubcategoryMap &&
+              typeof p.categorySubcategoryMap === "object"
+            ) {
               Object.values(p.categorySubcategoryMap).forEach((arr) => {
                 if (Array.isArray(arr)) allSubs.push(...arr);
               });
@@ -202,6 +234,10 @@ const CategoryProducts = () => {
           });
 
           setSelectedSubCategories([decodedSubCategory]);
+        }
+        // ✅ FIX #3: Explicit else branch — clear stale subcategory filter
+        else {
+          setSelectedSubCategories([]);
         }
 
         setProducts(allProducts);
@@ -234,7 +270,9 @@ const CategoryProducts = () => {
         for (const cat of categories) {
           try {
             const subRes = await axios.get(
-              `${API_URL}/categories/${encodeURIComponent(cat.name)}/subcategories`
+              `${API_URL}/categories/${encodeURIComponent(
+                cat.name
+              )}/subcategories`
             );
             if (subRes.data && subRes.data.subCategories) {
               subMap[cat.name] = subRes.data.subCategories;
@@ -275,7 +313,10 @@ const CategoryProducts = () => {
         if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
         if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
 
-        if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+        if (
+          p.categorySubcategoryMap &&
+          typeof p.categorySubcategoryMap === "object"
+        ) {
           Object.values(p.categorySubcategoryMap).forEach((arr) => {
             if (Array.isArray(arr)) allSubs.push(...arr);
           });
@@ -491,7 +532,9 @@ const CategoryProducts = () => {
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
-          <p>{resolvingNames ? "Loading category..." : "Loading products..."}</p>
+          <p>
+            {resolvingNames ? "Loading category..." : "Loading products..."}
+          </p>
         </div>
         <Footer />
       </>
@@ -757,9 +800,13 @@ const CategoryProducts = () => {
                               />
                               <div
                                 className="wishlist-btn-category"
-                                onClick={(e) => handleToggleWishlist(e, item._id)}
+                                onClick={(e) =>
+                                  handleToggleWishlist(e, item._id)
+                                }
                                 style={{
-                                  cursor: isToggling ? "not-allowed" : "pointer",
+                                  cursor: isToggling
+                                    ? "not-allowed"
+                                    : "pointer",
                                 }}
                               >
                                 {isToggling ? (
@@ -781,27 +828,33 @@ const CategoryProducts = () => {
                               {/* Sub-Category Badge */}
                               {(() => {
                                 const allSubs = [];
-                                if (item.subCategory) allSubs.push(item.subCategory);
-                                if (item.subcategory) allSubs.push(item.subcategory);
+                                if (item.subCategory)
+                                  allSubs.push(item.subCategory);
+                                if (item.subcategory)
+                                  allSubs.push(item.subcategory);
                                 if (Array.isArray(item.subCategories))
                                   allSubs.push(...item.subCategories);
                                 if (Array.isArray(item.subcategories))
                                   allSubs.push(...item.subcategories);
                                 if (
                                   item.categorySubcategoryMap &&
-                                  typeof item.categorySubcategoryMap === "object"
+                                  typeof item.categorySubcategoryMap ===
+                                    "object"
                                 ) {
-                                  Object.values(item.categorySubcategoryMap).forEach(
-                                    (arr) => {
-                                      if (Array.isArray(arr)) allSubs.push(...arr);
-                                    }
-                                  );
+                                  Object.values(
+                                    item.categorySubcategoryMap
+                                  ).forEach((arr) => {
+                                    if (Array.isArray(arr))
+                                      allSubs.push(...arr);
+                                  });
                                 }
 
                                 const cleanSubs = allSubs
                                   .filter(Boolean)
                                   .map((s) =>
-                                    String(s).replace(/[\[\]"']/g, "").trim()
+                                    String(s)
+                                      .replace(/[\[\]"']/g, "")
+                                      .trim()
                                   )
                                   .filter(Boolean);
 
@@ -827,7 +880,8 @@ const CategoryProducts = () => {
                                   <FaStar
                                     key={i}
                                     color={
-                                      i < Math.round(item.averageRating || 0)
+                                      i <
+                                      Math.round(item.averageRating || 0)
                                         ? "#ffc107"
                                         : "#e4e5e9"
                                     }
