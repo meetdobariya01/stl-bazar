@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Container, Row, Col } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
@@ -15,13 +17,15 @@ import {
 import "./footer.css";
 
 const Footer = () => {
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const { pathname } = useLocation();
 
-  const refreshPage = () => {
-    window.location.reload();
-  };
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant", // or "smooth"
+    });
+  }, [pathname]);
 
   return (
     <>
@@ -35,12 +39,13 @@ const Footer = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
               >
-                <img
-                  src="/images/native.png"
-                  alt="Refresh"
-                  className="footer-logo"
-                  onClick={refreshPage}
-                />
+                <NavLink to="/">
+                  <img
+                    src="/images/native.png"
+                    alt="Native91"
+                    className="footer-logo"
+                  />
+                </NavLink>
 
                 <p className="footer-text">
                   Native91 is a curated marketplace for discovering and shopping
@@ -54,7 +59,7 @@ const Footer = () => {
                     src="/images/india.png"
                     alt="Refresh"
                     className="footer-logo w-50"
-                    onClick={refreshPage}
+                    // onClick={refreshPage}
                   />{" "}
                   {/* <img
                     src="/images/brandel.png"
@@ -169,12 +174,13 @@ const Footer = () => {
           <Row className="d-md-none">
             <Col>
               {/* LOGO */}
-              <img
-                src="/images/native.png"
-                alt="Refresh"
-                className="footer-logo w-75"
-                onClick={refreshPage}
-              />
+              <NavLink to="/">
+                <img
+                  src="/images/native.png"
+                  alt="Native91"
+                  className="footer-logo"
+                />
+              </NavLink>
 
               {/* TEXT (FULL TEXT LIKE SCREENSHOT) */}
               <p className="footer-text">
@@ -306,9 +312,9 @@ const Footer = () => {
       </a>
 
       {/* SCROLL TO TOP */}
-      <button className="scroll-top" onClick={scrollToTop}>
+      {/* <button className="scroll-top" onClick={scrollToTop}>
         <FaArrowUp />
-      </button>
+      </button> */}
     </>
   );
 };
