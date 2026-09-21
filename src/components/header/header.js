@@ -283,7 +283,7 @@ const Header = () => {
         }
 
         const activeCategories = categoriesData.filter(
-          (cat) => cat.status === "active"
+          (cat) => cat.status === "active",
         );
         setCategories(activeCategories);
         console.log(`📂 Found ${activeCategories.length} categories`);
@@ -336,9 +336,9 @@ const Header = () => {
     try {
       const response = await axios.get(
         `${VENDOR_API_URL}/categories/${encodeURIComponent(
-          categoryName
+          categoryName,
         )}/subcategories`,
-        { ...getAuthHeaders() }
+        { ...getAuthHeaders() },
       );
       const subs = parseSubCategories(pickSubsFromResponse(response.data));
 
@@ -350,7 +350,7 @@ const Header = () => {
     } catch (error) {
       console.warn(
         `Sub-categories fetch failed for ${categoryName}:`,
-        error.message
+        error.message,
       );
       return [];
     } finally {
@@ -708,7 +708,7 @@ const Header = () => {
                                         <NavLink
                                           key={idx}
                                           to={`/category/${createSlug(
-                                            hoveredCategory
+                                            hoveredCategory,
                                           )}/${createSlug(sub)}`}
                                           className="subcategory-item"
                                           onClick={() => setShowMenu(false)}
@@ -718,7 +718,7 @@ const Header = () => {
                                           </span>
                                           {sub}
                                         </NavLink>
-                                      )
+                                      ),
                                     )
                                   ) : (
                                     <div className="subcategory-empty">
@@ -729,7 +729,7 @@ const Header = () => {
                                 <div className="subcategory-footer">
                                   <NavLink
                                     to={`/category/${createSlug(
-                                      hoveredCategory
+                                      hoveredCategory,
                                     )}`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
@@ -883,14 +883,14 @@ const Header = () => {
                                     <NavLink
                                       key={idx}
                                       to={`/category/${createSlug(
-                                        sub.title
+                                        sub.title,
                                       )}/${createSlug(subCat)}`}
                                       className="mobile-sub-sublink"
                                       onClick={() => setShowMenu(false)}
                                     >
                                       • {subCat}
                                     </NavLink>
-                                  )
+                                  ),
                                 )}
                               </div>
                             )}

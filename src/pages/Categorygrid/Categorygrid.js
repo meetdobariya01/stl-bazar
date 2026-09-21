@@ -17,6 +17,7 @@ import { createSlug } from "../../utils/slugUtils";
 import { useWishlist } from "../../context/WishlistContext";
 import { useCart } from "../../context/CartContext";
 import "./categorygrid.css";
+import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BEND_URL = "https://api-vendor.native91.com";
@@ -110,15 +111,13 @@ const CategoryProducts = () => {
         const cats = res.data?.categories || [];
 
         // Try slug match first
-        let matchedCat = cats.find(
-          (c) => createSlug(c.name) === categorySlug
-        );
+        let matchedCat = cats.find((c) => createSlug(c.name) === categorySlug);
 
         // Fallback — encoded name match
         if (!matchedCat) {
           const decoded = decodeURIComponent(categorySlug);
           matchedCat = cats.find(
-            (c) => c.name.toLowerCase() === decoded.toLowerCase()
+            (c) => c.name.toLowerCase() === decoded.toLowerCase(),
           );
         }
 
@@ -131,14 +130,14 @@ const CategoryProducts = () => {
           if (subCategorySlug && matchedCat.subcategories) {
             // Try slug match
             let matchedSub = matchedCat.subcategories.find(
-              (sc) => createSlug(sc.name) === subCategorySlug
+              (sc) => createSlug(sc.name) === subCategorySlug,
             );
 
             // Fallback — encoded name
             if (!matchedSub) {
               const decodedSub = decodeURIComponent(subCategorySlug);
               matchedSub = matchedCat.subcategories.find(
-                (sc) => sc.name.toLowerCase() === decodedSub.toLowerCase()
+                (sc) => sc.name.toLowerCase() === decodedSub.toLowerCase(),
               );
             }
 
@@ -199,7 +198,7 @@ const CategoryProducts = () => {
           allProducts = allProducts.filter(
             (p) =>
               p.category &&
-              p.category.toLowerCase() === decodedCategory.toLowerCase()
+              p.category.toLowerCase() === decodedCategory.toLowerCase(),
           );
         }
 
@@ -211,8 +210,10 @@ const CategoryProducts = () => {
             const allSubs = [];
             if (p.subCategory) allSubs.push(p.subCategory);
             if (p.subcategory) allSubs.push(p.subcategory);
-            if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
-            if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
+            if (Array.isArray(p.subCategories))
+              allSubs.push(...p.subCategories);
+            if (Array.isArray(p.subcategories))
+              allSubs.push(...p.subcategories);
 
             if (
               p.categorySubcategoryMap &&
@@ -226,7 +227,10 @@ const CategoryProducts = () => {
             const cleanSubs = allSubs
               .filter(Boolean)
               .map((s) =>
-                String(s).replace(/[\[\]"']/g, "").trim().toLowerCase()
+                String(s)
+                  .replace(/[\[\]"']/g, "")
+                  .trim()
+                  .toLowerCase(),
               )
               .filter(Boolean);
 
@@ -300,8 +304,8 @@ const CategoryProducts = () => {
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
         selectedCategories.some(
-          (cat) => p.category && p.category.toLowerCase() === cat.toLowerCase()
-        )
+          (cat) => p.category && p.category.toLowerCase() === cat.toLowerCase(),
+        ),
       );
     }
 
@@ -324,11 +328,16 @@ const CategoryProducts = () => {
 
         const cleanSubs = allSubs
           .filter(Boolean)
-          .map((s) => String(s).replace(/[\[\]"']/g, "").trim().toLowerCase())
+          .map((s) =>
+            String(s)
+              .replace(/[\[\]"']/g, "")
+              .trim()
+              .toLowerCase(),
+          )
           .filter(Boolean);
 
         return selectedSubCategories.some((selectedSub) =>
-          cleanSubs.includes(selectedSub.toLowerCase().trim())
+          cleanSubs.includes(selectedSub.toLowerCase().trim()),
         );
       });
     }
@@ -363,7 +372,9 @@ const CategoryProducts = () => {
     }
 
     if (selectedRating > 0) {
-      filtered = filtered.filter((p) => (p.averageRating || 0) >= selectedRating);
+      filtered = filtered.filter(
+        (p) => (p.averageRating || 0) >= selectedRating,
+      );
     }
 
     setFilteredProducts(filtered);
@@ -385,11 +396,15 @@ const CategoryProducts = () => {
     switch (sortBy) {
       case "alphabetical-a-z":
         return sorted.sort((a, b) =>
-          (a.name?.toLowerCase() || "").localeCompare(b.name?.toLowerCase() || "")
+          (a.name?.toLowerCase() || "").localeCompare(
+            b.name?.toLowerCase() || "",
+          ),
         );
       case "alphabetical-z-a":
         return sorted.sort((a, b) =>
-          (b.name?.toLowerCase() || "").localeCompare(a.name?.toLowerCase() || "")
+          (b.name?.toLowerCase() || "").localeCompare(
+            a.name?.toLowerCase() || "",
+          ),
         );
       case "price-low-high":
         return sorted.sort((a, b) => a.price - b.price);
@@ -397,15 +412,17 @@ const CategoryProducts = () => {
         return sorted.sort((a, b) => b.price - a.price);
       case "newest":
         return sorted.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
         );
       case "rating":
         return sorted.sort(
-          (a, b) => (b.averageRating || 0) - (a.averageRating || 0)
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
         );
       default:
         return sorted.sort((a, b) =>
-          (a.name?.toLowerCase() || "").localeCompare(b.name?.toLowerCase() || "")
+          (a.name?.toLowerCase() || "").localeCompare(
+            b.name?.toLowerCase() || "",
+          ),
         );
     }
   };
@@ -548,6 +565,7 @@ const CategoryProducts = () => {
     <>
       <Header />
 
+      <Breadcrumb />
       <div className="category-background lexend px-2">
         <Container className="category-page">
           <div className="category-hero-section">
@@ -930,3 +948,4 @@ const CategoryProducts = () => {
 };
 
 export default CategoryProducts;
+  

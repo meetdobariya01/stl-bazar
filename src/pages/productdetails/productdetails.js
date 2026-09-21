@@ -1318,7 +1318,7 @@ const Productdetails = () => {
             {/* RIGHT SIDE - PRODUCT INFO */} 
             <Col lg={6}> 
               <div className="product-content"> 
-                <span className="best-seller-badge">Bestseller</span> 
+                {/* <span className="best-seller-badge">Bestseller</span>  */}
  
                 <h1 className="funnel-sans">{String(product.name)}</h1> 
                 <div className="product-brand"> 
@@ -1418,7 +1418,7 @@ const Productdetails = () => {
                 </p> 
  
                 {/* 🆕 VENDOR DELIVERY TIME — inline small (uses shippingTime) */} 
-                {hasVendorDelivery && ( 
+                {/* {hasVendorDelivery && ( 
                   <div 
                     className="vendor-delivery-inline mt-2 d-flex align-items-center gap-2 small p-2 rounded" 
                     style={{ background: "#eef7ff" }} 
@@ -1431,24 +1431,24 @@ const Productdetails = () => {
                         : product.shippingTime} 
                     </span> 
                   </div> 
-                )} 
+                )}  */}
  
                 {/* VARIANT SELECTOR */} 
                 {variants.length > 0 && ( 
                   <div 
-                    className="variant-selector-section mt-3 mb-3 p-3 border rounded" 
+                    className="variant-selector-section mt-3 mb-3 " 
                     style={{ background: "#f8f9fa" }} 
                   > 
                     <div className="d-flex justify-content-between align-items-center mb-3"> 
                       <h6 className="mb-0 fw-bold"> 
-                        <FaPalette className="me-2 text-primary" /> 
+                        {/* <FaPalette className="me-2 text-primary" />  */}
                         Select Variant 
-                        <Badge bg="secondary" className="ms-2"> 
+                        {/* <Badge bg="secondary" className="ms-2"> 
                           {variants.length} options 
-                        </Badge> 
-                        <Badge bg="info" className="ms-2"> 
+                        </Badge>  */}
+                        {/* <Badge bg="info" className="ms-2"> 
                           Optional 
-                        </Badge> 
+                        </Badge>  */}
                       </h6> 
                       {selectedVariant && ( 
                         <small className="text-success"> 
@@ -1478,7 +1478,7 @@ const Productdetails = () => {
                           : null; 
  
                         return ( 
-                          <Col xs={6} md={4} lg={3} key={variant._id || idx}> 
+                          <Col xs={4} md={4} lg={3} key={variant._id || idx}> 
                             <div 
                               className={`variant-option-card ${isSelected ? "selected" : ""} ${isDisabled ? "disabled" : ""}`} 
                               onClick={() => handleVariantSelect(variant)} 
@@ -2304,7 +2304,7 @@ const Productdetails = () => {
  
                 > 
                   <div className="d-flex align-items-center gap-2"> 
-                    <FaTruck className="text-primary" /> 
+                    {/* <FaTruck className="text-primary" />  */}
                     <strong>Vendor Delivery Time:</strong> 
                     <span className="ms-1"> 
                       {product.shippingTime === "Custom" && product.customShippingTime 
@@ -2363,9 +2363,9 @@ const Productdetails = () => {
                           }} 
                         /> 
                       )} 
-                      <h5 className="brand-name mb-0"> 
+                      {/* <h5 className="brand-name mb-0"> 
                         {brandName || product?.company || "Native91"} 
-                      </h5> 
+                      </h5>  */}
                     </div> 
  
                     <p className="brand-description"> 
@@ -2399,12 +2399,12 @@ const Productdetails = () => {
                 <p className="mb-3"> 
                   No reviews yet. Be the first to review this product! 
                 </p> 
-                <Button 
+                {/* <Button 
                   variant="outline-dark" 
                   onClick={() => setShowReviewModal(true)} 
                 > 
                   Write a Review 
-                </Button> 
+                </Button>  */}
               </div> 
             ) : ( 
               <Row className="g-4"> 
