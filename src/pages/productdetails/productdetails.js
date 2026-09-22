@@ -56,8 +56,8 @@ import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL =
   process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-// const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
-const VENDOR_IMAGE_BASE = "http://localhost:5177"; // For local development
+const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
+// const VENDOR_IMAGE_BASE = "http://localhost:5177"; // For local development
 const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
 
 const formatPrice = (price) => {
