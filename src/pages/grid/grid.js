@@ -8,6 +8,7 @@ import {
   Button,
   Dropdown,
   Form,
+  Badge,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
@@ -16,6 +17,7 @@ import {
   FaHeart,
   FaRegHeart,
   FaSlidersH,
+  FaBan,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -31,7 +33,7 @@ import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
-// const VENDOR_BACKEND_URL = "http://localhost:5177"; // For local development
+
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
   let img = Array.isArray(image) ? image[0] : image;
@@ -104,7 +106,6 @@ const Grid = () => {
         setMaterials(uniqueMaterials);
         setBrands(uniqueBrands);
 
-        // Fetch wishlist to check status
         fetchWishlist();
       })
       .catch((err) => console.error(err))
@@ -159,24 +160,58 @@ const Grid = () => {
     }));
   };
 
-  const handleAddToCart = async (e, item) => {
-    e.stopPropagation();
-    const guestId = localStorage.getItem("guestId");
-    await axios.post(`${API_URL}/cart/add`, {
-      guestId,
-      product: {
-        productId: item._id,
-        name: item.name,
-        price: item.price,
-        image: Array.isArray(item.image) ? item.image[0] : item.image,
-        quantity: qty[item._id] || 1,
-      },
-    });
-    await fetchCart();
-    setShowCart(true);
+  // 🆕 Helper: check if a product is out of stock
+  const isOutOfStock = (item) => {
+    // Base stock check — variants handled separately on the product details page
+    const stock = item?.stock;
+    if (stock === undefined || stock === null) return false; // unknown → allow
+    return Number(stock) <= 0;
   };
 
-  // ✅ Updated toggleWishlist using context
+  // 🆕 ADD TO CART — with stock validation
+  const handleAddToCart = async (e, item) => {
+    e.stopPropagation();
+
+    // ❌ Block out-of-stock products
+    if (isOutOfStock(item)) {
+      alert("Sorry, this product is out of stock.");
+      return;
+    }
+
+    try {
+      const guestId = localStorage.getItem("guestId");
+      const requestedQty = qty[item._id] || 1;
+
+      // ❌ Block if user's requested quantity exceeds available stock
+      if (Number(item.stock) < requestedQty) {
+        alert(
+          `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`
+        );
+        return;
+      }
+
+      await axios.post(`${API_URL}/cart/add`, {
+        guestId,
+        product: {
+          productId: item._id,
+          name: item.name,
+          price: item.price,
+          image: Array.isArray(item.image) ? item.image[0] : item.image,
+          quantity: requestedQty,
+          stock: item.stock, // ✅ send stock for freshness
+        },
+      });
+      await fetchCart();
+      setShowCart(true);
+    } catch (err) {
+      console.error("Add to cart error:", err);
+      alert(
+        err.response?.data?.message ||
+          "Failed to add to cart. Please try again."
+      );
+    }
+  };
+
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
 
@@ -194,7 +229,6 @@ const Grid = () => {
         company: product.company || "Native91",
       });
 
-      // Refetch wishlist to update UI
       await fetchWishlist();
     } catch (error) {
       console.error("Error toggling wishlist:", error);
@@ -268,7 +302,6 @@ const Grid = () => {
     return labels[sort] || "Popular";
   };
 
-  // Check if product is in wishlist
   const checkIsInWishlist = (productId) => {
     return isInWishlist(productId);
   };
@@ -281,7 +314,6 @@ const Grid = () => {
 
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
-          {/* 🔹 Category Description Section */}
           {categories.length > 0 && (
             <div className="category-description mb-4 p-4 bg-light rounded text-center">
               <h2 className="h4 mb-3 funnel-sans">{decodedName}</h2>
@@ -338,7 +370,7 @@ const Grid = () => {
           </div>
 
           <Row className="g-4">
-            {/* Filters Sidebar (hidden - you can enable if needed) */}
+            {/* Filters Sidebar (hidden) */}
             <Col lg={3} className="d-none">
               <div className="filters-sidebar">
                 <div className="filter-header">
@@ -401,11 +433,6 @@ const Grid = () => {
                           onChange={() => handleMaterialChange(mat)}
                         />
                       ))}
-                      {materials.length > 5 && (
-                        <Button variant="link" size="sm" className="view-more">
-                          + View more
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -423,11 +450,6 @@ const Grid = () => {
                           onChange={() => handleBrandChange(brand)}
                         />
                       ))}
-                      {brands.length > 5 && (
-                        <Button variant="link" size="sm" className="view-more">
-                          + View more
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -552,6 +574,9 @@ const Grid = () => {
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
 
+                    // 🆕 Out-of-stock flag
+                    const outOfStock = isOutOfStock(item);
+
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3}>
                         <motion.div
@@ -570,6 +595,24 @@ const Grid = () => {
                                   (e.target.src = "/images/placeholder.png")
                                 }
                               />
+
+                              {/* 🆕 Out-of-stock badge */}
+                              {outOfStock && (
+                                <Badge
+                                  bg="danger"
+                                  style={{
+                                    position: "absolute",
+                                    top: "10px",
+                                    left: "10px",
+                                    zIndex: 2,
+                                    fontSize: "11px",
+                                    padding: "5px 10px",
+                                  }}
+                                >
+                                  <FaBan className="me-1" /> Out of Stock
+                                </Badge>
+                              )}
+
                               <div
                                 className="wishlist-btn-grid"
                                 onClick={(e) =>
@@ -618,11 +661,27 @@ const Grid = () => {
                               <div className="product-price">
                                 ₹{item.price.toLocaleString()}
                               </div>
+
+                              {/* 🆕 Button — disabled when out of stock */}
                               <Button
                                 className="add-to-cart-btn"
                                 onClick={(e) => handleAddToCart(e, item)}
+                                disabled={outOfStock}
+                                title={
+                                  outOfStock
+                                    ? "This product is out of stock"
+                                    : "Add to Cart"
+                                }
                               >
-                                <FaShoppingCart /> Add to Cart
+                                {outOfStock ? (
+                                  <>
+                                    <FaBan /> Out of Stock
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaShoppingCart /> Add to Cart
+                                  </>
+                                )}
                               </Button>
                             </Card.Body>
                           </Card>
@@ -636,7 +695,7 @@ const Grid = () => {
           </Row>
         </Container>
       </div>
-      {/* <Details /> */}
+
       <Footer />
     </>
   );
