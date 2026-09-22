@@ -18,6 +18,8 @@ import {
   FaRegHeart,
   FaSlidersH,
   FaBan,
+  FaPlus,
+  FaMinus,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -65,11 +67,15 @@ const Grid = () => {
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [qty, setQty] = useState({});
+
+  // 🆕 qtyMap — one entry per product ID
+  const [qtyMap, setQtyMap] = useState({});
+
   const [sort, setSort] = useState("popular");
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
+  const [isAddingToCart, setIsAddingToCart] = useState({});  // 🆕 per-product adding state
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -81,6 +87,22 @@ const Grid = () => {
   const [categories, setCategories] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [brands, setBrands] = useState([]);
+
+  // 🆕 Quantity helpers
+  const getQty = (productId) => qtyMap[productId] || 1;
+
+  const changeQty = (e, productId, delta, maxStock) => {
+    e.stopPropagation();
+    setQtyMap((prev) => {
+      const current = prev[productId] || 1;
+      let next = current + delta;
+      if (next < 1) next = 1;
+      if (maxStock !== undefined && maxStock !== null && next > maxStock) {
+        next = Math.max(1, Number(maxStock));
+      }
+      return { ...prev, [productId]: next };
+    });
+  };
 
   useEffect(() => {
     if (!decodedName) return;
@@ -153,42 +175,35 @@ const Grid = () => {
     products,
   ]);
 
-  const changeQty = (id, val) => {
-    setQty((prev) => ({
-      ...prev,
-      [id]: Math.max(1, (prev[id] || 1) + val),
-    }));
-  };
-
   // 🆕 Helper: check if a product is out of stock
   const isOutOfStock = (item) => {
-    // Base stock check — variants handled separately on the product details page
     const stock = item?.stock;
-    if (stock === undefined || stock === null) return false; // unknown → allow
+    if (stock === undefined || stock === null) return false;
     return Number(stock) <= 0;
   };
 
-  // 🆕 ADD TO CART — with stock validation
+  // 🆕 ADD TO CART — with qty + stock validation
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
 
-    // ❌ Block out-of-stock products
     if (isOutOfStock(item)) {
       alert("Sorry, this product is out of stock.");
       return;
     }
 
+    const requestedQty = getQty(item._id);
+
+    if (Number(item.stock) < requestedQty) {
+      alert(
+        `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`
+      );
+      return;
+    }
+
+    setIsAddingToCart((prev) => ({ ...prev, [item._id]: true }));
+
     try {
       const guestId = localStorage.getItem("guestId");
-      const requestedQty = qty[item._id] || 1;
-
-      // ❌ Block if user's requested quantity exceeds available stock
-      if (Number(item.stock) < requestedQty) {
-        alert(
-          `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`
-        );
-        return;
-      }
 
       await axios.post(`${API_URL}/cart/add`, {
         guestId,
@@ -198,17 +213,24 @@ const Grid = () => {
           price: item.price,
           image: Array.isArray(item.image) ? item.image[0] : item.image,
           quantity: requestedQty,
-          stock: item.stock, // ✅ send stock for freshness
+          stock: item.stock,
         },
       });
+
+      // Reset qty back to 1
+      setQtyMap((prev) => ({ ...prev, [item._id]: 1 }));
+
       await fetchCart();
       setShowCart(true);
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (err) {
       console.error("Add to cart error:", err);
       alert(
         err.response?.data?.message ||
-          "Failed to add to cart. Please try again."
+        "Failed to add to cart. Please try again."
       );
+    } finally {
+      setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
     }
   };
 
@@ -573,9 +595,9 @@ const Grid = () => {
                     const inWishlist = checkIsInWishlist(item._id);
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
-
-                    // 🆕 Out-of-stock flag
+                    const isAdding = isAddingToCart[item._id] || false;
                     const outOfStock = isOutOfStock(item);
+                    const qty = getQty(item._id);
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3}>
@@ -596,7 +618,6 @@ const Grid = () => {
                                 }
                               />
 
-                              {/* 🆕 Out-of-stock badge */}
                               {outOfStock && (
                                 <Badge
                                   bg="danger"
@@ -662,11 +683,44 @@ const Grid = () => {
                                 ₹{item.price.toLocaleString()}
                               </div>
 
+                              {/* 🆕 QUANTITY SELECTOR */}
+                              {!outOfStock && (
+                                <div
+                                  className="qty-box-grid"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="qty-btn-grid"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, -1, item.stock)
+                                    }
+                                    disabled={qty <= 1}
+                                  >
+                                    <FaMinus size={10} />
+                                  </button>
+                                  <span className="qty-value-grid">{qty}</span>
+                                  <button
+                                    type="button"
+                                    className="qty-btn-grid"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, 1, item.stock)
+                                    }
+                                    disabled={
+                                      item.stock !== undefined &&
+                                      qty >= Number(item.stock)
+                                    }
+                                  >
+                                    <FaPlus size={10} />
+                                  </button>
+                                </div>
+                              )}
+
                               {/* 🆕 Button — disabled when out of stock */}
                               <Button
                                 className="add-to-cart-btn"
                                 onClick={(e) => handleAddToCart(e, item)}
-                                disabled={outOfStock}
+                                disabled={isAdding || outOfStock}
                                 title={
                                   outOfStock
                                     ? "This product is out of stock"
@@ -676,6 +730,11 @@ const Grid = () => {
                                 {outOfStock ? (
                                   <>
                                     <FaBan /> Out of Stock
+                                  </>
+                                ) : isAdding ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2" />
+                                    Adding...
                                   </>
                                 ) : (
                                   <>
