@@ -1,5 +1,3 @@
-// Header.jsx - FULLY FIXED — email initial (Google + normal login)
-
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -530,7 +528,7 @@ const Header = () => {
 
   return (
     <>
-      <div className="lexend">
+      <div className="lexend pe-auto">
         <AnimatePresence>
           {showSearch && (
             <motion.div
@@ -633,7 +631,7 @@ const Header = () => {
               <img src="/images/native.png" alt="Native91" className="logo" />
             </Navbar.Brand>
 
-            <Nav className="mx-auto desktop-menu">
+            <Nav className="mx-auto desktop-menu ">
               {menu.map((item, index) => (
                 <motion.div key={index} whileHover={{ y: -3 }}>
                   {item.dropdown ? (
