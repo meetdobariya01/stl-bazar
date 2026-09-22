@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE WITH CUSTOM FIELD + SHIPPING TIME + HANDMADE POLICY
+// pages/Productdetails/Productdetails.js - COMPLETE WITH CUSTOM FIELD + SHIPPING TIME + HANDMADE POLICY + MULTI-VARIANT IMAGES
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -42,7 +42,7 @@ import {
   FaAppleAlt,
   FaSeedling,
   FaPalette,
-  FaScroll, // 🆕 added
+  FaScroll,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -56,7 +56,8 @@ import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL =
   process.env.REACT_APP_API_URL || "http://localhost:9000/api";
-const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
+// const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
+const VENDOR_IMAGE_BASE = "http://localhost:5177"; // For local development
 const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
 
 const formatPrice = (price) => {
@@ -178,6 +179,7 @@ const generateFallbackId = (color, size, price, idx) => {
   return base ? `fb_${base.replace(/[^a-zA-Z0-9]/g, "_")}` : `fb_idx_${idx}`;
 };
 
+// 🆕 Normalize variants — now supports images[]
 const normalizeVariants = (product) => {
   if (!product) return [];
 
@@ -193,13 +195,22 @@ const normalizeVariants = (product) => {
       let id = toIdString(v._id);
       if (!id) id = generateFallbackId(color, size, price, idx);
 
+      // 🆕 Resolve images: prefer images[] then fallback to single image
+      let imageArr = [];
+      if (Array.isArray(v.images) && v.images.length > 0) {
+        imageArr = v.images.filter(Boolean);
+      } else if (v.image) {
+        imageArr = [v.image];
+      }
+
       return {
         _id: id,
         color,
         size,
         price,
         stock: v.stock !== undefined ? v.stock : 0,
-        image: v.image || v.variantImage || "",
+        images: imageArr,              // 🆕 array
+        image: imageArr[0] || "",      // legacy single image (first)
         isAvailable:
           v.isAvailable !== undefined ? v.isAvailable : v.stock !== 0,
         __hasRealId: !!v._id,
@@ -220,6 +231,7 @@ const normalizeVariants = (product) => {
           size: "",
           price: product.price || 0,
           stock: product.stock || 0,
+          images: [],
           image: "",
           isAvailable: (product.stock || 0) > 0,
           __hasRealId: false,
@@ -230,39 +242,19 @@ const normalizeVariants = (product) => {
       const price = c.price || product.price || 0;
       const id =
         toIdString(c._id) || generateFallbackId(color, size, price, idx);
+      const imgArr = c.image ? [c.image] : [];
       return {
         _id: id,
         color,
         size,
         price,
         stock: c.stock !== undefined ? c.stock : product.stock || 0,
-        image: c.image || "",
+        images: imgArr,
+        image: imgArr[0] || "",
         isAvailable:
           c.isAvailable !== undefined
             ? c.isAvailable
             : (c.stock || product.stock || 0) > 0,
-        __hasRealId: !!c._id,
-      };
-    });
-  }
-
-  if (
-    product.variantColors &&
-    Array.isArray(product.variantColors) &&
-    product.variantColors.length > 0
-  ) {
-    return product.variantColors.map((c, idx) => {
-      const color = c.name || c.color || "";
-      const price = c.price || product.price || 0;
-      const id = toIdString(c._id) || generateFallbackId(color, "", price, idx);
-      return {
-        _id: id,
-        color,
-        size: "",
-        price,
-        stock: c.stock !== undefined ? c.stock : product.stock || 0,
-        image: c.image || "",
-        isAvailable: true,
         __hasRealId: !!c._id,
       };
     });
@@ -287,6 +279,7 @@ const Productdetails = () => {
   const [error, setError] = useState(null);
   const [isInWishlistState, setIsInWishlistState] = useState(false);
   const [productImages, setProductImages] = useState([]);
+  const [originalProductImages, setOriginalProductImages] = useState([]); // 🆕
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   const [stock, setStock] = useState(0);
@@ -340,35 +333,21 @@ const Productdetails = () => {
 
     const normalizeImageUrl = (logo) => {
       if (!logo) return null;
-
       if (typeof logo === "object" && !Array.isArray(logo)) {
-        if (logo.image && typeof logo.image === "string") {
-          logo = logo.image;
-        } else if (logo.url && typeof logo.url === "string") {
-          logo = logo.url;
-        } else {
-          return null;
-        }
+        if (logo.image && typeof logo.image === "string") logo = logo.image;
+        else if (logo.url && typeof logo.url === "string") logo = logo.url;
+        else return null;
       }
-
-      if (Array.isArray(logo)) {
-        logo = logo[0];
-      }
-
+      if (Array.isArray(logo)) logo = logo[0];
       if (!logo || typeof logo !== "string") return null;
-
       if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
-
       if (logo.startsWith("/images")) return `${ADMIN_IMAGE_BASE}${logo}`;
       if (logo.startsWith("/uploads") || logo.startsWith("/public"))
         return `${VENDOR_IMAGE_BASE}${logo}`;
-
       return `${ADMIN_IMAGE_BASE}/uploads/${logo}`;
     };
 
     try {
-      console.log("🔍 Fetching brand details for:", companyName);
-
       const response = await axios.get(`${API_URL}/companies`, {
         timeout: 15000,
         headers: {
@@ -377,20 +356,19 @@ const Productdetails = () => {
         },
       });
 
-      console.log("📦 Companies API response:", response.data);
-
       let companiesData = [];
       if (response.data) {
         if (response.data.success && Array.isArray(response.data.companies)) {
           companiesData = response.data.companies;
         } else if (Array.isArray(response.data)) {
           companiesData = response.data;
-        } else if (response.data.companies && Array.isArray(response.data.companies)) {
+        } else if (
+          response.data.companies &&
+          Array.isArray(response.data.companies)
+        ) {
           companiesData = response.data.companies;
         }
       }
-
-      console.log(`📦 Found ${companiesData.length} companies`);
 
       const matchedCompany = companiesData.find((c) => {
         const cName = (c.name || "").toLowerCase().trim();
@@ -399,27 +377,20 @@ const Productdetails = () => {
       });
 
       if (matchedCompany) {
-        console.log("✅ Matched company:", matchedCompany);
-
         setBrandName(matchedCompany.name || companyName);
-
         const description =
           matchedCompany.description ||
           `${matchedCompany.name} - Premium brand on Native91`;
-
         setBrandDescription(description);
-
         setBrandLogo(
           matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
         );
       } else {
-        console.warn(`⚠️ Company "${companyName}" not found in list`);
         setBrandName(companyName);
         setBrandDescription(`${companyName} - Premium brand on Native91`);
         setBrandLogo(null);
       }
     } catch (err) {
-      console.error("❌ Brand fetch error:", err.message);
       setBrandName(companyName);
       setBrandDescription(`${companyName} - Premium brand on Native91`);
       setBrandLogo(null);
@@ -458,7 +429,7 @@ const Productdetails = () => {
         savingsPercentage: ((discountAmount / basePrice) * 100).toFixed(0),
       };
     },
-    [product, selectedVariant],
+    [product, selectedVariant]
   );
 
   const applyCoupon = async (coupon) => {
@@ -472,7 +443,7 @@ const Productdetails = () => {
       const couponProducts = coupon.products || coupon.productIds || [];
       if (couponProducts.length > 0) {
         const isProductValid = couponProducts.some(
-          (id) => id.toString() === product._id.toString(),
+          (id) => id.toString() === product._id.toString()
         );
         if (!isProductValid) {
           alert("This coupon is not valid for this product.");
@@ -539,7 +510,7 @@ const Productdetails = () => {
 
       try {
         const response = await axios.get(
-          `${COUPON_API_URL}/coupons/public/product/${productId}`,
+          `${COUPON_API_URL}/coupons/public/product/${productId}`
         );
         if (
           response.data.success &&
@@ -561,8 +532,10 @@ const Productdetails = () => {
       if (companyName && isMounted.current) {
         try {
           const response = await axios.get(
-            `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(companyName)}`,
-            { params: { productId } },
+            `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(
+              companyName
+            )}`,
+            { params: { productId } }
           );
           if (
             response.data.success &&
@@ -612,10 +585,13 @@ const Productdetails = () => {
     return `${VENDOR_IMAGE_BASE}${imgStr}`;
   }, []);
 
-  const getVariantImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "/images/placeholder.png";
-    return getImageUrl(imagePath);
-  }, [getImageUrl]);
+  const getVariantImageUrl = useCallback(
+    (imagePath) => {
+      if (!imagePath) return "/images/placeholder.png";
+      return getImageUrl(imagePath);
+    },
+    [getImageUrl]
+  );
 
   const getAllImagesFromProduct = useCallback(
     (product) => {
@@ -634,7 +610,10 @@ const Productdetails = () => {
           if (Array.isArray(product[field]) && product[field].length > 0) {
             rawImages.push(...product[field]);
             break;
-          } else if (typeof product[field] === "string" && product[field].trim()) {
+          } else if (
+            typeof product[field] === "string" &&
+            product[field].trim()
+          ) {
             rawImages.push(product[field]);
             break;
           }
@@ -650,7 +629,7 @@ const Productdetails = () => {
       }
       return validImages;
     },
-    [getImageUrl],
+    [getImageUrl]
   );
 
   useEffect(() => {
@@ -668,12 +647,12 @@ const Productdetails = () => {
         let foundProduct = null;
 
         foundProduct = products.find(
-          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase(),
+          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase()
         );
         if (!foundProduct) {
           const productSlug = createSlug(productName);
           foundProduct = products.find(
-            (p) => p.name && createSlug(p.name) === productSlug,
+            (p) => p.name && createSlug(p.name) === productSlug
           );
         }
         if (!foundProduct) {
@@ -687,7 +666,7 @@ const Productdetails = () => {
         if (!foundProduct && slug.length === 24) {
           try {
             const productResponse = await axios.get(
-              `${API_URL}/product/${slug}`,
+              `${API_URL}/product/${slug}`
             );
             if (productResponse.data) foundProduct = productResponse.data;
           } catch (idErr) {
@@ -709,6 +688,7 @@ const Productdetails = () => {
 
         const allImages = getAllImagesFromProduct(foundProduct);
         setProductImages(allImages);
+        setOriginalProductImages(allImages); // 🆕 save original
         if (allImages.length > 0) {
           setActiveImg(allImages[0]);
           setCurrentImageIndex(0);
@@ -735,7 +715,7 @@ const Productdetails = () => {
           setError(
             err.response?.data?.message ||
             err.message ||
-            "Failed to load product.",
+            "Failed to load product."
           );
         }
       } finally {
@@ -791,7 +771,10 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+          "guest_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
       if (isInWishlistState) {
@@ -819,18 +802,25 @@ const Productdetails = () => {
     }
   };
 
+  // 🆕 Handle variant select — swap gallery with variant images
   const handleVariantSelect = (variant) => {
     if (!variant || variant.isAvailable === false || variant.stock === 0)
       return;
 
+    // Deselect if clicking the same variant
     if (selectedVariant && selectedVariant._id === variant._id) {
       setSelectedVariant(null);
       setSelectedColor("");
       setSelectedSize("");
       setStock(product?.stock || 0);
-      if (productImages.length > 0) {
-        setActiveImg(productImages[0]);
+
+      // Restore original product gallery
+      setProductImages(originalProductImages);
+      if (originalProductImages.length > 0) {
+        setActiveImg(originalProductImages[0]);
         setCurrentImageIndex(0);
+      } else {
+        setActiveImg("/images/placeholder.png");
       }
       return;
     }
@@ -842,15 +832,21 @@ const Productdetails = () => {
     setStock(variant.stock || 0);
     if (qty > variant.stock) setQty(Math.max(1, variant.stock));
 
-    if (variant.image) {
-      const variantImgUrl = getVariantImageUrl(variant.image);
-      setActiveImg(variantImgUrl);
+    // 🆕 Swap gallery with variant images (or fall back to original)
+    const variantImages = (variant.images || []).map((img) =>
+      getVariantImageUrl(img)
+    );
 
-      const variantIdx = productImages.findIndex(
-        (img) => img === variantImgUrl,
-      );
-      if (variantIdx !== -1) {
-        setCurrentImageIndex(variantIdx);
+    if (variantImages.length > 0) {
+      setProductImages(variantImages);
+      setActiveImg(variantImages[0]);
+      setCurrentImageIndex(0);
+    } else {
+      // No variant images → revert to original gallery
+      setProductImages(originalProductImages);
+      if (originalProductImages.length > 0) {
+        setActiveImg(originalProductImages[0]);
+        setCurrentImageIndex(0);
       }
     }
   };
@@ -888,7 +884,7 @@ const Productdetails = () => {
           rating: reviewData.rating,
           review: reviewData.review,
           userName: reviewData.userName,
-        },
+        }
       );
 
       if (response.data.message) {
@@ -927,9 +923,9 @@ const Productdetails = () => {
 
     if (hasCustomField && !customFieldInput.trim()) {
       setCustomFieldError(`${customFieldLabel} is required`);
-      document.querySelector('.custom-field-section')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+      document.querySelector(".custom-field-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
       });
       return;
     }
@@ -939,7 +935,10 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+          "guest_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -1013,9 +1012,9 @@ const Productdetails = () => {
 
     if (hasCustomField && !customFieldInput.trim()) {
       setCustomFieldError(`${customFieldLabel} is required`);
-      document.querySelector('.custom-field-section')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+      document.querySelector(".custom-field-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
       });
       return;
     }
@@ -1024,7 +1023,10 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+          "guest_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -1226,7 +1228,6 @@ const Productdetails = () => {
 
   const hasVendorDelivery = !!product.shippingTime;
 
-  // 🆕 Handmade Policy flag
   const hasHandmadePolicy =
     product?.handmadePolicy === true || product?.handmadePolicy === "true";
 
@@ -1246,7 +1247,8 @@ const Productdetails = () => {
                     {productImages.map((img, i) => (
                       <div
                         key={`thumb-${i}`}
-                        className={`thumb-box ${currentImageIndex === i ? "active" : ""}`}
+                        className={`thumb-box ${currentImageIndex === i ? "active" : ""
+                          }`}
                         onClick={() => {
                           setActiveImg(img);
                           setCurrentImageIndex(i);
@@ -1265,7 +1267,8 @@ const Productdetails = () => {
                 )}
 
                 <div
-                  className={`main-image-box ${isImageZoomed ? "image-zoom-active" : ""}`}
+                  className={`main-image-box ${isImageZoomed ? "image-zoom-active" : ""
+                    }`}
                   onMouseEnter={() => setIsImageZoomed(true)}
                   onMouseLeave={() => {
                     setIsImageZoomed(false);
@@ -1318,7 +1321,6 @@ const Productdetails = () => {
               <div className="product-content">
                 <h1 className="funnel-sans">
                   {String(product.name)}
-                  {/* 🆕 Handmade badge next to title */}
                   {hasHandmadePolicy && (
                     <Badge
                       bg="warning"
@@ -1408,7 +1410,8 @@ const Productdetails = () => {
                 </div>
 
                 <p
-                  className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""}`}
+                  className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""
+                    }`}
                   onClick={toggleWishlist}
                   style={{
                     cursor: isTogglingWishlist ? "not-allowed" : "pointer",
@@ -1426,7 +1429,6 @@ const Productdetails = () => {
                       : "Add to Wishlist"}
                 </p>
 
-                {/* 🆕 HANDMADE ORDER POLICY — inline near top */}
                 {hasHandmadePolicy && (
                   <div
                     className="handmade-policy-inline mt-3 p-3 rounded"
@@ -1438,7 +1440,11 @@ const Productdetails = () => {
                   >
                     <h6
                       className="mb-2 d-flex align-items-center funnel-sans"
-                      style={{ fontWeight: 600, color: "#7a5c00", fontSize: "14px" }}
+                      style={{
+                        fontWeight: 600,
+                        color: "#7a5c00",
+                        fontSize: "14px",
+                      }}
                     >
                       <FaScroll className="me-2" /> Handmade Order Policy
                     </h6>
@@ -1450,7 +1456,11 @@ const Productdetails = () => {
                         marginBottom: "8px",
                       }}
                     >
-                      <strong>1.</strong> Every piece is handmade to order, just for you. Because production begins as soon as you place your order, we're unable to accept cancellations or changes once an order is confirmed. Personalised items can't be returned or exchanged.
+                      <strong>1.</strong> Every piece is handmade to order, just
+                      for you. Because production begins as soon as you place
+                      your order, we're unable to accept cancellations or
+                      changes once an order is confirmed. Personalised items
+                      can't be returned or exchanged.
                     </p>
                     <p
                       style={{
@@ -1460,7 +1470,12 @@ const Productdetails = () => {
                         marginBottom: 0,
                       }}
                     >
-                      <strong>2.</strong> We pack every order with care, but if your item arrives damaged or incorrect, we'll make it right. Please share a clear unboxing video and photos within 24 hours of delivery so we can verify and arrange a replacement. Without this proof we're unable to process a claim.
+                      <strong>2.</strong> We pack every order with care, but if
+                      your item arrives damaged or incorrect, we'll make it
+                      right. Please share a clear unboxing video and photos
+                      within 24 hours of delivery so we can verify and arrange a
+                      replacement. Without this proof we're unable to process a
+                      claim.
                     </p>
                   </div>
                 )}
@@ -1472,9 +1487,7 @@ const Productdetails = () => {
                     style={{ background: "#f8f9fa" }}
                   >
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h6 className="mb-0 fw-bold">
-                        Select Variant
-                      </h6>
+                      <h6 className="mb-0 fw-bold">Select Variant</h6>
                       {selectedVariant && (
                         <small className="text-success">
                           <FaCheckCircle className="me-1" />
@@ -1501,11 +1514,13 @@ const Productdetails = () => {
                         const variantImageUrl = variant.image
                           ? getVariantImageUrl(variant.image)
                           : null;
+                        const variantImagesCount = (variant.images || []).length;
 
                         return (
                           <Col xs={4} md={4} lg={3} key={variant._id || idx}>
                             <div
-                              className={`variant-option-card ${isSelected ? "selected" : ""} ${isDisabled ? "disabled" : ""}`}
+                              className={`variant-option-card ${isSelected ? "selected" : ""
+                                } ${isDisabled ? "disabled" : ""}`}
                               onClick={() => handleVariantSelect(variant)}
                               style={{
                                 border: isSelected
@@ -1513,7 +1528,9 @@ const Productdetails = () => {
                                   : "2px solid #e0e0e0",
                                 borderRadius: "10px",
                                 padding: "10px",
-                                cursor: isDisabled ? "not-allowed" : "pointer",
+                                cursor: isDisabled
+                                  ? "not-allowed"
+                                  : "pointer",
                                 opacity: isDisabled ? 0.5 : 1,
                                 background: isSelected ? "#f0f8f5" : "white",
                                 transition: "all 0.2s ease",
@@ -1527,7 +1544,9 @@ const Productdetails = () => {
                                 <img
                                   src={variantImageUrl}
                                   alt={
-                                    variant.color || variant.size || "Variant"
+                                    variant.color ||
+                                    variant.size ||
+                                    "Variant"
                                   }
                                   style={{
                                     width: "45px",
@@ -1569,6 +1588,18 @@ const Productdetails = () => {
                                     ₹{variant.price}
                                   </div>
                                 )}
+                                {/* 🆕 show image count */}
+                                {variantImagesCount > 0 && (
+                                  <div
+                                    className="text-muted"
+                                    style={{ fontSize: "0.7rem" }}
+                                  >
+                                    🖼️ {variantImagesCount}{" "}
+                                    {variantImagesCount === 1
+                                      ? "image"
+                                      : "images"}
+                                  </div>
+                                )}
                                 {isDisabled && (
                                   <div
                                     className="text-danger"
@@ -1607,7 +1638,8 @@ const Productdetails = () => {
                     {!selectedVariant && variants.length > 0 && (
                       <Alert variant="info" className="mt-2 mb-0 py-2 small">
                         <FaInfoCircle className="me-2" />
-                        Optional: Select a variant above for specific color/size
+                        Optional: Select a variant above for specific
+                        color/size. Gallery will update with variant images.
                       </Alert>
                     )}
                   </div>
@@ -1674,7 +1706,8 @@ const Productdetails = () => {
                             product.ingredientsList.length > 0 && (
                               <span className="text-muted d-block mt-1">
                                 <small>
-                                  Detailed: {product.ingredientsList.join(", ")}
+                                  Detailed:{" "}
+                                  {product.ingredientsList.join(", ")}
                                 </small>
                               </span>
                             )}
@@ -1689,7 +1722,11 @@ const Productdetails = () => {
                         </div>
                         <div className="d-flex flex-wrap gap-1">
                           {product.allergens.map((allergen, idx) => (
-                            <Badge key={idx} bg="warning" className="text-dark">
+                            <Badge
+                              key={idx}
+                              bg="warning"
+                              className="text-dark"
+                            >
                               {allergen}
                             </Badge>
                           ))}
@@ -1793,39 +1830,63 @@ const Productdetails = () => {
                 {hasDietaryInfo && (
                   <div className="dietary-info-section mt-3 d-flex flex-wrap gap-2">
                     {product.dietaryInfo?.isVegetarian && (
-                      <Badge bg="success" className="p-2" style={{ fontSize: "14px" }}>
+                      <Badge
+                        bg="success"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
                         <FaLeaf className="me-1" /> Vegetarian
                       </Badge>
                     )}
                     {product.dietaryInfo?.isVegan && (
-                      <Badge bg="info" className="p-2" style={{ fontSize: "14px" }}>
+                      <Badge
+                        bg="info"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
                         <FaSeedling className="me-1" /> Vegan
                       </Badge>
                     )}
                     {product.dietaryInfo?.isGlutenFree && (
-                      <Badge bg="warning" className="p-2" style={{ fontSize: "14px" }}>
+                      <Badge
+                        bg="warning"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
                         🌾 Gluten Free
                       </Badge>
                     )}
                     {product.dietaryInfo?.isDairyFree && (
-                      <Badge bg="primary" className="p-2" style={{ fontSize: "14px" }}>
+                      <Badge
+                        bg="primary"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
                         🥛 Dairy Free
                       </Badge>
                     )}
                     {product.dietaryInfo?.isNutFree && (
-                      <Badge bg="secondary" className="p-2" style={{ fontSize: "14px" }}>
+                      <Badge
+                        bg="secondary"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
                         🥜 Nut Free
                       </Badge>
                     )}
                     {product.dietaryInfo?.isOrganic && (
-                      <Badge bg="success" className="p-2" style={{ fontSize: "14px" }}>
+                      <Badge
+                        bg="success"
+                        className="p-2"
+                        style={{ fontSize: "14px" }}
+                      >
                         🌱 Organic
                       </Badge>
                     )}
                   </div>
                 )}
 
-                {/* CUSTOMER INPUT FIELD — vendor-enabled only */}
+                {/* CUSTOMER INPUT FIELD */}
                 {hasCustomField && (
                   <div
                     className="custom-field-section mt-3 p-3 border rounded"
@@ -1852,7 +1913,9 @@ const Productdetails = () => {
                         {customFieldInput.length} / 100
                       </small>
                       {customFieldError && (
-                        <small className="text-danger">{customFieldError}</small>
+                        <small className="text-danger">
+                          {customFieldError}
+                        </small>
                       )}
                     </div>
                   </div>
@@ -1864,14 +1927,18 @@ const Productdetails = () => {
                     <div className="mt-2">
                       <div className="d-flex justify-content-between small">
                         <span>Stock Availability</span>
-                        <div bg={stockStatus.color} style={{ fontSize: "16px" }}>
+                        <div
+                          bg={stockStatus.color}
+                          style={{ fontSize: "16px" }}
+                        >
                           {stockStatus.icon} {stockStatus.label}
                         </div>
                         <span>{effectiveStock} / 10</span>
                       </div>
                       <div className="progress" style={{ height: "6px" }}>
                         <div
-                          className={`progress-bar bg-${effectiveStock <= 5 ? "warning" : "info"}`}
+                          className={`progress-bar bg-${effectiveStock <= 5 ? "warning" : "info"
+                            }`}
                           style={{ width: `${(effectiveStock / 10) * 100}%` }}
                         />
                       </div>
@@ -1898,7 +1965,8 @@ const Productdetails = () => {
                         {String(appliedCoupon.code)}
                       </span>
                       <span className="ms-2 text-success">
-                        ₹{formatPrice(discountedPrice.discountAmount)} OFF applied!
+                        ₹{formatPrice(discountedPrice.discountAmount)} OFF
+                        applied!
                       </span>
                     </div>
                     <Button
@@ -1918,7 +1986,8 @@ const Productdetails = () => {
                     <span className="mx-2">-</span>
                     <span className="small">
                       <span className="me-1">
-                        Your order will arrive within {shippingInfo.deliveryRange}
+                        Your order will arrive within{" "}
+                        {shippingInfo.deliveryRange}
                       </span>
                     </span>
                   </div>
@@ -1957,23 +2026,30 @@ const Productdetails = () => {
                           const shouldShow =
                             couponProducts.length === 0 ||
                             couponProducts.some(
-                              (id) => id.toString() === product._id.toString(),
+                              (id) =>
+                                id.toString() === product._id.toString()
                             );
                           if (!shouldShow) return null;
 
                           const isApplied =
-                            appliedCoupon && appliedCoupon.code === coupon.code;
+                            appliedCoupon &&
+                            appliedCoupon.code === coupon.code;
                           const priceInfo = calculateDiscountedPrice(coupon);
                           const discount =
                             coupon.discount || coupon.discountValue || 0;
                           const type =
-                            coupon.type || coupon.discountType || "percentage";
+                            coupon.type ||
+                            coupon.discountType ||
+                            "percentage";
 
                           return (
                             <div
                               key={coupon._id || `coupon-${index}`}
-                              className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? "border-success" : ""}`}
-                              style={isApplied ? { background: "#f0fff4" } : {}}
+                              className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? "border-success" : ""
+                                }`}
+                              style={
+                                isApplied ? { background: "#f0fff4" } : {}
+                              }
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
@@ -1987,20 +2063,30 @@ const Productdetails = () => {
                                   </strong>
                                   {isApplied && (
                                     <Badge bg="success" className="ms-2">
-                                      <FaCheckCircle className="me-1" /> Applied
+                                      <FaCheckCircle className="me-1" />{" "}
+                                      Applied
                                     </Badge>
                                   )}
                                 </div>
                                 <p className="mb-0 small text-muted">
                                   {String(
                                     coupon.description ||
-                                    `${type === "percentage" ? discount + "%" : "₹" + discount} off`,
+                                    `${type === "percentage"
+                                      ? discount + "%"
+                                      : "₹" + discount
+                                    } off`
                                   )}
                                 </p>
                                 {priceInfo && (
                                   <small className="text-success">
-                                    New price: ₹{formatPrice(priceInfo.discountedPrice)} (Save ₹
-                                    {formatPrice(priceInfo.discountAmount)})
+                                    New price: ₹
+                                    {formatPrice(
+                                      priceInfo.discountedPrice
+                                    )}{" "}
+                                    (Save ₹
+                                    {formatPrice(
+                                      priceInfo.discountAmount
+                                    )})
                                   </small>
                                 )}
                               </div>
@@ -2029,7 +2115,7 @@ const Productdetails = () => {
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      String(coupon.code),
+                                      String(coupon.code)
                                     );
                                     alert(`Copied "${coupon.code}"!`);
                                   }}
@@ -2049,7 +2135,9 @@ const Productdetails = () => {
                 {couponLoading && (
                   <div className="text-center mt-3">
                     <Spinner animation="border" size="sm" />
-                    <span className="ms-2 text-muted">Loading offers...</span>
+                    <span className="ms-2 text-muted">
+                      Loading offers...
+                    </span>
                   </div>
                 )}
 
@@ -2065,8 +2153,12 @@ const Productdetails = () => {
                     </button>
                     <input value={qty} readOnly />
                     <button
-                      onClick={() => setQty(Math.min(qty + 1, effectiveStock))}
-                      disabled={qty >= effectiveStock || effectiveStock === 0}
+                      onClick={() =>
+                        setQty(Math.min(qty + 1, effectiveStock))
+                      }
+                      disabled={
+                        qty >= effectiveStock || effectiveStock === 0
+                      }
                     >
                       +
                     </button>
@@ -2087,7 +2179,11 @@ const Productdetails = () => {
                   >
                     {isAddingToCart ? (
                       <>
-                        <Spinner animation="border" size="sm" className="me-2" />
+                        <Spinner
+                          animation="border"
+                          size="sm"
+                          className="me-2"
+                        />
                         Adding...
                       </>
                     ) : effectiveStock === 0 ? (
@@ -2137,7 +2233,6 @@ const Productdetails = () => {
               )}
             </details>
 
-            {/* 🆕 HANDMADE ORDER POLICY ACCORDION */}
             {hasHandmadePolicy && (
               <details>
                 <summary className="funnel-sans">
@@ -2151,11 +2246,34 @@ const Productdetails = () => {
                     borderLeft: "4px solid #ffc107",
                   }}
                 >
-                  <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#4a4a4a", marginBottom: "12px" }}>
-                    <strong>1.</strong> Every piece is handmade to order, just for you. Because production begins as soon as you place your order, we're unable to accept cancellations or changes once an order is confirmed. Personalised items can't be returned or exchanged.
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      lineHeight: 1.7,
+                      color: "#4a4a4a",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <strong>1.</strong> Every piece is handmade to order, just
+                    for you. Because production begins as soon as you place
+                    your order, we're unable to accept cancellations or changes
+                    once an order is confirmed. Personalised items can't be
+                    returned or exchanged.
                   </p>
-                  <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#4a4a4a", marginBottom: 0 }}>
-                    <strong>2.</strong> We pack every order with care, but if your item arrives damaged or incorrect, we'll make it right. Please share a clear unboxing video and photos within 24 hours of delivery so we can verify and arrange a replacement. Without this proof we're unable to process a claim.
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      lineHeight: 1.7,
+                      color: "#4a4a4a",
+                      marginBottom: 0,
+                    }}
+                  >
+                    <strong>2.</strong> We pack every order with care, but if
+                    your item arrives damaged or incorrect, we'll make it
+                    right. Please share a clear unboxing video and photos
+                    within 24 hours of delivery so we can verify and arrange a
+                    replacement. Without this proof we're unable to process a
+                    claim.
                   </p>
                 </div>
               </details>
@@ -2199,7 +2317,11 @@ const Productdetails = () => {
                         </h6>
                         <div className="d-flex flex-wrap gap-2">
                           {product.allergens.map((allergen, idx) => (
-                            <Badge key={idx} bg="warning" className="text-dark p-2">
+                            <Badge
+                              key={idx}
+                              bg="warning"
+                              className="text-dark p-2"
+                            >
                               {allergen}
                             </Badge>
                           ))}
@@ -2223,7 +2345,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.calories > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Calories</div>
+                                  <div className="small text-muted">
+                                    Calories
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.calories}
                                   </div>
@@ -2233,7 +2357,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.protein > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Protein</div>
+                                  <div className="small text-muted">
+                                    Protein
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.protein}g
                                   </div>
@@ -2243,7 +2369,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.carbohydrates > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Carbs</div>
+                                  <div className="small text-muted">
+                                    Carbs
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.carbohydrates}g
                                   </div>
@@ -2253,7 +2381,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.fat > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Fat</div>
+                                  <div className="small text-muted">
+                                    Fat
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.fat}g
                                   </div>
@@ -2263,7 +2393,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.sugar > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Sugar</div>
+                                  <div className="small text-muted">
+                                    Sugar
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.sugar}g
                                   </div>
@@ -2273,7 +2405,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.fiber > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Fiber</div>
+                                  <div className="small text-muted">
+                                    Fiber
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.fiber}g
                                   </div>
@@ -2283,7 +2417,9 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.sodium > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Sodium</div>
+                                  <div className="small text-muted">
+                                    Sodium
+                                  </div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.sodium}mg
                                   </div>
@@ -2303,22 +2439,34 @@ const Productdetails = () => {
                         </h6>
                         <div className="d-flex flex-wrap gap-2">
                           {product.dietaryInfo?.isVegetarian && (
-                            <Badge bg="success" className="p-2">🌱 Vegetarian</Badge>
+                            <Badge bg="success" className="p-2">
+                              🌱 Vegetarian
+                            </Badge>
                           )}
                           {product.dietaryInfo?.isVegan && (
-                            <Badge bg="info" className="p-2">🌿 Vegan</Badge>
+                            <Badge bg="info" className="p-2">
+                              🌿 Vegan
+                            </Badge>
                           )}
                           {product.dietaryInfo?.isGlutenFree && (
-                            <Badge bg="warning" className="p-2">🌾 Gluten Free</Badge>
+                            <Badge bg="warning" className="p-2">
+                              🌾 Gluten Free
+                            </Badge>
                           )}
                           {product.dietaryInfo?.isDairyFree && (
-                            <Badge bg="primary" className="p-2">🥛 Dairy Free</Badge>
+                            <Badge bg="primary" className="p-2">
+                              🥛 Dairy Free
+                            </Badge>
                           )}
                           {product.dietaryInfo?.isNutFree && (
-                            <Badge bg="secondary" className="p-2">🥜 Nut Free</Badge>
+                            <Badge bg="secondary" className="p-2">
+                              🥜 Nut Free
+                            </Badge>
                           )}
                           {product.dietaryInfo?.isOrganic && (
-                            <Badge bg="success" className="p-2">🌱 Organic</Badge>
+                            <Badge bg="success" className="p-2">
+                              🌱 Organic
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -2330,14 +2478,12 @@ const Productdetails = () => {
             <details>
               <summary className="funnel-sans">Shipping & Delivery</summary>
               {hasVendorDelivery && (
-                <div
-                  className="vendor-delivery-time mt-3 p-3 "
-
-                >
+                <div className="vendor-delivery-time mt-3 p-3 ">
                   <div className="d-flex align-items-center gap-2">
                     <strong>Vendor Delivery Time:</strong>
                     <span className="ms-1">
-                      {product.shippingTime === "Custom" && product.customShippingTime
+                      {product.shippingTime === "Custom" &&
+                        product.customShippingTime
                         ? product.customShippingTime
                         : product.shippingTime}
                     </span>
@@ -2359,10 +2505,14 @@ const Productdetails = () => {
               <summary className="funnel-sans">Returns Policy</summary>
               <p>
                 We do not accept{" "}
-                <a href="/return-policy#section1" className="text-dark">Returns</a>{" "}
+                <a href="/return-policy#section1" className="text-dark">
+                  Returns
+                </a>{" "}
                 for any products. However, customers may request an exchange in
                 accordance with our{" "}
-                <a href="/return-policy#section2" className="text-dark">Exchange</a>{" "}
+                <a href="/return-policy#section2" className="text-dark">
+                  Exchange
+                </a>{" "}
                 Policy and applicable eligibility conditions.
               </p>
             </details>
@@ -2383,7 +2533,9 @@ const Productdetails = () => {
                           src={brandLogo}
                           alt={brandName}
                           className="brand-logo-small"
-                          onError={(e) => (e.target.style.display = "none")}
+                          onError={(e) =>
+                            (e.target.style.display = "none")
+                          }
                           style={{
                             width: "60px",
                             height: "60px",
@@ -2451,7 +2603,10 @@ const Productdetails = () => {
                           </div>
                           {createdAt && (
                             <div className="review-date mt-1">
-                              <FaCalendarAlt className="me-1 text-muted" size={12} />
+                              <FaCalendarAlt
+                                className="me-1 text-muted"
+                                size={12}
+                              />
                               <small className="text-muted">
                                 {new Date(createdAt).toLocaleDateString()}
                               </small>
@@ -2484,12 +2639,20 @@ const Productdetails = () => {
         </Modal.Header>
         <Modal.Body>
           {reviewSuccess && (
-            <Alert variant="success" onClose={() => setReviewSuccess("")} dismissible>
+            <Alert
+              variant="success"
+              onClose={() => setReviewSuccess("")}
+              dismissible
+            >
               {reviewSuccess}
             </Alert>
           )}
           {reviewError && (
-            <Alert variant="danger" onClose={() => setReviewError("")} dismissible>
+            <Alert
+              variant="danger"
+              onClose={() => setReviewError("")}
+              dismissible
+            >
               {reviewError}
             </Alert>
           )}

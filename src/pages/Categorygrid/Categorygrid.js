@@ -10,6 +10,8 @@ import {
   FaSitemap,
   FaShoppingCart,
   FaBan,
+  FaPlus,
+  FaMinus,
 } from "react-icons/fa";
 import axios from "axios";
 import Header from "../../components/header/header";
@@ -65,6 +67,9 @@ const CategoryProducts = () => {
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
   const [isAddingToCart, setIsAddingToCart] = useState({});
 
+  // 🆕 Quantity per product
+  const [qtyMap, setQtyMap] = useState({});
+
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSubCategories, setSelectedSubCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
@@ -73,7 +78,22 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // 🆕 Helper: is this product out of stock?
+  // 🆕 Quantity helpers
+  const getQty = (productId) => qtyMap[productId] || 1;
+
+  const changeQty = (e, productId, delta, maxStock) => {
+    e.stopPropagation();
+    setQtyMap((prev) => {
+      const current = prev[productId] || 1;
+      let next = current + delta;
+      if (next < 1) next = 1;
+      if (maxStock !== undefined && maxStock !== null && next > maxStock) {
+        next = Math.max(1, Number(maxStock));
+      }
+      return { ...prev, [productId]: next };
+    });
+  };
+
   const isOutOfStock = (item) => {
     const stock = item?.stock;
     if (stock === undefined || stock === null) return false;
@@ -421,12 +441,22 @@ const CategoryProducts = () => {
     }
   };
 
-  // 🆕 ADD TO CART — with stock validation
+  // 🆕 ADD TO CART — with quantity + stock validation
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
 
     if (isOutOfStock(item)) {
       alert("Sorry, this product is out of stock.");
+      return;
+    }
+
+    const requestedQty = getQty(item._id);
+
+    if (Number(item.stock) < requestedQty) {
+      alert(
+        `Only ${item.stock} item${item.stock === 1 ? "" : "s"
+        } available in stock.`
+      );
       return;
     }
 
@@ -450,11 +480,14 @@ const CategoryProducts = () => {
         price: parseFloat(item.price),
         originalPrice: parseFloat(item.price),
         image: primaryImage,
-        quantity: 1,
+        quantity: requestedQty, // 🆕 use selected qty
         discountAmount: 0,
         couponCode: null,
         stock: item.stock,
       });
+
+      // Reset qty to 1 after adding
+      setQtyMap((prev) => ({ ...prev, [item._id]: 1 }));
 
       setShowCart(true);
       window.dispatchEvent(new Event("cartUpdated"));
@@ -462,7 +495,7 @@ const CategoryProducts = () => {
       console.error("Error adding to cart:", error);
       alert(
         error.response?.data?.message ||
-          "Failed to add to cart. Please try again."
+        "Failed to add to cart. Please try again."
       );
     } finally {
       setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
@@ -756,8 +789,8 @@ const CategoryProducts = () => {
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
                     const isAdding = isAddingToCart[item._id] || false;
-                    // 🆕 out-of-stock flag
                     const outOfStock = isOutOfStock(item);
+                    const qty = getQty(item._id);
 
                     return (
                       <Col
@@ -787,7 +820,6 @@ const CategoryProducts = () => {
                                 }}
                               />
 
-                              {/* 🆕 Out-of-stock badge */}
                               {outOfStock && (
                                 <Badge
                                   bg="danger"
@@ -844,7 +876,7 @@ const CategoryProducts = () => {
                                 if (
                                   item.categorySubcategoryMap &&
                                   typeof item.categorySubcategoryMap ===
-                                    "object"
+                                  "object"
                                 ) {
                                   Object.values(
                                     item.categorySubcategoryMap
@@ -901,7 +933,41 @@ const CategoryProducts = () => {
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
 
-                              {/* 🆕 Disable Add to Cart if out of stock */}
+                              {/* 🆕 QUANTITY SELECTOR */}
+                              {!outOfStock && (
+                                <div
+                                  className="qty-box-category"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="qty-btn-category"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, -1, item.stock)
+                                    }
+                                    disabled={qty <= 1}
+                                  >
+                                    <FaMinus size={10} />
+                                  </button>
+                                  <span className="qty-value-category">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="qty-btn-category"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, 1, item.stock)
+                                    }
+                                    disabled={
+                                      item.stock !== undefined &&
+                                      qty >= Number(item.stock)
+                                    }
+                                  >
+                                    <FaPlus size={10} />
+                                  </button>
+                                </div>
+                              )}
+
                               <Button
                                 className="add-to-cart-btn-category"
                                 onClick={(e) => handleAddToCart(e, item)}
