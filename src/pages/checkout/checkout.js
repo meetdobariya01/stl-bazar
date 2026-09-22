@@ -336,6 +336,8 @@ const Checkout = () => {
     }
   };
 
+  // Inside Checkout.js
+
   const placeOrder = async () => {
     setIsProcessing(true);
     setEmailStatus("");
@@ -347,10 +349,16 @@ const Checkout = () => {
         return;
       }
 
+      // Determine payment method string based on your state
+      let paymentMethodString = "COD";
+      if (payment === "upi" || payment === "card") {
+        paymentMethodString = "PayU"; // Treat UPI and Card as PayU online payments
+      }
+
       const orderData = {
         guestId: guestId,
         shippingAddress: shipping,
-        paymentMethod: payment,
+        paymentMethod: paymentMethodString,
         couponCode: appliedCoupon?.code || null,
       };
 
@@ -360,17 +368,36 @@ const Checkout = () => {
       );
 
       if (response.data.success) {
+        
+        // 🆕 IF PAYU, SUBMIT FORM TO PAYU
+        if (response.data.payuParams) {
+          const params = response.data.payuParams;
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = process.env.REACT_APP_PAYU_URL || 'https://test.payu.in/_payment';
+
+          for (const key in params) {
+            if (params.hasOwnProperty(key)) {
+              const hiddenField = document.createElement('input');
+              hiddenField.type = 'hidden';
+              hiddenField.name = key;
+              hiddenField.value = params[key];
+              form.appendChild(hiddenField);
+            }
+          }
+
+          document.body.appendChild(form);
+          form.submit(); // Redirects user to PayU
+          return; // Stop further execution in this function
+        }
+
+        // IF COD, proceed normally
         await sendOrderEmail(response.data.orderId);
 
         try {
           await axios.delete(`${API_URL}/cart/clear/${guestId}`);
         } catch (cartError) {
           console.error("Cart clear error:", cartError);
-          try {
-            await axios.post(`${API_URL}/cart/clear`, { guestId: guestId });
-          } catch (err) {
-            console.error("❌ Alternative cart clear failed:", err);
-          }
         }
 
         setAppliedCoupon(null);
@@ -391,7 +418,7 @@ const Checkout = () => {
     } finally {
       setIsProcessing(false);
     }
-  };
+  };;
 
   return (
     <>

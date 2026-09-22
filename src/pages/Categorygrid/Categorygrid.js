@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Form, Badge } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
   FaStar,
@@ -9,6 +9,7 @@ import {
   FaFilter,
   FaSitemap,
   FaShoppingCart,
+  FaBan,
 } from "react-icons/fa";
 import axios from "axios";
 import Header from "../../components/header/header";
@@ -51,7 +52,6 @@ const CategoryProducts = () => {
   const { isInWishlist, toggleWishlist, fetchWishlist } = useWishlist();
   const { addToCart, setShowCart } = useCart();
 
-  // 🆕 RESOLVED names from slug
   const [decodedCategory, setDecodedCategory] = useState("All");
   const [decodedSubCategory, setDecodedSubCategory] = useState(null);
   const [resolvingNames, setResolvingNames] = useState(true);
@@ -73,12 +73,13 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // ============================================================
-  // ✅ FIX #1: RESET ALL FILTERS + PRODUCT STATE WHEN URL CHANGES
-  // This is the PRIMARY fix. It runs before slug resolution and
-  // guarantees no stale filter state persists across navigations
-  // (including browser Back button).
-  // ============================================================
+  // 🆕 Helper: is this product out of stock?
+  const isOutOfStock = (item) => {
+    const stock = item?.stock;
+    if (stock === undefined || stock === null) return false;
+    return Number(stock) <= 0;
+  };
+
   useEffect(() => {
     setSelectedCategories([]);
     setSelectedSubCategories([]);
@@ -90,12 +91,9 @@ const CategoryProducts = () => {
     setProducts([]);
     setFilteredProducts([]);
     setLoading(true);
-    setResolvingNames(true); // force re-resolution of slugs
+    setResolvingNames(true);
   }, [categorySlug, subCategorySlug]);
 
-  // ============================================================
-  // 🆕 RESOLVE SLUGS → REAL NAMES
-  // ============================================================
   useEffect(() => {
     const resolveSlugs = async () => {
       setResolvingNames(true);
@@ -110,10 +108,8 @@ const CategoryProducts = () => {
         const res = await axios.get(`${ADMIN_CATEGORY_API}/categories`);
         const cats = res.data?.categories || [];
 
-        // Try slug match first
         let matchedCat = cats.find((c) => createSlug(c.name) === categorySlug);
 
-        // Fallback — encoded name match
         if (!matchedCat) {
           const decoded = decodeURIComponent(categorySlug);
           matchedCat = cats.find(
@@ -123,17 +119,13 @@ const CategoryProducts = () => {
 
         if (matchedCat) {
           setDecodedCategory(matchedCat.name);
-
-          // ✅ FIX #2: Always reset decodedSubCategory first
           setDecodedSubCategory(null);
 
           if (subCategorySlug && matchedCat.subcategories) {
-            // Try slug match
             let matchedSub = matchedCat.subcategories.find(
               (sc) => createSlug(sc.name) === subCategorySlug,
             );
 
-            // Fallback — encoded name
             if (!matchedSub) {
               const decodedSub = decodeURIComponent(subCategorySlug);
               matchedSub = matchedCat.subcategories.find(
@@ -141,7 +133,6 @@ const CategoryProducts = () => {
               );
             }
 
-            // Final fallback — rough slug conversion
             if (!matchedSub) {
               const rough = decodeURIComponent(subCategorySlug)
                 .replace(/-/g, " ")
@@ -151,9 +142,7 @@ const CategoryProducts = () => {
               setDecodedSubCategory(matchedSub.name);
             }
           }
-          // ✅ FIX #2 (continued): else → decodedSubCategory stays null
         } else {
-          // Total fallback
           setDecodedCategory(decodeURIComponent(categorySlug));
           if (subCategorySlug) {
             setDecodedSubCategory(decodeURIComponent(subCategorySlug));
@@ -163,7 +152,6 @@ const CategoryProducts = () => {
         }
       } catch (err) {
         console.warn("Slug resolve failed:", err.message);
-        // Fallback to raw params
         setDecodedCategory(decodeURIComponent(categorySlug || "All"));
         if (subCategorySlug) {
           setDecodedSubCategory(decodeURIComponent(subCategorySlug));
@@ -178,9 +166,6 @@ const CategoryProducts = () => {
     resolveSlugs();
   }, [categorySlug, subCategorySlug]);
 
-  // ============================================================
-  // FETCH PRODUCTS
-  // ============================================================
   useEffect(() => {
     if (resolvingNames) return;
     if (!decodedCategory) return;
@@ -193,7 +178,6 @@ const CategoryProducts = () => {
         let response = await axios.get(url);
         let allProducts = response.data || [];
 
-        // Filter by category
         if (decodedCategory !== "All") {
           allProducts = allProducts.filter(
             (p) =>
@@ -202,7 +186,6 @@ const CategoryProducts = () => {
           );
         }
 
-        // Filter by sub-category
         if (decodedSubCategory) {
           const targetSub = decodedSubCategory.toLowerCase().trim();
 
@@ -238,9 +221,7 @@ const CategoryProducts = () => {
           });
 
           setSelectedSubCategories([decodedSubCategory]);
-        }
-        // ✅ FIX #3: Explicit else branch — clear stale subcategory filter
-        else {
+        } else {
           setSelectedSubCategories([]);
         }
 
@@ -259,9 +240,6 @@ const CategoryProducts = () => {
     fetchProducts();
   }, [decodedCategory, decodedSubCategory, resolvingNames, fetchWishlist]);
 
-  // ============================================================
-  // FETCH CATEGORIES + SUB-CATEGORIES (for filter drawer)
-  // ============================================================
   useEffect(() => {
     const fetchCategoriesAndSubs = async () => {
       try {
@@ -295,9 +273,6 @@ const CategoryProducts = () => {
     fetchCategoriesAndSubs();
   }, []);
 
-  // ============================================================
-  // APPLY FILTERS
-  // ============================================================
   useEffect(() => {
     let filtered = [...products];
 
@@ -388,9 +363,6 @@ const CategoryProducts = () => {
     products,
   ]);
 
-  // ============================================================
-  // SORT
-  // ============================================================
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
     switch (sortBy) {
@@ -427,9 +399,6 @@ const CategoryProducts = () => {
     }
   };
 
-  // ============================================================
-  // HANDLERS
-  // ============================================================
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
     setIsTogglingWishlist((prev) => ({ ...prev, [productId]: true }));
@@ -452,8 +421,15 @@ const CategoryProducts = () => {
     }
   };
 
+  // 🆕 ADD TO CART — with stock validation
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
+
+    if (isOutOfStock(item)) {
+      alert("Sorry, this product is out of stock.");
+      return;
+    }
+
     setIsAddingToCart((prev) => ({ ...prev, [item._id]: true }));
     try {
       let guestId = localStorage.getItem("guestId");
@@ -477,13 +453,17 @@ const CategoryProducts = () => {
         quantity: 1,
         discountAmount: 0,
         couponCode: null,
+        stock: item.stock,
       });
 
       setShowCart(true);
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert("Failed to add to cart. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Failed to add to cart. Please try again."
+      );
     } finally {
       setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
     }
@@ -538,9 +518,6 @@ const CategoryProducts = () => {
 
   const categorySubCategories = getCategorySubCategories();
 
-  // ============================================================
-  // LOADING STATES
-  // ============================================================
   if (resolvingNames || loading) {
     return (
       <>
@@ -558,9 +535,6 @@ const CategoryProducts = () => {
     );
   }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <>
       <Header />
@@ -636,7 +610,6 @@ const CategoryProducts = () => {
           </div>
 
           <Row className="g-4">
-            {/* MOBILE FILTER DRAWER */}
             {showMobileFilters && (
               <div
                 className="mobile-filters-overlay"
@@ -657,7 +630,6 @@ const CategoryProducts = () => {
                     </Button>
                   </div>
                   <div className="drawer-body">
-                    {/* Categories */}
                     <div className="filter-group">
                       <h6>Categories</h6>
                       <div className="category-list">
@@ -679,7 +651,6 @@ const CategoryProducts = () => {
                       </div>
                     </div>
 
-                    {/* Sub-Categories */}
                     {categorySubCategories.length > 0 && (
                       <div className="filter-group">
                         <h6>
@@ -705,7 +676,6 @@ const CategoryProducts = () => {
                       </div>
                     )}
 
-                    {/* Price */}
                     <div className="filter-group">
                       <h6>Price</h6>
                       {[
@@ -726,7 +696,6 @@ const CategoryProducts = () => {
                       ))}
                     </div>
 
-                    {/* Rating */}
                     <div className="filter-group">
                       <h6>Rating</h6>
                       {[4, 3, 2].map((r) => (
@@ -763,7 +732,6 @@ const CategoryProducts = () => {
               </div>
             )}
 
-            {/* PRODUCTS GRID */}
             <Col lg={12}>
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-5">
@@ -788,6 +756,8 @@ const CategoryProducts = () => {
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
                     const isAdding = isAddingToCart[item._id] || false;
+                    // 🆕 out-of-stock flag
+                    const outOfStock = isOutOfStock(item);
 
                     return (
                       <Col
@@ -816,6 +786,24 @@ const CategoryProducts = () => {
                                   e.target.src = "/images/placeholder.png";
                                 }}
                               />
+
+                              {/* 🆕 Out-of-stock badge */}
+                              {outOfStock && (
+                                <Badge
+                                  bg="danger"
+                                  style={{
+                                    position: "absolute",
+                                    top: "10px",
+                                    left: "10px",
+                                    zIndex: 2,
+                                    fontSize: "11px",
+                                    padding: "5px 10px",
+                                  }}
+                                >
+                                  <FaBan className="me-1" /> Out of Stock
+                                </Badge>
+                              )}
+
                               <div
                                 className="wishlist-btn-category"
                                 onClick={(e) =>
@@ -843,7 +831,6 @@ const CategoryProducts = () => {
                                 )}
                               </div>
 
-                              {/* Sub-Category Badge */}
                               {(() => {
                                 const allSubs = [];
                                 if (item.subCategory)
@@ -913,12 +900,23 @@ const CategoryProducts = () => {
                               <div className="product-price">
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
+
+                              {/* 🆕 Disable Add to Cart if out of stock */}
                               <Button
                                 className="add-to-cart-btn-category"
                                 onClick={(e) => handleAddToCart(e, item)}
-                                disabled={isAdding}
+                                disabled={isAdding || outOfStock}
+                                title={
+                                  outOfStock
+                                    ? "This product is out of stock"
+                                    : "Add to Cart"
+                                }
                               >
-                                {isAdding ? (
+                                {outOfStock ? (
+                                  <>
+                                    <FaBan /> Out of Stock
+                                  </>
+                                ) : isAdding ? (
                                   <>
                                     <span className="spinner-border spinner-border-sm me-2" />
                                     Adding...
@@ -948,4 +946,3 @@ const CategoryProducts = () => {
 };
 
 export default CategoryProducts;
-  
