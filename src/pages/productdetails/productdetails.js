@@ -1316,7 +1316,7 @@ const Productdetails = () => {
                 <h1 className="funnel-sans">
                   {String(product.name)}
                 </h1>
-                <div className="product-brand">
+                <div className="product-brand fw-bold">
                   {String(product.company || "Brand Name")}
                 </div>
                 <div className="rating-row">

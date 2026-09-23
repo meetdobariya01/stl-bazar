@@ -313,12 +313,14 @@
 
 /* show dropdown */
 
-.premium-dropdown:hover .dropdown-menu {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0) scale(1);
+.premium-dropdown:hover > .dropdown-menu,
+.premium-dropdown .dropdown-menu.show {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translate(-50%, 0) scale(1) !important;
+  pointer-events: auto !important;
 }
-
 /* dropdown item */
 
 .dropdown-item-custom {
