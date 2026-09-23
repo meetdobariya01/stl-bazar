@@ -2704,7 +2704,7 @@ const Productdetails = () => {
             ? "Adding..."
             : discountedPrice
               ? `₹${formatPrice(displayPrice)}`
-              : ""}
+              : "Add to Cart"}
         </button>
       </div>
 

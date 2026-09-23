@@ -726,7 +726,7 @@ const Header = () => {
                                 </div>
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${createSlug(hoveredCategory)}`}
+                                    to={`/category/All`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >

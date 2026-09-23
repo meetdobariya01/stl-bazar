@@ -42,7 +42,7 @@
   position: relative;
   z-index: 2;
   padding: 35px 28px;
-  max-width: 70%;
+  /* max-width: 70%; */
   transition: 0.4s ease;
 }
 
