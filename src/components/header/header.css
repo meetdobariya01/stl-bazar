@@ -12,7 +12,9 @@
     box-shadow 0.45s ease,
     backdrop-filter 0.45s ease;
 }
-
+.premium-navbar .desktop-menu * {
+  cursor: pointer !important;
+}
 /* Premium header after scroll */
 
 .premium-navbar.navbar-scrolled {

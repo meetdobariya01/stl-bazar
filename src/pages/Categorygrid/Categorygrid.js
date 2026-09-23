@@ -863,7 +863,7 @@ const CategoryProducts = () => {
                                 )}
                               </div>
 
-                              {(() => {
+                              {/* {(() => {
                                 const allSubs = [];
                                 if (item.subCategory)
                                   allSubs.push(item.subCategory);
@@ -905,7 +905,7 @@ const CategoryProducts = () => {
                                       ` +${uniqueSubs.length - 1}`}
                                   </div>
                                 );
-                              })()}
+                              })()} */} 
                             </div>
                             <Card.Body>
                               <div className="product-brand">

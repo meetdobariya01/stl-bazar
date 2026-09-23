@@ -209,8 +209,8 @@ const normalizeVariants = (product) => {
         size,
         price,
         stock: v.stock !== undefined ? v.stock : 0,
-        images: imageArr,              // 🆕 array
-        image: imageArr[0] || "",      // legacy single image (first)
+        images: imageArr, // 🆕 array
+        image: imageArr[0] || "", // legacy single image (first)
         isAvailable:
           v.isAvailable !== undefined ? v.isAvailable : v.stock !== 0,
         __hasRealId: !!v._id,
@@ -340,7 +340,8 @@ const Productdetails = () => {
       }
       if (Array.isArray(logo)) logo = logo[0];
       if (!logo || typeof logo !== "string") return null;
-      if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
+      if (logo.startsWith("http://") || logo.startsWith("https://"))
+        return logo;
       if (logo.startsWith("/images")) return `${ADMIN_IMAGE_BASE}${logo}`;
       if (logo.startsWith("/uploads") || logo.startsWith("/public"))
         return `${VENDOR_IMAGE_BASE}${logo}`;
@@ -383,7 +384,7 @@ const Productdetails = () => {
           `${matchedCompany.name} - Premium brand on Native91`;
         setBrandDescription(description);
         setBrandLogo(
-          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
+          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null,
         );
       } else {
         setBrandName(companyName);
@@ -429,7 +430,7 @@ const Productdetails = () => {
         savingsPercentage: ((discountAmount / basePrice) * 100).toFixed(0),
       };
     },
-    [product, selectedVariant]
+    [product, selectedVariant],
   );
 
   const applyCoupon = async (coupon) => {
@@ -443,7 +444,7 @@ const Productdetails = () => {
       const couponProducts = coupon.products || coupon.productIds || [];
       if (couponProducts.length > 0) {
         const isProductValid = couponProducts.some(
-          (id) => id.toString() === product._id.toString()
+          (id) => id.toString() === product._id.toString(),
         );
         if (!isProductValid) {
           alert("This coupon is not valid for this product.");
@@ -510,7 +511,7 @@ const Productdetails = () => {
 
       try {
         const response = await axios.get(
-          `${COUPON_API_URL}/coupons/public/product/${productId}`
+          `${COUPON_API_URL}/coupons/public/product/${productId}`,
         );
         if (
           response.data.success &&
@@ -533,9 +534,9 @@ const Productdetails = () => {
         try {
           const response = await axios.get(
             `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(
-              companyName
+              companyName,
             )}`,
-            { params: { productId } }
+            { params: { productId } },
           );
           if (
             response.data.success &&
@@ -590,7 +591,7 @@ const Productdetails = () => {
       if (!imagePath) return "/images/placeholder.png";
       return getImageUrl(imagePath);
     },
-    [getImageUrl]
+    [getImageUrl],
   );
 
   const getAllImagesFromProduct = useCallback(
@@ -629,7 +630,7 @@ const Productdetails = () => {
       }
       return validImages;
     },
-    [getImageUrl]
+    [getImageUrl],
   );
 
   useEffect(() => {
@@ -647,12 +648,12 @@ const Productdetails = () => {
         let foundProduct = null;
 
         foundProduct = products.find(
-          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase()
+          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase(),
         );
         if (!foundProduct) {
           const productSlug = createSlug(productName);
           foundProduct = products.find(
-            (p) => p.name && createSlug(p.name) === productSlug
+            (p) => p.name && createSlug(p.name) === productSlug,
           );
         }
         if (!foundProduct) {
@@ -666,7 +667,7 @@ const Productdetails = () => {
         if (!foundProduct && slug.length === 24) {
           try {
             const productResponse = await axios.get(
-              `${API_URL}/product/${slug}`
+              `${API_URL}/product/${slug}`,
             );
             if (productResponse.data) foundProduct = productResponse.data;
           } catch (idErr) {
@@ -715,7 +716,7 @@ const Productdetails = () => {
           setError(
             err.response?.data?.message ||
             err.message ||
-            "Failed to load product."
+            "Failed to load product.",
           );
         }
       } finally {
@@ -771,10 +772,7 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).substr(2, 9);
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
       if (isInWishlistState) {
@@ -834,7 +832,7 @@ const Productdetails = () => {
 
     // 🆕 Swap gallery with variant images (or fall back to original)
     const variantImages = (variant.images || []).map((img) =>
-      getVariantImageUrl(img)
+      getVariantImageUrl(img),
     );
 
     if (variantImages.length > 0) {
@@ -884,7 +882,7 @@ const Productdetails = () => {
           rating: reviewData.rating,
           review: reviewData.review,
           userName: reviewData.userName,
-        }
+        },
       );
 
       if (response.data.message) {
@@ -935,10 +933,7 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).substr(2, 9);
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -1023,10 +1018,7 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).substr(2, 9);
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -1321,16 +1313,6 @@ const Productdetails = () => {
               <div className="product-content">
                 <h1 className="funnel-sans">
                   {String(product.name)}
-                  {hasHandmadePolicy && (
-                    <Badge
-                      bg="warning"
-                      text="dark"
-                      className="ms-2 align-middle"
-                      style={{ fontSize: "11px", verticalAlign: "middle" }}
-                    >
-                      📜 Handmade
-                    </Badge>
-                  )}
                 </h1>
                 <div className="product-brand">
                   {String(product.company || "Brand Name")}
@@ -1429,7 +1411,7 @@ const Productdetails = () => {
                       : "Add to Wishlist"}
                 </p>
 
-                {hasHandmadePolicy && (
+                {/* {hasHandmadePolicy && (
                   <div
                     className="handmade-policy-inline mt-3 p-3 rounded"
                     style={{
@@ -1478,7 +1460,7 @@ const Productdetails = () => {
                       claim.
                     </p>
                   </div>
-                )}
+                )} */}
 
                 {/* VARIANT SELECTOR */}
                 {variants.length > 0 && (
@@ -1514,7 +1496,8 @@ const Productdetails = () => {
                         const variantImageUrl = variant.image
                           ? getVariantImageUrl(variant.image)
                           : null;
-                        const variantImagesCount = (variant.images || []).length;
+                        const variantImagesCount = (variant.images || [])
+                          .length;
 
                         return (
                           <Col xs={4} md={4} lg={3} key={variant._id || idx}>
@@ -1528,9 +1511,7 @@ const Productdetails = () => {
                                   : "2px solid #e0e0e0",
                                 borderRadius: "10px",
                                 padding: "10px",
-                                cursor: isDisabled
-                                  ? "not-allowed"
-                                  : "pointer",
+                                cursor: isDisabled ? "not-allowed" : "pointer",
                                 opacity: isDisabled ? 0.5 : 1,
                                 background: isSelected ? "#f0f8f5" : "white",
                                 transition: "all 0.2s ease",
@@ -1544,9 +1525,7 @@ const Productdetails = () => {
                                 <img
                                   src={variantImageUrl}
                                   alt={
-                                    variant.color ||
-                                    variant.size ||
-                                    "Variant"
+                                    variant.color || variant.size || "Variant"
                                   }
                                   style={{
                                     width: "45px",
@@ -1689,7 +1668,7 @@ const Productdetails = () => {
                 )}
 
                 {/* INGREDIENTS */}
-                {(hasIngredients || hasAllergens) && (
+                {/* {(hasIngredients || hasAllergens) && (
                   <div
                     className="ingredients-section mt-3 p-3 border rounded"
                     style={{ background: "#fafafa" }}
@@ -1734,7 +1713,7 @@ const Productdetails = () => {
                       </div>
                     )}
                   </div>
-                )}
+                )} */}
 
                 {/* NUTRITIONAL INFO */}
                 {hasNutritionalInfo && (
@@ -1895,6 +1874,9 @@ const Productdetails = () => {
                     <div className="d-flex align-items-center gap-2 mb-2">
                       <FaInfoCircle className="text-warning" />
                       <strong>{customFieldLabel}</strong>
+                      <small className="text-muted">
+                        {customFieldInput.length} / 100
+                      </small>
                     </div>
 
                     <Form.Control
@@ -1909,9 +1891,6 @@ const Productdetails = () => {
                     />
 
                     <div className="d-flex justify-content-between mt-1">
-                      <small className="text-muted">
-                        {customFieldInput.length} / 100
-                      </small>
                       {customFieldError && (
                         <small className="text-danger">
                           {customFieldError}
@@ -1922,7 +1901,7 @@ const Productdetails = () => {
                 )}
 
                 {/* STOCK STATUS */}
-                <div className="stock-status mt-3">
+                {/* <div className="stock-status mt-3">
                   {effectiveStock > 0 && effectiveStock <= 10 && (
                     <div className="mt-2">
                       <div className="d-flex justify-content-between small">
@@ -1944,7 +1923,7 @@ const Productdetails = () => {
                       </div>
                     </div>
                   )}
-                </div>
+                </div> */}
 
                 {/* COUPON BADGE */}
                 {appliedCoupon && discountedPrice && (
@@ -2026,30 +2005,24 @@ const Productdetails = () => {
                           const shouldShow =
                             couponProducts.length === 0 ||
                             couponProducts.some(
-                              (id) =>
-                                id.toString() === product._id.toString()
+                              (id) => id.toString() === product._id.toString(),
                             );
                           if (!shouldShow) return null;
 
                           const isApplied =
-                            appliedCoupon &&
-                            appliedCoupon.code === coupon.code;
+                            appliedCoupon && appliedCoupon.code === coupon.code;
                           const priceInfo = calculateDiscountedPrice(coupon);
                           const discount =
                             coupon.discount || coupon.discountValue || 0;
                           const type =
-                            coupon.type ||
-                            coupon.discountType ||
-                            "percentage";
+                            coupon.type || coupon.discountType || "percentage";
 
                           return (
                             <div
                               key={coupon._id || `coupon-${index}`}
                               className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? "border-success" : ""
                                 }`}
-                              style={
-                                isApplied ? { background: "#f0fff4" } : {}
-                              }
+                              style={isApplied ? { background: "#f0fff4" } : {}}
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
@@ -2063,8 +2036,7 @@ const Productdetails = () => {
                                   </strong>
                                   {isApplied && (
                                     <Badge bg="success" className="ms-2">
-                                      <FaCheckCircle className="me-1" />{" "}
-                                      Applied
+                                      <FaCheckCircle className="me-1" /> Applied
                                     </Badge>
                                   )}
                                 </div>
@@ -2074,19 +2046,15 @@ const Productdetails = () => {
                                     `${type === "percentage"
                                       ? discount + "%"
                                       : "₹" + discount
-                                    } off`
+                                    } off`,
                                   )}
                                 </p>
                                 {priceInfo && (
                                   <small className="text-success">
                                     New price: ₹
-                                    {formatPrice(
-                                      priceInfo.discountedPrice
-                                    )}{" "}
+                                    {formatPrice(priceInfo.discountedPrice)}{" "}
                                     (Save ₹
-                                    {formatPrice(
-                                      priceInfo.discountAmount
-                                    )})
+                                    {formatPrice(priceInfo.discountAmount)})
                                   </small>
                                 )}
                               </div>
@@ -2115,7 +2083,7 @@ const Productdetails = () => {
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      String(coupon.code)
+                                      String(coupon.code),
                                     );
                                     alert(`Copied "${coupon.code}"!`);
                                   }}
@@ -2135,9 +2103,7 @@ const Productdetails = () => {
                 {couponLoading && (
                   <div className="text-center mt-3">
                     <Spinner animation="border" size="sm" />
-                    <span className="ms-2 text-muted">
-                      Loading offers...
-                    </span>
+                    <span className="ms-2 text-muted">Loading offers...</span>
                   </div>
                 )}
 
@@ -2153,19 +2119,15 @@ const Productdetails = () => {
                     </button>
                     <input value={qty} readOnly />
                     <button
-                      onClick={() =>
-                        setQty(Math.min(qty + 1, effectiveStock))
-                      }
-                      disabled={
-                        qty >= effectiveStock || effectiveStock === 0
-                      }
+                      onClick={() => setQty(Math.min(qty + 1, effectiveStock))}
+                      disabled={qty >= effectiveStock || effectiveStock === 0}
                     >
                       +
                     </button>
                   </div>
                   {effectiveStock > 0 && (
                     <small className="text-muted ms-3">
-                      Max: {effectiveStock} available
+                      Stock: {effectiveStock} available
                     </small>
                   )}
                 </div>
@@ -2236,7 +2198,7 @@ const Productdetails = () => {
             {hasHandmadePolicy && (
               <details>
                 <summary className="funnel-sans">
-                  <FaScroll className="me-2" /> Handmade Order Policy
+                  Handmade Order Policy
                 </summary>
                 <div
                   className="handmade-policy-content mt-3 p-3 rounded"
@@ -2255,10 +2217,10 @@ const Productdetails = () => {
                     }}
                   >
                     <strong>1.</strong> Every piece is handmade to order, just
-                    for you. Because production begins as soon as you place
-                    your order, we're unable to accept cancellations or changes
-                    once an order is confirmed. Personalised items can't be
-                    returned or exchanged.
+                    for you. Because production begins as soon as you place your
+                    order, we're unable to accept cancellations or changes once
+                    an order is confirmed. Personalised items can't be returned
+                    or exchanged.
                   </p>
                   <p
                     style={{
@@ -2269,9 +2231,9 @@ const Productdetails = () => {
                     }}
                   >
                     <strong>2.</strong> We pack every order with care, but if
-                    your item arrives damaged or incorrect, we'll make it
-                    right. Please share a clear unboxing video and photos
-                    within 24 hours of delivery so we can verify and arrange a
+                    your item arrives damaged or incorrect, we'll make it right.
+                    Please share a clear unboxing video and photos within 24
+                    hours of delivery so we can verify and arrange a
                     replacement. Without this proof we're unable to process a
                     claim.
                   </p>
@@ -2285,7 +2247,7 @@ const Productdetails = () => {
               hasDietaryInfo) && (
                 <details>
                   <summary className="funnel-sans">
-                    <FaInfoCircle className="me-2" /> Ingredients & Nutrition
+                    Ingredients & Nutrition
                   </summary>
                   <div className="ingredients-accordion p-3">
                     {hasIngredients && (
@@ -2345,9 +2307,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.calories > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Calories
-                                  </div>
+                                  <div className="small text-muted">Calories</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.calories}
                                   </div>
@@ -2357,9 +2317,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.protein > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Protein
-                                  </div>
+                                  <div className="small text-muted">Protein</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.protein}g
                                   </div>
@@ -2369,9 +2327,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.carbohydrates > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Carbs
-                                  </div>
+                                  <div className="small text-muted">Carbs</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.carbohydrates}g
                                   </div>
@@ -2381,9 +2337,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.fat > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Fat
-                                  </div>
+                                  <div className="small text-muted">Fat</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.fat}g
                                   </div>
@@ -2393,9 +2347,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.sugar > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Sugar
-                                  </div>
+                                  <div className="small text-muted">Sugar</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.sugar}g
                                   </div>
@@ -2405,9 +2357,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.fiber > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Fiber
-                                  </div>
+                                  <div className="small text-muted">Fiber</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.fiber}g
                                   </div>
@@ -2417,9 +2367,7 @@ const Productdetails = () => {
                             {product.nutritionalInfo?.sodium > 0 && (
                               <Col xs={6} md={3}>
                                 <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">
-                                    Sodium
-                                  </div>
+                                  <div className="small text-muted">Sodium</div>
                                   <div className="fw-bold">
                                     {product.nutritionalInfo.sodium}mg
                                   </div>
@@ -2533,9 +2481,7 @@ const Productdetails = () => {
                           src={brandLogo}
                           alt={brandName}
                           className="brand-logo-small"
-                          onError={(e) =>
-                            (e.target.style.display = "none")
-                          }
+                          onError={(e) => (e.target.style.display = "none")}
                           style={{
                             width: "60px",
                             height: "60px",
@@ -2723,11 +2669,13 @@ const Productdetails = () => {
       </Modal>
 
       {/* MOBILE STICKY CART */}
+       {/* MOBILE STICKY CART */}
       <div className="mobile-sticky-cart">
         <button
           className={`mobile-wishlist ${isInWishlistState ? "active" : ""}`}
           onClick={toggleWishlist}
           disabled={isTogglingWishlist}
+          aria-label="Wishlist"
         >
           {isTogglingWishlist ? (
             <Spinner animation="border" size="sm" />
@@ -2740,19 +2688,26 @@ const Productdetails = () => {
           className="mobile-add-cart"
           onClick={handleAddToCart}
           disabled={isAddingToCart || effectiveStock === 0}
+          aria-label="Add to cart"
         >
           {isAddingToCart ? (
-            <Spinner animation="border" size="sm" className="me-2" />
+            <>
+              <Spinner animation="border" size="sm" className="me-2" />
+              Adding...
+            </>
           ) : effectiveStock === 0 ? (
-            "Out of Stock"
+            <>
+              <FaShoppingCart className="me-2" />
+              Out of Stock
+            </>
           ) : (
-            <FaShoppingBag className="me-2" />
+            <>
+              <FaShoppingBag className="me-2" />
+              {discountedPrice
+                ? `Add to Cart - ₹${formatPrice(displayPrice)}`
+                : "Add to Cart"}
+            </>
           )}
-          {isAddingToCart
-            ? "Adding..."
-            : discountedPrice
-              ? `₹${formatPrice(displayPrice)}`
-              : "Add to Cart"}
         </button>
       </div>
 

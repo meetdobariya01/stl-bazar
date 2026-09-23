@@ -177,10 +177,11 @@ const Cart = () => {
     if (!item) return;
 
     if (type === "inc") {
+      const stockKey = `${productId}_${variantId || "default"}`;
       const stock =
-        productStock[productId] !== undefined
-          ? productStock[productId]
-          : await fetchProductStock(productId);
+        productStock[stockKey] !== undefined
+          ? productStock[stockKey]
+          : await fetchProductStock(productId, variantId);
       if (item.quantity >= stock) {
         alert(`❌ Only ${stock} items available in stock!`);
         return;
@@ -208,7 +209,6 @@ const Cart = () => {
           selectedSize: item.selectedSize || "",
           variantImage: item.variantImage || "",
           variantPrice: item.variantPrice || 0,
-          // 🆕 Preserve custom field on qty change
           customFieldLabel: item.customFieldLabel || null,
           customFieldValue: item.customFieldValue || null,
         },
@@ -219,7 +219,10 @@ const Cart = () => {
         "Update quantity error:",
         err.response?.data || err.message
       );
-      alert("Failed to update quantity. Please try again.");
+      alert(
+        err.response?.data?.message ||
+          "Failed to update quantity. Please try again."
+      );
     }
   };
 
@@ -241,13 +244,23 @@ const Cart = () => {
   );
 
   const FREE_SHIPPING_THRESHOLD = 1500;
-  const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 99;
+  const hasItems = cart.items.length > 0;
+
+  // 🆕 Only compute shipping when there are items
+  const shippingCost = !hasItems
+    ? 0
+    : subtotal >= FREE_SHIPPING_THRESHOLD
+    ? 0
+    : 99;
 
   const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
   const discountedSubtotal = subtotal - couponDiscount;
-  const finalShippingCost =
-    discountedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : shippingCost;
-  const total = discountedSubtotal + finalShippingCost;
+  const finalShippingCost = !hasItems
+    ? 0
+    : discountedSubtotal >= FREE_SHIPPING_THRESHOLD
+    ? 0
+    : shippingCost;
+  const total = hasItems ? discountedSubtotal + finalShippingCost : 0;
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -382,489 +395,385 @@ const Cart = () => {
             </NavLink>
           </motion.div>
 
-          <Col lg={4} className="my-3 d-lg-none d-md-none">
+          {/* 🆕 If cart is empty, show ONLY the empty state — no summary, no mobile summary */}
+          {cart.items.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
+              className="empty-cart"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
             >
-              <Card className="summary-card border-0">
-                <Card.Body>
-                  <h3>Order Summary</h3>
+              <FaShoppingBag size={70} />
+              <h4>Your Cart is Empty</h4>
+              <p className="text-muted">Add some products to get started!</p>
+              <Button as={NavLink} to="/" className="shop-btn">
+                Continue Shopping
+              </Button>
+            </motion.div>
+          ) : (
+            <Row className="g-4">
+              <Col lg={8}>
+                <AnimatePresence>
+                  {cart.items.map((item, index) => {
+                    const variantIdStr =
+                      item.variantId && item.variantId.toString
+                        ? item.variantId.toString()
+                        : item.variantId || "default";
 
-                  <div className="summary-row">
-                    <span>Subtotal ({cart.items.length} items)</span>
-                    <span>₹{formatPrice(subtotal)}</span>
-                  </div>
-                  {cart.appliedCoupon &&
-                    cart.appliedCoupon.discountAmount > 0 && (
-                      <div className="summary-row coupon-applied">
-                        <span>
-                          <FaTag className="me-1" /> Coupon (
-                          {cart.appliedCoupon.code})
-                        </span>
-                        <span className="discount">
-                          -₹{formatPrice(cart.appliedCoupon.discountAmount)}
-                          <FaTimes
-                            className="ms-2 remove-coupon"
-                            onClick={removeCoupon}
-                            style={{ cursor: "pointer", fontSize: "12px" }}
-                          />
-                        </span>
-                      </div>
-                    )}
+                    const stockKey = `${item.productId}_${variantIdStr}`;
 
-                  <div className="summary-row">
-                    <span>Shipping</span>
-                    <span className={finalShippingCost === 0 ? "free" : ""}>
-                      {finalShippingCost === 0
-                        ? "FREE"
-                        : `₹${formatPrice(finalShippingCost)}`}
+                    const stock =
+                      productStock[stockKey] !== undefined
+                        ? productStock[stockKey]
+                        : item.quantity;
+
+                    const stockStatus = getStockStatus(stock);
+                    const isLowStock = stock > 0 && stock <= 10;
+                    const isOutOfStock = stock === 0;
+
+                    return (
+                      <motion.div
+                        key={`${item.productId}_${item.variantId || "default"}`}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="cart-card"
+                      >
+                        <Card
+                          className={`border-0 ${
+                            isOutOfStock ? "opacity-50" : ""
+                          }`}
+                        >
+                          <Card.Body>
+                            <Row className="align-items-center">
+                              <Col md={3} xs={4}>
+                                <div className="cart-img">
+                                  <img
+                                    src={formatImagePath(
+                                      item.variantImage || item.image
+                                    )}
+                                    alt={item.name}
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = "/images/placeholder.png";
+                                    }}
+                                  />
+                                </div>
+                              </Col>
+                              <Col md={6} xs={8}>
+                                <div className="cart-info">
+                                  <h4>{item.name}</h4>
+
+                                  {/* VARIANT BADGES */}
+                                  {(item.selectedColor ||
+                                    item.selectedSize) && (
+                                    <div className="cart-variant-info mb-1">
+                                      {item.selectedColor && (
+                                        <Badge
+                                          bg="dark"
+                                          className="me-1"
+                                          style={{
+                                            fontSize: "11px",
+                                            padding: "4px 8px",
+                                          }}
+                                        >
+                                          🎨 {item.selectedColor}
+                                        </Badge>
+                                      )}
+                                      {item.selectedSize && (
+                                        <Badge
+                                          bg="secondary"
+                                          style={{
+                                            fontSize: "11px",
+                                            padding: "4px 8px",
+                                          }}
+                                        >
+                                          📏 {item.selectedSize}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* CUSTOM FIELD DISPLAY */}
+                                  {item.customFieldLabel &&
+                                    item.customFieldValue && (
+                                      <div
+                                        className="cart-custom-field mb-2"
+                                        style={{ fontSize: "12px" }}
+                                      >
+                                        <span
+                                          style={{
+                                            background: "#fff9e6",
+                                            border: "1px solid #ffd966",
+                                            borderRadius: "6px",
+                                            padding: "3px 8px",
+                                            color: "#7a5c00",
+                                            display: "inline-block",
+                                          }}
+                                        >
+                                          <strong>
+                                            {item.customFieldLabel}:
+                                          </strong>{" "}
+                                          {item.customFieldValue}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                  <h5 className="funnel-sans">
+                                    ₹{formatPrice(item.price)}
+                                  </h5>
+
+                                  {stockLoading[stockKey] ? (
+                                    <Spinner
+                                      animation="border"
+                                      size="sm"
+                                      className="mb-2"
+                                    />
+                                  ) : (
+                                    <Badge
+                                      bg={stockStatus.color}
+                                      className="mb-2 d-inline-block"
+                                      style={{
+                                        fontSize: "12px",
+                                        padding: "5px 10px",
+                                      }}
+                                    >
+                                      {stockStatus.icon} {stockStatus.label}
+                                    </Badge>
+                                  )}
+
+                                  {isLowStock && !isOutOfStock && (
+                                    <div
+                                      className="mt-1 mb-2"
+                                      style={{ maxWidth: "150px" }}
+                                    >
+                                      <div className="d-flex justify-content-between small">
+                                        <span className="text-muted">
+                                          Stock
+                                        </span>
+                                        <span className="text-muted">
+                                          {stock} / 10
+                                        </span>
+                                      </div>
+                                      <div
+                                        className="progress"
+                                        style={{ height: "4px" }}
+                                      >
+                                        <div
+                                          className={`progress-bar bg-${
+                                            stock <= 5 ? "warning" : "info"
+                                          }`}
+                                          style={{
+                                            width: `${(stock / 10) * 100}%`,
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {isOutOfStock && (
+                                    <div className="text-danger small mb-1">
+                                      <FaExclamationTriangle className="me-1" />
+                                      Out of Stock - Please remove from cart
+                                    </div>
+                                  )}
+
+                                  <div className="product-meta">
+                                    <span>Qty: {item.quantity}</span>
+                                  </div>
+                                  <div className="item-total">
+                                    <small>
+                                      Item Total: ₹
+                                      {formatPrice(
+                                        item.price * item.quantity
+                                      )}
+                                    </small>
+                                  </div>
+                                  <div className="cart-actions">
+                                    <button
+                                      onClick={() =>
+                                        removeItem(
+                                          item.productId,
+                                          item.variantId
+                                        )
+                                      }
+                                    >
+                                      <FaTrash /> Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </Col>
+                              <Col md={3} xs={12}>
+                                <div className="qty-box">
+                                  <button
+                                    onClick={() =>
+                                      updateQty(
+                                        item.productId,
+                                        "dec",
+                                        item.variantId
+                                      )
+                                    }
+                                    disabled={isOutOfStock}
+                                  >
+                                    <FaMinus />
+                                  </button>
+                                  <span>{item.quantity}</span>
+                                  <button
+                                    onClick={() =>
+                                      updateQty(
+                                        item.productId,
+                                        "inc",
+                                        item.variantId
+                                      )
+                                    }
+                                    disabled={
+                                      item.quantity >= stock || isOutOfStock
+                                    }
+                                  >
+                                    <FaPlus />
+                                  </button>
+                                </div>
+                                {!isOutOfStock && stock > 0 && (
+                                  <small className="text-muted d-block text-center mt-1">
+                                    Max: {stock}
+                                  </small>
+                                )}
+                              </Col>
+                            </Row>
+                          </Card.Body>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                <div className="shipping-box mt-3">
+                  <div className="shipping-top">
+                    <span>
+                      {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+                        "🎉 Congratulations! You've got FREE Shipping!"
+                      ) : (
+                        <>
+                          🎉 Add ₹{formatPrice(amountToFreeShipping)} more for
+                          FREE Shipping!
+                        </>
+                      )}
+                    </span>
+                    <span>
+                      ₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}
                     </span>
                   </div>
+                  <ProgressBar now={shippingProgress} />
+                </div>
 
-                  {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD && (
-                    <div className="summary-row shipping-note">
-                      <small>
-                        Add ₹{formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
-                        more for free shipping
-                      </small>
-                    </div>
-                  )}
-
-                  <hr />
-
-                  <div className="summary-total">
-                    <div>
-                      <h4>Total</h4>
-                      <p>Inclusive of all taxes</p>
-                    </div>
-                    <h2>₹{formatPrice(total)}</h2>
-                  </div>
-
-                  {cart.appliedCoupon && cart.appliedCoupon.discountAmount > 0 ? (
-                    <button className="coupon-btn applied" onClick={removeCoupon}>
-                      <FaTag /> Remove Coupon
-                    </button>
-                  ) : (
-                    <button className="coupon-btn" onClick={handleOpenCouponModal}>
-                      <FaTag /> Apply Coupon
-                    </button>
-                  )}
-
-                  <Button as={NavLink} to="/checkout" className="checkout-btn">
-                    Proceed to Checkout
-                  </Button>
-
-                  <div className="secure-checkout">
-                    <FaShieldAlt />
-                    <span>Secure Checkout</span>
-                  </div>
-                </Card.Body>
-              </Card>
-            </motion.div>
-            <div className="shipping-box">
-              <div className="shipping-top">
-                <span>
-                  {subtotal >= FREE_SHIPPING_THRESHOLD ? (
-                    "🎉 Congratulations! You've got FREE Shipping!"
-                  ) : (
-                    <>
-                      🎉 Add ₹{formatPrice(amountToFreeShipping)} more for FREE
-                      Shipping!
-                    </>
-                  )}
-                </span>
-                <span>
-                  ₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}
-                </span>
-              </div>
-              <ProgressBar now={shippingProgress} />
-            </div>
-          </Col>
-          <Row className="g-4">
-            <Col lg={8}>
-              <AnimatePresence>
-                {cart.items.length === 0 ? (
-                  <motion.div
-                    className="empty-cart"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                {couponMessage.text && (
+                  <Alert
+                    variant={
+                      couponMessage.type === "success" ? "success" : "danger"
+                    }
+                    className="mt-3"
+                    dismissible
+                    onClose={() => setCouponMessage({ type: "", text: "" })}
                   >
-                    <FaShoppingBag size={70} />
-                    <h4>Your Cart is Empty</h4>
-                    <Button as={NavLink} to="/" className="shop-btn">
-                      Continue Shopping
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <>
-                    {cart.items.map((item, index) => {
-                      const variantIdStr =
-                        item.variantId && item.variantId.toString
-                          ? item.variantId.toString()
-                          : item.variantId || "default";
-
-                      const stockKey = `${item.productId}_${variantIdStr}`;
-
-                      const stock =
-                        productStock[stockKey] !== undefined
-                          ? productStock[stockKey]
-                          : item.quantity;
-
-                      const stockStatus = getStockStatus(stock);
-                      const isLowStock = stock > 0 && stock <= 10;
-                      const isOutOfStock = stock === 0;
-
-                      return (
-                        <motion.div
-                          key={`${item.productId}_${item.variantId || "default"}`}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="cart-card"
-                        >
-                          <Card
-                            className={`border-0 ${
-                              isOutOfStock ? "opacity-50" : ""
-                            }`}
-                          >
-                            <Card.Body>
-                              <Row className="align-items-center">
-                                <Col md={3} xs={4}>
-                                  <div className="cart-img">
-                                    <img
-                                      src={formatImagePath(
-                                        item.variantImage || item.image
-                                      )}
-                                      alt={item.name}
-                                      onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src =
-                                          "/images/placeholder.png";
-                                      }}
-                                    />
-                                  </div>
-                                </Col>
-                                <Col md={6} xs={8}>
-                                  <div className="cart-info">
-                                    <h4>{item.name}</h4>
-
-                                    {/* VARIANT BADGES */}
-                                    {(item.selectedColor ||
-                                      item.selectedSize) && (
-                                      <div className="cart-variant-info mb-1">
-                                        {item.selectedColor && (
-                                          <Badge
-                                            bg="dark"
-                                            className="me-1"
-                                            style={{
-                                              fontSize: "11px",
-                                              padding: "4px 8px",
-                                            }}
-                                          >
-                                            🎨 {item.selectedColor}
-                                          </Badge>
-                                        )}
-                                        {item.selectedSize && (
-                                          <Badge
-                                            bg="secondary"
-                                            style={{
-                                              fontSize: "11px",
-                                              padding: "4px 8px",
-                                            }}
-                                          >
-                                            📏 {item.selectedSize}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* 🆕 CUSTOM FIELD DISPLAY */}
-                                    {item.customFieldLabel &&
-                                      item.customFieldValue && (
-                                        <div
-                                          className="cart-custom-field mb-2"
-                                          style={{ fontSize: "12px" }}
-                                        >
-                                          <span
-                                            style={{
-                                              background: "#fff9e6",
-                                              border: "1px solid #ffd966",
-                                              borderRadius: "6px",
-                                              padding: "3px 8px",
-                                              color: "#7a5c00",
-                                              display: "inline-block",
-                                            }}
-                                          >
-                                            <strong>
-                                              {item.customFieldLabel}:
-                                            </strong>{" "}
-                                            {item.customFieldValue}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                    <h5 className="funnel-sans">
-                                      ₹{formatPrice(item.price)}
-                                    </h5>
-
-                                    {stockLoading[stockKey] ? (
-                                      <Spinner
-                                        animation="border"
-                                        size="sm"
-                                        className="mb-2"
-                                      />
-                                    ) : (
-                                      <Badge
-                                        bg={stockStatus.color}
-                                        className="mb-2 d-inline-block"
-                                        style={{
-                                          fontSize: "12px",
-                                          padding: "5px 10px",
-                                        }}
-                                      >
-                                        {stockStatus.icon} {stockStatus.label}
-                                      </Badge>
-                                    )}
-
-                                    {isLowStock && !isOutOfStock && (
-                                      <div
-                                        className="mt-1 mb-2"
-                                        style={{ maxWidth: "150px" }}
-                                      >
-                                        <div className="d-flex justify-content-between small">
-                                          <span className="text-muted">
-                                            Stock
-                                          </span>
-                                          <span className="text-muted">
-                                            {stock} / 10
-                                          </span>
-                                        </div>
-                                        <div
-                                          className="progress"
-                                          style={{ height: "4px" }}
-                                        >
-                                          <div
-                                            className={`progress-bar bg-${
-                                              stock <= 5 ? "warning" : "info"
-                                            }`}
-                                            style={{
-                                              width: `${(stock / 10) * 100}%`,
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {isOutOfStock && (
-                                      <div className="text-danger small mb-1">
-                                        <FaExclamationTriangle className="me-1" />
-                                        Out of Stock - Please remove from cart
-                                      </div>
-                                    )}
-
-                                    <div className="product-meta">
-                                      <span>Qty: {item.quantity}</span>
-                                    </div>
-                                    <div className="item-total">
-                                      <small>
-                                        Item Total: ₹
-                                        {formatPrice(
-                                          item.price * item.quantity
-                                        )}
-                                      </small>
-                                    </div>
-                                    <div className="cart-actions">
-                                      <button
-                                        onClick={() =>
-                                          removeItem(
-                                            item.productId,
-                                            item.variantId
-                                          )
-                                        }
-                                        disabled={isOutOfStock}
-                                      >
-                                        <FaTrash /> Remove
-                                      </button>
-                                    </div>
-                                  </div>
-                                </Col>
-                                <Col md={3} xs={12}>
-                                  <div className="qty-box">
-                                    <button
-                                      onClick={() =>
-                                        updateQty(
-                                          item.productId,
-                                          "dec",
-                                          item.variantId
-                                        )
-                                      }
-                                      disabled={isOutOfStock}
-                                    >
-                                      <FaMinus />
-                                    </button>
-                                    <span>{item.quantity}</span>
-                                    <button
-                                      onClick={() =>
-                                        updateQty(
-                                          item.productId,
-                                          "inc",
-                                          item.variantId
-                                        )
-                                      }
-                                      disabled={
-                                        item.quantity >= stock || isOutOfStock
-                                      }
-                                    >
-                                      <FaPlus />
-                                    </button>
-                                  </div>
-                                  {!isOutOfStock && stock > 0 && (
-                                    <small className="text-muted d-block text-center mt-1">
-                                      Max: {stock}
-                                    </small>
-                                  )}
-                                </Col>
-                              </Row>
-                            </Card.Body>
-                          </Card>
-                        </motion.div>
-                      );
-                    })}
-
-                    <div className="shipping-box d-none d-md-block d-lg-block">
-                      <div className="shipping-top">
-                        <span>
-                          {subtotal >= FREE_SHIPPING_THRESHOLD ? (
-                            "🎉 Congratulations! You've got FREE Shipping!"
-                          ) : (
-                            <>
-                              🎉 Add ₹{formatPrice(amountToFreeShipping)} more
-                              for FREE Shipping!
-                            </>
-                          )}
-                        </span>
-                        <span>
-                          ₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}
-                        </span>
-                      </div>
-                      <ProgressBar now={shippingProgress} />
-                    </div>
-
-                    {couponMessage.text && (
-                      <Alert
-                        variant={
-                          couponMessage.type === "success"
-                            ? "success"
-                            : "danger"
-                        }
-                        className="mt-3"
-                        dismissible
-                        onClose={() =>
-                          setCouponMessage({ type: "", text: "" })
-                        }
-                      >
-                        {couponMessage.text}
-                      </Alert>
-                    )}
-                  </>
+                    {couponMessage.text}
+                  </Alert>
                 )}
-              </AnimatePresence>
-            </Col>
+              </Col>
 
-            <Col lg={4} className="d-none d-md-block d-lg-block">
-              <motion.div
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-              >
-                <Card className="summary-card border-0">
-                  <Card.Body>
-                    <h3>Order Summary</h3>
+              {/* 🆕 Order Summary — desktop only */}
+              <Col lg={4} className="d-none d-lg-block">
+                <motion.div
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <Card className="summary-card border-0">
+                    <Card.Body>
+                      <h3>Order Summary</h3>
 
-                    <div className="summary-row">
-                      <span>Subtotal ({cart.items.length} items)</span>
-                      <span>₹{formatPrice(subtotal)}</span>
-                    </div>
+                      <div className="summary-row">
+                        <span>Subtotal ({cart.items.length} items)</span>
+                        <span>₹{formatPrice(subtotal)}</span>
+                      </div>
 
-                    {cart.appliedCoupon && (
-                      <div className="summary-row coupon-applied">
-                        <span>
-                          <FaTag className="me-1" /> Coupon (
-                          {cart.appliedCoupon.code})
+                      {cart.appliedCoupon && (
+                        <div className="summary-row coupon-applied">
+                          <span>
+                            <FaTag className="me-1" /> Coupon (
+                            {cart.appliedCoupon.code})
+                          </span>
+                          <span className="discount">
+                            -₹{formatPrice(cart.appliedCoupon.discountAmount)}
+                            <FaTimes
+                              className="ms-2 remove-coupon"
+                              onClick={removeCoupon}
+                              style={{ cursor: "pointer", fontSize: "12px" }}
+                            />
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="summary-row">
+                        <span>Shipping</span>
+                        <span className={finalShippingCost === 0 ? "free" : ""}>
+                          {finalShippingCost === 0
+                            ? "FREE"
+                            : `₹${formatPrice(finalShippingCost)}`}
                         </span>
-                        <span className="discount">
-                          -₹{formatPrice(cart.appliedCoupon.discountAmount)}
-                          <FaTimes
-                            className="ms-2 remove-coupon"
-                            onClick={removeCoupon}
-                            style={{ cursor: "pointer", fontSize: "12px" }}
-                          />
-                        </span>
                       </div>
-                    )}
 
-                    <div className="summary-row">
-                      <span>Shipping</span>
-                      <span className={finalShippingCost === 0 ? "free" : ""}>
-                        {finalShippingCost === 0
-                          ? "FREE"
-                          : `₹${formatPrice(finalShippingCost)}`}
-                      </span>
-                    </div>
+                      {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD && (
+                        <div className="summary-row shipping-note">
+                          <small>
+                            Add ₹
+                            {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
+                            more for free shipping
+                          </small>
+                        </div>
+                      )}
 
-                    {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD && (
-                      <div className="summary-row shipping-note">
-                        <small>
-                          Add ₹
-                          {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)}{" "}
-                          more for free shipping
-                        </small>
+                      <hr />
+
+                      <div className="summary-total">
+                        <div>
+                          <h4>Total</h4>
+                          <p>Inclusive of all taxes</p>
+                        </div>
+                        <h2>₹{formatPrice(total)}</h2>
                       </div>
-                    )}
 
-                    <hr />
+                      {!cart.appliedCoupon ? (
+                        <button
+                          className="coupon-btn"
+                          onClick={handleOpenCouponModal}
+                        >
+                          <FaTag /> Apply Coupon
+                        </button>
+                      ) : (
+                        <button
+                          className="coupon-btn applied"
+                          onClick={removeCoupon}
+                        >
+                          <FaTag /> Remove Coupon
+                        </button>
+                      )}
 
-                    <div className="summary-total">
-                      <div>
-                        <h4>Total</h4>
-                        <p>Inclusive of all taxes</p>
-                      </div>
-                      <h2>₹{formatPrice(total)}</h2>
-                    </div>
-
-                    {!cart.appliedCoupon ? (
-                      <button
-                        className="coupon-btn"
-                        onClick={handleOpenCouponModal}
+                      <Button
+                        as={NavLink}
+                        to="/checkout"
+                        className="checkout-btn"
                       >
-                        <FaTag /> Apply Coupon
-                      </button>
-                    ) : (
-                      <button
-                        className="coupon-btn applied"
-                        onClick={removeCoupon}
-                      >
-                        <FaTag /> Remove Coupon
-                      </button>
-                    )}
+                        Proceed to Checkout
+                      </Button>
 
-                    <Button
-                      as={NavLink}
-                      to="/checkout"
-                      className="checkout-btn"
-                    >
-                      Proceed to Checkout
-                    </Button>
-
-                    <div className="secure-checkout">
-                      <FaShieldAlt />
-                      <span>Secure Checkout</span>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </motion.div>
-            </Col>
-          </Row>
+                      <div className="secure-checkout">
+                        <FaShieldAlt />
+                        <span>Secure Checkout</span>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+          )}
         </Container>
       </section>
 

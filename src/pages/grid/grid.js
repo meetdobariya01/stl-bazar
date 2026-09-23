@@ -684,7 +684,7 @@ const Grid = () => {
                               </div>
 
                               {/* 🆕 QUANTITY SELECTOR */}
-                              {!outOfStock && (
+                              {/* {!outOfStock && (
                                 <div
                                   className="qty-box-grid"
                                   onClick={(e) => e.stopPropagation()}
@@ -714,7 +714,7 @@ const Grid = () => {
                                     <FaPlus size={10} />
                                   </button>
                                 </div>
-                              )}
+                              )} */}
 
                               {/* 🆕 Button — disabled when out of stock */}
                               <Button
