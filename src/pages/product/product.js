@@ -31,6 +31,7 @@ const fadeRight = {
 
 const Product = () => {
   const [brands, setBrands] = useState([]);
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,7 +50,7 @@ const Product = () => {
   });
 
   // ✅ NEW UPGRADED IMAGE LOGIC (Handles Object, Array, String)
- const getImageUrl = (logo) => {
+  const getImageUrl = (logo) => {
     if (!logo) return null;
 
     // Object handle karo
@@ -74,14 +75,14 @@ const Product = () => {
     if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
 
     // Relative URL fix
-    if (logo.startsWith("/images")) return `https://api-admin.native91.com${logo}`;
+    if (logo.startsWith("/images"))
+      return `https://api-admin.native91.com${logo}`;
     if (logo.startsWith("/uploads") || logo.startsWith("/public"))
       return `https://api-vendor.native91.com${logo}`;
 
     // Fallback
     return `https://api-admin.native91.com/uploads/${logo}`;
   };
-
 
   const handleImageError = (brandId) => {
     setImageErrors((prev) => ({ ...prev, [brandId]: true }));
@@ -600,8 +601,39 @@ const Product = () => {
                         </div>
 
                         <p className="lexend mt-2">
-                          {item.description ||
-                            `${item.name || "This brand"} - Premium brand on Native91`}
+                          {(() => {
+                            const description =
+                              item.description ||
+                              `${item.name || "This brand"} - Premium brand on Native91`;
+
+                            const words = description.trim().split(/\s+/);
+                            const isLong = words.length > 100;
+
+                            return (
+                              <>
+                                {isLong && !expandedDescriptions[item._id]
+                                  ? `${words.slice(0, 50).join(" ")}...`
+                                  : description}
+
+                                {isLong && (
+                                  <button
+                                    type="button"
+                                    className="read-more-btn"
+                                    onClick={() =>
+                                      setExpandedDescriptions((prev) => ({
+                                        ...prev,
+                                        [item._id]: !prev[item._id],
+                                      }))
+                                    }
+                                  >
+                                    {expandedDescriptions[item._id]
+                                      ? " Read Less"
+                                      : " Read More"}
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
                         </p>
 
                         <div className="d-flex flex-wrap gap-3 align-items-center mt-3">

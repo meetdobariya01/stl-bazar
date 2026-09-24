@@ -429,3 +429,17 @@
     width: auto;
   }
 }
+.read-more-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin-left: 5px;
+  color: #8b6f47;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.read-more-btn:hover {
+  text-decoration: underline;
+}
