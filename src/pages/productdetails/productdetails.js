@@ -1313,9 +1313,7 @@ const Productdetails = () => {
             {/* RIGHT SIDE - PRODUCT INFO */}
             <Col lg={6}>
               <div className="product-content">
-                <h1 className="funnel-sans">
-                  {String(product.name)}
-                </h1>
+                <h1 className="funnel-sans">{String(product.name)}</h1>
                 <div className="product-brand fw-bold">
                   {String(product.company || "Brand Name")}
                 </div>
@@ -2203,9 +2201,7 @@ const Productdetails = () => {
 
             {hasHandmadePolicy && (
               <details>
-                <summary className="funnel-sans">
-                 Handmade Order Policy
-                </summary>
+                <summary className="funnel-sans">Handmade Order Policy</summary>
                 <div
                   className="handmade-policy-content mt-3 p-3 rounded"
                   style={{
@@ -2577,6 +2573,7 @@ const Productdetails = () => {
 
       {/* REVIEW MODAL */}
       <Modal
+        className="lexend"
         show={showReviewModal}
         onHide={() => {
           setShowReviewModal(false);

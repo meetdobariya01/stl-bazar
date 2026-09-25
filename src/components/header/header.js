@@ -407,11 +407,14 @@ const Header = () => {
       return;
     }
     try {
-      const response = await axios.get(`https://api.native91.com/api/search-suggestions`, {
-        params: { q: query },
-        timeout: 5000,
-        ...getAuthHeaders(),
-      });
+      const response = await axios.get(
+        `https://api.native91.com/api/search-suggestions`,
+        {
+          params: { q: query },
+          timeout: 5000,
+          ...getAuthHeaders(),
+        },
+      );
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
@@ -447,10 +450,13 @@ const Header = () => {
     if (!searchQuery.trim()) return;
     setIsLoading(true);
     try {
-      const response = await axios.get(`https://api.native91.com/api/products/search`, {
-        params: { keyword: searchQuery },
-        ...getAuthHeaders(),
-      });
+      const response = await axios.get(
+        `https://api.native91.com/api/products/search`,
+        {
+          params: { keyword: searchQuery },
+          ...getAuthHeaders(),
+        },
+      );
       setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
       setShowRecommendations(false);
@@ -637,7 +643,16 @@ const Header = () => {
                   {item.dropdown ? (
                     <Dropdown
                       className="premium-dropdown category-dropdown"
-                      onMouseEnter={() => handleCategoryHover(item.title)}
+                      show={hoveredCategory !== null}
+                      onMouseEnter={() => {
+                        if (categoryMenuTimeout.current) {
+                          clearTimeout(categoryMenuTimeout.current);
+                        }
+
+                        if (!hoveredCategory) {
+                          setHoveredCategory(item.title);
+                        }
+                      }}
                       onMouseLeave={handleCategoryLeave}
                     >
                       <Dropdown.Toggle
@@ -677,7 +692,7 @@ const Header = () => {
                                     {sub.title}
                                     {sub.subCategories &&
                                       sub.subCategories.length > 0 && (
-                                        <span className="sub-category-arrow">
+                                        <span className="sub-category-arrow ms-1">
                                           ›
                                         </span>
                                       )}

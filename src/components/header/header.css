@@ -994,7 +994,7 @@
 }
 /* ===== CATEGORY MEGA MENU WITH SUB-CATEGORIES ===== */
 .category-dropdown .dropdown-menu {
-  min-width: 600px !important;
+  min-width: 650px !important;
   max-width: 800px !important;
   padding: 0 !important;
   border: none !important;
@@ -1012,8 +1012,8 @@
 
 /* Categories Column */
 .category-list-column {
-  width: 250px;
-  min-width: 250px;
+  width: 270px;
+  min-width: 270px;
   background: #f8f9fa;
   padding: 12px 0;
   overflow-y: auto;
@@ -1059,7 +1059,7 @@
 }
 
 .category-link .sub-category-arrow {
-  color: #ccc;
+  /* color: #ccc; */
   font-size: 18px;
   font-weight: 300;
   transition: all 0.2s ease;

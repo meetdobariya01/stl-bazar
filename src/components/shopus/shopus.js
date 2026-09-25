@@ -17,8 +17,8 @@ const features = [
   },
   {
     icon: <FaUndoAlt />,
-    title: "Easy Returns",
-    desc: "Hassle-free returns",
+    title: "Easy Exchange",
+    desc: "Hassle-free Exchange",
   },
   {
     icon: <FaShieldAlt />,
