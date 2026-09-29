@@ -278,7 +278,6 @@
 
 .premium-dropdown .dropdown-menu {
   position: absolute;
-
   top: calc(100% + 15px);
   left: 50%;
   min-width: 240px;
@@ -313,12 +312,14 @@
 
 /* show dropdown */
 
-.premium-dropdown:hover .dropdown-menu {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0) scale(1);
+.premium-dropdown:hover > .dropdown-menu,
+.premium-dropdown .dropdown-menu.show {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translate(-50%, 0) scale(1) !important;
+  pointer-events: auto !important;
 }
-
 /* dropdown item */
 
 .dropdown-item-custom {
@@ -990,7 +991,11 @@
     transition: none !important;
   }
 }
-/* ===== CATEGORY MEGA MENU WITH SUB-CATEGORIES ===== */
+
+/* ============================================================
+   🆕 CATEGORY MEGA MENU WITH SUB-CATEGORIES
+   ============================================================ */
+
 .category-dropdown .dropdown-menu {
   min-width: 600px !important;
   max-width: 800px !important;
@@ -1000,12 +1005,16 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
   background: #ffffff !important;
   overflow: hidden !important;
+  /* 🆕 Screen-fit limit */
+  max-height: calc(100vh - 90px) !important;
+  overflow-y: auto !important;
 }
 
 .category-menu-wrapper {
   display: flex;
   min-height: 350px;
-  max-height: 500px;
+  /* 🆕 Screen-fit limit */
+  max-height: calc(100vh - 110px);
 }
 
 /* Categories Column */
@@ -1015,6 +1024,8 @@
   background: #f8f9fa;
   padding: 12px 0;
   overflow-y: auto;
+  /* 🆕 Screen-fit limit */
+  max-height: calc(100vh - 110px);
   border-right: 1px solid #e9ecef;
 }
 
@@ -1073,6 +1084,8 @@
   flex: 1;
   padding: 16px 20px;
   overflow-y: auto;
+  /* 🆕 Screen-fit limit */
+  max-height: calc(100vh - 110px);
   background: #ffffff;
 }
 
@@ -1211,32 +1224,35 @@
   padding-left: 20px !important;
 }
 
-/* ===== RESPONSIVE ===== */
+/* ============================================================
+   RESPONSIVE — Category Menu
+   ============================================================ */
 @media (max-width: 992px) {
   .category-dropdown .dropdown-menu {
     min-width: 100% !important;
     max-width: 100% !important;
     border-radius: 12px !important;
+    max-height: calc(100vh - 80px) !important;
   }
-  
+
   .category-menu-wrapper {
     flex-direction: column;
     min-height: auto;
     max-height: none;
   }
-  
+
   .category-list-column {
     width: 100%;
     min-width: 100%;
-    max-height: 200px;
+    max-height: 250px;
     border-right: none;
     border-bottom: 1px solid #e9ecef;
   }
-  
+
   .subcategory-list-column {
-    max-height: 300px;
+    max-height: 350px;
   }
-  
+
   .subcategory-grid {
     grid-template-columns: 1fr;
   }

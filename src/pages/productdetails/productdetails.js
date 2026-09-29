@@ -57,7 +57,6 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const COUPON_API_URL =
   process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
-// const VENDOR_IMAGE_BASE = "http://localhost:5177"; // For local development
 const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
 
 const formatPrice = (price) => {
@@ -195,7 +194,6 @@ const normalizeVariants = (product) => {
       let id = toIdString(v._id);
       if (!id) id = generateFallbackId(color, size, price, idx);
 
-      // 🆕 Resolve images: prefer images[] then fallback to single image
       let imageArr = [];
       if (Array.isArray(v.images) && v.images.length > 0) {
         imageArr = v.images.filter(Boolean);
@@ -209,8 +207,8 @@ const normalizeVariants = (product) => {
         size,
         price,
         stock: v.stock !== undefined ? v.stock : 0,
-        images: imageArr, // 🆕 array
-        image: imageArr[0] || "", // legacy single image (first)
+        images: imageArr,
+        image: imageArr[0] || "",
         isAvailable:
           v.isAvailable !== undefined ? v.isAvailable : v.stock !== 0,
         __hasRealId: !!v._id,
@@ -263,6 +261,32 @@ const normalizeVariants = (product) => {
   return [];
 };
 
+// 🆕 Wait for Fastrr SDK to load
+const waitForFastrrSDK = (maxWait = 10000) => {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      if (
+        window.HeadlessCheckout &&
+        typeof window.HeadlessCheckout.addToCart === "function"
+      ) {
+        resolve(true);
+      } else if (Date.now() - start > maxWait) {
+        reject(new Error("Fastrr SDK load timeout"));
+      } else {
+        setTimeout(check, 200);
+      }
+    };
+    check();
+  });
+};
+
+const isMobileDevice = () =>
+  typeof window !== "undefined" &&
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+
 const Productdetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -279,8 +303,9 @@ const Productdetails = () => {
   const [error, setError] = useState(null);
   const [isInWishlistState, setIsInWishlistState] = useState(false);
   const [productImages, setProductImages] = useState([]);
-  const [originalProductImages, setOriginalProductImages] = useState([]); // 🆕
+  const [originalProductImages, setOriginalProductImages] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false); // 🆕
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   const [stock, setStock] = useState(0);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
@@ -384,7 +409,7 @@ const Productdetails = () => {
           `${matchedCompany.name} - Premium brand on Native91`;
         setBrandDescription(description);
         setBrandLogo(
-          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null,
+          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
         );
       } else {
         setBrandName(companyName);
@@ -430,7 +455,7 @@ const Productdetails = () => {
         savingsPercentage: ((discountAmount / basePrice) * 100).toFixed(0),
       };
     },
-    [product, selectedVariant],
+    [product, selectedVariant]
   );
 
   const applyCoupon = async (coupon) => {
@@ -444,7 +469,7 @@ const Productdetails = () => {
       const couponProducts = coupon.products || coupon.productIds || [];
       if (couponProducts.length > 0) {
         const isProductValid = couponProducts.some(
-          (id) => id.toString() === product._id.toString(),
+          (id) => id.toString() === product._id.toString()
         );
         if (!isProductValid) {
           alert("This coupon is not valid for this product.");
@@ -511,7 +536,7 @@ const Productdetails = () => {
 
       try {
         const response = await axios.get(
-          `${COUPON_API_URL}/coupons/public/product/${productId}`,
+          `${COUPON_API_URL}/coupons/public/product/${productId}`
         );
         if (
           response.data.success &&
@@ -534,9 +559,9 @@ const Productdetails = () => {
         try {
           const response = await axios.get(
             `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(
-              companyName,
+              companyName
             )}`,
-            { params: { productId } },
+            { params: { productId } }
           );
           if (
             response.data.success &&
@@ -591,7 +616,7 @@ const Productdetails = () => {
       if (!imagePath) return "/images/placeholder.png";
       return getImageUrl(imagePath);
     },
-    [getImageUrl],
+    [getImageUrl]
   );
 
   const getAllImagesFromProduct = useCallback(
@@ -630,7 +655,7 @@ const Productdetails = () => {
       }
       return validImages;
     },
-    [getImageUrl],
+    [getImageUrl]
   );
 
   useEffect(() => {
@@ -648,12 +673,12 @@ const Productdetails = () => {
         let foundProduct = null;
 
         foundProduct = products.find(
-          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase(),
+          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase()
         );
         if (!foundProduct) {
           const productSlug = createSlug(productName);
           foundProduct = products.find(
-            (p) => p.name && createSlug(p.name) === productSlug,
+            (p) => p.name && createSlug(p.name) === productSlug
           );
         }
         if (!foundProduct) {
@@ -667,7 +692,7 @@ const Productdetails = () => {
         if (!foundProduct && slug.length === 24) {
           try {
             const productResponse = await axios.get(
-              `${API_URL}/product/${slug}`,
+              `${API_URL}/product/${slug}`
             );
             if (productResponse.data) foundProduct = productResponse.data;
           } catch (idErr) {
@@ -689,7 +714,7 @@ const Productdetails = () => {
 
         const allImages = getAllImagesFromProduct(foundProduct);
         setProductImages(allImages);
-        setOriginalProductImages(allImages); // 🆕 save original
+        setOriginalProductImages(allImages);
         if (allImages.length > 0) {
           setActiveImg(allImages[0]);
           setCurrentImageIndex(0);
@@ -715,8 +740,8 @@ const Productdetails = () => {
         if (isMounted.current) {
           setError(
             err.response?.data?.message ||
-            err.message ||
-            "Failed to load product.",
+              err.message ||
+              "Failed to load product."
           );
         }
       } finally {
@@ -772,7 +797,10 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+          "guest_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
       if (isInWishlistState) {
@@ -800,19 +828,16 @@ const Productdetails = () => {
     }
   };
 
-  // 🆕 Handle variant select — swap gallery with variant images
   const handleVariantSelect = (variant) => {
     if (!variant || variant.isAvailable === false || variant.stock === 0)
       return;
 
-    // Deselect if clicking the same variant
     if (selectedVariant && selectedVariant._id === variant._id) {
       setSelectedVariant(null);
       setSelectedColor("");
       setSelectedSize("");
       setStock(product?.stock || 0);
 
-      // Restore original product gallery
       setProductImages(originalProductImages);
       if (originalProductImages.length > 0) {
         setActiveImg(originalProductImages[0]);
@@ -830,9 +855,8 @@ const Productdetails = () => {
     setStock(variant.stock || 0);
     if (qty > variant.stock) setQty(Math.max(1, variant.stock));
 
-    // 🆕 Swap gallery with variant images (or fall back to original)
     const variantImages = (variant.images || []).map((img) =>
-      getVariantImageUrl(img),
+      getVariantImageUrl(img)
     );
 
     if (variantImages.length > 0) {
@@ -840,7 +864,6 @@ const Productdetails = () => {
       setActiveImg(variantImages[0]);
       setCurrentImageIndex(0);
     } else {
-      // No variant images → revert to original gallery
       setProductImages(originalProductImages);
       if (originalProductImages.length > 0) {
         setActiveImg(originalProductImages[0]);
@@ -882,7 +905,7 @@ const Productdetails = () => {
           rating: reviewData.rating,
           review: reviewData.review,
           userName: reviewData.userName,
-        },
+        }
       );
 
       if (response.data.message) {
@@ -933,7 +956,10 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+          "guest_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -955,8 +981,8 @@ const Productdetails = () => {
         selectedVariant && selectedVariant.image
           ? selectedVariant.image
           : Array.isArray(product.image) && product.image.length > 0
-            ? product.image[0]
-            : product.image || "";
+          ? product.image[0]
+          : product.image || "";
 
       await addToCart({
         productId: String(product._id),
@@ -996,10 +1022,12 @@ const Productdetails = () => {
     }
   };
 
+  // 🆕 BUY NOW — Direct Fastrr checkout (NO address modal, direct Fastrr iframe)
   const handleBuyNow = async () => {
     const effectiveStockCheck = selectedVariant
       ? selectedVariant.stock || 0
       : stock;
+
     if (effectiveStockCheck === 0) {
       alert("Sorry, this product is out of stock!");
       return;
@@ -1014,14 +1042,20 @@ const Productdetails = () => {
       return;
     }
 
+    setIsBuyingNow(true);
+
     try {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+          "guest_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
+      // 🆕 STEP 1: Add product to cart
       const strictVariantId =
         selectedVariant && selectedVariant._id
           ? String(selectedVariant._id)
@@ -1040,8 +1074,8 @@ const Productdetails = () => {
         selectedVariant && selectedVariant.image
           ? selectedVariant.image
           : Array.isArray(product.image) && product.image.length > 0
-            ? product.image[0]
-            : product.image || "";
+          ? product.image[0]
+          : product.image || "";
 
       await addToCart({
         productId: String(product._id),
@@ -1072,9 +1106,139 @@ const Productdetails = () => {
         customFieldValue: hasCustomField ? customFieldInput.trim() : null,
       });
 
-      navigate("/checkout");
+      // 🆕 STEP 2: Wait for cart update
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      // 🆕 STEP 3: Fetch cart from backend
+      const cartRes = await axios.get(`${API_URL}/cart/${guestId}`);
+      const cartData = cartRes.data;
+
+      if (!cartData?.items || cartData.items.length === 0) {
+        alert("Cart is empty. Please try again.");
+        setIsBuyingNow(false);
+        return;
+      }
+
+      // 🆕 STEP 4: Compatibility check
+      try {
+        const checkRes = await axios.post(
+          `${API_URL}/order/check-fastrr-compatibility`,
+          {
+            cartItems: cartData.items.map((item) => ({
+              productId: item.productId,
+              name: item.name,
+            })),
+          }
+        );
+
+        if (!checkRes.data.compatible) {
+          alert(
+            `⚠️ Fast Checkout unavailable for this product.\n\n` +
+              `Reason: ${
+                checkRes.data.reason || "Product not found in Fastrr catalog."
+              }`
+          );
+          setIsBuyingNow(false);
+          return;
+        }
+      } catch (checkErr) {
+        console.error("Compat check error:", checkErr);
+        alert("Fastrr checkout is currently unavailable. Please try again.");
+        setIsBuyingNow(false);
+        return;
+      }
+
+      // 🆕 STEP 5: Create Fastrr order + get access token
+      const placeholderAddress = {
+        name: "Guest Customer",
+        email: "guest@native91.com",
+        phone: "9999999999",
+        address: "Will be provided at Fastrr checkout",
+        city: "Mumbai",
+        state: "Maharashtra",
+        pincode: "400001",
+        country: "India",
+      };
+
+      const cartSubtotal = cartData.items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
+
+      const tokenRes = await axios.post(
+        `${API_URL}/order/shiprocket-checkout`,
+        {
+          guestId,
+          shippingAddress: placeholderAddress,
+          cartItems: cartData.items.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId || null,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: Array.isArray(item.image) ? item.image[0] : item.image,
+            sku: item.sku || "",
+            selectedColor: item.selectedColor || "",
+            selectedSize: item.selectedSize || "",
+            customFieldLabel: item.customFieldLabel || null,
+            customFieldValue: item.customFieldValue || null,
+          })),
+          couponCode: appliedCoupon?.code || null,
+          subtotal: cartSubtotal,
+          total: cartSubtotal,
+          shippingCost: 0,
+          couponDiscount: discountedPrice ? discountedPrice.discountAmount : 0,
+        }
+      );
+
+      if (!tokenRes.data.success || !tokenRes.data.accessToken) {
+        alert(
+          tokenRes.data.message || "Failed to initialize Fastrr checkout"
+        );
+        setIsBuyingNow(false);
+        return;
+      }
+
+      const token = tokenRes.data.accessToken;
+      const fastrrOrderId = tokenRes.data.orderId;
+
+      // 🆕 STEP 6: Wait for Fastrr SDK
+      try {
+        await waitForFastrrSDK(8000);
+      } catch (sdkErr) {
+        alert("Fastrr SDK not loaded. Please refresh the page.");
+        setIsBuyingNow(false);
+        return;
+      }
+
+      // 🆕 STEP 7: Open Fastrr iframe directly
+      const dummyEvent = {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      };
+
+      setIsBuyingNow(false);
+
+      setTimeout(
+        () => {
+          try {
+            window.HeadlessCheckout.addToCart(dummyEvent, token, {
+              fallbackUrl: `${window.location.origin}/order-complete?orderId=${fastrrOrderId}`,
+            });
+          } catch (iframeErr) {
+            console.error("Fastrr iframe error:", iframeErr);
+            alert("Failed to open Fastrr checkout.");
+          }
+        },
+        isMobileDevice() ? 400 : 50
+      );
     } catch (error) {
-      alert("Failed to proceed. Please try again.");
+      console.error("Buy Now error:", error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to start checkout. Please try again."
+      );
+      setIsBuyingNow(false);
     }
   };
 
@@ -1223,6 +1387,15 @@ const Productdetails = () => {
   const hasHandmadePolicy =
     product?.handmadePolicy === true || product?.handmadePolicy === "true";
 
+  const navigateToBrand = () => {
+    const companyName =
+      product?.company || product?.vendor || product?.vendorName;
+    if (companyName) {
+      const encodedCompanyName = encodeURIComponent(companyName);
+      navigate(`/company/${encodedCompanyName}`);
+    }
+  };
+
   return (
     <>
       <Header />
@@ -1239,8 +1412,9 @@ const Productdetails = () => {
                     {productImages.map((img, i) => (
                       <div
                         key={`thumb-${i}`}
-                        className={`thumb-box ${currentImageIndex === i ? "active" : ""
-                          }`}
+                        className={`thumb-box ${
+                          currentImageIndex === i ? "active" : ""
+                        }`}
                         onClick={() => {
                           setActiveImg(img);
                           setCurrentImageIndex(i);
@@ -1259,8 +1433,9 @@ const Productdetails = () => {
                 )}
 
                 <div
-                  className={`main-image-box ${isImageZoomed ? "image-zoom-active" : ""
-                    }`}
+                  className={`main-image-box ${
+                    isImageZoomed ? "image-zoom-active" : ""
+                  }`}
                   onMouseEnter={() => setIsImageZoomed(true)}
                   onMouseLeave={() => {
                     setIsImageZoomed(false);
@@ -1311,10 +1486,23 @@ const Productdetails = () => {
             {/* RIGHT SIDE - PRODUCT INFO */}
             <Col lg={6}>
               <div className="product-content">
-                <h1 className="funnel-sans">
-                  {String(product.name)}
-                </h1>
-                <div className="product-brand">
+                <h1 className="funnel-sans">{String(product.name)}</h1>
+                <div
+                  className="product-brand fw-bold"
+                  onClick={navigateToBrand}
+                  style={{
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    display: "inline-block",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.textDecoration = "underline";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.textDecoration = "none";
+                  }}
+                  title={`View ${product.company || "brand"} products`}
+                >
                   {String(product.company || "Brand Name")}
                 </div>
                 <div className="rating-row">
@@ -1392,8 +1580,9 @@ const Productdetails = () => {
                 </div>
 
                 <p
-                  className={`wishlist-btn-product-details mt-2 ${isInWishlistState ? "active" : ""
-                    }`}
+                  className={`wishlist-btn-product-details mt-2 ${
+                    isInWishlistState ? "active" : ""
+                  }`}
                   onClick={toggleWishlist}
                   style={{
                     cursor: isTogglingWishlist ? "not-allowed" : "pointer",
@@ -1407,60 +1596,9 @@ const Productdetails = () => {
                   {isTogglingWishlist
                     ? "Processing..."
                     : isInWishlistState
-                      ? "Go to Wishlist"
-                      : "Add to Wishlist"}
+                    ? "Go to Wishlist"
+                    : "Add to Wishlist"}
                 </p>
-
-                {/* {hasHandmadePolicy && (
-                  <div
-                    className="handmade-policy-inline mt-3 p-3 rounded"
-                    style={{
-                      background: "#fff8f0",
-                      border: "1px solid #ffc107",
-                      borderLeft: "4px solid #ffc107",
-                    }}
-                  >
-                    <h6
-                      className="mb-2 d-flex align-items-center funnel-sans"
-                      style={{
-                        fontWeight: 600,
-                        color: "#7a5c00",
-                        fontSize: "14px",
-                      }}
-                    >
-                      <FaScroll className="me-2" /> Handmade Order Policy
-                    </h6>
-                    <p
-                      style={{
-                        fontSize: "13px",
-                        lineHeight: 1.6,
-                        color: "#4a4a4a",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <strong>1.</strong> Every piece is handmade to order, just
-                      for you. Because production begins as soon as you place
-                      your order, we're unable to accept cancellations or
-                      changes once an order is confirmed. Personalised items
-                      can't be returned or exchanged.
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "13px",
-                        lineHeight: 1.6,
-                        color: "#4a4a4a",
-                        marginBottom: 0,
-                      }}
-                    >
-                      <strong>2.</strong> We pack every order with care, but if
-                      your item arrives damaged or incorrect, we'll make it
-                      right. Please share a clear unboxing video and photos
-                      within 24 hours of delivery so we can verify and arrange a
-                      replacement. Without this proof we're unable to process a
-                      claim.
-                    </p>
-                  </div>
-                )} */}
 
                 {/* VARIANT SELECTOR */}
                 {variants.length > 0 && (
@@ -1474,9 +1612,7 @@ const Productdetails = () => {
                         <small className="text-success">
                           <FaCheckCircle className="me-1" />
                           {selectedVariant.color}
-                          {selectedVariant.color &&
-                            selectedVariant.size &&
-                            " • "}
+                          {selectedVariant.color && selectedVariant.size && " • "}
                           {selectedVariant.size &&
                             `Size: ${selectedVariant.size}`}
                         </small>
@@ -1490,7 +1626,7 @@ const Productdetails = () => {
                           (selectedVariant._id
                             ? selectedVariant._id === variant._id
                             : selectedColor === variant.color &&
-                            selectedSize === variant.size);
+                              selectedSize === variant.size);
                         const isDisabled =
                           variant.isAvailable === false || variant.stock === 0;
                         const variantImageUrl = variant.image
@@ -1502,8 +1638,9 @@ const Productdetails = () => {
                         return (
                           <Col xs={4} md={4} lg={3} key={variant._id || idx}>
                             <div
-                              className={`variant-option-card ${isSelected ? "selected" : ""
-                                } ${isDisabled ? "disabled" : ""}`}
+                              className={`variant-option-card ${
+                                isSelected ? "selected" : ""
+                              } ${isDisabled ? "disabled" : ""}`}
                               onClick={() => handleVariantSelect(variant)}
                               style={{
                                 border: isSelected
@@ -1567,7 +1704,6 @@ const Productdetails = () => {
                                     ₹{variant.price}
                                   </div>
                                 )}
-                                {/* 🆕 show image count */}
                                 {variantImagesCount > 0 && (
                                   <div
                                     className="text-muted"
@@ -1666,54 +1802,6 @@ const Productdetails = () => {
                       )}
                   </div>
                 )}
-
-                {/* INGREDIENTS */}
-                {/* {(hasIngredients || hasAllergens) && (
-                  <div
-                    className="ingredients-section mt-3 p-3 border rounded"
-                    style={{ background: "#fafafa" }}
-                  >
-                    {hasIngredients && (
-                      <div className="mb-2">
-                        <div className="d-flex align-items-center gap-2 mb-1">
-                          <FaUtensils className="text-primary" />
-                          <strong>Ingredients</strong>
-                        </div>
-                        <p className="mb-0 small">
-                          {product.ingredients}
-                          {product.ingredientsList &&
-                            product.ingredientsList.length > 0 && (
-                              <span className="text-muted d-block mt-1">
-                                <small>
-                                  Detailed:{" "}
-                                  {product.ingredientsList.join(", ")}
-                                </small>
-                              </span>
-                            )}
-                        </p>
-                      </div>
-                    )}
-                    {hasAllergens && (
-                      <div className="mt-2">
-                        <div className="d-flex align-items-center gap-2 mb-1">
-                          <FaExclamationTriangle className="text-warning" />
-                          <strong>Allergens</strong>
-                        </div>
-                        <div className="d-flex flex-wrap gap-1">
-                          {product.allergens.map((allergen, idx) => (
-                            <Badge
-                              key={idx}
-                              bg="warning"
-                              className="text-dark"
-                            >
-                              {allergen}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )} */}
 
                 {/* NUTRITIONAL INFO */}
                 {hasNutritionalInfo && (
@@ -1900,31 +1988,6 @@ const Productdetails = () => {
                   </div>
                 )}
 
-                {/* STOCK STATUS */}
-                {/* <div className="stock-status mt-3">
-                  {effectiveStock > 0 && effectiveStock <= 10 && (
-                    <div className="mt-2">
-                      <div className="d-flex justify-content-between small">
-                        <span>Stock Availability</span>
-                        <div
-                          bg={stockStatus.color}
-                          style={{ fontSize: "16px" }}
-                        >
-                          {stockStatus.icon} {stockStatus.label}
-                        </div>
-                        <span>{effectiveStock} / 10</span>
-                      </div>
-                      <div className="progress" style={{ height: "6px" }}>
-                        <div
-                          className={`progress-bar bg-${effectiveStock <= 5 ? "warning" : "info"
-                            }`}
-                          style={{ width: `${(effectiveStock / 10) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div> */}
-
                 {/* COUPON BADGE */}
                 {appliedCoupon && discountedPrice && (
                   <div
@@ -2005,7 +2068,7 @@ const Productdetails = () => {
                           const shouldShow =
                             couponProducts.length === 0 ||
                             couponProducts.some(
-                              (id) => id.toString() === product._id.toString(),
+                              (id) => id.toString() === product._id.toString()
                             );
                           if (!shouldShow) return null;
 
@@ -2020,9 +2083,12 @@ const Productdetails = () => {
                           return (
                             <div
                               key={coupon._id || `coupon-${index}`}
-                              className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${isApplied ? "border-success" : ""
-                                }`}
-                              style={isApplied ? { background: "#f0fff4" } : {}}
+                              className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${
+                                isApplied ? "border-success" : ""
+                              }`}
+                              style={
+                                isApplied ? { background: "#f0fff4" } : {}
+                              }
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
@@ -2043,10 +2109,11 @@ const Productdetails = () => {
                                 <p className="mb-0 small text-muted">
                                   {String(
                                     coupon.description ||
-                                    `${type === "percentage"
-                                      ? discount + "%"
-                                      : "₹" + discount
-                                    } off`,
+                                      `${
+                                        type === "percentage"
+                                          ? discount + "%"
+                                          : "₹" + discount
+                                      } off`
                                   )}
                                 </p>
                                 {priceInfo && (
@@ -2083,7 +2150,7 @@ const Productdetails = () => {
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      String(coupon.code),
+                                      String(coupon.code)
                                     );
                                     alert(`Copied "${coupon.code}"!`);
                                   }}
@@ -2161,8 +2228,22 @@ const Productdetails = () => {
                   <Button
                     className="buy-btn-product-details"
                     onClick={handleBuyNow}
+                    disabled={isBuyingNow || effectiveStock === 0}
                   >
-                    Buy Now
+                    {isBuyingNow ? (
+                      <>
+                        <Spinner
+                          animation="border"
+                          size="sm"
+                          className="me-2"
+                        />
+                        Opening Checkout...
+                      </>
+                    ) : effectiveStock === 0 ? (
+                      <>Out of Stock</>
+                    ) : (
+                      <>Buy Now</>
+                    )}
                   </Button>
                 </div>
 
@@ -2217,10 +2298,10 @@ const Productdetails = () => {
                     }}
                   >
                     <strong>1.</strong> Every piece is handmade to order, just
-                    for you. Because production begins as soon as you place your
-                    order, we're unable to accept cancellations or changes once
-                    an order is confirmed. Personalised items can't be returned
-                    or exchanged.
+                    for you. Because production begins as soon as you place
+                    your order, we're unable to accept cancellations or changes
+                    once an order is confirmed. Personalised items can't be
+                    returned or exchanged.
                   </p>
                   <p
                     style={{
@@ -2231,9 +2312,9 @@ const Productdetails = () => {
                     }}
                   >
                     <strong>2.</strong> We pack every order with care, but if
-                    your item arrives damaged or incorrect, we'll make it right.
-                    Please share a clear unboxing video and photos within 24
-                    hours of delivery so we can verify and arrange a
+                    your item arrives damaged or incorrect, we'll make it
+                    right. Please share a clear unboxing video and photos
+                    within 24 hours of delivery so we can verify and arrange a
                     replacement. Without this proof we're unable to process a
                     claim.
                   </p>
@@ -2245,183 +2326,179 @@ const Productdetails = () => {
               hasAllergens ||
               hasNutritionalInfo ||
               hasDietaryInfo) && (
-                <details>
-                  <summary className="funnel-sans">
-                    Ingredients & Nutrition
-                  </summary>
-                  <div className="ingredients-accordion p-3">
-                    {hasIngredients && (
-                      <div className="mb-3">
-                        <h6 className="fw-bold">
-                          <FaUtensils className="me-2 text-primary" />
-                          Ingredients
-                        </h6>
-                        <p className="mb-0">{product.ingredients}</p>
-                        {product.ingredientsList &&
-                          product.ingredientsList.length > 0 && (
-                            <div className="mt-2">
-                              <small className="text-muted">Detailed:</small>
-                              <ul className="mb-0 mt-1">
-                                {product.ingredientsList.map((item, idx) => (
-                                  <li key={idx}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                      </div>
-                    )}
+              <details>
+                <summary className="funnel-sans">
+                  Ingredients & Nutrition
+                </summary>
+                <div className="ingredients-accordion p-3">
+                  {hasIngredients && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaUtensils className="me-2 text-primary" />
+                        Ingredients
+                      </h6>
+                      <p className="mb-0">{product.ingredients}</p>
+                      {product.ingredientsList &&
+                        product.ingredientsList.length > 0 && (
+                          <div className="mt-2">
+                            <small className="text-muted">Detailed:</small>
+                            <ul className="mb-0 mt-1">
+                              {product.ingredientsList.map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                    </div>
+                  )}
 
-                    {hasAllergens && (
-                      <div className="mb-3">
-                        <h6 className="fw-bold">
-                          <FaExclamationTriangle className="me-2 text-warning" />
-                          Allergens
-                        </h6>
-                        <div className="d-flex flex-wrap gap-2">
-                          {product.allergens.map((allergen, idx) => (
-                            <Badge
-                              key={idx}
-                              bg="warning"
-                              className="text-dark p-2"
-                            >
-                              {allergen}
-                            </Badge>
-                          ))}
-                        </div>
+                  {hasAllergens && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaExclamationTriangle className="me-2 text-warning" />
+                        Allergens
+                      </h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {product.allergens.map((allergen, idx) => (
+                          <Badge key={idx} bg="warning" className="text-dark p-2">
+                            {allergen}
+                          </Badge>
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {hasNutritionalInfo && (
-                      <div className="mb-3">
-                        <h6 className="fw-bold">
-                          <FaAppleAlt className="me-2 text-success" />
-                          Nutritional Information
-                          {product.nutritionalInfo?.servingSize && (
-                            <span className="text-muted small ms-2">
-                              (per {product.nutritionalInfo.servingSize})
-                            </span>
+                  {hasNutritionalInfo && (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">
+                        <FaAppleAlt className="me-2 text-success" />
+                        Nutritional Information
+                        {product.nutritionalInfo?.servingSize && (
+                          <span className="text-muted small ms-2">
+                            (per {product.nutritionalInfo.servingSize})
+                          </span>
+                        )}
+                      </h6>
+                      <div className="nutrition-grid">
+                        <Row className="g-2">
+                          {product.nutritionalInfo?.calories > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Calories</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.calories}
+                                </div>
+                              </div>
+                            </Col>
                           )}
-                        </h6>
-                        <div className="nutrition-grid">
-                          <Row className="g-2">
-                            {product.nutritionalInfo?.calories > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Calories</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.calories}
-                                  </div>
+                          {product.nutritionalInfo?.protein > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Protein</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.protein}g
                                 </div>
-                              </Col>
-                            )}
-                            {product.nutritionalInfo?.protein > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Protein</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.protein}g
-                                  </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.carbohydrates > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Carbs</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.carbohydrates}g
                                 </div>
-                              </Col>
-                            )}
-                            {product.nutritionalInfo?.carbohydrates > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Carbs</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.carbohydrates}g
-                                  </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.fat > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Fat</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.fat}g
                                 </div>
-                              </Col>
-                            )}
-                            {product.nutritionalInfo?.fat > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Fat</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.fat}g
-                                  </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.sugar > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Sugar</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.sugar}g
                                 </div>
-                              </Col>
-                            )}
-                            {product.nutritionalInfo?.sugar > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Sugar</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.sugar}g
-                                  </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.fiber > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Fiber</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.fiber}g
                                 </div>
-                              </Col>
-                            )}
-                            {product.nutritionalInfo?.fiber > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Fiber</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.fiber}g
-                                  </div>
+                              </div>
+                            </Col>
+                          )}
+                          {product.nutritionalInfo?.sodium > 0 && (
+                            <Col xs={6} md={3}>
+                              <div className="nutrition-item p-2 bg-light rounded text-center">
+                                <div className="small text-muted">Sodium</div>
+                                <div className="fw-bold">
+                                  {product.nutritionalInfo.sodium}mg
                                 </div>
-                              </Col>
-                            )}
-                            {product.nutritionalInfo?.sodium > 0 && (
-                              <Col xs={6} md={3}>
-                                <div className="nutrition-item p-2 bg-light rounded text-center">
-                                  <div className="small text-muted">Sodium</div>
-                                  <div className="fw-bold">
-                                    {product.nutritionalInfo.sodium}mg
-                                  </div>
-                                </div>
-                              </Col>
-                            )}
-                          </Row>
-                        </div>
+                              </div>
+                            </Col>
+                          )}
+                        </Row>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {hasDietaryInfo && (
-                      <div>
-                        <h6 className="fw-bold">
-                          <FaLeaf className="me-2 text-success" />
-                          Dietary Preferences
-                        </h6>
-                        <div className="d-flex flex-wrap gap-2">
-                          {product.dietaryInfo?.isVegetarian && (
-                            <Badge bg="success" className="p-2">
-                              🌱 Vegetarian
-                            </Badge>
-                          )}
-                          {product.dietaryInfo?.isVegan && (
-                            <Badge bg="info" className="p-2">
-                              🌿 Vegan
-                            </Badge>
-                          )}
-                          {product.dietaryInfo?.isGlutenFree && (
-                            <Badge bg="warning" className="p-2">
-                              🌾 Gluten Free
-                            </Badge>
-                          )}
-                          {product.dietaryInfo?.isDairyFree && (
-                            <Badge bg="primary" className="p-2">
-                              🥛 Dairy Free
-                            </Badge>
-                          )}
-                          {product.dietaryInfo?.isNutFree && (
-                            <Badge bg="secondary" className="p-2">
-                              🥜 Nut Free
-                            </Badge>
-                          )}
-                          {product.dietaryInfo?.isOrganic && (
-                            <Badge bg="success" className="p-2">
-                              🌱 Organic
-                            </Badge>
-                          )}
-                        </div>
+                  {hasDietaryInfo && (
+                    <div>
+                      <h6 className="fw-bold">
+                        <FaLeaf className="me-2 text-success" />
+                        Dietary Preferences
+                      </h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {product.dietaryInfo?.isVegetarian && (
+                          <Badge bg="success" className="p-2">
+                            🌱 Vegetarian
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isVegan && (
+                          <Badge bg="info" className="p-2">
+                            🌿 Vegan
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isGlutenFree && (
+                          <Badge bg="warning" className="p-2">
+                            🌾 Gluten Free
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isDairyFree && (
+                          <Badge bg="primary" className="p-2">
+                            🥛 Dairy Free
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isNutFree && (
+                          <Badge bg="secondary" className="p-2">
+                            🥜 Nut Free
+                          </Badge>
+                        )}
+                        {product.dietaryInfo?.isOrganic && (
+                          <Badge bg="success" className="p-2">
+                            🌱 Organic
+                          </Badge>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </details>
-              )}
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
 
             <details>
               <summary className="funnel-sans">Shipping & Delivery</summary>
@@ -2431,7 +2508,7 @@ const Productdetails = () => {
                     <strong>Vendor Delivery Time:</strong>
                     <span className="ms-1">
                       {product.shippingTime === "Custom" &&
-                        product.customShippingTime
+                      product.customShippingTime
                         ? product.customShippingTime
                         : product.shippingTime}
                     </span>
@@ -2669,7 +2746,6 @@ const Productdetails = () => {
       </Modal>
 
       {/* MOBILE STICKY CART */}
-       {/* MOBILE STICKY CART */}
       <div className="mobile-sticky-cart">
         <button
           className={`mobile-wishlist ${isInWishlistState ? "active" : ""}`}

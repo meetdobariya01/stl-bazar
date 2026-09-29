@@ -1,4 +1,6 @@
-// Router/orderRouter.js - COMPLETE UPDATED WITH VARIANT, CUSTOM FIELD & PAYU (FIXED HASH)
+
+// Router/orderRouter.js - COMPLETE WITH FASTrr CHECKOUT
+// STRICT MATCHING — no random fallback (fixes iframe close for new products)
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
@@ -25,30 +27,25 @@ const VENDOR_API_URL =
   "https://api.brandelvendor.starlighttechlabsindia.com/api";
 
 // ============================================
-// 🆕 PAYU HELPER FUNCTIONS (FIXED)
+// PAYU HELPER FUNCTIONS
+// ============================================
 const generatePayUHash = (data) => {
   const { key, txnid, amount, productinfo, firstname, email, salt } = data;
-  
-  // ✅ CORRECTED FORMULA based on PayU Error Message:
-  // PayU expects 11 pipes (|||||||||||) after email before SALT
   const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|||||||||||${salt}`;
-  
   console.log("🔑 PayU Hash String:", hashString);
   return crypto.createHash("sha512").update(hashString).digest("hex");
 };
 
 const verifyPayUHash = (data) => {
   const { key, salt, status, txnid, amount, productinfo, firstname, email, hash, additionalCharges } = data;
-  
+
   let hashString;
   if (additionalCharges) {
-    // If additional charges are present
     hashString = `${additionalCharges}|${salt}|${status}||||||${data.udf5 || ""}|${data.udf4 || ""}|${data.udf3 || ""}|${data.udf2 || ""}|${data.udf1 || ""}|${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}`;
   } else {
-    // Standard reverse hash: salt|status|udf10|udf9|udf8|udf7|udf6|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key
     hashString = `${salt}|${status}||||||${data.udf5 || ""}|${data.udf4 || ""}|${data.udf3 || ""}|${data.udf2 || ""}|${data.udf1 || ""}|${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}`;
   }
-  
+
   const calculatedHash = crypto.createHash("sha512").update(hashString).digest("hex");
   console.log("🔐 Reverse Hash Calculated:", calculatedHash);
   console.log("🔐 Reverse Hash Received  :", hash);
@@ -56,7 +53,7 @@ const verifyPayUHash = (data) => {
 };
 
 // ============================================
-// ✅ HELPER: Get complete vendor data from SellerDocument
+// HELPER: Get complete vendor data
 // ============================================
 async function getCompleteVendorData(vendorId) {
   try {
@@ -65,7 +62,7 @@ async function getCompleteVendorData(vendorId) {
 
     const sellerDoc = await SellerDocument.findOne({ vendorId: vendorId });
 
-    const vendorData = {
+    return {
       _id: vendor._id,
       name: vendor.name || vendor.company,
       company: vendor.company || "N/A",
@@ -77,8 +74,6 @@ async function getCompleteVendorData(vendorId) {
       pincode: sellerDoc?.contact?.pincode || "400001",
       country: sellerDoc?.contact?.country || "India",
     };
-
-    return vendorData;
   } catch (error) {
     console.error("Error fetching vendor data:", error.message);
     return null;
@@ -86,25 +81,30 @@ async function getCompleteVendorData(vendorId) {
 }
 
 // ============================================
-// PLACE ORDER
+// HELPER: Normalize string for matching
+// ============================================
+const normalizeString = (s) =>
+  (s || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ");
+
+// ============================================
+// PLACE ORDER (Standard COD/PayU)
 // ============================================
 router.post("/place", async (req, res) => {
   const { guestId, shippingAddress, paymentMethod, couponCode } = req.body;
 
   if (!guestId || !shippingAddress) {
-    return res.status(400).json({
-      success: false,
-      message: "Incomplete data",
-    });
+    return res.status(400).json({ success: false, message: "Incomplete data" });
   }
 
   try {
     const cart = await Cart.findOne({ guestId });
     if (!cart || cart.items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cart is empty",
-      });
+      return res.status(400).json({ success: false, message: "Cart is empty" });
     }
 
     const itemsWithVendorInfo = await Promise.all(
@@ -118,54 +118,29 @@ router.post("/place", async (req, res) => {
         let vendorId = null;
 
         if (product?.vendorId) {
-          if (product.vendorId._id) {
-            vendorId = product.vendorId._id;
-          } else if (
-            typeof product.vendorId === "string" ||
-            product.vendorId instanceof mongoose.Types.ObjectId
-          ) {
-            vendorId = product.vendorId;
-          } else {
-            vendorId = product.vendorId;
-          }
+          if (product.vendorId._id) vendorId = product.vendorId._id;
+          else vendorId = product.vendorId;
         }
-
-        if (!vendorId && product?.vendor) {
-          vendorId = product.vendor;
-        }
-
+        if (!vendorId && product?.vendor) vendorId = product.vendor;
         if (!vendorId && item.company) {
           const vendorByCompany = await Vendor.findOne({
             company: { $regex: new RegExp(`^${item.company}$`, "i") },
           });
-          if (vendorByCompany) {
-            vendorId = vendorByCompany._id;
-          }
+          if (vendorByCompany) vendorId = vendorByCompany._id;
         }
 
-        if (product && product.company) {
-          company = product.company;
-        } else if (product && product.vendorId) {
-          if (product.vendorId.company) {
-            company = product.vendorId.company;
-          }
-        } else if (product && product.vendor) {
+        if (product && product.company) company = product.company;
+        else if (product && product.vendorId && product.vendorId.company)
+          company = product.vendorId.company;
+        else if (product && product.vendor) {
           const vendorDoc = await Vendor.findById(product.vendor);
-          if (vendorDoc && vendorDoc.company) {
-            company = vendorDoc.company;
-          }
+          if (vendorDoc && vendorDoc.company) company = vendorDoc.company;
         }
-
         if (!company && vendorId) {
           const vendor = await Vendor.findById(vendorId);
-          if (vendor && vendor.company) {
-            company = vendor.company;
-          }
+          if (vendor && vendor.company) company = vendor.company;
         }
-
-        if (!company && item.company) {
-          company = item.company;
-        }
+        if (!company && item.company) company = item.company;
 
         const variantImage = item.variantImage || null;
         const variantPrice = item.variantPrice || 0;
@@ -197,28 +172,22 @@ router.post("/place", async (req, res) => {
       })
     );
 
+    // Stock validation
     for (const item of itemsWithVendorInfo) {
       const product = await Product.findById(item.productId);
-
       if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: `Product not found: ${item.name}`,
-        });
+        return res.status(404).json({ success: false, message: `Product not found: ${item.name}` });
       }
 
       if (item.variantId && product.variants && product.variants.length > 0) {
         const variant = product.variants.id(item.variantId);
         if (!variant) {
-          return res.status(400).json({
-            success: false,
-            message: `Variant not found for ${product.name}`,
-          });
+          return res.status(400).json({ success: false, message: `Variant not found for ${product.name}` });
         }
         if (variant.stock < item.quantity) {
           return res.status(400).json({
             success: false,
-            message: `Insufficient stock for ${product.name} (${variant.color} ${variant.size}). Available: ${variant.stock}`,
+            message: `Insufficient stock for ${product.name}. Available: ${variant.stock}`,
           });
         }
       } else {
@@ -231,11 +200,7 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    let subtotal = cart.items.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0
-    );
-
+    let subtotal = cart.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     let totalPrice = subtotal;
     let couponData = {
       code: null,
@@ -247,19 +212,12 @@ router.post("/place", async (req, res) => {
 
     if (couponCode) {
       try {
-        const coupon = await Coupon.findOne({
-          code: couponCode.toUpperCase(),
-          isActive: true,
-        });
+        const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
 
         if (coupon) {
-          const isExpired =
-            coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
-          const usageLimitReached =
-            coupon.usageLimit &&
-            (coupon.usageCount || 0) >= coupon.usageLimit;
-          const minOrderNotMet =
-            coupon.minOrderAmount && subtotal < coupon.minOrderAmount;
+          const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+          const usageLimitReached = coupon.usageLimit && (coupon.usageCount || 0) >= coupon.usageLimit;
+          const minOrderNotMet = coupon.minOrderAmount && subtotal < coupon.minOrderAmount;
 
           if (!isExpired && !usageLimitReached && !minOrderNotMet) {
             let discountAmount = 0;
@@ -267,10 +225,7 @@ router.post("/place", async (req, res) => {
             if (coupon.discountType === "percentage") {
               discountAmount = (subtotal * coupon.discountValue) / 100;
               if (coupon.maxDiscountAmount) {
-                discountAmount = Math.min(
-                  discountAmount,
-                  coupon.maxDiscountAmount
-                );
+                discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
               }
             } else {
               discountAmount = Math.min(coupon.discountValue, subtotal);
@@ -295,8 +250,10 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    const isOnlinePayment = paymentMethod === "PayU" || paymentMethod === "Online" || paymentMethod === "upi" || paymentMethod === "card";
-    
+    const isOnlinePayment =
+      paymentMethod === "PayU" || paymentMethod === "Online" ||
+      paymentMethod === "upi" || paymentMethod === "card";
+
     const order = new Order({
       guestId,
       items: itemsWithVendorInfo.map((item) => ({
@@ -323,7 +280,7 @@ router.post("/place", async (req, res) => {
       subtotal: subtotal,
       totalPrice: totalPrice,
       coupon: couponData,
-      orderStatus: "Pending", 
+      orderStatus: "Pending",
     });
 
     await order.save();
@@ -335,9 +292,7 @@ router.post("/place", async (req, res) => {
           { $inc: { "variants.$.stock": -item.quantity } }
         );
       } else {
-        await Product.findByIdAndUpdate(item.productId, {
-          $inc: { stock: -item.quantity },
-        });
+        await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity } });
       }
     }
 
@@ -356,13 +311,8 @@ router.post("/place", async (req, res) => {
         for (const item of itemsWithVendorInfo) {
           if (item.vendorId) {
             const vendorId = item.vendorId.toString();
-            if (!vendorItemsMap[vendorId]) {
-              vendorItemsMap[vendorId] = [];
-            }
-            vendorItemsMap[vendorId].push({
-              ...item,
-              weight: item.weight || 0.5,
-            });
+            if (!vendorItemsMap[vendorId]) vendorItemsMap[vendorId] = [];
+            vendorItemsMap[vendorId].push({ ...item, weight: item.weight || 0.5 });
           }
         }
 
@@ -379,10 +329,7 @@ router.post("/place", async (req, res) => {
 
               const vendorItems = vendorItemsMap[vendorId];
               const result = await shiprocketService.createVendorShipment(
-                order,
-                vendorData,
-                vendorItems,
-                shippingAddress
+                order, vendorData, vendorItems, shippingAddress
               );
               shipmentResults.push(result);
             } catch (vendorError) {
@@ -426,7 +373,7 @@ router.post("/place", async (req, res) => {
       await order.save();
     }
 
-    // EMAIL RESULTS
+    // EMAILS
     const emailResults = { customer: false, admin: false, vendors: [] };
 
     const customerEmail = shippingAddress.email;
@@ -456,7 +403,7 @@ router.post("/place", async (req, res) => {
       if (item.company && item.company !== "N/A") {
         const company = item.company;
         if (!vendorGroups.has(company)) {
-          vendorGroups.set(company, { company: company, items: [], vendorId: item.vendorId });
+          vendorGroups.set(company, { company, items: [], vendorId: item.vendorId });
         }
         vendorGroups.get(company).items.push(item);
       }
@@ -464,28 +411,34 @@ router.post("/place", async (req, res) => {
 
     for (const [company, vendorData] of vendorGroups) {
       try {
-        let vendor = await Vendor.findOne({ company: company }).select("email name company phone");
+        let vendor = await Vendor.findOne({ company }).select("email name company phone");
         if (!vendor) {
-          vendor = await Vendor.findOne({ company: { $regex: new RegExp(`^${company}$`, "i") } }).select("email name company phone");
+          vendor = await Vendor.findOne({
+            company: { $regex: new RegExp(`^${company}$`, "i") },
+          }).select("email name company phone");
         }
 
         if (vendor && vendor.email) {
-          const vendorItems = vendorData.items;
-          const vendorHtml = getVendorOrderEmail(order, orderId, vendorItems, {
+          const vendorHtml = getVendorOrderEmail(order, orderId, vendorData.items, {
             name: vendor.name || company,
             email: vendor.email,
             shopName: company,
             phone: vendor?.phone || "N/A",
           });
 
-          const result = await sendEmail(vendor.email, `New Order Received for ${company} - Order #${orderId}`, vendorHtml);
-          emailResults.vendors.push({ company: company, email: vendor.email, success: result.success });
+          const result = await sendEmail(
+            vendor.email,
+            `New Order Received for ${company} - Order #${orderId}`,
+            vendorHtml
+          );
+          emailResults.vendors.push({ company, email: vendor.email, success: result.success });
         }
       } catch (vendorErr) {
         console.error(`Error sending email to vendor ${company}:`, vendorErr.message);
       }
     }
 
+    // VENDOR NOTIFICATIONS
     const notificationResults = [];
     for (const [company, vendorData] of vendorGroups) {
       try {
@@ -493,7 +446,7 @@ router.post("/place", async (req, res) => {
         const vendorTotal = vendorItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
 
         const notificationData = {
-          company: company,
+          company,
           title: "🛒 New Order Received!",
           message: `You have received a new order #${orderId.toString().slice(-6)}.\n\nTotal Amount: ₹${vendorTotal}\nItems: ${vendorItems.length} product(s)\nCustomer: ${shippingAddress?.name || "Customer"}\nPhone: ${shippingAddress?.phone || "N/A"}\nOrder Date: ${new Date().toLocaleString()}\n\nPlease check and process the order.`,
           read: false,
@@ -510,17 +463,13 @@ router.post("/place", async (req, res) => {
       }
     }
 
-    // ============================================
-    // 🆕 GENERATE PAYU PARAMS IF ONLINE PAYMENT
-    // ============================================
+    // PAYU PARAMS
     let payuParams = null;
     if (isOnlinePayment) {
       const txnid = `TXN_${Date.now()}_${order._id}`;
-      
       order.payuTxnId = txnid;
       await order.save();
 
-      // ✅ Ensure amount is a clean 2-decimal string
       const cleanAmount = Number(order.totalPrice).toFixed(2);
 
       const hashData = {
@@ -530,7 +479,7 @@ router.post("/place", async (req, res) => {
         productinfo: "Order Payment",
         firstname: shippingAddress.name,
         email: shippingAddress.email,
-        salt: process.env.PAYU_SALT
+        salt: process.env.PAYU_SALT,
       };
 
       const hash = generatePayUHash(hashData);
@@ -546,7 +495,7 @@ router.post("/place", async (req, res) => {
         surl: `${process.env.BACKEND_URL}/api/order/payu/success`,
         furl: `${process.env.BACKEND_URL}/api/order/payu/failure`,
         hash: hash,
-        service_provider: "payu_paisa"
+        service_provider: "payu_paisa",
       };
     }
 
@@ -580,16 +529,16 @@ router.post("/place", async (req, res) => {
 });
 
 // ============================================
-// 🆕 PAYU SUCCESS CALLBACK
+// PAYU SUCCESS CALLBACK
 // ============================================
 router.post("/payu/success", async (req, res) => {
   try {
     const responseData = req.body;
-    
+
     const isValid = verifyPayUHash({
       ...responseData,
       salt: process.env.PAYU_SALT,
-      key: process.env.PAYU_KEY
+      key: process.env.PAYU_KEY,
     });
 
     if (!isValid) {
@@ -597,20 +546,22 @@ router.post("/payu/success", async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL}/order-complete?status=failed`);
     }
 
-    // Extract Order ID from txnid: TXN_timestamp_orderId
-    const orderId = responseData.txnid.split('_')[2];
+    const orderId = responseData.txnid.split("_")[2];
 
-    const order = await Order.findByIdAndUpdate(orderId, {
-      paymentStatus: "Paid",
-      payuPaymentId: responseData.mihpayid,
-      orderStatus: "Processing"
-    }, { new: true });
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        paymentStatus: "Paid",
+        payuPaymentId: responseData.mihpayid,
+        orderStatus: "Processing",
+      },
+      { new: true }
+    );
 
     if (!order) {
       return res.redirect(`${process.env.FRONTEND_URL}/order-complete?status=error`);
     }
 
-    // Send Customer Email after successful payment
     try {
       const customerEmail = order.shippingAddress.email;
       if (customerEmail) {
@@ -629,17 +580,17 @@ router.post("/payu/success", async (req, res) => {
 });
 
 // ============================================
-// 🆕 PAYU FAILURE CALLBACK
+// PAYU FAILURE CALLBACK
 // ============================================
 router.post("/payu/failure", async (req, res) => {
   try {
     const responseData = req.body;
-    const orderId = responseData.txnid ? responseData.txnid.split('_')[2] : null;
+    const orderId = responseData.txnid ? responseData.txnid.split("_")[2] : null;
 
     if (orderId) {
       await Order.findByIdAndUpdate(orderId, {
         paymentStatus: "Failed",
-        orderStatus: "Cancelled"
+        orderStatus: "Cancelled",
       });
     }
 
@@ -651,14 +602,584 @@ router.post("/payu/failure", async (req, res) => {
 });
 
 // ============================================
-// GET SINGLE ORDER BY ID
+// FASTrr STATUS CHECK — Is product in Fastrr catalog?
+// GET /api/order/fastrr-status/:productId
+// ============================================
+router.get("/fastrr-status/:productId", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.productId);
+    if (!product) return res.json({ synced: false, reason: "product_not_found" });
+
+    const BASE_URL = process.env.BACKEND_URL || "https://api.native91.com";
+    const apiRes = await axios.get(`${BASE_URL}/api/v2/products?limit=500`, {
+      timeout: 10000,
+    });
+    const apiProducts = apiRes.data?.data?.products || [];
+
+    const productName = (product.name || "").trim();
+    const normalizedDbName = normalizeString(productName);
+
+    const matched = apiProducts.find(
+      (p) => normalizeString(p.title) === normalizedDbName
+    );
+
+    res.json({
+      synced: !!matched,
+      productName,
+      matchedTitle: matched?.title || null,
+    });
+  } catch (err) {
+    console.error("Fastrr status check error:", err.message);
+    res.json({ synced: false, reason: "api_error", error: err.message });
+  }
+});
+
+// ============================================
+// CHECK FASTRR COMPATIBILITY (Pre-check before checkout)
+// POST /api/order/check-fastrr-compatibility
+// ============================================
+router.post("/check-fastrr-compatibility", async (req, res) => {
+  try {
+    const { cartItems } = req.body;
+
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      return res.status(400).json({
+        compatible: false,
+        reason: "Cart is empty",
+      });
+    }
+
+    const BASE_URL = process.env.BACKEND_URL || "https://api.native91.com";
+
+    // Fetch Fastrr catalog
+    let apiProducts = [];
+    try {
+      const apiRes = await axios.get(
+        `${BASE_URL}/api/v2/products?page=1&limit=500`,
+        { timeout: 10000 }
+      );
+      apiProducts = apiRes.data?.data?.products || [];
+      console.log(`📦 [Compat Check] Fetched ${apiProducts.length} Fastrr products`);
+    } catch (apiErr) {
+      console.error("❌ [Compat Check] Fastrr catalog fetch failed:", apiErr.message);
+      return res.status(500).json({
+        compatible: false,
+        reason: "Fastrr catalog service is currently unavailable. Please use standard checkout.",
+      });
+    }
+
+    // Check each cart item against Fastrr catalog
+    for (const item of cartItems) {
+      let productName = (item.name || "").trim();
+
+      if (item.productId) {
+        try {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            productName = (product.name || product.ProductName || productName).trim();
+          }
+        } catch (dbErr) {
+          console.warn(`[Compat Check] Product lookup failed for ${item.productId}:`, dbErr.message);
+        }
+      }
+
+      if (!productName) {
+        return res.json({
+          compatible: false,
+          reason: "Product name missing for compatibility check.",
+          productId: item.productId,
+        });
+      }
+
+      const lowerName = productName.toLowerCase();
+      const normalizedName = normalizeString(productName);
+
+      // ✅ Strict exact match (case-insensitive)
+      let matched = apiProducts.find(
+        (p) => (p.title || "").trim().toLowerCase() === lowerName
+      );
+
+      // ✅ Second attempt — normalized
+      if (!matched) {
+        matched = apiProducts.find(
+          (p) => normalizeString(p.title) === normalizedName
+        );
+      }
+
+      if (!matched) {
+        console.warn(`⚠️ [Compat Check] "${productName}" NOT in Fastrr catalog`);
+        return res.json({
+          compatible: false,
+          reason: `"${productName}" is not yet available for Fastrr checkout.`,
+          productName,
+          productId: item.productId,
+        });
+      }
+
+      console.log(`✅ [Compat Check] Matched: "${matched.title}"`);
+    }
+
+    // All items are compatible
+    return res.json({ compatible: true });
+  } catch (error) {
+    console.error("Fastrr compatibility check error:", error.message);
+    return res.status(500).json({
+      compatible: false,
+      reason: "Compatibility check failed. Please use standard checkout.",
+      error: error.message,
+    });
+  }
+});
+
+// ============================================
+// FASTrr CHECKOUT — CREATE ORDER + ACCESS TOKEN
+// STRICT MATCHING — no random fallback
+// POST /api/order/shiprocket-checkout
+// ============================================
+router.post("/shiprocket-checkout", async (req, res) => {
+  try {
+    const { guestId, shippingAddress, cartItems, couponCode, subtotal, total } = req.body;
+
+    if (!guestId || !cartItems || cartItems.length === 0) {
+      return res.status(400).json({ success: false, message: "Invalid cart" });
+    }
+
+    if (!shippingAddress || !shippingAddress.name || !shippingAddress.email) {
+      return res.status(400).json({ success: false, message: "Shipping address required" });
+    }
+
+    const BASE_URL = process.env.BACKEND_URL || "https://api.native91.com";
+
+    // Fetch Fastrr catalog
+    let apiProducts = [];
+    try {
+      const apiRes = await axios.get(
+        `${BASE_URL}/api/v2/products?page=1&limit=500`,
+        { timeout: 10000 }
+      );
+      apiProducts = apiRes.data?.data?.products || [];
+      console.log(`📦 Fetched ${apiProducts.length} products from /api/v2/products`);
+    } catch (apiErr) {
+      console.error("❌ Failed to fetch /api/v2/products:", apiErr.message);
+      return res.status(500).json({
+        success: false,
+        code: "FASTRR_CATALOG_UNAVAILABLE",
+        message: "Fastrr catalog temporarily unavailable. Please use standard checkout.",
+      });
+    }
+
+    const itemsWithVendorInfo = [];
+
+    for (const item of cartItems) {
+      const product = await Product.findById(item.productId).populate({
+        path: "vendorId",
+        select: "company name email _id",
+      });
+
+      if (!product) {
+        return res.status(404).json({ success: false, message: `Product not found: ${item.name}` });
+      }
+
+      let effectiveStock = product.stock || 0;
+      let variantIdx = 0;
+      let variantDoc = null;
+
+      if (item.variantId && product.variants && product.variants.length > 0) {
+        variantDoc = product.variants.id(item.variantId);
+        if (!variantDoc) {
+          return res.status(400).json({ success: false, message: `Variant not found for ${product.name}` });
+        }
+        effectiveStock = variantDoc.stock || 0;
+        variantIdx = product.variants.findIndex(
+          (v) => v._id && v._id.toString() === item.variantId.toString()
+        );
+        if (variantIdx < 0) variantIdx = 0;
+      }
+
+      if (effectiveStock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${product.name}. Available: ${effectiveStock}`,
+        });
+      }
+
+      let vendorId = null;
+      if (product.vendorId && product.vendorId._id) vendorId = product.vendorId._id;
+      else if (product.vendorId) vendorId = product.vendorId;
+      else if (product.vendor) vendorId = product.vendor;
+
+      const productName = (product.name || product.ProductName || "").trim();
+
+      console.log(`🔍 Looking for product in Fastrr catalog: "${productName}"`);
+
+      // ✅ STRICT EXACT MATCH ONLY (case-insensitive)
+      let matchedApiProduct = apiProducts.find((p) => {
+        const apiTitle = (p.title || "").trim().toLowerCase();
+        return apiTitle === productName.toLowerCase();
+      });
+
+      // ✅ SECOND ATTEMPT — normalized (remove punctuation, collapse spaces)
+      if (!matchedApiProduct) {
+        const normalizedDbName = normalizeString(productName);
+        matchedApiProduct = apiProducts.find(
+          (p) => normalizeString(p.title) === normalizedDbName
+        );
+      }
+
+      // ❌ Product NOT in Fastrr catalog → clean error
+      if (!matchedApiProduct) {
+        console.warn(`⚠️ Product "${productName}" NOT in Fastrr catalog.`);
+        console.warn(`   First 10 available titles:`);
+        apiProducts.slice(0, 10).forEach((p) => console.warn(`   - "${p.title}"`));
+
+        return res.status(400).json({
+          success: false,
+          code: "FASTRR_CATALOG_MISSING",
+          message: `"${productName}" is not yet available for Fastrr checkout. It may still be syncing. Please use standard checkout (COD/PayU).`,
+          productName,
+          productId: item.productId,
+        });
+      }
+
+      console.log(`✅ Matched Fastrr product: "${matchedApiProduct.title}" (ID: ${matchedApiProduct.id})`);
+
+      let shiprocketVariantId = null;
+
+      if (matchedApiProduct.variants && matchedApiProduct.variants.length > 0) {
+        if (variantDoc) {
+          const variantTitle = (variantDoc.color || variantDoc.size || variantDoc.variant || "").trim().toLowerCase();
+          console.log(`   Looking for variant: "${variantTitle}"`);
+
+          const matchedApiVariant = matchedApiProduct.variants.find((av) => {
+            const apiVariantTitle = (av.title || "").trim().toLowerCase();
+            return apiVariantTitle === variantTitle;
+          });
+
+          if (matchedApiVariant) {
+            shiprocketVariantId = matchedApiVariant.id;
+            console.log(`   ✅ Matched variant by title -> ${shiprocketVariantId}`);
+          } else {
+            shiprocketVariantId = matchedApiProduct.variants[variantIdx]?.id
+              || matchedApiProduct.variants[0]?.id
+              || null;
+            console.log(`   ⚠️ Variant title not matched, using index ${variantIdx} -> ${shiprocketVariantId}`);
+          }
+        } else {
+          shiprocketVariantId = matchedApiProduct.variants[0]?.id || null;
+          console.log(`   ✅ No variant, using first -> ${shiprocketVariantId}`);
+        }
+      }
+
+      if (!shiprocketVariantId) {
+        console.warn(`⚠️ No Fastrr variant ID for "${productName}".`);
+        return res.status(400).json({
+          success: false,
+          code: "FASTRR_VARIANT_MISSING",
+          message: `Variant for "${productName}" is not available in Fastrr catalog. Please use standard checkout.`,
+          productName,
+          productId: item.productId,
+        });
+      }
+
+      console.log(`🛒 Item: ${productName} | variantIdx: ${variantIdx} | Fastrr ID: ${shiprocketVariantId}`);
+
+      itemsWithVendorInfo.push({
+        productId: item.productId,
+        variantId: item.variantId || null,
+        shiprocketVariantId,
+        name: item.name || product.name,
+        price: item.price || product.price,
+        quantity: item.quantity,
+        stock: effectiveStock,
+        image: Array.isArray(item.image) ? item.image : [item.image],
+        vendorId,
+        company: product.company || product.vendorId?.company || "N/A",
+        weight: product.weight || 0.5,
+        selectedColor: item.selectedColor || "",
+        selectedSize: item.selectedSize || "",
+        variantImage: item.variantImage || "",
+        variantPrice: item.variantPrice || 0,
+        customFieldLabel: item.customFieldLabel || null,
+        customFieldValue: item.customFieldValue || null,
+        sku: item.sku || "",
+      });
+    }
+
+    // Create order in DB (Pending)
+    const order = new Order({
+      guestId,
+      items: itemsWithVendorInfo,
+      shippingAddress,
+      paymentMethod: "Shiprocket",
+      paymentStatus: "Pending",
+      subtotal,
+      totalPrice: total,
+      orderStatus: "Pending",
+      coupon: couponCode
+        ? { code: couponCode, discountAmount: Number((subtotal - total).toFixed(2)) }
+        : { code: null, discountAmount: 0 },
+    });
+
+    await order.save();
+
+    // Build Fastrr payload
+    const accessTokenPayload = {
+      cart_data: {
+        items: itemsWithVendorInfo.map((i) => ({
+          variant_id: String(i.shiprocketVariantId),
+          quantity: Number(i.quantity),
+        })),
+      },
+      redirect_url: `${process.env.FRONTEND_URL}/order-complete?orderId=${order._id}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    const payloadString = JSON.stringify(accessTokenPayload);
+
+    const hmac = crypto
+      .createHmac("sha256", process.env.SHIPROCKET_CHECKOUT_SECRET)
+      .update(payloadString)
+      .digest("base64");
+
+    console.log("🔑 Fastrr Access Token Request:");
+    console.log("Payload String:", payloadString);
+    console.log("HMAC:", hmac);
+    console.log("API Key:", process.env.SHIPROCKET_CHECKOUT_API_KEY);
+
+    let accessToken = null;
+    let shiprocketOrderId = null;
+
+    try {
+      const tokenResponse = await axios.post(
+        "https://checkout-api.shiprocket.com/api/v1/access-token/checkout",
+        payloadString,
+        {
+          headers: {
+            "X-Api-Key": process.env.SHIPROCKET_CHECKOUT_API_KEY,
+            "X-Api-HMAC-SHA256": hmac,
+            "Content-Type": "application/json",
+          },
+          timeout: 15000,
+        }
+      );
+
+      console.log("✅ Fastrr Access Token Response:", JSON.stringify(tokenResponse.data));
+
+      accessToken = tokenResponse.data?.result?.token || tokenResponse.data?.token || null;
+      shiprocketOrderId = tokenResponse.data?.result?.data?.order_id
+        || tokenResponse.data?.result?.order_id
+        || tokenResponse.data?.order_id
+        || null;
+
+      if (shiprocketOrderId) {
+        order.shiprocketOrderId = shiprocketOrderId;
+        await order.save();
+      }
+    } catch (tokenErr) {
+      console.error("❌ Fastrr Token API error:", tokenErr.response?.data || tokenErr.message);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate checkout token",
+        error: tokenErr.response?.data || tokenErr.message,
+      });
+    }
+
+    if (!accessToken) {
+      return res.status(500).json({
+        success: false,
+        message: "No access token received from Fastrr",
+      });
+    }
+
+    res.json({
+      success: true,
+      orderId: order._id,
+      accessToken,
+      shiprocketOrderId,
+    });
+  } catch (err) {
+    console.error("Shiprocket checkout create error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============================================
+// FASTrr CHECKOUT — ORDER WEBHOOK
+// POST /api/order/shiprocket-webhook
+// ============================================
+router.post("/shiprocket-webhook", async (req, res) => {
+  try {
+    console.log("📩 Fastrr Order Webhook received:", JSON.stringify(req.body, null, 2));
+
+    const {
+      order_id,
+      cart_data,
+      status,
+      phone,
+      email,
+      payment_type,
+      total_amount_payable,
+      shipping_address,
+    } = req.body;
+
+    let order = null;
+
+    if (order_id) {
+      order = await Order.findOne({ shiprocketOrderId: order_id });
+    }
+
+    if (!order && (email || phone)) {
+      order = await Order.findOne({
+        paymentMethod: "Shiprocket",
+        paymentStatus: "Pending",
+        $or: [
+          { "shippingAddress.email": email },
+          { "shippingAddress.phone": phone },
+        ],
+      }).sort({ createdAt: -1 });
+    }
+
+    if (!order) {
+      console.warn("⚠️ No matching order found for webhook:", order_id);
+      return res.json({ success: true, message: "Order not found but webhook received" });
+    }
+
+    if (status === "SUCCESS" || status === "success" || status === "PAID" || status === "paid") {
+      order.paymentStatus = "Paid";
+      order.orderStatus = "Processing";
+      order.paymentMethod = payment_type || "Shiprocket";
+      order.shiprocketPaymentId = order_id;
+      order.totalPrice = total_amount_payable || order.totalPrice;
+
+      if (shipping_address && !order.shippingAddress?.address) {
+        order.shippingAddress = {
+          name: shipping_address.name || order.shippingAddress?.name,
+          email: email || order.shippingAddress?.email,
+          phone: phone || order.shippingAddress?.phone,
+          address: shipping_address.line1 || shipping_address.address,
+          city: shipping_address.city,
+          state: shipping_address.state,
+          pincode: shipping_address.pincode,
+          country: shipping_address.country || "India",
+        };
+      }
+
+      await order.save();
+
+      for (const item of order.items) {
+        if (item.variantId) {
+          await Product.updateOne(
+            { _id: item.productId, "variants._id": item.variantId },
+            { $inc: { "variants.$.stock": -item.quantity } }
+          );
+        } else {
+          await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: -item.quantity },
+          });
+        }
+      }
+
+      await Cart.findOneAndDelete({ guestId: order.guestId });
+
+      try {
+        const customerEmail = order.shippingAddress?.email;
+        if (customerEmail) {
+          const html = getCustomerOrderEmail(order, order._id);
+          await sendEmail(customerEmail, `Order Confirmed! - Order #${order._id}`, html);
+        }
+      } catch (emailErr) {
+        console.error("Email error:", emailErr.message);
+      }
+
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL || "orders@native91.com";
+        if (adminEmail) {
+          const adminHtml = getAdminOrderEmail(order, order._id);
+          await sendEmail(adminEmail, `New Order (Fastrr) - #${order._id}`, adminHtml);
+        }
+      } catch (emailErr) {
+        console.error("Admin email error:", emailErr.message);
+      }
+    } else if (status === "FAILED" || status === "failed" || status === "CANCELLED") {
+      order.paymentStatus = "Failed";
+      order.orderStatus = "Cancelled";
+      await order.save();
+    }
+
+    res.json({ success: true, orderId: order._id });
+  } catch (err) {
+    console.error("Fastrr webhook error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============================================
+// FASTrr CHECKOUT — CONFIRM (from frontend)
+// ============================================
+router.post("/shiprocket-confirm", async (req, res) => {
+  try {
+    const { orderId, shiprocketPaymentId, shiprocketOrderId, status } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "orderId required" });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (status === "success") {
+      order.paymentStatus = "Paid";
+      order.orderStatus = "Processing";
+      order.shiprocketPaymentId = shiprocketPaymentId || null;
+      order.shiprocketOrderId = shiprocketOrderId || null;
+
+      for (const item of order.items) {
+        if (item.variantId) {
+          await Product.updateOne(
+            { _id: item.productId, "variants._id": item.variantId },
+            { $inc: { "variants.$.stock": -item.quantity } }
+          );
+        } else {
+          await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: -item.quantity },
+          });
+        }
+      }
+
+      await Cart.findOneAndDelete({ guestId: order.guestId });
+
+      try {
+        const customerEmail = order.shippingAddress?.email;
+        if (customerEmail) {
+          const html = getCustomerOrderEmail(order, order._id);
+          await sendEmail(customerEmail, `Order Confirmed! - Order #${order._id}`, html);
+        }
+      } catch (emailErr) {
+        console.error("Email error:", emailErr.message);
+      }
+    } else {
+      order.paymentStatus = "Failed";
+      order.orderStatus = "Cancelled";
+    }
+
+    await order.save();
+    res.json({ success: true, order });
+  } catch (err) {
+    console.error("Confirm error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============================================
+// GET SINGLE ORDER
 // ============================================
 router.get("/single/:orderId", async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId);
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ message: "Order not found" });
     res.json(order);
   } catch (err) {
     console.error(err);
@@ -667,7 +1188,7 @@ router.get("/single/:orderId", async (req, res) => {
 });
 
 // ============================================
-// GET ORDERS BY GUEST ID
+// GET ORDERS BY GUEST
 // ============================================
 router.get("/guest/:guestId", async (req, res) => {
   try {
@@ -693,7 +1214,7 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // ============================================
-// ADMIN: GET ORDER WITH COMMISSION CALCULATION
+// ADMIN: GET ORDER WITH COMMISSION
 // ============================================
 router.get("/admin/commission/:orderId", async (req, res) => {
   try {
@@ -770,10 +1291,16 @@ router.get("/admin/commission/:orderId", async (req, res) => {
       shiprocketSyncStatus: order.shiprocketSyncStatus,
       shiprocketError: order.shiprocketError || null,
       commissionSummary: {
-        totalAdminCommission: totalAdminCommission,
-        totalVendorCommission: totalVendorCommission,
-        platformCommissionRate: order.totalPrice > 0 ? ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) + "%" : "0%",
-        vendorCommissionRate: order.totalPrice > 0 ? ((totalVendorCommission / order.totalPrice) * 100).toFixed(2) + "%" : "0%",
+        totalAdminCommission,
+        totalVendorCommission,
+        platformCommissionRate:
+          order.totalPrice > 0
+            ? ((totalAdminCommission / order.totalPrice) * 100).toFixed(2) + "%"
+            : "0%",
+        vendorCommissionRate:
+          order.totalPrice > 0
+            ? ((totalVendorCommission / order.totalPrice) * 100).toFixed(2) + "%"
+            : "0%",
       },
       vendorBreakdown: Object.values(vendorBreakdown),
     });
@@ -839,7 +1366,10 @@ router.get("/admin/commissions", async (req, res) => {
         shiprocketSyncStatus: order.shiprocketSyncStatus || "pending",
         adminCommission: orderAdminCommission,
         vendorCommission: orderVendorCommission,
-        platformCommissionRate: order.totalPrice > 0 ? ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + "%" : "0%",
+        platformCommissionRate:
+          order.totalPrice > 0
+            ? ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + "%"
+            : "0%",
       });
     }
 
@@ -889,7 +1419,10 @@ router.get("/admin/commissions", async (req, res) => {
           shiprocketSyncStatus: order.shiprocketSyncStatus || "pending",
           adminCommission: orderAdminCommission,
           vendorCommission: orderVendorCommission,
-          platformCommissionRate: order.totalPrice > 0 ? ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + "%" : "0%",
+          platformCommissionRate:
+            order.totalPrice > 0
+              ? ((orderAdminCommission / order.totalPrice) * 100).toFixed(2) + "%"
+              : "0%",
         });
       }
 
@@ -903,10 +1436,13 @@ router.get("/admin/commissions", async (req, res) => {
       success: true,
       summary: {
         totalOrders: filteredSummaries.length,
-        totalRevenue: totalRevenue,
-        totalAdminCommission: totalAdminCommission,
-        totalVendorCommission: totalVendorCommission,
-        platformCommissionRate: totalRevenue > 0 ? ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + "%" : "0%",
+        totalRevenue,
+        totalAdminCommission,
+        totalVendorCommission,
+        platformCommissionRate:
+          totalRevenue > 0
+            ? ((totalAdminCommission / totalRevenue) * 100).toFixed(2) + "%"
+            : "0%",
       },
       orders: filteredSummaries,
     });
@@ -925,10 +1461,17 @@ router.put("/admin/status/:orderId", async (req, res) => {
     const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
 
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: "Invalid status. Allowed: Pending, Processing, Shipped, Delivered, Cancelled" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Allowed: Pending, Processing, Shipped, Delivered, Cancelled",
+      });
     }
 
-    const order = await Order.findByIdAndUpdate(req.params.orderId, { orderStatus: status }, { new: true });
+    const order = await Order.findByIdAndUpdate(
+      req.params.orderId,
+      { orderStatus: status },
+      { new: true }
+    );
 
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
@@ -950,50 +1493,47 @@ router.put("/admin/status/:orderId", async (req, res) => {
 });
 
 // ============================================
-// SEND ORDER CONFIRMATION EMAIL (Manual Trigger)
+// SEND ORDER CONFIRMATION EMAIL (Manual)
 // ============================================
 router.post("/send-confirmation", async (req, res) => {
   try {
-    const { to, subject, orderId, customerName, items, subtotal, couponDiscount, shippingCost, total, shippingAddress, paymentMethod, shippingMethod, orderDate } = req.body;
+    const {
+      to, subject, orderId, customerName, items, subtotal,
+      couponDiscount, shippingCost, total, paymentMethod, orderDate,
+    } = req.body;
 
     if (!to) return res.status(400).json({ success: false, message: "Recipient email is required" });
 
     const html = `
       <!DOCTYPE html>
-      <html>
-      <head><meta charset="UTF-8"><style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 8px; }
-          .header { background: linear-gradient(135deg, #28a745, #218838); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .header h1 { color: #fff; margin: 0; }
-          .order-details { margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #28a745; }
-          .items-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-          .items-table th { background: #f8f9fa; padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6; }
-          .items-table td { padding: 10px; border-bottom: 1px solid #dee2e6; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; }
-        </style></head>
-      <body>
-        <div class="container">
-          <div class="header"><h1>🎉 Order Confirmed!</h1><p>Thank you, ${customerName || "Customer"}!</p></div>
-          <div style="padding: 20px;">
-            <div class="order-details">
-              <p><strong>📋 Order #:</strong> ${orderId}</p>
-              <p><strong>📅 Date:</strong> ${orderDate || new Date().toLocaleString()}</p>
-              <p><strong>💳 Payment:</strong> ${paymentMethod || "COD"}</p>
-            </div>
-            <h3>🛍️ Order Items</h3>
-            <table class="items-table"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-            <tbody>${(items || []).map(item => `<tr><td>${item.name}</td><td>${item.quantity}</td><td>₹${(item.price || 0).toFixed(2)}</td><td>₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td></tr>`).join("")}</tbody></table>
-            <div style="margin-top:15px; border-top:2px solid #eee; padding-top:15px;">
-              <div style="display:flex; justify-content:space-between;"><span>Subtotal</span><span>₹${(subtotal || 0).toFixed(2)}</span></div>
-              ${couponDiscount > 0 ? `<div style="display:flex; justify-content:space-between; color:#28a745;"><span>Discount</span><span>-₹${(couponDiscount || 0).toFixed(2)}</span></div>` : ""}
-              <div style="display:flex; justify-content:space-between;"><span>Shipping</span><span>${shippingCost === 0 ? "FREE" : `₹${(shippingCost || 0).toFixed(2)}`}</span></div>
-              <div style="display:flex; justify-content:space-between; font-size:20px; font-weight:bold; border-top:2px solid #28a745;"><span>Total</span><span style="color:#28a745;">₹${(total || 0).toFixed(2)}</span></div>
-            </div>
-            <div class="footer"><p>Thank you for shopping with us! 🛍️</p></div>
+      <html><head><meta charset="UTF-8"><style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 8px; }
+        .header { background: linear-gradient(135deg, #28a745, #218838); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { color: #fff; margin: 0; }
+        .items-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .items-table th { background: #f8f9fa; padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6; }
+        .items-table td { padding: 10px; border-bottom: 1px solid #dee2e6; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; }
+      </style></head>
+      <body><div class="container">
+        <div class="header"><h1>🎉 Order Confirmed!</h1><p>Thank you, ${customerName || "Customer"}!</p></div>
+        <div style="padding: 20px;">
+          <p><strong>📋 Order #:</strong> ${orderId}</p>
+          <p><strong>📅 Date:</strong> ${orderDate || new Date().toLocaleString()}</p>
+          <p><strong>💳 Payment:</strong> ${paymentMethod || "COD"}</p>
+          <h3>🛍️ Order Items</h3>
+          <table class="items-table"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+          <tbody>${(items || []).map((item) => `<tr><td>${item.name}</td><td>${item.quantity}</td><td>₹${(item.price || 0).toFixed(2)}</td><td>₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td></tr>`).join("")}</tbody></table>
+          <div style="margin-top:15px; border-top:2px solid #eee; padding-top:15px;">
+            <div><span>Subtotal</span><span style="float:right;">₹${(subtotal || 0).toFixed(2)}</span></div>
+            ${couponDiscount > 0 ? `<div style="color:#28a745;"><span>Discount</span><span style="float:right;">-₹${(couponDiscount || 0).toFixed(2)}</span></div>` : ""}
+            <div><span>Shipping</span><span style="float:right;">${shippingCost === 0 ? "FREE" : `₹${(shippingCost || 0).toFixed(2)}`}</span></div>
+            <div style="font-size:20px; font-weight:bold; border-top:2px solid #28a745; margin-top:10px; padding-top:10px;"><span>Total</span><span style="float:right; color:#28a745;">₹${(total || 0).toFixed(2)}</span></div>
           </div>
+          <div class="footer"><p>Thank you for shopping with us! 🛍️</p></div>
         </div>
-      </body></html>`;
+      </div></body></html>`;
 
     const result = await sendEmail(to, subject || `Order Confirmation - #${orderId}`, html);
     if (result.success) {

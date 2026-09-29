@@ -129,7 +129,6 @@ const decodeJWT = (token) => {
 
 // 🆕 Extract first letter from user object OR JWT
 const extractInitial = (userObj, token = null) => {
-  // Step 1: User object
   if (userObj && typeof userObj === "object") {
     const candidates = [
       userObj.email,
@@ -154,7 +153,6 @@ const extractInitial = (userObj, token = null) => {
     }
   }
 
-  // Step 2: JWT fallback
   if (token) {
     const decoded = decodeJWT(token);
     if (decoded) {
@@ -207,7 +205,7 @@ const Header = () => {
   const { cartCount, fetchCart } = useCart();
   const { wishlistCount, fetchWishlist } = useWishlist();
 
-  // 🆕 Track login state — PRODUCTION SAFE with JWT
+  // 🆕 Track login state
   useEffect(() => {
     const loadUser = () => {
       try {
@@ -221,7 +219,6 @@ const Header = () => {
           return;
         }
 
-        // Try parse user data (may be missing for Google login)
         let parsed = null;
         if (userData) {
           try {
@@ -243,7 +240,6 @@ const Header = () => {
 
     loadUser();
 
-    // Delayed loads — production timing fix
     const t1 = setTimeout(loadUser, 100);
     const t2 = setTimeout(loadUser, 500);
     const t3 = setTimeout(loadUser, 1500);
@@ -264,7 +260,7 @@ const Header = () => {
     };
   }, []);
 
-  // Fetch categories
+  // 🆕 Fetch categories + build sub-categories map in one shot
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -281,11 +277,12 @@ const Header = () => {
         }
 
         const activeCategories = categoriesData.filter(
-          (cat) => cat.status === "active",
+          (cat) => cat.status === "active"
         );
-        setCategories(activeCategories);
+
         console.log(`📂 Found ${activeCategories.length} categories`);
 
+        // 🆕 Build sub-categories map directly from category object
         const subMap = {};
         activeCategories.forEach((cat) => {
           if (Array.isArray(cat.subcategories)) {
@@ -297,6 +294,13 @@ const Header = () => {
             subMap[cat.name] = [];
           }
         });
+
+        console.log("📊 Sub-categories map:");
+        Object.entries(subMap).forEach(([name, subs]) => {
+          console.log(`   ${name}: ${subs.length} subs`);
+        });
+
+        setCategories(activeCategories);
         setCategorySubCategories(subMap);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -320,36 +324,79 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // Fetch sub-categories on hover
+  // 🆕 Fetch sub-categories on hover (fuzzy match + fallback)
   const fetchSubCategoriesForCategory = async (categoryName) => {
+    if (!categoryName) return [];
+
+    console.log(`🔍 Fetching subs for: "${categoryName}"`);
+
+    // STEP 1: Local data use karo (fuzzy match with trim + lowercase)
+    const normalizedName = String(categoryName).trim().toLowerCase();
+
+    const localCategory = categories.find((cat) => {
+      const catName = String(cat.name || "").trim().toLowerCase();
+      return catName === normalizedName;
+    });
+
+    if (localCategory) {
+      console.log(`✅ Found local category: "${localCategory.name}"`);
+
+      if (
+        Array.isArray(localCategory.subcategories) &&
+        localCategory.subcategories.length > 0
+      ) {
+        const localSubs = localCategory.subcategories
+          .filter((sc) => !sc.status || sc.status === "active")
+          .map((sc) => (typeof sc === "string" ? sc : sc.name))
+          .filter(Boolean);
+
+        console.log(`✅ Local subs for "${categoryName}":`, localSubs.length);
+
+        setCategorySubCategories((prev) => ({
+          ...prev,
+          [categoryName]: localSubs,
+        }));
+        return localSubs;
+      } else {
+        console.warn(`⚠️ "${categoryName}" has no subcategories field`);
+      }
+    } else {
+      console.warn(`⚠️ Category "${categoryName}" not found in local data`);
+      console.log(
+        `   Available:`,
+        categories.map((c) => c.name)
+      );
+    }
+
+    // STEP 2: Cache check
     if (
       categorySubCategories[categoryName] &&
       categorySubCategories[categoryName].length > 0
     ) {
+      console.log(`✅ Using cached subs for "${categoryName}"`);
       return categorySubCategories[categoryName];
     }
 
+    // STEP 3: Fallback — VENDOR API
+    console.log(`🌐 Trying VENDOR API for "${categoryName}"...`);
     setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: true }));
-
     try {
       const response = await axios.get(
         `${VENDOR_API_URL}/categories/${encodeURIComponent(
-          categoryName,
+          categoryName
         )}/subcategories`,
-        { ...getAuthHeaders() },
+        { ...getAuthHeaders(), timeout: 5000 }
       );
-      const subs = parseSubCategories(pickSubsFromResponse(response.data));
+      console.log(`📦 VENDOR API response:`, response.data);
 
-      setCategorySubCategories((prev) => ({
-        ...prev,
-        [categoryName]: subs,
-      }));
+      const subs = parseSubCategories(pickSubsFromResponse(response.data));
+      console.log(`✅ VENDOR API subs for "${categoryName}":`, subs.length);
+
+      setCategorySubCategories((prev) => ({ ...prev, [categoryName]: subs }));
       return subs;
     } catch (error) {
-      console.warn(
-        `Sub-categories fetch failed for ${categoryName}:`,
-        error.message,
-      );
+      console.warn(`❌ VENDOR API failed for "${categoryName}":`, error.message);
+      setCategorySubCategories((prev) => ({ ...prev, [categoryName]: [] }));
       return [];
     } finally {
       setLoadingSubCategories((prev) => ({ ...prev, [categoryName]: false }));
@@ -357,11 +404,19 @@ const Header = () => {
   };
 
   const handleCategoryHover = (categoryName) => {
+    if (!categoryName || categoryName === "Category") return;
+
     if (categoryMenuTimeout.current) {
       clearTimeout(categoryMenuTimeout.current);
     }
+
     setHoveredCategory(categoryName);
-    fetchSubCategoriesForCategory(categoryName);
+
+    // 🆕 Sub-categories already loaded from initial fetch — no need to call API
+    const existing = categorySubCategories[categoryName];
+    if (!existing || existing.length === 0) {
+      fetchSubCategoriesForCategory(categoryName);
+    }
   };
 
   const handleCategoryLeave = () => {
@@ -407,11 +462,14 @@ const Header = () => {
       return;
     }
     try {
-      const response = await axios.get(`https://api.native91.com/api/search-suggestions`, {
-        params: { q: query },
-        timeout: 5000,
-        ...getAuthHeaders(),
-      });
+      const response = await axios.get(
+        `https://api.native91.com/api/search-suggestions`,
+        {
+          params: { q: query },
+          timeout: 5000,
+          ...getAuthHeaders(),
+        }
+      );
       if (response.data?.products && response.data.products.length > 0) {
         setRecommendations(response.data.products.slice(0, 8));
         setShowRecommendations(true);
@@ -447,10 +505,13 @@ const Header = () => {
     if (!searchQuery.trim()) return;
     setIsLoading(true);
     try {
-      const response = await axios.get(`https://api.native91.com/api/products/search`, {
-        params: { keyword: searchQuery },
-        ...getAuthHeaders(),
-      });
+      const response = await axios.get(
+        `https://api.native91.com/api/products/search`,
+        {
+          params: { keyword: searchQuery },
+          ...getAuthHeaders(),
+        }
+      );
       setSearchResults(response.data?.products || []);
       setShowSearchResults(true);
       setShowRecommendations(false);
@@ -477,18 +538,29 @@ const Header = () => {
     };
   }, []);
 
+  // 🆕 Menu — sub-categories directly from category object
   const menu = [
     { title: "Home", link: "/" },
     { title: "Brands", link: "/product" },
     {
       title: "Category",
-      dropdown: categories.map((cat) => ({
-        title: cat.name,
-        link: `/category/${createSlug(cat.name)}`,
-        productCount: cat.productCount || 0,
-        subCategories: categorySubCategories[cat.name] || [],
-        loading: loadingSubCategories[cat.name] || false,
-      })),
+      dropdown: categories.map((cat) => {
+        // 🆕 Direct sub-categories (no lookup needed)
+        const catSubs = Array.isArray(cat.subcategories)
+          ? cat.subcategories
+              .filter((sc) => !sc.status || sc.status === "active")
+              .map((sc) => (typeof sc === "string" ? sc : sc.name))
+              .filter(Boolean)
+          : [];
+
+        return {
+          title: cat.name,
+          link: `/category/${createSlug(cat.name)}`,
+          productCount: cat.productCount || 0,
+          subCategories: catSubs,
+          loading: loadingSubCategories[cat.name] || false,
+        };
+      }),
     },
     { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
@@ -506,7 +578,6 @@ const Header = () => {
     };
   }, []);
 
-  // 🆕 User icon block
   const renderUserIcon = () => {
     if (isLoggedIn) {
       return (
@@ -574,18 +645,6 @@ const Header = () => {
                           className="search-recommendation-item"
                           onClick={() => handleRecommendationClick(product)}
                         >
-                          {/* <div className="recommendation-img">
-                            <img
-                              src={
-                                product.image?.[0] || "/images/placeholder.png"
-                              }
-                              alt={product.name}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "/images/placeholder.png";
-                              }}
-                            />
-                          </div> */}
                           <div className="recommendation-info">
                             <div className="recommendation-name">
                               {product.name}
@@ -706,7 +765,7 @@ const Header = () => {
                                         <NavLink
                                           key={idx}
                                           to={`/category/${createSlug(
-                                            hoveredCategory,
+                                            hoveredCategory
                                           )}/${createSlug(sub)}`}
                                           className="subcategory-item"
                                           onClick={() => setShowMenu(false)}
@@ -716,7 +775,7 @@ const Header = () => {
                                           </span>
                                           {sub}
                                         </NavLink>
-                                      ),
+                                      )
                                     )
                                   ) : (
                                     <div className="subcategory-empty">
@@ -726,7 +785,9 @@ const Header = () => {
                                 </div>
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${createSlug(hoveredCategory)}`}
+                                    to={`/category/${createSlug(
+                                      hoveredCategory
+                                    )}`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >
@@ -871,23 +932,21 @@ const Header = () => {
                           >
                             {sub.title}
                           </NavLink>
-                          {categorySubCategories[sub.title] &&
-                            categorySubCategories[sub.title].length > 0 && (
+                          {sub.subCategories &&
+                            sub.subCategories.length > 0 && (
                               <div className="mobile-sub-subcategories">
-                                {categorySubCategories[sub.title].map(
-                                  (subCat, idx) => (
-                                    <NavLink
-                                      key={idx}
-                                      to={`/category/${createSlug(
-                                        sub.title,
-                                      )}/${createSlug(subCat)}`}
-                                      className="mobile-sub-sublink"
-                                      onClick={() => setShowMenu(false)}
-                                    >
-                                      • {subCat}
-                                    </NavLink>
-                                  ),
-                                )}
+                                {sub.subCategories.map((subCat, idx) => (
+                                  <NavLink
+                                    key={idx}
+                                    to={`/category/${createSlug(
+                                      sub.title
+                                    )}/${createSlug(subCat)}`}
+                                    className="mobile-sub-sublink"
+                                    onClick={() => setShowMenu(false)}
+                                  >
+                                    • {subCat}
+                                  </NavLink>
+                                ))}
                               </div>
                             )}
                         </div>

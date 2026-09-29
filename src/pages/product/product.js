@@ -7,7 +7,6 @@ import {
   Alert,
   Button,
   Form,
-  Badge,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
 import Header from "../../components/header/header";
@@ -40,19 +39,18 @@ const Product = () => {
 
   // ✅ Filter and Sort States
   const [sortBy, setSortBy] = useState("newest");
-  const [selectedCategory, setSelectedCategory] = useState("all"); // ✅ UNCOMMENTED
-  const [categories, setCategories] = useState([]); // ✅ UNCOMMENTED
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [brandStats, setBrandStats] = useState({
     totalBrands: 0,
     totalCategories: 0,
   });
 
-  // ✅ NEW UPGRADED IMAGE LOGIC (Handles Object, Array, String)
- const getImageUrl = (logo) => {
+  // ✅ IMAGE LOGIC
+  const getImageUrl = (logo) => {
     if (!logo) return null;
 
-    // Object handle karo
     if (typeof logo === "object" && !Array.isArray(logo)) {
       if (logo.image && typeof logo.image === "string") {
         logo = logo.image;
@@ -63,31 +61,25 @@ const Product = () => {
       }
     }
 
-    // Array handle karo
     if (Array.isArray(logo)) {
       logo = logo[0];
     }
 
     if (!logo || typeof logo !== "string") return null;
 
-    // Full URL check
     if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
-
-    // Relative URL fix
     if (logo.startsWith("/images")) return `https://api-admin.native91.com${logo}`;
     if (logo.startsWith("/uploads") || logo.startsWith("/public"))
       return `https://api-vendor.native91.com${logo}`;
 
-    // Fallback
     return `https://api-admin.native91.com/uploads/${logo}`;
   };
-
 
   const handleImageError = (brandId) => {
     setImageErrors((prev) => ({ ...prev, [brandId]: true }));
   };
 
-  // ✅ Extract categories from brands - ✅ UNCOMMENTED
+  // ✅ Extract categories
   const extractCategories = (brandsData) => {
     const categorySet = new Set();
     brandsData.forEach((brand) => {
@@ -111,7 +103,6 @@ const Product = () => {
   const applyFiltersAndSort = (brandsData) => {
     let result = [...brandsData];
 
-    // ✅ Filter by category - ✅ UNCOMMENTED
     if (selectedCategory !== "all") {
       result = result.filter((brand) => {
         if (brand.category) {
@@ -129,7 +120,6 @@ const Product = () => {
       });
     }
 
-    // ✅ Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       result = result.filter(
@@ -140,7 +130,6 @@ const Product = () => {
       );
     }
 
-    // ✅ Apply sorting
     switch (sortBy) {
       case "newest":
         result.sort(
@@ -165,7 +154,7 @@ const Product = () => {
     return result;
   };
 
-  // ✅ FETCH BRANDS - Using /companies endpoint
+  // ✅ FETCH BRANDS + CHECK PRODUCT COUNT
   const fetchBrands = async () => {
     try {
       setLoading(true);
@@ -191,59 +180,142 @@ const Product = () => {
       if (response.data) {
         if (response.data.success && Array.isArray(response.data.companies)) {
           brandsData = response.data.companies;
-          console.log(
-            `✅ Found ${brandsData.length} companies in data.companies`,
-          );
         } else if (Array.isArray(response.data)) {
           brandsData = response.data;
-          console.log(`✅ Found ${brandsData.length} companies (direct array)`);
-        } else if (
-          response.data.companies &&
-          Array.isArray(response.data.companies)
-        ) {
+        } else if (response.data.companies && Array.isArray(response.data.companies)) {
           brandsData = response.data.companies;
-          console.log(
-            `✅ Found ${brandsData.length} companies in nested property`,
-          );
-        } else {
-          console.warn("⚠️ Unexpected response format:", response.data);
-          brandsData = [];
         }
       }
 
-      setBrands(brandsData);
+      console.log(`📂 Fetched ${brandsData.length} brands from API`);
 
-      // ✅ Extract categories - ✅ UNCOMMENTED
-      const extractedCategories = extractCategories(brandsData);
+      // ============================================================
+      // 🆕 STEP: Check if productCount field is RELIABLE
+      // ============================================================
+      const hasProductCountField = brandsData.some(
+        (b) =>
+          b.productCount !== undefined ||
+          b.productsCount !== undefined ||
+          b.totalProducts !== undefined,
+      );
+
+      const allHaveZeroCount = hasProductCountField && brandsData.every(
+        (b) => {
+          const count = b.productCount ?? b.productsCount ?? b.totalProducts ?? 0;
+          return count === 0;
+        }
+      );
+
+      let brandsWithProducts = brandsData;
+
+      if (hasProductCountField && !allHaveZeroCount) {
+        // ✅ productCount RELIABLE — filter directly
+        console.log("🎯 Using productCount from API (reliable)");
+        brandsWithProducts = brandsData.filter((b) => {
+          const count = b.productCount ?? b.productsCount ?? b.totalProducts ?? 0;
+          if (count === 0) {
+            console.log(`⚠️ Skipping "${b.name}" — 0 products`);
+            return false;
+          }
+          return true;
+        });
+        console.log(
+          `✅ ${brandsWithProducts.length}/${brandsData.length} brands kept (from productCount)`,
+        );
+      } else {
+        // ❌ productCount BUGGY (all 0) — client-side fetch
+        console.log("🔧 productCount unreliable — checking products per brand...");
+
+        // Limit to first 30 brands to avoid too many requests
+        const brandsToCheck = brandsData.slice(0, 30);
+
+        const checkPromises = brandsToCheck.map(async (brand) => {
+          const brandName = brand.name || brand.company;
+          if (!brandName) return { brand, hasProducts: false };
+
+          try {
+            // 🎯 Try multiple endpoints (fallback strategy)
+            const endpoints = [
+              `${API_URL}/companies/${encodeURIComponent(brandName)}/products?limit=1`,
+              `${API_URL}/products?company=${encodeURIComponent(brandName)}&limit=1`,
+              `${API_URL}/v2/products?company=${encodeURIComponent(brandName)}&limit=1`,
+            ];
+
+            for (const url of endpoints) {
+              try {
+                const res = await axios.get(url, { timeout: 5000 });
+                const products =
+                  res.data?.products ||
+                  res.data?.data?.products ||
+                  res.data?.data ||
+                  [];
+
+                if (Array.isArray(products) && products.length > 0) {
+                  console.log(`✅ "${brandName}" has products (via ${url.split('/api/')[1]})`);
+                  return { brand, hasProducts: true };
+                }
+              } catch (e) {
+                // Try next endpoint
+                continue;
+              }
+            }
+
+            console.log(`⚠️ "${brandName}" — no products found in any endpoint`);
+            return { brand, hasProducts: false };
+          } catch (err) {
+            console.warn(`Error checking "${brandName}":`, err.message);
+            // On error → include (safer than exclude)
+            return { brand, hasProducts: true };
+          }
+        });
+
+        const results = await Promise.all(checkPromises);
+        brandsWithProducts = results
+          .filter((r) => r.hasProducts)
+          .map((r) => r.brand);
+
+        console.log(
+          `✅ ${brandsWithProducts.length}/${brandsToCheck.length} brands have products`,
+        );
+
+        // ⚠️ If ALL filtered out → show all (safety fallback)
+        if (brandsWithProducts.length === 0) {
+          console.warn("⚠️ All brands filtered out — showing all as fallback");
+          brandsWithProducts = brandsData;
+        }
+      }
+
+      setBrands(brandsWithProducts);
+
+      // ✅ Extract categories
+      const extractedCategories = extractCategories(brandsWithProducts);
       setCategories(extractedCategories);
       setBrandStats({
-        totalBrands: brandsData.length,
+        totalBrands: brandsWithProducts.length,
         totalCategories: extractedCategories.length,
       });
 
       // ✅ Apply filters and sorting
-      const filtered = applyFiltersAndSort(brandsData);
+      const filtered = applyFiltersAndSort(brandsWithProducts);
       setFilteredBrands(filtered);
 
-      if (brandsData.length === 0) {
-        setError("No brands found in the database.");
+      if (brandsWithProducts.length === 0) {
+        setError("No brands with products found.");
       }
 
-      console.log(`✅ Found ${brandsData.length} brands`);
+      console.log(`✅ Displaying ${brandsWithProducts.length} brands`);
     } catch (err) {
       console.error("🔴 ERROR FETCHING BRANDS:", err);
 
       let errorMessage = "Failed to load brands. ";
-
       if (err.code === "ECONNABORTED") {
         errorMessage += "Request timed out.";
       } else if (err.response) {
         errorMessage += `Server responded with status ${err.response.status}.`;
       } else if (err.request) {
-        errorMessage +=
-          "No response from server. Please check if the server is running.";
+        errorMessage += "No response from server.";
       } else {
-        errorMessage += err.message || "Unknown error occurred.";
+        errorMessage += err.message || "Unknown error.";
       }
 
       setError(errorMessage);
@@ -260,15 +332,13 @@ const Product = () => {
       const filtered = applyFiltersAndSort(brands);
       setFilteredBrands(filtered);
     }
-  }, [sortBy, searchTerm, selectedCategory, brands]); // ✅ selectedCategory added back
+  }, [sortBy, searchTerm, selectedCategory, brands]);
 
-  // ✅ Retry function
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1);
     fetchBrands();
   };
 
-  // ✅ Initial fetch
   useEffect(() => {
     fetchBrands();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -346,7 +416,7 @@ const Product = () => {
     );
   }
 
-  // ✅ Success State - Render Brands with Filters
+  // ✅ Success State
   return (
     <div>
       <Header />
@@ -367,7 +437,6 @@ const Product = () => {
               Our Brands
             </h2>
 
-            {/* FILTER BUTTON */}
             <div className="filter-trigger-wrapper lexend">
               <Button
                 className="filter-trigger-btn"
@@ -385,11 +454,6 @@ const Product = () => {
               </Button>
             </div>
           </div>
-          {/* <p className="text-center text-muted mb-4">
-            {filteredBrands.length} of {brands.length} brands available
-          </p> */}
-          {/* ✅ FILTERS AND SORTING SECTION */}
-          {/* FILTER BUTTON */}
 
           {/* FILTER PANEL */}
           {showFilters && (
@@ -424,17 +488,14 @@ const Product = () => {
               </div>
 
               <Row className="g-3">
-                {/* SEARCH */}
                 <Col lg={5} md={12}>
                   <Form.Group>
                     <Form.Label className="filter-label">
                       <i className="bi bi-search me-2"></i>
                       Search Brands
                     </Form.Label>
-
                     <div className="filter-input-wrapper">
                       <i className="bi bi-search"></i>
-
                       <Form.Control
                         type="text"
                         placeholder="Search by name, category..."
@@ -445,21 +506,18 @@ const Product = () => {
                   </Form.Group>
                 </Col>
 
-                {/* CATEGORY */}
                 <Col lg={3} md={6}>
                   <Form.Group>
                     <Form.Label className="filter-label">
                       <i className="bi bi-tag me-2"></i>
                       Category
                     </Form.Label>
-
                     <Form.Select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="filter-select"
                     >
                       <option value="all">All Categories</option>
-
                       {categories.map((cat, idx) => (
                         <option key={idx} value={cat}>
                           {cat}
@@ -469,14 +527,12 @@ const Product = () => {
                   </Form.Group>
                 </Col>
 
-                {/* SORT */}
                 <Col lg={2} md={6}>
                   <Form.Group>
                     <Form.Label className="filter-label">
                       <i className="bi bi-sort-down me-2"></i>
                       Sort By
                     </Form.Label>
-
                     <Form.Select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
@@ -489,24 +545,11 @@ const Product = () => {
                     </Form.Select>
                   </Form.Group>
                 </Col>
-
-                {/* RESET */}
-                {/* <Col lg={2} md={12}>
-                  <Button
-                    className="filter-reset-btn"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedCategory("all");
-                      setSortBy("newest");
-                    }}
-                  >
-                    Reset
-                  </Button>
-                </Col> */}
               </Row>
             </div>
           )}
-          {/* ✅ BRAND GRID DISPLAY */}
+
+          {/* BRAND GRID */}
           {filteredBrands.length === 0 ? (
             <div className="text-center py-5">
               <h5>No brands match your filters</h5>
@@ -518,7 +561,7 @@ const Product = () => {
                 className="rounded-pill"
                 onClick={() => {
                   setSearchTerm("");
-                  setSelectedCategory("all"); // ✅ UNCOMMENTED
+                  setSelectedCategory("all");
                   setSortBy("newest");
                 }}
               >
@@ -533,16 +576,6 @@ const Product = () => {
                 const showImage = imageUrl && !hasError;
                 const isEven = index % 2 !== 0;
 
-                // Format category display
-                let categoryDisplay = "—";
-                if (item.category) {
-                  if (Array.isArray(item.category)) {
-                    categoryDisplay = item.category.join(", ");
-                  } else if (typeof item.category === "string") {
-                    categoryDisplay = item.category;
-                  }
-                }
-
                 return (
                   <Row
                     key={item._id || index}
@@ -550,7 +583,6 @@ const Product = () => {
                       isEven ? "flex-row-reverse" : ""
                     }`}
                   >
-                    {/* IMAGE SECTION */}
                     <Col md={3}>
                       <motion.div
                         className="value-image-wrapper"
@@ -583,7 +615,6 @@ const Product = () => {
                       </motion.div>
                     </Col>
 
-                    {/* CONTENT SECTION */}
                     <Col md={9}>
                       <motion.div
                         className="value-content light mt-2 mt-md-0"
