@@ -117,8 +117,8 @@
   }
 
   .promo-content {
-    max-width: 90%;
-    padding: 25px 20px;
+    max-width: 100%;
+    padding: 25px 10px;
   }
 
   .promo-content h3 {
@@ -161,10 +161,10 @@
   }
 
   .promo-content h3 {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .promo-content p {
-    font-size: 14px;
+    font-size: 11px;
   }
 }

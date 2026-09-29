@@ -226,34 +226,77 @@ router.get("/google", passport.authenticate("google", {
 // ============================================
 // GOOGLE LOGIN - Callback (Direct Home Page)
 // ============================================
+// router.get(
+//   "/google/callback",
+//   passport.authenticate("google", { 
+//     session: false, 
+//     failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=google_auth_failed`
+//   }),
+//   (req, res) => {
+//     try {
+//       const { token, user } = req.user;
+//       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      
+//       // ✅ Check if user is already logged in
+//       if (user && isUserLoggedIn(user.email)) {
+//         // Redirect with error
+//         return res.redirect(`${clientUrl}/login?error=already_logged_in`);
+//       }
+      
+//       // ✅ Create active session for Google login
+//       if (user) {
+//         const device = req.headers['user-agent'] || 'Unknown Device';
+//         createSession(user.email, token, device);
+//       }
+      
+//       // DIRECT HOME PAGE REDIRECT WITH TOKEN
+//       res.redirect(`${clientUrl}/?token=${token}`);
+//     } catch (error) {
+//       console.error("Google callback error:", error);
+//       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+//       res.redirect(`${clientUrl}/login?error=auth_failed`);
+//     }
+//   }
+// );
+
+// ============================================
+// GOOGLE LOGIN - Callback (Redirect to /login)
+// ============================================
 router.get(
   "/google/callback",
-  passport.authenticate("google", { 
-    session: false, 
-    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=google_auth_failed`
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: `${process.env.CLIENT_URL || "http://localhost:3000"}/login?error=google_auth_failed`,
   }),
   (req, res) => {
     try {
       const { token, user } = req.user;
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-      
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+
       // ✅ Check if user is already logged in
       if (user && isUserLoggedIn(user.email)) {
-        // Redirect with error
         return res.redirect(`${clientUrl}/login?error=already_logged_in`);
       }
-      
+
       // ✅ Create active session for Google login
       if (user) {
-        const device = req.headers['user-agent'] || 'Unknown Device';
+        const device = req.headers["user-agent"] || "Unknown Device";
         createSession(user.email, token, device);
       }
-      
-      // DIRECT HOME PAGE REDIRECT WITH TOKEN
-      res.redirect(`${clientUrl}/?token=${token}`);
+
+      // 🆕 Redirect to /login WITH token + user info in URL
+      const redirectUrl =
+        `${clientUrl}/login?token=${encodeURIComponent(token)}` +
+        `&email=${encodeURIComponent(user?.email || "")}` +
+        `&name=${encodeURIComponent(user?.name || "")}` +
+        `&picture=${encodeURIComponent(user?.profilePicture || "")}`;
+
+      console.log("🔀 Redirecting to:", redirectUrl);
+
+      res.redirect(redirectUrl);
     } catch (error) {
       console.error("Google callback error:", error);
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
       res.redirect(`${clientUrl}/login?error=auth_failed`);
     }
   }

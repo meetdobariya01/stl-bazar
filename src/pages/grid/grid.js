@@ -1,3 +1,4 @@
+// pages/Grid/Grid.js
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -35,6 +36,31 @@ import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
+const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
+
+// 🆕 Resolve company logo URL from any shape the API returns
+const normalizeImageUrl = (logo) => {
+  if (!logo) return null;
+
+  // Handle nested objects like { image: "..." } or { url: "..." }
+  if (typeof logo === "object" && !Array.isArray(logo)) {
+    if (typeof logo.image === "string") logo = logo.image;
+    else if (typeof logo.url === "string") logo = logo.url;
+    else return null;
+  }
+
+  // Handle arrays — use first element
+  if (Array.isArray(logo)) logo = logo[0];
+  if (!logo || typeof logo !== "string") return null;
+
+  const s = logo.trim();
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  if (s.startsWith("/images")) return `${ADMIN_IMAGE_BASE}${s}`;
+  if (s.startsWith("/uploads") || s.startsWith("/public"))
+    return `${VENDOR_BACKEND_URL}${s}`;
+  if (!s.startsWith("/")) return `${ADMIN_IMAGE_BASE}/uploads/${s}`;
+  return `${ADMIN_IMAGE_BASE}${s}`;
+};
 
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
@@ -68,6 +94,14 @@ const Grid = () => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
+  // 🆕 Company details
+  const [companyInfo, setCompanyInfo] = useState({
+    name: decodedName || "",
+    description: "",
+    logo: null,
+    loading: true,
+  });
+
   // 🆕 qtyMap — one entry per product ID
   const [qtyMap, setQtyMap] = useState({});
 
@@ -75,7 +109,7 @@ const Grid = () => {
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
-  const [isAddingToCart, setIsAddingToCart] = useState({});  // 🆕 per-product adding state
+  const [isAddingToCart, setIsAddingToCart] = useState({});
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -104,6 +138,90 @@ const Grid = () => {
     });
   };
 
+  // ============================================
+  // 🆕 Fetch COMPANY details (logo + description)
+  // ============================================
+  useEffect(() => {
+    if (!decodedName) {
+      setCompanyInfo((prev) => ({ ...prev, loading: false }));
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchCompany = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/companies`, {
+          timeout: 15000,
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        });
+
+        let companiesData = [];
+        if (response.data) {
+          if (response.data.success && Array.isArray(response.data.companies)) {
+            companiesData = response.data.companies;
+          } else if (Array.isArray(response.data)) {
+            companiesData = response.data;
+          } else if (
+            response.data.companies &&
+            Array.isArray(response.data.companies)
+          ) {
+            companiesData = response.data.companies;
+          }
+        }
+
+        // Fuzzy match by trimmed + lowercase name
+        const targetName = decodedName.trim().toLowerCase();
+        const matched = companiesData.find((c) => {
+          const n = (c.name || "").trim().toLowerCase();
+          return n === targetName;
+        });
+
+        if (cancelled) return;
+
+        if (matched) {
+          setCompanyInfo({
+            name: matched.name || decodedName,
+            description:
+              matched.description ||
+              `${matched.name} - Premium brand on Native91`,
+            logo: matched.logo ? normalizeImageUrl(matched.logo) : null,
+            loading: false,
+          });
+        } else {
+          setCompanyInfo({
+            name: decodedName,
+            description: `${decodedName} - Premium brand on Native91`,
+            logo: null,
+            loading: false,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching company details:", err);
+        if (!cancelled) {
+          setCompanyInfo({
+            name: decodedName,
+            description: `${decodedName} - Premium brand on Native91`,
+            logo: null,
+            loading: false,
+          });
+        }
+      }
+    };
+
+    fetchCompany();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [decodedName]);
+
+  // ============================================
+  // Fetch products for this company
+  // ============================================
   useEffect(() => {
     if (!decodedName) return;
 
@@ -182,7 +300,7 @@ const Grid = () => {
     return Number(stock) <= 0;
   };
 
-  // 🆕 ADD TO CART — with qty + stock validation
+  // 🆕 ADD TO CART
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
 
@@ -195,7 +313,7 @@ const Grid = () => {
 
     if (Number(item.stock) < requestedQty) {
       alert(
-        `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`
+        `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`,
       );
       return;
     }
@@ -217,7 +335,6 @@ const Grid = () => {
         },
       });
 
-      // Reset qty back to 1
       setQtyMap((prev) => ({ ...prev, [item._id]: 1 }));
 
       await fetchCart();
@@ -227,7 +344,7 @@ const Grid = () => {
       console.error("Add to cart error:", err);
       alert(
         err.response?.data?.message ||
-        "Failed to add to cart. Please try again."
+          "Failed to add to cart. Please try again.",
       );
     } finally {
       setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
@@ -337,13 +454,46 @@ const Grid = () => {
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
           {categories.length > 0 && (
-            <div className="category-description mb-4 p-4 bg-light rounded text-center">
-              <h2 className="h4 mb-3 funnel-sans">{decodedName}</h2>
-              <p className="text-muted mb-0">
-                Explore our collection of premium {decodedName.toLowerCase()}{" "}
-                products. From everyday essentials to luxury items, find the
-                perfect match for your needs. Browse through our curated
-                selection and enjoy quality craftsmanship at competitive prices.
+            <div className="category-description mb-4 p-4 rounded text-center">
+              {/* 🆕 COMPANY LOGO */}
+              {companyInfo.logo && (
+                <img
+                  src={companyInfo.logo}
+                  alt={companyInfo.name}
+                  className="company-logo-grid d-block mx-auto mb-3"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              )}
+
+              {/* Fallback logo if none uploaded */}
+              {!companyInfo.logo && !companyInfo.loading && (
+                <img
+                  src="./images/native.png"
+                  alt={companyInfo.name}
+                  className="why-feature-image d-block mx-auto"
+                />
+              )}
+
+              {/* Loading spinner for company info */}
+              {companyInfo.loading && (
+                <div className="d-flex justify-content-center mb-3">
+                  <div className="spinner-border spinner-border-sm text-secondary" />
+                </div>
+              )}
+
+              {/* 🆕 COMPANY NAME */}
+              <h2 className="h4 m-3 funnel-sans">
+                {companyInfo.name || decodedName}
+              </h2>
+
+              {/* 🆕 COMPANY DESCRIPTION */}
+              <p className="text-muted mb-0 company-description-grid">
+                {companyInfo.description ||
+                  `Explore our collection of premium ${(
+                    companyInfo.name || decodedName
+                  ).toLowerCase()} products. From everyday essentials to luxury items, find the perfect match for your needs.`}
               </p>
             </div>
           )}
@@ -414,7 +564,9 @@ const Grid = () => {
                         <Form.Check
                           key={cat}
                           type="checkbox"
-                          label={`${cat} (${products.filter((p) => p.category === cat).length})`}
+                          label={`${cat} (${
+                            products.filter((p) => p.category === cat).length
+                          })`}
                           checked={selectedCategories.includes(cat)}
                           onChange={() => handleCategoryChange(cat)}
                         />
@@ -450,7 +602,9 @@ const Grid = () => {
                         <Form.Check
                           key={mat}
                           type="checkbox"
-                          label={`${mat} (${products.filter((p) => p.material === mat).length})`}
+                          label={`${mat} (${
+                            products.filter((p) => p.material === mat).length
+                          })`}
                           checked={selectedMaterials.includes(mat)}
                           onChange={() => handleMaterialChange(mat)}
                         />
@@ -467,7 +621,9 @@ const Grid = () => {
                         <Form.Check
                           key={brand}
                           type="checkbox"
-                          label={`${brand} (${products.filter((p) => p.brand === brand).length})`}
+                          label={`${brand} (${
+                            products.filter((p) => p.brand === brand).length
+                          })`}
                           checked={selectedBrands.includes(brand)}
                           onChange={() => handleBrandChange(brand)}
                         />
@@ -683,7 +839,6 @@ const Grid = () => {
                                 ₹{item.price.toLocaleString()}
                               </div>
 
-                              {/* 🆕 QUANTITY SELECTOR */}
                               {!outOfStock && (
                                 <div
                                   className="qty-box-grid"
@@ -716,7 +871,6 @@ const Grid = () => {
                                 </div>
                               )}
 
-                              {/* 🆕 Button — disabled when out of stock */}
                               <Button
                                 className="add-to-cart-btn"
                                 onClick={(e) => handleAddToCart(e, item)}
