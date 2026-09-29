@@ -1570,7 +1570,7 @@ const Productdetails = () => {
                                   </div>
                                 )}
                                 {/* 🆕 show image count */}
-                                {variantImagesCount > 0 && (
+                                {/* {variantImagesCount > 0 && (
                                   <div
                                     className="text-muted"
                                     style={{ fontSize: "0.7rem" }}
@@ -1580,7 +1580,7 @@ const Productdetails = () => {
                                       ? "image"
                                       : "images"}
                                   </div>
-                                )}
+                                )} */}
                                 {isDisabled && (
                                   <div
                                     className="text-danger"
@@ -1600,7 +1600,7 @@ const Productdetails = () => {
                                     </div>
                                   )}
                               </div>
-                              {isSelected && (
+                              {/* {isSelected && (
                                 <FaCheckCircle
                                   className="text-success"
                                   style={{
@@ -1609,7 +1609,7 @@ const Productdetails = () => {
                                     right: "5px",
                                   }}
                                 />
-                              )}
+                              )} */}
                             </div>
                           </Col>
                         );
@@ -2430,7 +2430,7 @@ const Productdetails = () => {
               {hasVendorDelivery && (
                 <div className="vendor-delivery-time mt-3 p-3 ">
                   <div className="d-flex align-items-center gap-2">
-                    <strong>Vendor Delivery Time:</strong>
+                    <strong>Vendor Dispatched Time:</strong>
                     <span className="ms-1">
                       {product.shippingTime === "Custom" &&
                       product.customShippingTime

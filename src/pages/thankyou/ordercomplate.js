@@ -65,7 +65,7 @@ const Ordercomplate = () => {
         <img src="./images/order-complete.png" alt="Thank You Banner" />
       </section>
 
-      <section className="features-section">
+      {/* <section className="features-section">
         <Container>
           <div className="features-wrapper">
             <Row className="g-0">
@@ -93,12 +93,12 @@ const Ordercomplate = () => {
             </Row>
           </div>
         </Container>
-      </section>
+      </section> */}
 
       <section className="next-step-section">
         <Container>
           {/* Heading */}
-          <motion.div
+          {/* <motion.div
             className="text-center mb-5"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -108,7 +108,6 @@ const Ordercomplate = () => {
             <h2 className="section-heading funnel-sans">What Happens Next?</h2>
           </motion.div>
 
-          {/* Steps */}
           <Row className="g-4 justify-content-center">
             {steps.map((step, index) => (
               <Col lg={3} md={6} sm={6} xs={4} key={index}>
@@ -129,7 +128,7 @@ const Ordercomplate = () => {
                 </motion.div>
               </Col>
             ))}
-          </Row>
+          </Row> */}
 
           {/* Support Box */}
           <motion.div

@@ -75,7 +75,7 @@ const Grid = () => {
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
-  const [isAddingToCart, setIsAddingToCart] = useState({});  // 🆕 per-product adding state
+  const [isAddingToCart, setIsAddingToCart] = useState({}); // 🆕 per-product adding state
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -195,7 +195,7 @@ const Grid = () => {
 
     if (Number(item.stock) < requestedQty) {
       alert(
-        `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`
+        `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`,
       );
       return;
     }
@@ -227,7 +227,7 @@ const Grid = () => {
       console.error("Add to cart error:", err);
       alert(
         err.response?.data?.message ||
-        "Failed to add to cart. Please try again."
+          "Failed to add to cart. Please try again.",
       );
     } finally {
       setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
@@ -337,15 +337,20 @@ const Grid = () => {
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
           {categories.length > 0 && (
-            <div className="category-description mb-4 p-4 bg-light rounded text-center">
-              <h2 className="h4 mb-3 funnel-sans">{decodedName}</h2>
-              <p className="text-muted mb-0">
-                Explore our collection of premium {decodedName.toLowerCase()}{" "}
-                products. From everyday essentials to luxury items, find the
-                perfect match for your needs. Browse through our curated
-                selection and enjoy quality craftsmanship at competitive prices.
-              </p>
-            </div>
+                <div className="category-description mb-4 p-4 rounded text-center">
+                  <img
+                    src="./images/native.png"
+                    alt=""
+                    className="why-feature-image d-block mx-auto"
+                  />
+                  <h2 className="h4 m-3 funnel-sans">{decodedName}</h2>
+                  <p className="text-muted mb-0">
+                    Explore our collection of premium {decodedName.toLowerCase()}{" "}
+                    products. From everyday essentials to luxury items, find the
+                    perfect match for your needs. Browse through our curated
+                    selection and enjoy quality craftsmanship at competitive prices.
+                  </p>
+                </div>
           )}
 
           <div className="top-bar">
