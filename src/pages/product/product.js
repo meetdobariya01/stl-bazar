@@ -30,6 +30,7 @@ const fadeRight = {
 
 const Product = () => {
   const [brands, setBrands] = useState([]);
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -631,8 +632,39 @@ const Product = () => {
                         </div>
 
                         <p className="lexend mt-2">
-                          {item.description ||
-                            `${item.name || "This brand"} - Premium brand on Native91`}
+                          {(() => {
+                            const description =
+                              item.description ||
+                              `${item.name || "This brand"} - Premium brand on Native91`;
+
+                            const words = description.trim().split(/\s+/);
+                            const isLong = words.length > 100;
+
+                            return (
+                              <>
+                                {isLong && !expandedDescriptions[item._id]
+                                  ? `${words.slice(0, 50).join(" ")}...`
+                                  : description}
+
+                                {isLong && (
+                                  <button
+                                    type="button"
+                                    className="read-more-btn"
+                                    onClick={() =>
+                                      setExpandedDescriptions((prev) => ({
+                                        ...prev,
+                                        [item._id]: !prev[item._id],
+                                      }))
+                                    }
+                                  >
+                                    {expandedDescriptions[item._id]
+                                      ? " Read Less"
+                                      : " Read More"}
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
                         </p>
 
                         <div className="d-flex flex-wrap gap-3 align-items-center mt-3">

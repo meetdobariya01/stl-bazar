@@ -984,7 +984,7 @@ const Checkout = () => {
                       </div>
                       <div>
                         <FaUndo />
-                        <span>Easy Returns</span>
+                        <span>Easy Exchange</span>
                       </div>
                       <div>
                         <FaTruck />

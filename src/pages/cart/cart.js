@@ -65,6 +65,18 @@ const isMobileDevice = () =>
   typeof window !== "undefined" &&
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+// ✅ Placeholder address — Fastrr webhook thi real address aavse
+const FASTrr_PLACEHOLDER_ADDRESS = {
+  name: "Fastrr Customer",
+  email: "pending@fastrr-checkout.com",
+  phone: "0000000000",
+  address: "Pending — will be captured by Fastrr",
+  city: "Pending",
+  state: "Pending",
+  pincode: "000000",
+  country: "India",
+};
+
 const Cart = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState({ items: [], appliedCoupon: null });
@@ -136,13 +148,6 @@ const Cart = () => {
 
   useEffect(() => { fetchCart(); }, [guestId]);
 
-  // 🆕 Clear old saved address on mount (no longer used)
-  useEffect(() => {
-    try {
-      localStorage.removeItem("fastrrAddress");
-    } catch (e) {}
-  }, []);
-
   const updateQty = async (productId, type, variantId = null) => {
     const item = cart.items.find((i) => {
       const sameProduct = i.productId === productId;
@@ -201,7 +206,6 @@ const Cart = () => {
   const FREE_SHIPPING_THRESHOLD = 1500;
   const hasItems = cart.items.length > 0;
 
-  const finalShippingCost = 0;
   const couponDiscount = cart.appliedCoupon?.discountAmount || 0;
   const discountedSubtotal = subtotal - couponDiscount;
   const total = hasItems ? discountedSubtotal : 0;
@@ -268,7 +272,7 @@ const Cart = () => {
     fetchAvailableCoupons();
   };
 
-  // 🆕 FAST CHECKOUT — Direct Fastrr open (NO address modal)
+  // ✅ DIRECT FASTrr CHECKOUT — No address modal
   const handleShiprocketCheckoutClick = async () => {
     if (!hasItems) {
       alert("Cart is empty");
@@ -293,43 +297,27 @@ const Cart = () => {
         alert(
           `⚠️ Fast Checkout unavailable for this product.\n\n` +
             `Reason: ${checkRes.data.reason || "Product not found in Fastrr catalog."}\n\n` +
-            `Redirecting to standard checkout...`
+            `Please try standard checkout.`
         );
         setProcessingCheckout(false);
-        navigate("/checkout");
         return;
       }
     } catch (err) {
       console.error("Compatibility check error:", err);
-
       const reason =
         err.response?.data?.reason ||
         err.response?.data?.message ||
         "Fastrr checkout is currently unavailable.";
-
-      alert(`⚠️ ${reason}\n\nRedirecting to standard checkout...`);
+      alert(`⚠️ ${reason}`);
       setProcessingCheckout(false);
-      navigate("/checkout");
       return;
     }
 
-    // Step 2: Create order + get access token
+    // Step 2: Create order + get access token (with placeholder address)
     try {
-      // Minimal placeholder — Fastrr iframe ma user pote address fill karshe
-      const placeholderAddress = {
-        name: "Guest Customer",
-        email: "guest@native91.com",
-        phone: "9999999999",
-        address: "Will be provided at checkout",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pincode: "400001",
-        country: "India",
-      };
-
       const res = await axios.post(`${API_URL}/order/shiprocket-checkout`, {
         guestId,
-        shippingAddress: placeholderAddress,
+        shippingAddress: FASTrr_PLACEHOLDER_ADDRESS,   // ✅ Placeholder — Fastrr webhook thi real aavse
         cartItems: cart.items.map((item) => ({
           productId: item.productId,
           variantId: item.variantId || null,
@@ -355,9 +343,8 @@ const Cart = () => {
           res.data.code === "FASTRR_CATALOG_MISSING" ||
           res.data.code === "FASTRR_VARIANT_MISSING"
         ) {
-          alert(`⚠️ ${res.data.message}\n\nRedirecting to standard checkout...`);
+          alert(`⚠️ ${res.data.message}`);
           setProcessingCheckout(false);
-          navigate("/checkout");
           return;
         }
         alert(res.data.message || "Failed to initialize checkout");
@@ -379,10 +366,9 @@ const Cart = () => {
 
       setProcessingCheckout(false);
 
-      // Step 4: Open Fastrr iframe — address form ae ma hoy che
+      // Step 4: DIRECTLY open Fastrr iframe (address form ae ma hoy che)
       setTimeout(() => {
         try {
-          // Fastrr addToCart requires an event, create dummy
           const dummyEvent = {
             preventDefault: () => {},
             stopPropagation: () => {},
@@ -398,10 +384,7 @@ const Cart = () => {
       }, isMobileDevice() ? 400 : 50);
     } catch (err) {
       console.error("Fastrr checkout error:", err);
-      alert(
-        err.response?.data?.message ||
-          "Checkout failed. Please try again."
-      );
+      alert(err.response?.data?.message || "Checkout failed. Please try again.");
       setProcessingCheckout(false);
     }
   };

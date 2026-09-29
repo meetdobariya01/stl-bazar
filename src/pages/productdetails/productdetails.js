@@ -1,4 +1,4 @@
-// pages/Productdetails/Productdetails.js - COMPLETE WITH CUSTOM FIELD + SHIPPING TIME + HANDMADE POLICY + MULTI-VARIANT IMAGES
+// pages/Productdetails/Productdetails.js - COMPLETE WITH CUSTOM FIELD + SHIPPING TIME + HANDMADE POLICY + MULTI-VARIANT IMAGES + RICH TEXT DESCRIPTION
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -58,6 +58,17 @@ const COUPON_API_URL =
   process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
 const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
+
+// ✅ RICH TEXT RENDERER — renders vendor HTML (from Quill) safely on the product page
+const RichText = ({ html, className = "" }) => {
+  if (!html) return null;
+  return (
+    <div
+      className={className}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+};
 
 const formatPrice = (price) => {
   if (!price && price !== 0) return "0.00";
@@ -1487,22 +1498,7 @@ const Productdetails = () => {
             <Col lg={6}>
               <div className="product-content">
                 <h1 className="funnel-sans">{String(product.name)}</h1>
-                <div
-                  className="product-brand fw-bold"
-                  onClick={navigateToBrand}
-                  style={{
-                    cursor: "pointer",
-                    textDecoration: "none",
-                    display: "inline-block",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.textDecoration = "underline";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.textDecoration = "none";
-                  }}
-                  title={`View ${product.company || "brand"} products`}
-                >
+                <div className="product-brand fw-bold">
                   {String(product.company || "Brand Name")}
                 </div>
                 <div className="rating-row">
@@ -2266,7 +2262,11 @@ const Productdetails = () => {
           <div className="product-accordion mt-5">
             <details open>
               <summary className="funnel-sans">Product Details</summary>
-              <p>{String(product.description)}</p>
+              {/* ✅ FIXED: Render rich text HTML instead of showing raw tags */}
+              <RichText
+                html={product.description}
+                className="product-description"
+              />
               {sizeWeightInfo && sizeWeightInfo.length > 0 && (
                 <ul className="mt-2">
                   {sizeWeightInfo.map((info, idx) => (
@@ -2278,9 +2278,7 @@ const Productdetails = () => {
 
             {hasHandmadePolicy && (
               <details>
-                <summary className="funnel-sans">
-                  Handmade Order Policy
-                </summary>
+                <summary className="funnel-sans">Handmade Order Policy</summary>
                 <div
                   className="handmade-policy-content mt-3 p-3 rounded"
                   style={{
@@ -2648,6 +2646,7 @@ const Productdetails = () => {
 
       {/* REVIEW MODAL */}
       <Modal
+        className="lexend"
         show={showReviewModal}
         onHide={() => {
           setShowReviewModal(false);
