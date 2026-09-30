@@ -1,4 +1,4 @@
-// Models/Cart.js - UPDATED WITH VENDOR, STOCK & VARIANT FIELDS
+// Models/Cart.js - UPDATED WITH VENDOR, STOCK, VARIANT & CUSTOM FIELD
 const mongoose = require("mongoose");
 
 const CartSchema = new mongoose.Schema(
@@ -29,7 +29,7 @@ const CartSchema = new mongoose.Schema(
           default: 1
         },
         image: [String],
-        
+
         // ✅ VENDOR FIELDS
         vendorId: {
           type: mongoose.Schema.Types.ObjectId,
@@ -44,7 +44,7 @@ const CartSchema = new mongoose.Schema(
           default: 0
         },
 
-        // 🆕 VARIANT FIELDS (ADDED)
+        // 🆕 VARIANT FIELDS
         variantId: {
           type: mongoose.Schema.Types.ObjectId,
           default: null
@@ -64,6 +64,16 @@ const CartSchema = new mongoose.Schema(
         variantPrice: {
           type: Number,
           default: 0
+        },
+
+        // 🆕 CUSTOM FIELD (Customer Input)
+        customFieldLabel: {
+          type: String,
+          default: null
+        },
+        customFieldValue: {
+          type: String,
+          default: null
         }
       }
     ],
@@ -75,7 +85,7 @@ const CartSchema = new mongoose.Schema(
       discountAmount: Number
     }
   },
-  
+
   { timestamps: true }
 );
 

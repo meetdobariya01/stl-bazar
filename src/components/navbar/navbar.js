@@ -1,11 +1,15 @@
-// Mainnavbar.js - FULLY FIXED — slug links + Admin API path
+// Mainnavbar.js - FULLY FIXED — with icons (search, user, wishlist, cart)
 
 import React, { useState, useEffect, useRef } from "react";
 import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FaSearch, FaTimes, FaSitemap } from "react-icons/fa";
+import { HiOutlineUser, HiOutlineHeart } from "react-icons/hi";
+import { FiShoppingBag } from "react-icons/fi";
 import axios from "axios";
 import { createSlug } from "../../utils/slugUtils";
+import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import "./navbar.css";
 
 const VENDOR_API_URL = "https://api-vendor.native91.com/api";
@@ -32,13 +36,17 @@ const parseSubCategories = (input, depth = 0) => {
   }
   if (typeof input === "object" && input !== null) {
     if (input.status === "inactive") return [];
-    if (typeof input.name === "string") return parseSubCategories(input.name, depth + 1);
+    if (typeof input.name === "string")
+      return parseSubCategories(input.name, depth + 1);
     return [];
   }
   if (typeof input === "string") {
     let s = input.trim();
     if (!s) return [];
-    if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith('"') && s.endsWith('"'))) {
+    if (
+      (s.startsWith("[") && s.endsWith("]")) ||
+      (s.startsWith('"') && s.endsWith('"'))
+    ) {
       try {
         const parsed = JSON.parse(s);
         const result = parseSubCategories(parsed, depth + 1);
@@ -49,7 +57,10 @@ const parseSubCategories = (input, depth = 0) => {
     let prev = null;
     while (cleaned !== prev) {
       prev = cleaned;
-      cleaned = cleaned.replace(/^[\[\]\\"]+/, "").replace(/[\[\]\\"]+$/, "").trim();
+      cleaned = cleaned
+        .replace(/^[\[\]\\"]+/, "")
+        .replace(/[\[\]\\"]+$/, "")
+        .trim();
     }
     if (cleaned.length === 0 || cleaned.length > 200) return [];
     return [cleaned];
@@ -66,10 +77,68 @@ const Mainnavbar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInitial, setUserInitial] = useState("");
+
   const searchRef = useRef(null);
   const searchTimeout = useRef(null);
   const categoryMenuTimeout = useRef(null);
 
+  // Cart + Wishlist — Providers wrap થયા છે index.js માં ✅
+  const { cartCount, fetchCart } = useCart();
+  const { wishlistCount, fetchWishlist } = useWishlist();
+
+  // Track login + cart + wishlist
+  useEffect(() => {
+    const loadUser = () => {
+      const token = localStorage.getItem("token");
+      const userData =
+        localStorage.getItem("user") || localStorage.getItem("userData");
+
+      if (token && userData) {
+        try {
+          const parsed = JSON.parse(userData);
+          const name =
+            parsed?.name ||
+            parsed?.fullName ||
+            parsed?.username ||
+            parsed?.email ||
+            "";
+          setIsLoggedIn(true);
+          setUserInitial(name ? name.trim().charAt(0).toUpperCase() : "U");
+        } catch {
+          setIsLoggedIn(true);
+          setUserInitial("U");
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserInitial("");
+      }
+    };
+
+    loadUser();
+    fetchCart();
+    fetchWishlist();
+
+    const handleCartUpdate = () => fetchCart();
+    const handleWishlistUpdate = () => fetchWishlist();
+
+    window.addEventListener("storage", loadUser);
+    window.addEventListener("userUpdated", loadUser);
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
+
+    return () => {
+      window.removeEventListener("storage", loadUser);
+      window.removeEventListener("userUpdated", loadUser);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
+    };
+  }, [fetchCart, fetchWishlist]);
+
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -85,10 +154,11 @@ const Mainnavbar = () => {
           categoriesData = response.data;
         }
 
-        const activeCategories = categoriesData.filter((cat) => cat.status === "active");
+        const activeCategories = categoriesData.filter(
+          (cat) => cat.status === "active"
+        );
         setCategories(activeCategories);
 
-        // Build sub-categories map from Admin API response
         const subMap = {};
         activeCategories.forEach((cat) => {
           if (Array.isArray(cat.subcategories)) {
@@ -114,6 +184,17 @@ const Mainnavbar = () => {
     fetchCategories();
   }, []);
 
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleCategoryHover = (categoryName) => {
     if (categoryMenuTimeout.current) clearTimeout(categoryMenuTimeout.current);
     setHoveredCategory(categoryName);
@@ -132,10 +213,13 @@ const Mainnavbar = () => {
     if (value.trim().length >= 2) {
       searchTimeout.current = setTimeout(async () => {
         try {
-          const res = await axios.get(`${VENDOR_API_URL}/search-suggestions`, {
-            params: { q: value },
-            ...getAuthHeaders(),
-          });
+          const res = await axios.get(
+            `${VENDOR_API_URL}/search-suggestions`,
+            {
+              params: { q: value },
+              ...getAuthHeaders(),
+            }
+          );
           if (res.data?.products) {
             setSearchResults(res.data.products);
             setShowSuggestions(true);
@@ -165,8 +249,9 @@ const Mainnavbar = () => {
   return (
     <div>
       <Navbar className="desktop-navbar lexend" expand="lg">
-        <Container fluid>
-          <Nav className="mx-auto nav-links">
+        <Container fluid className="mainnavbar-container">
+          {/* ===== LEFT: Nav Links ===== */}
+          <Nav className="nav-links">
             <NavDropdown
               title="Category"
               id="category-dropdown"
@@ -177,7 +262,8 @@ const Mainnavbar = () => {
                 <NavDropdown.Item disabled>Loading...</NavDropdown.Item>
               ) : (
                 categories.map((category) => {
-                  const subCategories = categorySubCategories[category.name] || [];
+                  const subCategories =
+                    categorySubCategories[category.name] || [];
                   const hasSubCategories = subCategories.length > 0;
 
                   return (
@@ -189,29 +275,36 @@ const Mainnavbar = () => {
                         onMouseEnter={() => handleCategoryHover(category.name)}
                       >
                         <span className="category-name">{category.name}</span>
-                        {hasSubCategories && <span className="sub-category-arrow">›</span>}
+                        {hasSubCategories && (
+                          <span className="sub-category-arrow">›</span>
+                        )}
                       </NavDropdown.Item>
 
-                      {hasSubCategories && hoveredCategory === category.name && (
-                        <div className="sub-category-dropdown">
-                          <div className="sub-category-header">
-                            <FaSitemap className="me-2" />
-                            <span className="sub-category-title">{category.name}</span>
+                      {hasSubCategories &&
+                        hoveredCategory === category.name && (
+                          <div className="sub-category-dropdown">
+                            <div className="sub-category-header">
+                              <FaSitemap className="me-2" />
+                              <span className="sub-category-title">
+                                {category.name}
+                              </span>
+                            </div>
+                            <div className="sub-category-list">
+                              {subCategories.map((sub, idx) => (
+                                <NavLink
+                                  key={idx}
+                                  to={`/category/${createSlug(
+                                    category.name
+                                  )}/${createSlug(sub)}`}
+                                  className="sub-category-item"
+                                >
+                                  <span className="sub-category-dot">•</span>
+                                  {sub}
+                                </NavLink>
+                              ))}
+                            </div>
                           </div>
-                          <div className="sub-category-list">
-                            {subCategories.map((sub, idx) => (
-                              <NavLink
-                                key={idx}
-                                to={`/category/${createSlug(category.name)}/${createSlug(sub)}`}
-                                className="sub-category-item"
-                              >
-                                <span className="sub-category-dot">•</span>
-                                {sub}
-                              </NavLink>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   );
                 })
@@ -232,57 +325,117 @@ const Mainnavbar = () => {
             </Nav.Link>
           </Nav>
 
-          <div className="navbar-search-container" ref={searchRef}>
-            <form onSubmit={handleSearch} className="navbar-search-form">
-              <div className="navbar-search-wrapper">
-                <FaSearch className="navbar-search-icon" />
-                <input
-                  type="text"
-                  className="navbar-search-input"
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  autoComplete="off"
-                />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    className="navbar-clear-search"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSearchResults([]);
-                      setShowSuggestions(false);
-                    }}
-                  >
-                    <FaTimes />
-                  </button>
-                )}
-              </div>
-
-              {showSuggestions && searchResults.length > 0 && (
-                <div className="navbar-search-suggestions">
-                  {searchResults.slice(0, 6).map((product) => (
-                    <div
-                      key={product._id}
-                      className="suggestion-item product-item"
-                      onClick={() => handleSuggestionClick(product)}
+          {/* ===== RIGHT: Search + Icons ===== */}
+          <div className="mainnavbar-right">
+            {/* 🔍 Search */}
+            <div className="navbar-search-container" ref={searchRef}>
+              <form onSubmit={handleSearch} className="navbar-search-form">
+                <div className="navbar-search-wrapper">
+                  <FaSearch className="navbar-search-icon" />
+                  <input
+                    type="text"
+                    className="navbar-search-input"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    autoComplete="off"
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      className="navbar-clear-search"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSearchResults([]);
+                        setShowSuggestions(false);
+                      }}
                     >
-                      {product.image && product.image.length > 0 && (
-                        <img
-                          src={product.image[0] || "/images/placeholder.png"}
-                          alt={product.name}
-                          className="suggestion-product-image"
-                        />
-                      )}
-                      <div className="suggestion-product-info">
-                        <div className="suggestion-product-name">{product.name}</div>
-                        <div className="suggestion-product-price">₹{product.price}</div>
-                      </div>
-                    </div>
-                  ))}
+                      <FaTimes />
+                    </button>
+                  )}
                 </div>
-              )}
-            </form>
+
+                {showSuggestions && searchResults.length > 0 && (
+                  <div className="navbar-search-suggestions">
+                    {searchResults.slice(0, 6).map((product) => (
+                      <div
+                        key={product._id}
+                        className="suggestion-item product-item"
+                        onClick={() => handleSuggestionClick(product)}
+                      >
+                        {product.image && product.image.length > 0 && (
+                          <img
+                            src={
+                              product.image[0] || "/images/placeholder.png"
+                            }
+                            alt={product.name}
+                            className="suggestion-product-image"
+                          />
+                        )}
+                        <div className="suggestion-product-info">
+                          <div className="suggestion-product-name">
+                            {product.name}
+                          </div>
+                          <div className="suggestion-product-price">
+                            ₹{product.price}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </form>
+            </div>
+
+            {/* ✅ ICONS — unique mnav- classes */}
+            <div className="mainnavbar-icons">
+              {/* 👤 User / Initial */}
+              <NavLink
+                to={isLoggedIn ? "/profile" : "/login"}
+                className="mnav-icon-link"
+                title={isLoggedIn ? "My Profile" : "Login"}
+              >
+                <button type="button" className="mnav-user-btn">
+                  {isLoggedIn ? (
+                    <span className="mnav-user-initial">{userInitial}</span>
+                  ) : (
+                    <HiOutlineUser className="mnav-icon" />
+                  )}
+                </button>
+              </NavLink>
+
+              {/* ❤️ Wishlist */}
+              <NavLink
+                to="/wishlist"
+                className="mnav-icon-link mnav-icon-wrapper"
+                title="Wishlist"
+              >
+                <button type="button" className="mnav-cart-btn">
+                  <HiOutlineHeart className="mnav-icon" />
+                  {wishlistCount > 0 && (
+                    <span className="mnav-badge">
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </span>
+                  )}
+                </button>
+              </NavLink>
+
+              {/* 🛍️ Cart */}
+              <NavLink
+                to="/cart"
+                className="mnav-icon-link mnav-icon-wrapper"
+                title="Cart"
+              >
+                <button type="button" className="mnav-cart-btn">
+                  <FiShoppingBag className="mnav-icon" />
+                  {cartCount > 0 && (
+                    <span className="mnav-badge">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
+                </button>
+              </NavLink>
+            </div>
           </div>
         </Container>
       </Navbar>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Form, Badge } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
   FaStar,
@@ -9,6 +9,9 @@ import {
   FaFilter,
   FaSitemap,
   FaShoppingCart,
+  FaBan,
+  FaPlus,
+  FaMinus,
 } from "react-icons/fa";
 import axios from "axios";
 import Header from "../../components/header/header";
@@ -17,68 +20,11 @@ import { createSlug } from "../../utils/slugUtils";
 import { useWishlist } from "../../context/WishlistContext";
 import { useCart } from "../../context/CartContext";
 import "./categorygrid.css";
+import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 const VENDOR_BEND_URL = "https://api-vendor.native91.com";
 const ADMIN_CATEGORY_API = "https://api-admin.native91.com/api/category";
-
-// ============================================================
-// 🆕 CLEAN SUBCATEGORY STRING — removes garbage
-// ============================================================
-const cleanSubcat = (s) => {
-  if (!s) return "";
-  if (typeof s !== "string") s = String(s);
-
-  let cleaned = s.trim();
-  if (!cleaned) return "";
-
-  // Parse JSON arrays (nested)
-  let iter = 0;
-  while ((cleaned.startsWith("[") || cleaned.startsWith('"')) && iter < 5) {
-    try {
-      const parsed = JSON.parse(cleaned);
-      if (Array.isArray(parsed)) cleaned = String(parsed[0] || "").trim();
-      else if (typeof parsed === "string") cleaned = parsed.trim();
-      else break;
-    } catch {
-      break;
-    }
-    iter++;
-  }
-
-  // Strip leading/trailing brackets, quotes, backslashes, slashes, spaces
-  let prev = null;
-  let stripIter = 0;
-  while (cleaned !== prev && stripIter < 15) {
-    prev = cleaned;
-    cleaned = cleaned
-      .replace(/^[\s\[\]"'\\\/]+/, "")
-      .replace(/[\s\[\]"'\\\/]+$/, "")
-      .trim();
-    stripIter++;
-  }
-
-  // Remove internal backslashes
-  cleaned = cleaned.replace(/\\+/g, "").trim();
-
-  // Remove trailing brackets/quotes
-  cleaned = cleaned
-    .replace(/^[\[\]"']+/, "")
-    .replace(/[\[\]"']+$/, "")
-    .trim();
-
-  // Handle comma-separated — take first
-  if (cleaned.includes(",") && !cleaned.includes(" & ")) {
-    const parts = cleaned.split(",").map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 1) cleaned = parts[0];
-  }
-
-  // Validation
-  if (cleaned.length === 0 || cleaned.length > 100) return "";
-  if (/^[\\\/\[\]"'\s]+$/.test(cleaned)) return "";
-
-  return cleaned;
-};
 
 const formatImagePath = (image) => {
   if (!image) return "/images/placeholder.png";
@@ -97,7 +43,8 @@ const formatImagePath = (image) => {
 
 const CategoryProducts = () => {
   const { pathname } = useLocation();
-  const { categoryName: categorySlug, subCategoryName: subCategorySlug } = useParams();
+  const { categoryName: categorySlug, subCategoryName: subCategorySlug } =
+    useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -120,6 +67,9 @@ const CategoryProducts = () => {
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
   const [isAddingToCart, setIsAddingToCart] = useState({});
 
+  // 🆕 Quantity per product
+  const [qtyMap, setQtyMap] = useState({});
+
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSubCategories, setSelectedSubCategories] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
@@ -128,9 +78,42 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // ============================================================
-  // RESOLVE SLUGS → REAL NAMES
-  // ============================================================
+  // 🆕 Quantity helpers
+  const getQty = (productId) => qtyMap[productId] || 1;
+
+  const changeQty = (e, productId, delta, maxStock) => {
+    e.stopPropagation();
+    setQtyMap((prev) => {
+      const current = prev[productId] || 1;
+      let next = current + delta;
+      if (next < 1) next = 1;
+      if (maxStock !== undefined && maxStock !== null && next > maxStock) {
+        next = Math.max(1, Number(maxStock));
+      }
+      return { ...prev, [productId]: next };
+    });
+  };
+
+  const isOutOfStock = (item) => {
+    const stock = item?.stock;
+    if (stock === undefined || stock === null) return false;
+    return Number(stock) <= 0;
+  };
+
+  useEffect(() => {
+    setSelectedCategories([]);
+    setSelectedSubCategories([]);
+    setSelectedPriceRange("");
+    setPriceMin("");
+    setPriceMax("");
+    setSelectedRating(0);
+    setSortBy("featured");
+    setProducts([]);
+    setFilteredProducts([]);
+    setLoading(true);
+    setResolvingNames(true);
+  }, [categorySlug, subCategorySlug]);
+
   useEffect(() => {
     const resolveSlugs = async () => {
       setResolvingNames(true);
@@ -150,23 +133,23 @@ const CategoryProducts = () => {
         if (!matchedCat) {
           const decoded = decodeURIComponent(categorySlug);
           matchedCat = cats.find(
-            (c) => c.name.toLowerCase() === decoded.toLowerCase()
+            (c) => c.name.toLowerCase() === decoded.toLowerCase(),
           );
         }
 
         if (matchedCat) {
           setDecodedCategory(matchedCat.name);
+          setDecodedSubCategory(null);
 
           if (subCategorySlug && matchedCat.subcategories) {
             let matchedSub = matchedCat.subcategories.find(
-              (sc) => createSlug(sc.name || sc) === subCategorySlug
+              (sc) => createSlug(sc.name) === subCategorySlug,
             );
 
             if (!matchedSub) {
               const decodedSub = decodeURIComponent(subCategorySlug);
               matchedSub = matchedCat.subcategories.find(
-                (sc) =>
-                  String(sc.name || sc).toLowerCase() === decodedSub.toLowerCase()
+                (sc) => sc.name.toLowerCase() === decodedSub.toLowerCase(),
               );
             }
 
@@ -176,13 +159,15 @@ const CategoryProducts = () => {
                 .replace(/\b\w/g, (l) => l.toUpperCase());
               setDecodedSubCategory(rough);
             } else {
-              setDecodedSubCategory(matchedSub.name || matchedSub);
+              setDecodedSubCategory(matchedSub.name);
             }
           }
         } else {
           setDecodedCategory(decodeURIComponent(categorySlug));
           if (subCategorySlug) {
             setDecodedSubCategory(decodeURIComponent(subCategorySlug));
+          } else {
+            setDecodedSubCategory(null);
           }
         }
       } catch (err) {
@@ -190,6 +175,8 @@ const CategoryProducts = () => {
         setDecodedCategory(decodeURIComponent(categorySlug || "All"));
         if (subCategorySlug) {
           setDecodedSubCategory(decodeURIComponent(subCategorySlug));
+        } else {
+          setDecodedSubCategory(null);
         }
       } finally {
         setResolvingNames(false);
@@ -199,9 +186,6 @@ const CategoryProducts = () => {
     resolveSlugs();
   }, [categorySlug, subCategorySlug]);
 
-  // ============================================================
-  // FETCH PRODUCTS
-  // ============================================================
   useEffect(() => {
     if (resolvingNames) return;
     if (!decodedCategory) return;
@@ -218,7 +202,7 @@ const CategoryProducts = () => {
           allProducts = allProducts.filter(
             (p) =>
               p.category &&
-              p.category.toLowerCase() === decodedCategory.toLowerCase()
+              p.category.toLowerCase() === decodedCategory.toLowerCase(),
           );
         }
 
@@ -229,10 +213,15 @@ const CategoryProducts = () => {
             const allSubs = [];
             if (p.subCategory) allSubs.push(p.subCategory);
             if (p.subcategory) allSubs.push(p.subcategory);
-            if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
-            if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
+            if (Array.isArray(p.subCategories))
+              allSubs.push(...p.subCategories);
+            if (Array.isArray(p.subcategories))
+              allSubs.push(...p.subcategories);
 
-            if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+            if (
+              p.categorySubcategoryMap &&
+              typeof p.categorySubcategoryMap === "object"
+            ) {
               Object.values(p.categorySubcategoryMap).forEach((arr) => {
                 if (Array.isArray(arr)) allSubs.push(...arr);
               });
@@ -240,13 +229,20 @@ const CategoryProducts = () => {
 
             const cleanSubs = allSubs
               .filter(Boolean)
-              .map((s) => cleanSubcat(String(s)).toLowerCase())
+              .map((s) =>
+                String(s)
+                  .replace(/[\[\]"']/g, "")
+                  .trim()
+                  .toLowerCase(),
+              )
               .filter(Boolean);
 
             return cleanSubs.includes(targetSub);
           });
 
           setSelectedSubCategories([decodedSubCategory]);
+        } else {
+          setSelectedSubCategories([]);
         }
 
         setProducts(allProducts);
@@ -264,9 +260,6 @@ const CategoryProducts = () => {
     fetchProducts();
   }, [decodedCategory, decodedSubCategory, resolvingNames, fetchWishlist]);
 
-  // ============================================================
-  // FETCH CATEGORIES + SUB-CATEGORIES
-  // ============================================================
   useEffect(() => {
     const fetchCategoriesAndSubs = async () => {
       try {
@@ -279,7 +272,9 @@ const CategoryProducts = () => {
         for (const cat of categories) {
           try {
             const subRes = await axios.get(
-              `${API_URL}/categories/${encodeURIComponent(cat.name)}/subcategories`
+              `${API_URL}/categories/${encodeURIComponent(
+                cat.name
+              )}/subcategories`
             );
             if (subRes.data && subRes.data.subCategories) {
               subMap[cat.name] = subRes.data.subCategories;
@@ -298,17 +293,14 @@ const CategoryProducts = () => {
     fetchCategoriesAndSubs();
   }, []);
 
-  // ============================================================
-  // APPLY FILTERS
-  // ============================================================
   useEffect(() => {
     let filtered = [...products];
 
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((p) =>
         selectedCategories.some(
-          (cat) => p.category && p.category.toLowerCase() === cat.toLowerCase()
-        )
+          (cat) => p.category && p.category.toLowerCase() === cat.toLowerCase(),
+        ),
       );
     }
 
@@ -320,7 +312,10 @@ const CategoryProducts = () => {
         if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
         if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
 
-        if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+        if (
+          p.categorySubcategoryMap &&
+          typeof p.categorySubcategoryMap === "object"
+        ) {
           Object.values(p.categorySubcategoryMap).forEach((arr) => {
             if (Array.isArray(arr)) allSubs.push(...arr);
           });
@@ -328,11 +323,16 @@ const CategoryProducts = () => {
 
         const cleanSubs = allSubs
           .filter(Boolean)
-          .map((s) => cleanSubcat(String(s)).toLowerCase())
+          .map((s) =>
+            String(s)
+              .replace(/[\[\]"']/g, "")
+              .trim()
+              .toLowerCase(),
+          )
           .filter(Boolean);
 
         return selectedSubCategories.some((selectedSub) =>
-          cleanSubs.includes(cleanSubcat(selectedSub).toLowerCase())
+          cleanSubs.includes(selectedSub.toLowerCase().trim()),
         );
       });
     }
@@ -367,7 +367,9 @@ const CategoryProducts = () => {
     }
 
     if (selectedRating > 0) {
-      filtered = filtered.filter((p) => (p.averageRating || 0) >= selectedRating);
+      filtered = filtered.filter(
+        (p) => (p.averageRating || 0) >= selectedRating,
+      );
     }
 
     setFilteredProducts(filtered);
@@ -381,19 +383,20 @@ const CategoryProducts = () => {
     products,
   ]);
 
-  // ============================================================
-  // SORT
-  // ============================================================
   const getSortedProducts = () => {
     let sorted = [...filteredProducts];
     switch (sortBy) {
       case "alphabetical-a-z":
         return sorted.sort((a, b) =>
-          (a.name?.toLowerCase() || "").localeCompare(b.name?.toLowerCase() || "")
+          (a.name?.toLowerCase() || "").localeCompare(
+            b.name?.toLowerCase() || "",
+          ),
         );
       case "alphabetical-z-a":
         return sorted.sort((a, b) =>
-          (b.name?.toLowerCase() || "").localeCompare(a.name?.toLowerCase() || "")
+          (b.name?.toLowerCase() || "").localeCompare(
+            a.name?.toLowerCase() || "",
+          ),
         );
       case "price-low-high":
         return sorted.sort((a, b) => a.price - b.price);
@@ -401,22 +404,21 @@ const CategoryProducts = () => {
         return sorted.sort((a, b) => b.price - a.price);
       case "newest":
         return sorted.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
         );
       case "rating":
         return sorted.sort(
-          (a, b) => (b.averageRating || 0) - (a.averageRating || 0)
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
         );
       default:
         return sorted.sort((a, b) =>
-          (a.name?.toLowerCase() || "").localeCompare(b.name?.toLowerCase() || "")
+          (a.name?.toLowerCase() || "").localeCompare(
+            b.name?.toLowerCase() || "",
+          ),
         );
     }
   };
 
-  // ============================================================
-  // HANDLERS
-  // ============================================================
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
     setIsTogglingWishlist((prev) => ({ ...prev, [productId]: true }));
@@ -439,8 +441,25 @@ const CategoryProducts = () => {
     }
   };
 
+  // 🆕 ADD TO CART — with quantity + stock validation
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
+
+    if (isOutOfStock(item)) {
+      alert("Sorry, this product is out of stock.");
+      return;
+    }
+
+    const requestedQty = getQty(item._id);
+
+    if (Number(item.stock) < requestedQty) {
+      alert(
+        `Only ${item.stock} item${item.stock === 1 ? "" : "s"
+        } available in stock.`
+      );
+      return;
+    }
+
     setIsAddingToCart((prev) => ({ ...prev, [item._id]: true }));
     try {
       let guestId = localStorage.getItem("guestId");
@@ -461,16 +480,23 @@ const CategoryProducts = () => {
         price: parseFloat(item.price),
         originalPrice: parseFloat(item.price),
         image: primaryImage,
-        quantity: 1,
+        quantity: requestedQty, // 🆕 use selected qty
         discountAmount: 0,
         couponCode: null,
+        stock: item.stock,
       });
+
+      // Reset qty to 1 after adding
+      setQtyMap((prev) => ({ ...prev, [item._id]: 1 }));
 
       setShowCart(true);
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert("Failed to add to cart. Please try again.");
+      alert(
+        error.response?.data?.message ||
+        "Failed to add to cart. Please try again."
+      );
     } finally {
       setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
     }
@@ -512,39 +538,19 @@ const CategoryProducts = () => {
 
   const checkIsInWishlist = (productId) => isInWishlist(productId);
 
-  // 🆕 CLEANED subcategories with dedupe + sort
   const getCategorySubCategories = () => {
-    let rawSubs = [];
-
     if (decodedCategory === "All") {
       const allSubs = new Set();
       Object.values(allSubCategories).forEach((subs) => {
         subs.forEach((s) => allSubs.add(s));
       });
-      rawSubs = Array.from(allSubs);
-    } else {
-      rawSubs = allSubCategories[decodedCategory] || [];
+      return Array.from(allSubs);
     }
-
-    const seen = new Set();
-    const cleaned = [];
-    rawSubs.forEach((s) => {
-      const val = cleanSubcat(s);
-      if (!val) return;
-      const key = val.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      cleaned.push(val);
-    });
-
-    return cleaned.sort((a, b) => a.localeCompare(b));
+    return allSubCategories[decodedCategory] || [];
   };
 
   const categorySubCategories = getCategorySubCategories();
 
-  // ============================================================
-  // LOADING
-  // ============================================================
   if (resolvingNames || loading) {
     return (
       <>
@@ -553,20 +559,20 @@ const CategoryProducts = () => {
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
-          <p>{resolvingNames ? "Loading category..." : "Loading products..."}</p>
+          <p>
+            {resolvingNames ? "Loading category..." : "Loading products..."}
+          </p>
         </div>
         <Footer />
       </>
     );
   }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <>
       <Header />
 
+      <Breadcrumb />
       <div className="category-background lexend px-2">
         <Container className="category-page">
           <div className="category-hero-section">
@@ -783,6 +789,8 @@ const CategoryProducts = () => {
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
                     const isAdding = isAddingToCart[item._id] || false;
+                    const outOfStock = isOutOfStock(item);
+                    const qty = getQty(item._id);
 
                     return (
                       <Col
@@ -811,11 +819,32 @@ const CategoryProducts = () => {
                                   e.target.src = "/images/placeholder.png";
                                 }}
                               />
+
+                              {outOfStock && (
+                                <Badge
+                                  bg="danger"
+                                  style={{
+                                    position: "absolute",
+                                    top: "10px",
+                                    left: "10px",
+                                    zIndex: 2,
+                                    fontSize: "11px",
+                                    padding: "5px 10px",
+                                  }}
+                                >
+                                  <FaBan className="me-1" /> Out of Stock
+                                </Badge>
+                              )}
+
                               <div
                                 className="wishlist-btn-category"
-                                onClick={(e) => handleToggleWishlist(e, item._id)}
+                                onClick={(e) =>
+                                  handleToggleWishlist(e, item._id)
+                                }
                                 style={{
-                                  cursor: isToggling ? "not-allowed" : "pointer",
+                                  cursor: isToggling
+                                    ? "not-allowed"
+                                    : "pointer",
                                 }}
                               >
                                 {isToggling ? (
@@ -834,28 +863,36 @@ const CategoryProducts = () => {
                                 )}
                               </div>
 
-                              {(() => {
+                              {/* {(() => {
                                 const allSubs = [];
-                                if (item.subCategory) allSubs.push(item.subCategory);
-                                if (item.subcategory) allSubs.push(item.subcategory);
+                                if (item.subCategory)
+                                  allSubs.push(item.subCategory);
+                                if (item.subcategory)
+                                  allSubs.push(item.subcategory);
                                 if (Array.isArray(item.subCategories))
                                   allSubs.push(...item.subCategories);
                                 if (Array.isArray(item.subcategories))
                                   allSubs.push(...item.subcategories);
                                 if (
                                   item.categorySubcategoryMap &&
-                                  typeof item.categorySubcategoryMap === "object"
+                                  typeof item.categorySubcategoryMap ===
+                                  "object"
                                 ) {
-                                  Object.values(item.categorySubcategoryMap).forEach(
-                                    (arr) => {
-                                      if (Array.isArray(arr)) allSubs.push(...arr);
-                                    }
-                                  );
+                                  Object.values(
+                                    item.categorySubcategoryMap
+                                  ).forEach((arr) => {
+                                    if (Array.isArray(arr))
+                                      allSubs.push(...arr);
+                                  });
                                 }
 
                                 const cleanSubs = allSubs
                                   .filter(Boolean)
-                                  .map((s) => cleanSubcat(String(s)))
+                                  .map((s) =>
+                                    String(s)
+                                      .replace(/[\[\]"']/g, "")
+                                      .trim()
+                                  )
                                   .filter(Boolean);
 
                                 const uniqueSubs = [...new Set(cleanSubs)];
@@ -868,7 +905,7 @@ const CategoryProducts = () => {
                                       ` +${uniqueSubs.length - 1}`}
                                   </div>
                                 );
-                              })()}
+                              })()} */} 
                             </div>
                             <Card.Body>
                               <div className="product-brand">
@@ -880,7 +917,8 @@ const CategoryProducts = () => {
                                   <FaStar
                                     key={i}
                                     color={
-                                      i < Math.round(item.averageRating || 0)
+                                      i <
+                                      Math.round(item.averageRating || 0)
                                         ? "#ffc107"
                                         : "#e4e5e9"
                                     }
@@ -894,12 +932,57 @@ const CategoryProducts = () => {
                               <div className="product-price">
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
+
+                              {/* 🆕 QUANTITY SELECTOR */}
+                              {!outOfStock && (
+                                <div
+                                  className="qty-box-category"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="qty-btn-category"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, -1, item.stock)
+                                    }
+                                    disabled={qty <= 1}
+                                  >
+                                    <FaMinus size={10} />
+                                  </button>
+                                  <span className="qty-value-category">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="qty-btn-category"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, 1, item.stock)
+                                    }
+                                    disabled={
+                                      item.stock !== undefined &&
+                                      qty >= Number(item.stock)
+                                    }
+                                  >
+                                    <FaPlus size={10} />
+                                  </button>
+                                </div>
+                              )}
+
                               <Button
                                 className="add-to-cart-btn-category"
                                 onClick={(e) => handleAddToCart(e, item)}
-                                disabled={isAdding}
+                                disabled={isAdding || outOfStock}
+                                title={
+                                  outOfStock
+                                    ? "This product is out of stock"
+                                    : "Add to Cart"
+                                }
                               >
-                                {isAdding ? (
+                                {outOfStock ? (
+                                  <>
+                                    <FaBan /> Out of Stock
+                                  </>
+                                ) : isAdding ? (
                                   <>
                                     <span className="spinner-border spinner-border-sm me-2" />
                                     Adding...

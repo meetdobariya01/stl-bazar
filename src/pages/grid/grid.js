@@ -8,6 +8,7 @@ import {
   Button,
   Dropdown,
   Form,
+  Badge,
 } from "react-bootstrap";
 import { motion } from "framer-motion";
 import {
@@ -16,6 +17,9 @@ import {
   FaHeart,
   FaRegHeart,
   FaSlidersH,
+  FaBan,
+  FaPlus,
+  FaMinus,
 } from "react-icons/fa";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -31,7 +35,7 @@ import Breadcrumb from "../../components/breadcrumb/breadcrumb";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const VENDOR_BACKEND_URL = "https://api-vendor.native91.com";
-// const VENDOR_BACKEND_URL = "http://localhost:5177"; // For local development
+
 const getPrimaryImageUrl = (image) => {
   if (!image) return "/images/placeholder.png";
   let img = Array.isArray(image) ? image[0] : image;
@@ -63,11 +67,15 @@ const Grid = () => {
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [qty, setQty] = useState({});
+
+  // 🆕 qtyMap — one entry per product ID
+  const [qtyMap, setQtyMap] = useState({});
+
   const [sort, setSort] = useState("popular");
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
+  const [isAddingToCart, setIsAddingToCart] = useState({});  // 🆕 per-product adding state
 
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -79,6 +87,22 @@ const Grid = () => {
   const [categories, setCategories] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [brands, setBrands] = useState([]);
+
+  // 🆕 Quantity helpers
+  const getQty = (productId) => qtyMap[productId] || 1;
+
+  const changeQty = (e, productId, delta, maxStock) => {
+    e.stopPropagation();
+    setQtyMap((prev) => {
+      const current = prev[productId] || 1;
+      let next = current + delta;
+      if (next < 1) next = 1;
+      if (maxStock !== undefined && maxStock !== null && next > maxStock) {
+        next = Math.max(1, Number(maxStock));
+      }
+      return { ...prev, [productId]: next };
+    });
+  };
 
   useEffect(() => {
     if (!decodedName) return;
@@ -104,7 +128,6 @@ const Grid = () => {
         setMaterials(uniqueMaterials);
         setBrands(uniqueBrands);
 
-        // Fetch wishlist to check status
         fetchWishlist();
       })
       .catch((err) => console.error(err))
@@ -152,31 +175,65 @@ const Grid = () => {
     products,
   ]);
 
-  const changeQty = (id, val) => {
-    setQty((prev) => ({
-      ...prev,
-      [id]: Math.max(1, (prev[id] || 1) + val),
-    }));
+  // 🆕 Helper: check if a product is out of stock
+  const isOutOfStock = (item) => {
+    const stock = item?.stock;
+    if (stock === undefined || stock === null) return false;
+    return Number(stock) <= 0;
   };
 
+  // 🆕 ADD TO CART — with qty + stock validation
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
-    const guestId = localStorage.getItem("guestId");
-    await axios.post(`${API_URL}/cart/add`, {
-      guestId,
-      product: {
-        productId: item._id,
-        name: item.name,
-        price: item.price,
-        image: Array.isArray(item.image) ? item.image[0] : item.image,
-        quantity: qty[item._id] || 1,
-      },
-    });
-    await fetchCart();
-    setShowCart(true);
+
+    if (isOutOfStock(item)) {
+      alert("Sorry, this product is out of stock.");
+      return;
+    }
+
+    const requestedQty = getQty(item._id);
+
+    if (Number(item.stock) < requestedQty) {
+      alert(
+        `Only ${item.stock} item${item.stock === 1 ? "" : "s"} available in stock.`
+      );
+      return;
+    }
+
+    setIsAddingToCart((prev) => ({ ...prev, [item._id]: true }));
+
+    try {
+      const guestId = localStorage.getItem("guestId");
+
+      await axios.post(`${API_URL}/cart/add`, {
+        guestId,
+        product: {
+          productId: item._id,
+          name: item.name,
+          price: item.price,
+          image: Array.isArray(item.image) ? item.image[0] : item.image,
+          quantity: requestedQty,
+          stock: item.stock,
+        },
+      });
+
+      // Reset qty back to 1
+      setQtyMap((prev) => ({ ...prev, [item._id]: 1 }));
+
+      await fetchCart();
+      setShowCart(true);
+      window.dispatchEvent(new Event("cartUpdated"));
+    } catch (err) {
+      console.error("Add to cart error:", err);
+      alert(
+        err.response?.data?.message ||
+        "Failed to add to cart. Please try again."
+      );
+    } finally {
+      setIsAddingToCart((prev) => ({ ...prev, [item._id]: false }));
+    }
   };
 
-  // ✅ Updated toggleWishlist using context
   const handleToggleWishlist = async (e, productId) => {
     e.stopPropagation();
 
@@ -194,7 +251,6 @@ const Grid = () => {
         company: product.company || "Native91",
       });
 
-      // Refetch wishlist to update UI
       await fetchWishlist();
     } catch (error) {
       console.error("Error toggling wishlist:", error);
@@ -268,7 +324,6 @@ const Grid = () => {
     return labels[sort] || "Popular";
   };
 
-  // Check if product is in wishlist
   const checkIsInWishlist = (productId) => {
     return isInWishlist(productId);
   };
@@ -281,7 +336,6 @@ const Grid = () => {
 
       <div className="product-background lexend px-3 py-5">
         <Container className="product-page">
-          {/* 🔹 Category Description Section */}
           {categories.length > 0 && (
             <div className="category-description mb-4 p-4 bg-light rounded text-center">
               <h2 className="h4 mb-3 funnel-sans">{decodedName}</h2>
@@ -338,7 +392,7 @@ const Grid = () => {
           </div>
 
           <Row className="g-4">
-            {/* Filters Sidebar (hidden - you can enable if needed) */}
+            {/* Filters Sidebar (hidden) */}
             <Col lg={3} className="d-none">
               <div className="filters-sidebar">
                 <div className="filter-header">
@@ -401,11 +455,6 @@ const Grid = () => {
                           onChange={() => handleMaterialChange(mat)}
                         />
                       ))}
-                      {materials.length > 5 && (
-                        <Button variant="link" size="sm" className="view-more">
-                          + View more
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -423,11 +472,6 @@ const Grid = () => {
                           onChange={() => handleBrandChange(brand)}
                         />
                       ))}
-                      {brands.length > 5 && (
-                        <Button variant="link" size="sm" className="view-more">
-                          + View more
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -551,6 +595,9 @@ const Grid = () => {
                     const inWishlist = checkIsInWishlist(item._id);
                     const productSlug = createSlug(item.name);
                     const isToggling = isTogglingWishlist[item._id] || false;
+                    const isAdding = isAddingToCart[item._id] || false;
+                    const outOfStock = isOutOfStock(item);
+                    const qty = getQty(item._id);
 
                     return (
                       <Col key={item._id} xs={6} md={4} lg={3}>
@@ -570,6 +617,23 @@ const Grid = () => {
                                   (e.target.src = "/images/placeholder.png")
                                 }
                               />
+
+                              {outOfStock && (
+                                <Badge
+                                  bg="danger"
+                                  style={{
+                                    position: "absolute",
+                                    top: "10px",
+                                    left: "10px",
+                                    zIndex: 2,
+                                    fontSize: "11px",
+                                    padding: "5px 10px",
+                                  }}
+                                >
+                                  <FaBan className="me-1" /> Out of Stock
+                                </Badge>
+                              )}
+
                               <div
                                 className="wishlist-btn-grid"
                                 onClick={(e) =>
@@ -618,11 +682,65 @@ const Grid = () => {
                               <div className="product-price">
                                 ₹{item.price.toLocaleString()}
                               </div>
+
+                              {/* 🆕 QUANTITY SELECTOR */}
+                              {!outOfStock && (
+                                <div
+                                  className="qty-box-grid"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="qty-btn-grid"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, -1, item.stock)
+                                    }
+                                    disabled={qty <= 1}
+                                  >
+                                    <FaMinus size={10} />
+                                  </button>
+                                  <span className="qty-value-grid">{qty}</span>
+                                  <button
+                                    type="button"
+                                    className="qty-btn-grid"
+                                    onClick={(e) =>
+                                      changeQty(e, item._id, 1, item.stock)
+                                    }
+                                    disabled={
+                                      item.stock !== undefined &&
+                                      qty >= Number(item.stock)
+                                    }
+                                  >
+                                    <FaPlus size={10} />
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* 🆕 Button — disabled when out of stock */}
                               <Button
                                 className="add-to-cart-btn"
                                 onClick={(e) => handleAddToCart(e, item)}
+                                disabled={isAdding || outOfStock}
+                                title={
+                                  outOfStock
+                                    ? "This product is out of stock"
+                                    : "Add to Cart"
+                                }
                               >
-                                <FaShoppingCart /> Add to Cart
+                                {outOfStock ? (
+                                  <>
+                                    <FaBan /> Out of Stock
+                                  </>
+                                ) : isAdding ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2" />
+                                    Adding...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaShoppingCart /> Add to Cart
+                                  </>
+                                )}
                               </Button>
                             </Card.Body>
                           </Card>
@@ -636,7 +754,7 @@ const Grid = () => {
           </Row>
         </Container>
       </div>
-      {/* <Details /> */}
+
       <Footer />
     </>
   );

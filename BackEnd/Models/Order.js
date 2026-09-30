@@ -1,4 +1,4 @@
-// Models/Order.js - UPDATED WITH VARIANT SUPPORT
+// Models/Order.js - UPDATED WITH VARIANT, CUSTOM FIELD, PAYU & SHIPROCKET CHECKOUT
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -16,12 +16,23 @@ const orderSchema = new mongoose.Schema({
       company: { type: String, default: "N/A" },
       weight: { type: Number, default: 0.5 },
 
+ shippingCost: {
+      type: Number,
+      default: 0,
+    },
+
+
+
       // 🆕 VARIANT FIELDS
       variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
       selectedColor: { type: String, default: "" },
       selectedSize: { type: String, default: "" },
       variantImage: { type: String, default: "" },
       variantPrice: { type: Number, default: 0 },
+
+      // 🆕 CUSTOM FIELD
+      customFieldLabel: { type: String, default: null },
+      customFieldValue: { type: String, default: null },
     },
   ],
   shippingAddress: {
@@ -36,9 +47,28 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: { type: String, default: "COD" },
 
+  // 🆕 PAYMENT STATUS
+  paymentStatus: {
+    type: String,
+    enum: ["Pending", "Paid", "Failed"],
+    default: "Pending",
+  },
+
+  // 🆕 PAYU FIELDS
+  payuTxnId: { type: String, default: null },
+  payuPaymentId: { type: String, default: null },
+
+  // 🆕 SHIPROCKET CHECKOUT FIELDS
+  shiprocketPaymentId: { type: String, default: null },
+  shiprocketOrderId: { type: String, default: null },
+
   coupon: {
     code: { type: String, default: null },
-    discountType: { type: String, enum: ["percentage", "fixed"], default: null },
+    discountType: {
+      type: String,
+      enum: ["percentage", "fixed"],
+      default: null,
+    },
     discountValue: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
     couponId: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
@@ -48,7 +78,7 @@ const orderSchema = new mongoose.Schema({
   orderStatus: {
     type: String,
     enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
-    default: "Pending"
+    default: "Pending",
   },
 
   shipments: [
@@ -61,24 +91,30 @@ const orderSchema = new mongoose.Schema({
       labelUrl: String,
       status: {
         type: String,
-        enum: ['created', 'pickup_scheduled', 'in_transit', 'delivered', 'cancelled'],
-        default: 'created'
+        enum: [
+          "created",
+          "pickup_scheduled",
+          "in_transit",
+          "delivered",
+          "cancelled",
+        ],
+        default: "created",
       },
       trackingUrl: String,
-      createdAt: { type: Date, default: Date.now }
-    }
+      createdAt: { type: Date, default: Date.now },
+    },
   ],
 
   shiprocketSyncStatus: {
     type: String,
-    enum: ['pending', 'synced', 'failed', 'partial', 'skipped', 'disabled'],
-    default: 'pending'
+    enum: ["pending", "synced", "failed", "partial", "skipped", "disabled"],
+    default: "pending",
   },
 
   shiprocketError: { type: String, default: null },
-
 }, {
-  timestamps: true
+  timestamps: true,
 });
 
 module.exports = mongoose.model("Order", orderSchema);
+

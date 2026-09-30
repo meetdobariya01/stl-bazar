@@ -1,5 +1,4 @@
-// models/Product.js (user backend)
-
+// models/Product.js (PUBLIC / user backend)
 const mongoose = require("mongoose");
 
 const variantSchema = new mongoose.Schema({
@@ -19,14 +18,17 @@ const ProductSchema = new mongoose.Schema(
     category: { type: String, required: true },
     categoryIcon: { type: String, default: "FaBoxOpen" },
 
-    // Sub-category
- // Sub-category (ALL fields synced)
-subcategory: { type: String, default: "" },
-subcategories: { type: [String], default: [] },
-subCategory: { type: String, default: "" },
-subCategories: { type: [String], default: [] },
-categorySubcategoryMap: { type: Map, of: [String], default: {} },
-    // 🆕 VARIANTS
+    // Multi-category
+    categories: { type: [String], default: [] },
+    categorySubcategoryMap: { type: Map, of: [String], default: {} },
+
+    // Sub-category (all spellings — vendor backend may write either)
+    subcategory: { type: String, default: "" },
+    subcategories: { type: [String], default: [] },
+    subCategory: { type: String, default: "" },
+    subCategories: { type: [String], default: [] },
+
+    // VARIANTS
     variants: { type: [variantSchema], default: [] },
 
     image: [{ type: String }],
@@ -40,10 +42,60 @@ categorySubcategoryMap: { type: Map, of: [String], default: {} },
       review: String,
       createdAt: { type: Date, default: Date.now }
     }],
-    averageRating: { type: Number, default: 0 }
+    averageRating: { type: Number, default: 0 },
+
+    // Shipping
+    shippingTime: { type: String, default: "7 days" },
+    customShippingTime: { type: String, default: "" },
+    estimatedDeliveryDays: {
+      min: { type: Number, default: 3 },
+      max: { type: Number, default: 5 }
+    },
+    shippingCharge: { type: Number, default: 0 },
+    isFreeShipping: { type: Boolean, default: true },
+
+    // Ingredients / nutrition
+    ingredients: { type: String, default: "" },
+    ingredientsList: { type: [String], default: [] },
+    nutritionalInfo: {
+      servingSize: { type: String, default: "" },
+      calories: { type: Number, default: 0 },
+      protein: { type: Number, default: 0 },
+      carbohydrates: { type: Number, default: 0 },
+      fat: { type: Number, default: 0 },
+      sugar: { type: Number, default: 0 },
+      fiber: { type: Number, default: 0 },
+      sodium: { type: Number, default: 0 }
+    },
+    allergens: { type: [String], default: [] },
+    dietaryInfo: {
+      isVegetarian: { type: Boolean, default: false },
+      isVegan: { type: Boolean, default: false },
+      isGlutenFree: { type: Boolean, default: false },
+      isDairyFree: { type: Boolean, default: false },
+      isNutFree: { type: Boolean, default: false },
+      isOrganic: { type: Boolean, default: false }
+    },
+
+    // Weight / dimensions / sku / variant
+    weight: { type: Number, default: 0 },
+    weightUnit: { type: String, default: "" },
+    dimensions: {
+      length: { type: Number, default: 0 },
+      width: { type: Number, default: 0 },
+      height: { type: Number, default: 0 },
+      unit: { type: String, default: "cm" }
+    },
+    sku: { type: String, default: "" },
+    variant: { type: String, default: "" },
+
+    // ✅ CUSTOM FIELD — vendor enables + names; customer types the value at runtime
+    customField: {
+      enabled: { type: Boolean, default: false },
+      label:   { type: String, default: "" }   // e.g., "Name to Print"
+    }
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
 module.exports = mongoose.model("Product", ProductSchema);
-

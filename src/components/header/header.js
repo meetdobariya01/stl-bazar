@@ -1,5 +1,3 @@
-// Header.jsx - FULLY FIXED — email initial (Google + normal login)
-
 import { useState, useEffect, useRef } from "react";
 import {
   Navbar,
@@ -283,7 +281,7 @@ const Header = () => {
         }
 
         const activeCategories = categoriesData.filter(
-          (cat) => cat.status === "active"
+          (cat) => cat.status === "active",
         );
         setCategories(activeCategories);
         console.log(`📂 Found ${activeCategories.length} categories`);
@@ -336,9 +334,9 @@ const Header = () => {
     try {
       const response = await axios.get(
         `${VENDOR_API_URL}/categories/${encodeURIComponent(
-          categoryName
+          categoryName,
         )}/subcategories`,
-        { ...getAuthHeaders() }
+        { ...getAuthHeaders() },
       );
       const subs = parseSubCategories(pickSubsFromResponse(response.data));
 
@@ -350,7 +348,7 @@ const Header = () => {
     } catch (error) {
       console.warn(
         `Sub-categories fetch failed for ${categoryName}:`,
-        error.message
+        error.message,
       );
       return [];
     } finally {
@@ -530,7 +528,7 @@ const Header = () => {
 
   return (
     <>
-      <div className="lexend">
+      <div className="lexend pe-auto">
         <AnimatePresence>
           {showSearch && (
             <motion.div
@@ -576,8 +574,8 @@ const Header = () => {
                           className="search-recommendation-item"
                           onClick={() => handleRecommendationClick(product)}
                         >
-                          <div className="recommendation-img">
-                            {/* <img
+                          {/* <div className="recommendation-img">
+                            <img
                               src={
                                 product.image?.[0] || "/images/placeholder.png"
                               }
@@ -586,8 +584,8 @@ const Header = () => {
                                 e.target.onerror = null;
                                 e.target.src = "/images/placeholder.png";
                               }}
-                            /> */}
-                          </div>
+                            />
+                          </div> */}
                           <div className="recommendation-info">
                             <div className="recommendation-name">
                               {product.name}
@@ -633,7 +631,7 @@ const Header = () => {
               <img src="/images/native.png" alt="Native91" className="logo" />
             </Navbar.Brand>
 
-            <Nav className="mx-auto desktop-menu">
+            <Nav className="mx-auto desktop-menu ">
               {menu.map((item, index) => (
                 <motion.div key={index} whileHover={{ y: -3 }}>
                   {item.dropdown ? (
@@ -708,7 +706,7 @@ const Header = () => {
                                         <NavLink
                                           key={idx}
                                           to={`/category/${createSlug(
-                                            hoveredCategory
+                                            hoveredCategory,
                                           )}/${createSlug(sub)}`}
                                           className="subcategory-item"
                                           onClick={() => setShowMenu(false)}
@@ -718,7 +716,7 @@ const Header = () => {
                                           </span>
                                           {sub}
                                         </NavLink>
-                                      )
+                                      ),
                                     )
                                   ) : (
                                     <div className="subcategory-empty">
@@ -728,9 +726,7 @@ const Header = () => {
                                 </div>
                                 <div className="subcategory-footer">
                                   <NavLink
-                                    to={`/category/${createSlug(
-                                      hoveredCategory
-                                    )}`}
+                                    to={`/category/All`}
                                     className="view-all-subcategories"
                                     onClick={() => setShowMenu(false)}
                                   >
@@ -883,14 +879,14 @@ const Header = () => {
                                     <NavLink
                                       key={idx}
                                       to={`/category/${createSlug(
-                                        sub.title
+                                        sub.title,
                                       )}/${createSlug(subCat)}`}
                                       className="mobile-sub-sublink"
                                       onClick={() => setShowMenu(false)}
                                     >
                                       • {subCat}
                                     </NavLink>
-                                  )
+                                  ),
                                 )}
                               </div>
                             )}

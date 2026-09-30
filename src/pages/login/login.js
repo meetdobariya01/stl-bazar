@@ -1,16 +1,23 @@
-// Login.js - FULLY FIXED — Google JWT decode + user save
+// Login.js - FULLY FIXED — Google + normal login (email initial + force logout)
 
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Button, Card, Modal } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaGoogle, FaEye, FaEyeSlash, FaExclamationTriangle } from "react-icons/fa";
+import {
+  FaEnvelope,
+  FaLock,
+  FaGoogle,
+  FaEye,
+  FaEyeSlash,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 import "./login.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 
-// 🆕 Decode JWT to extract user info
+// 🆕 Decode JWT token
 const decodeJWT = (token) => {
   try {
     if (!token || typeof token !== "string") return null;
@@ -25,17 +32,34 @@ const decodeJWT = (token) => {
   }
 };
 
-// 🆕 Build user object from JWT
-const buildUserFromJWT = (token) => {
+// 🆕 Build user object from JWT + fallback
+const buildUserObject = (token, fallbackEmail = "", fallbackName = "") => {
   const decoded = decodeJWT(token);
-  if (!decoded) return null;
   return {
-    _id: decoded.id || decoded.sub || decoded._id || "",
-    email: decoded.email || decoded.userEmail || "",
-    name: decoded.name || decoded.given_name || "",
-    picture: decoded.picture || "",
-    ...decoded,
+    _id: decoded?.id || decoded?.sub || decoded?._id || "",
+    email: decoded?.email || fallbackEmail || "",
+    name: decoded?.name || decoded?.given_name || fallbackName || "",
+    picture: decoded?.picture || "",
+    provider: decoded?.provider || "local",
+    ...(decoded || {}),
   };
+};
+
+// 🆕 Save session + notify navbar
+const saveSession = (token, userObj) => {
+  localStorage.setItem("token", token);
+  if (userObj) {
+    localStorage.setItem("user", JSON.stringify(userObj));
+  }
+  // ✅ Notify all listeners
+  window.dispatchEvent(new Event("userUpdated"));
+  window.dispatchEvent(new Event("cartUpdated"));
+  window.dispatchEvent(new Event("wishlistUpdated"));
+
+  console.log("✅ Session saved:", {
+    token: token ? "✓" : "✗",
+    user: userObj,
+  });
 };
 
 const Login = () => {
@@ -50,36 +74,19 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Save token + user + notify navbar
-  const saveSession = (token, userObj) => {
-    localStorage.setItem("token", token);
-    if (userObj) {
-      localStorage.setItem("user", JSON.stringify(userObj));
-    }
-
-    // Notify navbar + cart + wishlist
-    window.dispatchEvent(new Event("userUpdated"));
-    window.dispatchEvent(new Event("cartUpdated"));
-    window.dispatchEvent(new Event("wishlistUpdated"));
-
-    console.log("✅ Session saved:", {
-      token: token ? "✓" : "✗",
-      user: userObj,
-    });
-  };
-
-  // Check for Google OAuth callback
+  // ============================================
+  // Google OAuth callback — token from URL
+  // ============================================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get("token");
     const error = params.get("error");
+    const emailParam = params.get("email");
 
     if (token) {
-      // ✅ Build user from JWT (Google callback may not include user object)
-      const userFromJWT = buildUserFromJWT(token);
-
-      // Save session
-      saveSession(token, userFromJWT);
+      // ✅ Build user from JWT
+      const userObj = buildUserObject(token, emailParam || "");
+      saveSession(token, userObj);
 
       // Clean URL
       window.history.replaceState({}, document.title, "/");
@@ -89,6 +96,15 @@ const Login = () => {
     if (error === "already_logged_in") {
       setErrorMessage("This account is already logged in from another device.");
       setShowForceLogoutModal(true);
+
+      // Store email for retry
+      if (emailParam) {
+        setPendingLoginData({
+          email: emailParam,
+          password: null,
+          isGoogle: true,
+        });
+      }
     }
 
     if (error && error !== "already_logged_in") {
@@ -96,27 +112,41 @@ const Login = () => {
     }
   }, [location.search, navigate]);
 
-  // Handle Submit Login
+  // ============================================
+  // Normal Login submit
+  // ============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage("");
 
     try {
+      console.log("Attempting login:", { email, password: "***" });
+
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/login`,
         { email, password },
         { headers: { "Content-Type": "application/json" } }
       );
 
+      console.log("Login response:", response.data);
+
       if (response.data.token) {
+        // ✅ Backend user object
         let userObj = response.data.user;
 
-        // Fallback — JWT માંથી user બનાવો
+        // ⚠️ Fallback — જો email missing → JWT decode
         if (!userObj || !userObj.email) {
-          userObj = buildUserFromJWT(response.data.token) || {
+          userObj = buildUserObject(
+            response.data.token,
             email,
-            name: email.split("@")[0],
+            email.split("@")[0]
+          );
+        } else {
+          // Backend `id` field → `_id` (consistency)
+          userObj = {
+            _id: userObj.id || userObj._id,
+            ...userObj,
           };
         }
 
@@ -131,49 +161,75 @@ const Login = () => {
         data: error.response?.data,
       });
 
-      if (error.response?.status === 409 && error.response?.data?.code === "ALREADY_LOGGED_IN") {
-        setErrorMessage(error.response?.data?.message || "Already logged in from another device.");
+      if (
+        error.response?.status === 409 &&
+        error.response?.data?.code === "ALREADY_LOGGED_IN"
+      ) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "This account is already logged in from another device."
+        );
         setShowForceLogoutModal(true);
-        setPendingLoginData({ email, password });
+        setPendingLoginData({ email, password, isGoogle: false });
       } else {
-        setErrorMessage(error.response?.data?.message || "Something went wrong! Try again.");
+        setErrorMessage(
+          error.response?.data?.message || "Something went wrong! Try again."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Handle Force Logout — FIXED
+  // ============================================
+  // Force Logout + Retry Login
+  // ============================================
   const handleForceLogout = async () => {
+    console.log("🚀 Force logout START");
+    console.log("pendingLoginData:", pendingLoginData);
+
     setShowForceLogoutModal(false);
     setLoading(true);
     setErrorMessage("");
 
-    try {
-      // Step 1: Try force logout with email
-      if (pendingLoginData?.email) {
-        try {
-          await axios.post(
-            `${process.env.REACT_APP_API_URL}/auth/force-logout`,
-            { email: pendingLoginData.email },
-            {
-              headers: { "Content-Type": "application/json" },
-              timeout: 8000,
-            }
-          );
-        } catch (forceErr) {
-          console.warn("Force-logout failed (continuing):", forceErr?.message);
-        }
+    const targetEmail = pendingLoginData?.email;
+
+    // Step 1: Try backend /force-logout (fail થાય તો પણ continue)
+    if (targetEmail) {
+      try {
+        console.log("📡 Calling /auth/force-logout...");
+        const res = await axios.post(
+          `${process.env.REACT_APP_API_URL}/auth/force-logout`,
+          { email: targetEmail },
+          {
+            headers: { "Content-Type": "application/json" },
+            timeout: 5000,
+          }
+        );
+        console.log("✅ Backend force-logout:", res.data);
+      } catch (forceErr) {
+        console.warn(
+          "⚠️ Backend force-logout failed (continuing):",
+          forceErr?.response?.status,
+          forceErr?.message
+        );
       }
+    }
 
-      // Step 2: Clear local session
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("userData");
-      window.dispatchEvent(new Event("userUpdated"));
+    // Step 2: ALWAYS clear local
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userData");
+    localStorage.removeItem("guestId");
+    window.dispatchEvent(new Event("userUpdated"));
+    window.dispatchEvent(new Event("cartUpdated"));
+    window.dispatchEvent(new Event("wishlistUpdated"));
+    console.log("✅ Local session cleared");
 
-      // Step 3: Retry login
-      if (pendingLoginData?.email && pendingLoginData?.password) {
+    // Step 3: Retry login (only if password available)
+    if (pendingLoginData?.email && pendingLoginData?.password) {
+      try {
+        console.log("📡 Retrying login...");
         const response = await axios.post(
           `${process.env.REACT_APP_API_URL}/auth/login`,
           {
@@ -189,22 +245,46 @@ const Login = () => {
         if (response.data.token) {
           let userObj = response.data.user;
           if (!userObj || !userObj.email) {
-            userObj = buildUserFromJWT(response.data.token) || {
-              email: pendingLoginData.email,
+            userObj = buildUserObject(
+              response.data.token,
+              pendingLoginData.email,
+              pendingLoginData.email.split("@")[0]
+            );
+          } else {
+            userObj = {
+              _id: userObj.id || userObj._id,
+              ...userObj,
             };
           }
 
           saveSession(response.data.token, userObj);
           setPendingLoginData(null);
           navigate("/");
+          console.log("✅ Login retry successful");
         }
+      } catch (loginErr) {
+        console.error(
+          "❌ Retry login failed:",
+          loginErr.response?.data || loginErr.message
+        );
+        setErrorMessage(
+          loginErr.response?.data?.message ||
+            "Backend still has active session. Please try again later."
+        );
       }
-    } catch (error) {
-      console.error("Force logout error:", error);
-      setErrorMessage(error.response?.data?.message || "Failed to force logout.");
-    } finally {
-      setLoading(false);
+    } else if (pendingLoginData?.isGoogle) {
+      // Google login — redirect to OAuth
+      console.log("📡 Google login — redirecting to OAuth");
+      setPendingLoginData(null);
+      window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+      return;
+    } else {
+      console.warn("⚠️ No password — cannot retry");
+      setErrorMessage("Other device logged out. Please login again.");
     }
+
+    setLoading(false);
+    console.log("🏁 Force logout END");
   };
 
   const handleCancelForceLogout = () => {
@@ -213,11 +293,17 @@ const Login = () => {
     setErrorMessage("");
   };
 
+  // ============================================
+  // Google login (redirect to backend OAuth)
+  // ============================================
   const handleGoogleLogin = () => {
     setErrorMessage("");
     window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
   };
 
+  // ============================================
+  // Initialize Google One-Tap
+  // ============================================
   useEffect(() => {
     if (window.google) {
       window.google.accounts.id.initialize({
@@ -241,6 +327,9 @@ const Login = () => {
     }
   }, []);
 
+  // ============================================
+  // Google One-Tap credential response
+  // ============================================
   const handleGoogleCredentialResponse = async (response) => {
     setGoogleLoading(true);
     setErrorMessage("");
@@ -253,9 +342,14 @@ const Login = () => {
 
       let userObj = result.data.user;
 
-      // ✅ Fallback — JWT માંથી user બનાવો
+      // ⚠️ Fallback — JWT decode
       if (!userObj || !userObj.email) {
-        userObj = buildUserFromJWT(result.data.token);
+        userObj = buildUserObject(result.data.token);
+      } else {
+        userObj = {
+          _id: userObj.id || userObj._id,
+          ...userObj,
+        };
       }
 
       saveSession(result.data.token, userObj);
@@ -263,19 +357,38 @@ const Login = () => {
     } catch (error) {
       console.error("Google login error:", error);
 
-      if (error.response?.status === 409 && error.response?.data?.code === "ALREADY_LOGGED_IN") {
-        setErrorMessage(error.response?.data?.message || "Already logged in from another device.");
+      if (
+        error.response?.status === 409 &&
+        error.response?.data?.code === "ALREADY_LOGGED_IN"
+      ) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "This account is already logged in from another device."
+        );
         setShowForceLogoutModal(true);
+
+        const emailFromErr = error.response?.data?.email;
+        if (emailFromErr) {
+          setPendingLoginData({
+            email: emailFromErr,
+            password: null,
+            isGoogle: true,
+          });
+        }
       } else {
-        setErrorMessage(error.response?.data?.message || "Google login failed");
+        setErrorMessage(
+          error.response?.data?.message || "Google login failed"
+        );
       }
     } finally {
       setGoogleLoading(false);
     }
   };
 
+  // ============================================
+  // Scroll to top on route change
+  // ============================================
   const { pathname } = useLocation();
-
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
@@ -288,18 +401,31 @@ const Login = () => {
           <Col lg={10}>
             <div className="login-container">
               <div className="login-image-wrapper d-none d-sm-block">
-                <img src="./images/login.webp" alt="Premium Grocery" className="login-side-image" />
+                <img
+                  src="./images/login.webp"
+                  alt="Premium Grocery"
+                  className="login-side-image"
+                />
               </div>
 
               <Card className="login-card border-0">
                 <h3 className="text-center mb-4 lexend">Welcome Back</h3>
-                <p className="text-center text-muted mb-4">Login to continue shopping</p>
+                <p className="text-center text-muted mb-4">
+                  Login to continue shopping
+                </p>
 
                 {errorMessage && !showForceLogoutModal && (
-                  <div className="alert alert-danger d-flex align-items-center" role="alert">
+                  <div
+                    className="alert alert-danger d-flex align-items-center"
+                    role="alert"
+                  >
                     <FaExclamationTriangle className="me-2" />
                     <span>{errorMessage}</span>
-                    <button type="button" className="btn-close ms-auto" onClick={() => setErrorMessage("")} />
+                    <button
+                      type="button"
+                      className="btn-close ms-auto"
+                      onClick={() => setErrorMessage("")}
+                    />
                   </div>
                 )}
 
@@ -316,7 +442,11 @@ const Login = () => {
                 <div className="divider funnel-sans">OR</div>
 
                 <Form onSubmit={handleSubmit}>
-                  <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+                  <motion.div
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
                     <Form.Group className="mb-3 input-group-custom lexend underline-input">
                       <FaEnvelope />
                       <Form.Control
@@ -330,7 +460,11 @@ const Login = () => {
                     </Form.Group>
                   </motion.div>
 
-                  <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
+                  <motion.div
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
                     <Form.Group className="mb-3 input-group-custom lexend underline-input position-relative">
                       <FaLock />
                       <Form.Control
@@ -358,20 +492,35 @@ const Login = () => {
                     </Form.Group>
                   </motion.div>
 
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}>
-                    <Button type="submit" className="login-btn w-100 mb-3 lexend" disabled={loading}>
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      type="submit"
+                      className="login-btn w-100 mb-3 lexend"
+                      disabled={loading}
+                    >
                       {loading ? "Logging in..." : "Login"}
                     </Button>
                   </motion.div>
                 </Form>
 
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
                   <div id="googleLoginBtn" className="google-btn"></div>
                 </motion.div>
 
                 <div className="text-center mt-4">
-                  <span className="text-muted funnel-sans">Don't have an account?</span>
-                  <a href="/signup" className="ms-1 register-link lexend">Sign Up</a>
+                  <span className="text-muted funnel-sans">
+                    Don't have an account?
+                  </span>
+                  <a href="/signup" className="ms-1 register-link lexend">
+                    Sign Up
+                  </a>
                 </div>
               </Card>
             </div>
@@ -379,7 +528,12 @@ const Login = () => {
         </Row>
       </Container>
 
-      <Modal show={showForceLogoutModal} onHide={handleCancelForceLogout} centered>
+      {/* ✅ Force Logout Modal */}
+      <Modal
+        show={showForceLogoutModal}
+        onHide={handleCancelForceLogout}
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title>
             <FaExclamationTriangle className="text-warning me-2" />
@@ -387,9 +541,19 @@ const Login = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p><strong>This account is already logged in from another device.</strong></p>
-          <p className="text-muted">For security reasons, only one active session is allowed per account.</p>
-          <p className="text-muted">Would you like to log out from the other device and continue with this login?</p>
+          <p>
+            <strong>
+              This account is already logged in from another device.
+            </strong>
+          </p>
+          <p className="text-muted">
+            For security reasons, only one active session is allowed per
+            account.
+          </p>
+          <p className="text-muted">
+            Would you like to log out from the other device and continue with
+            this login?
+          </p>
           <div className="mt-3 p-3 bg-light rounded">
             <small className="text-muted">
               <strong>What will happen:</strong>
@@ -402,8 +566,14 @@ const Login = () => {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCancelForceLogout}>Cancel</Button>
-          <Button variant="warning" onClick={handleForceLogout} disabled={loading}>
+          <Button variant="secondary" onClick={handleCancelForceLogout}>
+            Cancel
+          </Button>
+          <Button
+            variant="warning"
+            onClick={handleForceLogout}
+            disabled={loading}
+          >
             {loading ? "Processing..." : "Logout Other Device & Login"}
           </Button>
         </Modal.Footer>

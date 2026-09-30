@@ -516,3 +516,49 @@
     padding: 8px;
   }
 }
+/* 🆕 Quantity selector for category grid */
+.qty-box-category {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px auto;
+  padding: 4px 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  background: #f8f9fa;
+  width: fit-content;
+}
+
+.qty-btn-category {
+  border: none;
+  background: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0D3B2E;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.qty-btn-category:hover:not(:disabled) {
+  background: #0D3B2E;
+  color: #fff;
+}
+
+.qty-btn-category:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qty-value-category {
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 22px;
+  text-align: center;
+  color: #0D3B2E;
+}
