@@ -40,7 +40,7 @@ const ContactUs = () => {
       setLoading(true);
 
       const res = await axios.post(
-        "http://localhost:9000/api/contact/send-mail",
+        "https://api.native91.com/api/contact/send-mail",
         formData,
       );
 

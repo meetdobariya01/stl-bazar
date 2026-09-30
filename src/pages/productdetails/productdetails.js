@@ -59,15 +59,10 @@ const COUPON_API_URL =
 const VENDOR_IMAGE_BASE = "https://api-vendor.native91.com";
 const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
 
-// ✅ RICH TEXT RENDERER — renders vendor HTML (from Quill) safely on the product page
+// ✅ RICH TEXT RENDERER
 const RichText = ({ html, className = "" }) => {
   if (!html) return null;
-  return (
-    <div
-      className={className}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
+  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
 const formatPrice = (price) => {
@@ -121,42 +116,117 @@ const formatSizeWeight = (product) => {
   return parts.length > 0 ? parts : null;
 };
 
+// 🆕 Parse any dispatch text to { min, max, display }
+const parseDispatchToDays = (text) => {
+  if (!text) return { min: 1, max: 2, display: "1-2 days" };
+  const t = String(text).toLowerCase().trim();
+
+  // Format: "3-5 days" or "3–5 days" or "3 to 5 days"
+  const rangeMatch = t.match(/(\d+)\s*[-–to]+\s*(\d+)\s*day/);
+  if (rangeMatch) {
+    return {
+      min: parseInt(rangeMatch[1]),
+      max: parseInt(rangeMatch[2]),
+      display: `${rangeMatch[1]}–${rangeMatch[2]} days`,
+    };
+  }
+
+  // Format: "10 days" or "5 day"
+  const singleDayMatch = t.match(/(\d+)\s*day/);
+  if (singleDayMatch) {
+    const d = parseInt(singleDayMatch[1]);
+    return { min: d, max: d, display: `${d} day${d > 1 ? "s" : ""}` };
+  }
+
+  // Format: "1-2 weeks"
+  const weekRangeMatch = t.match(/(\d+)\s*[-–to]+\s*(\d+)\s*week/);
+  if (weekRangeMatch) {
+    const wMin = parseInt(weekRangeMatch[1]) * 7;
+    const wMax = parseInt(weekRangeMatch[2]) * 7;
+    return {
+      min: wMin,
+      max: wMax,
+      display: `${weekRangeMatch[1]}–${weekRangeMatch[2]} weeks`,
+    };
+  }
+
+  // Format: "1 week", "2 weeks"
+  const weekMatch = t.match(/(\d+)\s*week/);
+  if (weekMatch) {
+    const w = parseInt(weekMatch[1]);
+    const days = w * 7;
+    return {
+      min: days,
+      max: days,
+      display: `${w} week${w > 1 ? "s" : ""}`,
+    };
+  }
+
+  // Fallback
+  return { min: 3, max: 5, display: text };
+};
+
+// 🆕 UPDATED: Calculates total delivery = dispatch days + transit days
 const getShippingDisplay = (product) => {
   if (!product) return null;
-  let shippingText = product.shippingTime || "1 week";
-  if (shippingText === "Custom" && product.customShippingTime) {
-    shippingText = product.customShippingTime;
+
+  // ============================================
+  // 1. VENDOR DISPATCH TIME
+  // ============================================
+  let dispatchRaw = product.shippingTime || "";
+  if (dispatchRaw === "Custom" && product.customShippingTime) {
+    dispatchRaw = product.customShippingTime;
   }
+  if (!dispatchRaw) dispatchRaw = "1 week";
+
+  const dispatchParsed = parseDispatchToDays(dispatchRaw);
+
+  // ============================================
+  // 2. DELIVERY TRANSIT TIME (default 3–5 days)
+  // ============================================
+  const transitMin = product.estimatedDeliveryDays?.min || 3;
+  const transitMax = product.estimatedDeliveryDays?.max || 5;
+  const transitDisplay =
+    transitMin === transitMax
+      ? `${transitMin} days`
+      : `${transitMin}–${transitMax} days`;
+
+  // ============================================
+  // 3. TOTAL DELIVERY = DISPATCH + TRANSIT
+  // ============================================
+  const totalMin = dispatchParsed.min + transitMin;
+  const totalMax = dispatchParsed.max + transitMax;
+  const totalDisplay =
+    totalMin === totalMax
+      ? `${totalMin} days`
+      : `${totalMin}–${totalMax} days`;
+
+  // ============================================
+  // 4. SHIPPING CHARGE
+  // ============================================
   const charge = product.shippingCharge || 0;
   const isFree =
     product.isFreeShipping !== undefined ? product.isFreeShipping : true;
   const chargeText = isFree ? "Free" : `₹${charge}`;
 
-  const isWeekBased = shippingText.toLowerCase().includes("week");
-  let deliveryRange = "1 week";
-
-  if (isWeekBased) {
-    const weekMatch = shippingText.match(/(\d+)\s*week/);
-    if (weekMatch) {
-      const weeks = parseInt(weekMatch[1]);
-      deliveryRange = `${weeks} week${weeks > 1 ? "s" : ""}`;
-    } else {
-      deliveryRange = shippingText;
-    }
-  } else {
-    const minDays = product.estimatedDeliveryDays?.min || 3;
-    const maxDays = product.estimatedDeliveryDays?.max || 7;
-    deliveryRange =
-      minDays === maxDays ? `${minDays} days` : `${minDays}–${maxDays} days`;
-  }
-
   return {
-    shippingText,
+    // Vendor dispatch
+    dispatchText: dispatchParsed.display,
+    dispatchMin: dispatchParsed.min,
+    dispatchMax: dispatchParsed.max,
+
+    // Transit
+    transitText: transitDisplay,
+
+    // Total (dispatch + transit)
+    deliveryRange: totalDisplay,
+    totalMin,
+    totalMax,
+
+    // Shipping
     chargeText,
     charge,
     isFree,
-    displayText: `${chargeText} • ${shippingText}`,
-    deliveryRange,
   };
 };
 
@@ -189,7 +259,7 @@ const generateFallbackId = (color, size, price, idx) => {
   return base ? `fb_${base.replace(/[^a-zA-Z0-9]/g, "_")}` : `fb_idx_${idx}`;
 };
 
-// 🆕 Normalize variants — now supports images[]
+// 🆕 Normalize variants — supports images[]
 const normalizeVariants = (product) => {
   if (!product) return [];
 
@@ -272,7 +342,6 @@ const normalizeVariants = (product) => {
   return [];
 };
 
-// 🆕 Wait for Fastrr SDK to load
 const waitForFastrrSDK = (maxWait = 10000) => {
   return new Promise((resolve, reject) => {
     const start = Date.now();
@@ -316,7 +385,7 @@ const Productdetails = () => {
   const [productImages, setProductImages] = useState([]);
   const [originalProductImages, setOriginalProductImages] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [isBuyingNow, setIsBuyingNow] = useState(false); // 🆕
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   const [stock, setStock] = useState(0);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
@@ -1033,7 +1102,7 @@ const Productdetails = () => {
     }
   };
 
-  // 🆕 BUY NOW — Direct Fastrr checkout (NO address modal, direct Fastrr iframe)
+  // 🆕 BUY NOW — Direct Fastrr checkout
   const handleBuyNow = async () => {
     const effectiveStockCheck = selectedVariant
       ? selectedVariant.stock || 0
@@ -1066,7 +1135,6 @@ const Productdetails = () => {
         localStorage.setItem("guestId", guestId);
       }
 
-      // 🆕 STEP 1: Add product to cart
       const strictVariantId =
         selectedVariant && selectedVariant._id
           ? String(selectedVariant._id)
@@ -1117,10 +1185,8 @@ const Productdetails = () => {
         customFieldValue: hasCustomField ? customFieldInput.trim() : null,
       });
 
-      // 🆕 STEP 2: Wait for cart update
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // 🆕 STEP 3: Fetch cart from backend
       const cartRes = await axios.get(`${API_URL}/cart/${guestId}`);
       const cartData = cartRes.data;
 
@@ -1130,7 +1196,6 @@ const Productdetails = () => {
         return;
       }
 
-      // 🆕 STEP 4: Compatibility check
       try {
         const checkRes = await axios.post(
           `${API_URL}/order/check-fastrr-compatibility`,
@@ -1159,7 +1224,6 @@ const Productdetails = () => {
         return;
       }
 
-      // 🆕 STEP 5: Create Fastrr order + get access token
       const placeholderAddress = {
         name: "Guest Customer",
         email: "guest@native91.com",
@@ -1213,7 +1277,6 @@ const Productdetails = () => {
       const token = tokenRes.data.accessToken;
       const fastrrOrderId = tokenRes.data.orderId;
 
-      // 🆕 STEP 6: Wait for Fastrr SDK
       try {
         await waitForFastrrSDK(8000);
       } catch (sdkErr) {
@@ -1222,7 +1285,6 @@ const Productdetails = () => {
         return;
       }
 
-      // 🆕 STEP 7: Open Fastrr iframe directly
       const dummyEvent = {
         preventDefault: () => {},
         stopPropagation: () => {},
@@ -1628,8 +1690,6 @@ const Productdetails = () => {
                         const variantImageUrl = variant.image
                           ? getVariantImageUrl(variant.image)
                           : null;
-                        const variantImagesCount = (variant.images || [])
-                          .length;
 
                         return (
                           <Col xs={4} md={4} lg={3} key={variant._id || idx}>
@@ -1700,18 +1760,6 @@ const Productdetails = () => {
                                     ₹{variant.price}
                                   </div>
                                 )}
-                                {/* 🆕 show image count */}
-                                {/* {variantImagesCount > 0 && (
-                                  <div
-                                    className="text-muted"
-                                    style={{ fontSize: "0.7rem" }}
-                                  >
-                                    🖼️ {variantImagesCount}{" "}
-                                    {variantImagesCount === 1
-                                      ? "image"
-                                      : "images"}
-                                  </div>
-                                )} */}
                                 {isDisabled && (
                                   <div
                                     className="text-danger"
@@ -1731,16 +1779,6 @@ const Productdetails = () => {
                                     </div>
                                   )}
                               </div>
-                              {/* {isSelected && (
-                                <FaCheckCircle
-                                  className="text-success"
-                                  style={{
-                                    position: "absolute",
-                                    top: "5px",
-                                    right: "5px",
-                                  }}
-                                />
-                              )} */}
                             </div>
                           </Col>
                         );
@@ -2019,16 +2057,44 @@ const Productdetails = () => {
                   </div>
                 )}
 
+                {/* 🆕 UPDATED: SHIPPING INFO CARD — Total = Dispatch + Transit */}
                 {shippingInfo && (
-                  <div className="shipping-info-card mb-1 tax-text">
-                    <span className="fw-bold">Estimated Delivery</span>
-                    <span className="mx-2">-</span>
-                    <span className="small">
-                      <span className="me-1">
+                  <div className="shipping-info-card mb-2">
+                    {/* Total Estimated Delivery */}
+                    <div className="d-flex align-items-center gap-2 mb-1">
+                      <span className="fw-bold">Estimated Delivery:</span>
+                      <span className="small">
                         Your order will arrive within{" "}
-                        {shippingInfo.deliveryRange}
+                        <strong>{shippingInfo.deliveryRange}</strong>
                       </span>
-                    </span>
+                    </div>
+
+                    {/* Vendor Dispatched Time
+                    <div className="d-flex align-items-center gap-2 mb-1">
+                      <FaClock className="text-warning" />
+                      <span className="fw-bold">Vendor Dispatched Time:</span>
+                      <span className="small">{shippingInfo.dispatchText}</span>
+                    </div> */}
+
+                    {/* Delivery Transit */}
+                    {/* <div className="d-flex align-items-center gap-2 mb-1">
+                      <FaShippingFast className="text-info" />
+                      <span className="fw-bold">Delivery Transit:</span>
+                      <span className="small">{shippingInfo.transitText}</span>
+                    </div> */}
+
+                    {/* Shipping Charge */}
+                    {/* <div className="d-flex align-items-center gap-2">
+                      <FaBox className="text-primary" />
+                      <span className="fw-bold">Shipping:</span>
+                      <span className="small">
+                        {shippingInfo.isFree ? (
+                          <span className="text-success fw-bold">Free</span>
+                        ) : (
+                          <span>₹{shippingInfo.charge}</span>
+                        )}
+                      </span>
+                    </div> */}
                   </div>
                 )}
 
@@ -2263,7 +2329,6 @@ const Productdetails = () => {
           <div className="product-accordion mt-5">
             <details open>
               <summary className="funnel-sans">Product Details</summary>
-              {/* ✅ FIXED: Render rich text HTML instead of showing raw tags */}
               <RichText
                 html={product.description}
                 className="product-description"
@@ -2503,7 +2568,7 @@ const Productdetails = () => {
               <summary className="funnel-sans">Shipping & Delivery</summary>
               {hasVendorDelivery && (
                 <div className="vendor-delivery-time mt-3 p-3 ">
-                  <div className="d-flex align-items-center gap-2">
+                  <div className="d-flex align-items-center gap-2 mb-2">
                     <strong>Vendor Dispatched Time:</strong>
                     <span className="ms-1">
                       {product.shippingTime === "Custom" &&
@@ -2512,6 +2577,22 @@ const Productdetails = () => {
                         : product.shippingTime}
                     </span>
                   </div>
+                  {shippingInfo && (
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <strong>Delivery Transit:</strong>
+                      <span className="ms-1">
+                        {shippingInfo.transitText}
+                      </span>
+                    </div>
+                  )}
+                  {shippingInfo && (
+                    <div className="d-flex align-items-center gap-2">
+                      <strong>Total Estimated Delivery:</strong>
+                      <span className="ms-1">
+                        {shippingInfo.deliveryRange}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </details>
