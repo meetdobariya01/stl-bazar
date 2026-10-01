@@ -1240,7 +1240,7 @@ const Cart = () => {
                     </span>
                     <span>₹{formatPrice(subtotal)} / ₹{FREE_SHIPPING_THRESHOLD}</span>
                   </div> */}
-                  <ProgressBar now={shippingProgress} />
+                  {/* <ProgressBar now={shippingProgress} /> */}
                 </div>
 
                 <div className="d-lg-none mt-3">
@@ -1277,8 +1277,8 @@ const Cart = () => {
                         </div>
                       )}
                       <div className="summary-row">
-                        <span>Shipping</span>
-                        <span className="free">including in checkout</span>
+                      
+                        <span className="free">Shipping charges will be calculated at the time of Checkout.</span>
                       </div>
                       <hr />
                       <div className="summary-total">
