@@ -2624,7 +2624,7 @@ const Productdetails = () => {
                 ) : (
                   <>
                     <div className="d-flex align-items-center gap-3 mb-3">
-                      {brandLogo && (
+                      {/* {brandLogo && (
                         <img
                           src={brandLogo}
                           alt={brandName}
@@ -2638,7 +2638,7 @@ const Productdetails = () => {
                             border: "1px solid #e9ecef",
                           }}
                         />
-                      )}
+                      )} */}
                     </div>
 
                     <p className="brand-description">

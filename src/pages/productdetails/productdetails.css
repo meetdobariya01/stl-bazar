@@ -1051,10 +1051,15 @@
 }
 /* ===== RICH TEXT DESCRIPTION STYLING ===== */
 .product-description {
-  font-size: 15px;
-  line-height: 1.7;
-  color: #333;
-  word-break: break-word;
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+  line-height: 1.8;
+  padding-right: 10px;
+  box-sizing: border-box;
 }
 
 .product-description p {
