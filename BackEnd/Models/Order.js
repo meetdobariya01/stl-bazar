@@ -81,10 +81,11 @@ codCharges: {
   orderStatus: {
     type: String,
     enum: [
-      "PENDING_PAYMENT",   // ✅ NEW — order created, payment pending
+      "PENDING_PAYMENT",
       "Pending",
+      "Accepted",
       "Processing",
-      "Shipped",
+      "Ready for Shipment",
       "Delivered",
       "Cancelled",
     ],

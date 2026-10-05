@@ -62,7 +62,9 @@ const ADMIN_IMAGE_BASE = "https://api-admin.native91.com";
 // ✅ RICH TEXT RENDERER
 const RichText = ({ html, className = "" }) => {
   if (!html) return null;
-  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+  );
 };
 
 const formatPrice = (price) => {
@@ -197,9 +199,7 @@ const getShippingDisplay = (product) => {
   const totalMin = dispatchParsed.min + transitMin;
   const totalMax = dispatchParsed.max + transitMax;
   const totalDisplay =
-    totalMin === totalMax
-      ? `${totalMin} days`
-      : `${totalMin}–${totalMax} days`;
+    totalMin === totalMax ? `${totalMin} days` : `${totalMin}–${totalMax} days`;
 
   // ============================================
   // 4. SHIPPING CHARGE
@@ -364,7 +364,7 @@ const waitForFastrrSDK = (maxWait = 10000) => {
 const isMobileDevice = () =>
   typeof window !== "undefined" &&
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
+    navigator.userAgent,
   );
 
 const Productdetails = () => {
@@ -489,7 +489,7 @@ const Productdetails = () => {
           `${matchedCompany.name} - Premium brand on Native91`;
         setBrandDescription(description);
         setBrandLogo(
-          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null
+          matchedCompany.logo ? normalizeImageUrl(matchedCompany.logo) : null,
         );
       } else {
         setBrandName(companyName);
@@ -535,7 +535,7 @@ const Productdetails = () => {
         savingsPercentage: ((discountAmount / basePrice) * 100).toFixed(0),
       };
     },
-    [product, selectedVariant]
+    [product, selectedVariant],
   );
 
   const applyCoupon = async (coupon) => {
@@ -549,7 +549,7 @@ const Productdetails = () => {
       const couponProducts = coupon.products || coupon.productIds || [];
       if (couponProducts.length > 0) {
         const isProductValid = couponProducts.some(
-          (id) => id.toString() === product._id.toString()
+          (id) => id.toString() === product._id.toString(),
         );
         if (!isProductValid) {
           alert("This coupon is not valid for this product.");
@@ -616,7 +616,7 @@ const Productdetails = () => {
 
       try {
         const response = await axios.get(
-          `${COUPON_API_URL}/coupons/public/product/${productId}`
+          `${COUPON_API_URL}/coupons/public/product/${productId}`,
         );
         if (
           response.data.success &&
@@ -639,9 +639,9 @@ const Productdetails = () => {
         try {
           const response = await axios.get(
             `${COUPON_API_URL}/coupons/public/company/${encodeURIComponent(
-              companyName
+              companyName,
             )}`,
-            { params: { productId } }
+            { params: { productId } },
           );
           if (
             response.data.success &&
@@ -696,7 +696,7 @@ const Productdetails = () => {
       if (!imagePath) return "/images/placeholder.png";
       return getImageUrl(imagePath);
     },
-    [getImageUrl]
+    [getImageUrl],
   );
 
   const getAllImagesFromProduct = useCallback(
@@ -735,7 +735,7 @@ const Productdetails = () => {
       }
       return validImages;
     },
-    [getImageUrl]
+    [getImageUrl],
   );
 
   useEffect(() => {
@@ -753,12 +753,12 @@ const Productdetails = () => {
         let foundProduct = null;
 
         foundProduct = products.find(
-          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase()
+          (p) => p.name && p.name.toLowerCase() === productName.toLowerCase(),
         );
         if (!foundProduct) {
           const productSlug = createSlug(productName);
           foundProduct = products.find(
-            (p) => p.name && createSlug(p.name) === productSlug
+            (p) => p.name && createSlug(p.name) === productSlug,
           );
         }
         if (!foundProduct) {
@@ -772,7 +772,7 @@ const Productdetails = () => {
         if (!foundProduct && slug.length === 24) {
           try {
             const productResponse = await axios.get(
-              `${API_URL}/product/${slug}`
+              `${API_URL}/product/${slug}`,
             );
             if (productResponse.data) foundProduct = productResponse.data;
           } catch (idErr) {
@@ -821,7 +821,7 @@ const Productdetails = () => {
           setError(
             err.response?.data?.message ||
               err.message ||
-              "Failed to load product."
+              "Failed to load product.",
           );
         }
       } finally {
@@ -877,10 +877,7 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).substr(2, 9);
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
       if (isInWishlistState) {
@@ -936,7 +933,7 @@ const Productdetails = () => {
     if (qty > variant.stock) setQty(Math.max(1, variant.stock));
 
     const variantImages = (variant.images || []).map((img) =>
-      getVariantImageUrl(img)
+      getVariantImageUrl(img),
     );
 
     if (variantImages.length > 0) {
@@ -985,7 +982,7 @@ const Productdetails = () => {
           rating: reviewData.rating,
           review: reviewData.review,
           userName: reviewData.userName,
-        }
+        },
       );
 
       if (response.data.message) {
@@ -1036,10 +1033,7 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).substr(2, 9);
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -1061,8 +1055,8 @@ const Productdetails = () => {
         selectedVariant && selectedVariant.image
           ? selectedVariant.image
           : Array.isArray(product.image) && product.image.length > 0
-          ? product.image[0]
-          : product.image || "";
+            ? product.image[0]
+            : product.image || "";
 
       await addToCart({
         productId: String(product._id),
@@ -1128,10 +1122,7 @@ const Productdetails = () => {
       let guestId = localStorage.getItem("guestId");
       if (!guestId) {
         guestId =
-          "guest_" +
-          Date.now() +
-          "_" +
-          Math.random().toString(36).substr(2, 9);
+          "guest_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         localStorage.setItem("guestId", guestId);
       }
 
@@ -1153,8 +1144,8 @@ const Productdetails = () => {
         selectedVariant && selectedVariant.image
           ? selectedVariant.image
           : Array.isArray(product.image) && product.image.length > 0
-          ? product.image[0]
-          : product.image || "";
+            ? product.image[0]
+            : product.image || "";
 
       await addToCart({
         productId: String(product._id),
@@ -1204,7 +1195,7 @@ const Productdetails = () => {
               productId: item.productId,
               name: item.name,
             })),
-          }
+          },
         );
 
         if (!checkRes.data.compatible) {
@@ -1212,7 +1203,7 @@ const Productdetails = () => {
             `⚠️ Fast Checkout unavailable for this product.\n\n` +
               `Reason: ${
                 checkRes.data.reason || "Product not found in Fastrr catalog."
-              }`
+              }`,
           );
           setIsBuyingNow(false);
           return;
@@ -1237,7 +1228,7 @@ const Productdetails = () => {
 
       const cartSubtotal = cartData.items.reduce(
         (sum, item) => sum + item.price * item.quantity,
-        0
+        0,
       );
 
       const tokenRes = await axios.post(
@@ -1263,13 +1254,11 @@ const Productdetails = () => {
           total: cartSubtotal,
           shippingCost: 0,
           couponDiscount: discountedPrice ? discountedPrice.discountAmount : 0,
-        }
+        },
       );
 
       if (!tokenRes.data.success || !tokenRes.data.accessToken) {
-        alert(
-          tokenRes.data.message || "Failed to initialize Fastrr checkout"
-        );
+        alert(tokenRes.data.message || "Failed to initialize Fastrr checkout");
         setIsBuyingNow(false);
         return;
       }
@@ -1303,13 +1292,13 @@ const Productdetails = () => {
             alert("Failed to open Fastrr checkout.");
           }
         },
-        isMobileDevice() ? 400 : 50
+        isMobileDevice() ? 400 : 50,
       );
     } catch (error) {
       console.error("Buy Now error:", error);
       alert(
         error.response?.data?.message ||
-          "Failed to start checkout. Please try again."
+          "Failed to start checkout. Please try again.",
       );
       setIsBuyingNow(false);
     }
@@ -1560,7 +1549,11 @@ const Productdetails = () => {
             <Col lg={6}>
               <div className="product-content">
                 <h1 className="funnel-sans">{String(product.name)}</h1>
-                <div className="product-brand fw-bold">
+                <div
+                  className="product-brand fw-bold"
+                  onClick={navigateToBrand}
+                  style={{ cursor: "pointer" }}
+                >
                   {String(product.company || "Brand Name")}
                 </div>
                 <div className="rating-row">
@@ -1654,8 +1647,8 @@ const Productdetails = () => {
                   {isTogglingWishlist
                     ? "Processing..."
                     : isInWishlistState
-                    ? "Go to Wishlist"
-                    : "Add to Wishlist"}
+                      ? "Go to Wishlist"
+                      : "Add to Wishlist"}
                 </p>
 
                 {/* VARIANT SELECTOR */}
@@ -1670,7 +1663,9 @@ const Productdetails = () => {
                         <small className="text-success">
                           <FaCheckCircle className="me-1" />
                           {selectedVariant.color}
-                          {selectedVariant.color && selectedVariant.size && " • "}
+                          {selectedVariant.color &&
+                            selectedVariant.size &&
+                            " • "}
                           {selectedVariant.size &&
                             `Size: ${selectedVariant.size}`}
                         </small>
@@ -1714,7 +1709,7 @@ const Productdetails = () => {
                                 position: "relative",
                               }}
                             >
-                              {variantImageUrl && (
+                              {/* {variantImageUrl && (
                                 <img
                                   src={variantImageUrl}
                                   alt={
@@ -1731,7 +1726,7 @@ const Productdetails = () => {
                                     e.target.style.display = "none";
                                   }}
                                 />
-                              )}
+                              )} */}
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 {variant.color && (
                                   <div
@@ -1797,7 +1792,7 @@ const Productdetails = () => {
 
                 {/* SIZE/WEIGHT INFO */}
                 {sizeWeightInfo && sizeWeightInfo.length > 0 && (
-                  <div className="size-weight-info mt-3 py-3 bg-light rounded">
+                  <div className="size-weight-info mt-3 py-1 bg-light rounded">
                     <div className="d-flex flex-wrap gap-3">
                       {product.size && (
                         <div className="d-flex align-items-center">
@@ -2061,11 +2056,13 @@ const Productdetails = () => {
                 {shippingInfo && (
                   <div className="shipping-info-card mb-2">
                     {/* Total Estimated Delivery */}
-                    <div className="d-flex align-items-center gap-2 mb-1">
-                      <span className="fw-bold">Estimated Delivery:</span>
-                      <span className="small">
-                        Your order will arrive within{" "}
-                        <strong>{shippingInfo.deliveryRange}</strong>
+                    <div className="d-flex align-items-center gap-2 my-2">
+                      <span className="fw-bold">
+                        Estimated Delivery:{" "}
+                        <span className="small fw-normal">
+                          Your order will arrive within{" "}
+                          <strong>{shippingInfo.deliveryRange}</strong>
+                        </span>
                       </span>
                     </div>
 
@@ -2131,7 +2128,7 @@ const Productdetails = () => {
                           const shouldShow =
                             couponProducts.length === 0 ||
                             couponProducts.some(
-                              (id) => id.toString() === product._id.toString()
+                              (id) => id.toString() === product._id.toString(),
                             );
                           if (!shouldShow) return null;
 
@@ -2149,9 +2146,7 @@ const Productdetails = () => {
                               className={`coupon-item p-2 mb-2 border rounded bg-white d-flex justify-content-between align-items-center ${
                                 isApplied ? "border-success" : ""
                               }`}
-                              style={
-                                isApplied ? { background: "#f0fff4" } : {}
-                              }
+                              style={isApplied ? { background: "#f0fff4" } : {}}
                             >
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center">
@@ -2176,7 +2171,7 @@ const Productdetails = () => {
                                         type === "percentage"
                                           ? discount + "%"
                                           : "₹" + discount
-                                      } off`
+                                      } off`,
                                   )}
                                 </p>
                                 {priceInfo && (
@@ -2213,7 +2208,7 @@ const Productdetails = () => {
                                   size="sm"
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      String(coupon.code)
+                                      String(coupon.code),
                                     );
                                     alert(`Copied "${coupon.code}"!`);
                                   }}
@@ -2362,10 +2357,10 @@ const Productdetails = () => {
                     }}
                   >
                     <strong>1.</strong> Every piece is handmade to order, just
-                    for you. Because production begins as soon as you place
-                    your order, we're unable to accept cancellations or changes
-                    once an order is confirmed. Personalised items can't be
-                    returned or exchanged.
+                    for you. Because production begins as soon as you place your
+                    order, we're unable to accept cancellations or changes once
+                    an order is confirmed. Personalised items can't be returned
+                    or exchanged.
                   </p>
                   <p
                     style={{
@@ -2376,9 +2371,9 @@ const Productdetails = () => {
                     }}
                   >
                     <strong>2.</strong> We pack every order with care, but if
-                    your item arrives damaged or incorrect, we'll make it
-                    right. Please share a clear unboxing video and photos
-                    within 24 hours of delivery so we can verify and arrange a
+                    your item arrives damaged or incorrect, we'll make it right.
+                    Please share a clear unboxing video and photos within 24
+                    hours of delivery so we can verify and arrange a
                     replacement. Without this proof we're unable to process a
                     claim.
                   </p>
@@ -2424,7 +2419,11 @@ const Productdetails = () => {
                       </h6>
                       <div className="d-flex flex-wrap gap-2">
                         {product.allergens.map((allergen, idx) => (
-                          <Badge key={idx} bg="warning" className="text-dark p-2">
+                          <Badge
+                            key={idx}
+                            bg="warning"
+                            className="text-dark p-2"
+                          >
                             {allergen}
                           </Badge>
                         ))}
@@ -2580,17 +2579,13 @@ const Productdetails = () => {
                   {shippingInfo && (
                     <div className="d-flex align-items-center gap-2 mb-2">
                       <strong>Delivery Transit:</strong>
-                      <span className="ms-1">
-                        {shippingInfo.transitText}
-                      </span>
+                      <span className="ms-1">{shippingInfo.transitText}</span>
                     </div>
                   )}
                   {shippingInfo && (
                     <div className="d-flex align-items-center gap-2">
                       <strong>Total Estimated Delivery:</strong>
-                      <span className="ms-1">
-                        {shippingInfo.deliveryRange}
-                      </span>
+                      <span className="ms-1">{shippingInfo.deliveryRange}</span>
                     </div>
                   )}
                 </div>
