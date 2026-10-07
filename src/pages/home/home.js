@@ -1,6 +1,6 @@
 import React from "react";
 import Header from "../../components/header/header";
-import Mainnavbar from "../../components/navbar/navbar"
+import Mainnavbar from "../../components/navbar/navbar";
 import Footer from "../../components/footer/footer";
 import "./home.css";
 import Carouselhero from "../../components/carousel/carousel";
@@ -27,10 +27,9 @@ const Home = () => {
       {/* header */}
       <Header />
 
-      {/* ✅ Mainnavbar — icons વાળી bar */}
-      {/* <Mainnavbar /> */}
+      {/* <Mainnavbar />/ */}
 
-      <OfferMarquee />
+      {/* <OfferMarquee /> */}
 
       {/* carousel */}
       {/* <Carouselhero /> */}

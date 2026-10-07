@@ -146,6 +146,7 @@ app.use("/api/categories", require("./Router/categoryRoutes"));
 app.use('/api/coupons', require('./Router/couponRoutes'));
 app.use('/api/shiprocket', shiprocketRouter);
 app.use("/api", require("./Router/routerproduct"));
+app.use("/api/careers", require("./Router/careerRoutes"));
 
 /* ===============================
    ROOT
