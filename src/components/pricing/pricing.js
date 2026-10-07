@@ -127,7 +127,7 @@ const Pricing = () => {
 
             <h3 className="pricing-subtitle">
               Launch Offer:{" "}
-              <span className="highlight">
+              <span className="">
                 <b>SEP & OCT 2026</b>
               </span>
             </h3>

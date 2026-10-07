@@ -56,6 +56,7 @@ const categoriesData = [
     title: "Community-Made Products",
     desc: "Products created by communities as part of livelihood and social development programs.",
   },
+  
 ];
 
 const faqsData = [
@@ -375,22 +376,22 @@ const Socialimpact = () => {
           <div className="si-timeline-row">
             {[
               {
-                step: "STEP 01",
+                step: " 01",
                 title: "Apply",
                 desc: "Tell us about your organization, the products you create and the communities or causes you support.",
               },
               {
-                step: "STEP 02",
+                step: " 02",
                 title: "Curate",
                 desc: "Our team reviews your organization and products to ensure they align with the Native91 marketplace and customer experience.",
               },
               {
-                step: "STEP 03",
+                step: " 03",
                 title: "Go Live",
                 desc: "Once selected, your approved products are presented through the Native91 marketplace with thoughtful product storytelling.",
               },
               {
-                step: "STEP 04",
+                step: " 04",
                 title: "Grow",
                 desc: "Reach new customers, generate product sales and create an additional channel to support your organization's mission.",
               },

@@ -27,7 +27,7 @@ const StorySection = () => {
 
               <div className="jewellery-line"></div>
 
-              <h1>Neephairen Jewels</h1>
+              <h1>Neepahiren Jewels</h1>
 
               <h2>
                 Timeless Polki Jewellery,

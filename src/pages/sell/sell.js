@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation, NavLink  } from "react-router-dom";
+import { useLocation, NavLink } from "react-router-dom";
 import { Link } from "react-router-dom";
 import {
   Container,
@@ -32,14 +32,16 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 // All available product categories a seller can offer
 const PRODUCT_CATEGORIES = [
   "Organic Food & Healthy Snacks",
-  "Natural Skin Care & Wellness",
-  "Gifts & Hamper",
+  "Beauty & Wellness",
+  "Gifts & Hampers",
   "Handmade Home Decor",
   "Sustainable Lifestyle",
   "Jewelry & Accessories",
   "Pet Care",
   "Kids Fashion & Toys",
   "Desk Essentials",
+  "Ethnic Fashion",
+
 ];
 
 // ============================================================
@@ -60,7 +62,6 @@ const OTPVerification = ({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef([]);
-
   // Start timer
   useEffect(() => {
     if (timeLeft > 0 && !success) {
@@ -307,6 +308,7 @@ const OTPVerification = ({
 const Sell = () => {
   const { pathname } = useLocation();
   const pricingRef = useRef(null);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     window.scrollTo({
@@ -868,6 +870,37 @@ const Sell = () => {
                       </span>
                     </div>
 
+                    <div className="privacy-note d-flex align-items-start gap-2 mb-4">
+                      <input
+                        type="checkbox"
+                        id="termsAgreement"
+                        className="terms-checkbox"
+                        checked={agreed}
+                        onChange={(e) => setAgreed(e.target.checked)}
+                        required
+                      />
+
+                      <label htmlFor="termsAgreement" className="terms-label">
+                        I agree to the{" "}
+                        <a
+                          href="/terms-and-conditions"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Terms & Conditions
+                        </a>{" "}
+                        and{" "}
+                        <a
+                          href="/privacypolicy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Privacy Policy
+                        </a>
+                        .
+                      </label>
+                    </div>
+
                     <Button
                       type="submit"
                       className="create-btn w-100"
@@ -929,7 +962,7 @@ const Sell = () => {
                     <div>
                       <h5>Founding Seller benefits available</h5>
                       <p>Unlock exclusive early seller advantages</p>
-                    </div>  
+                    </div>
                   </div>
 
                   <div className="support-card d-flex gap-3 p-3 bg-light rounded mt-4">

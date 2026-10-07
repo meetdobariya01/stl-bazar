@@ -141,7 +141,7 @@
     height: 120px;
   }
   .section-title-seller {
-    font-size: 22px;
+    font-size: 18px;
   }
 
   .card-content {
@@ -158,5 +158,8 @@
 
   .product-company {
     font-size: 0.7rem;
+  }
+  .view-all-link {
+    font-size: 13px;
   }
 }

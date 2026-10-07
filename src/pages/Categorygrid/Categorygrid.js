@@ -41,6 +41,102 @@ const formatImagePath = (image) => {
   return `${VENDOR_BEND_URL}${imgPath}`;
 };
 
+// 🆕 Clean up sub-category strings that may contain stray backslashes,
+// brackets, quotes, JSON wrappers, or "/" delimiters from older data.
+const cleanSubCategoryLabel = (s) => {
+  if (!s) return "";
+  let cleaned = String(s).trim();
+  if (!cleaned) return "";
+
+  // Peel JSON-like wrappers: ["x"], "x"
+  let iter = 0;
+  while ((cleaned.startsWith("[") || cleaned.startsWith('"')) && iter < 5) {
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) cleaned = String(parsed[0] || "").trim();
+      else if (typeof parsed === "string") cleaned = parsed.trim();
+      else break;
+    } catch {
+      break;
+    }
+    iter++;
+  }
+
+  // Strip any combination of backslashes / brackets / quotes from both ends
+  let prev = null;
+  let stripIter = 0;
+  while (cleaned !== prev && stripIter < 15) {
+    prev = cleaned;
+    cleaned = cleaned
+      .replace(/^[\s\\\[\]"'\/]+/, "")
+      .replace(/[\s\\\[\]"'\/]+$/, "")
+      .trim();
+    stripIter++;
+  }
+
+  // Remove remaining inner backslashes
+  cleaned = cleaned.replace(/\\+/g, "").trim();
+
+  // Re-strip once more in case escapes revealed new edges
+  cleaned = cleaned
+    .replace(/^[\s\\\[\]"'\/]+/, "")
+    .replace(/[\s\\\[\]"'\/]+$/, "")
+    .trim();
+
+  // Keep first item if comma-separated list
+  if (cleaned.includes(",") && !cleaned.includes(" & ")) {
+    const parts = cleaned.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 1) cleaned = parts[0];
+  }
+
+  // 🆕 Keep first item if "/" is used as a delimiter
+  //    "Freezedried/instantmoothies/so" → "Freezedried"
+  //    "travel-friendly/diet-friendly"  → "travel-friendly"
+  if (cleaned.includes("/") && !cleaned.startsWith("http")) {
+    const slashParts = cleaned.split("/").map((p) => p.trim()).filter(Boolean);
+    if (slashParts.length > 1) cleaned = slashParts[0];
+  }
+
+  // Final pass: strip stragglers including trailing dashes
+  cleaned = cleaned.replace(/\\+/g, "").trim();
+  cleaned = cleaned
+    .replace(/^[\s\[\]"'\/-]+/, "")
+    .replace(/[\s\[\]"'\/-]+$/, "")
+    .trim();
+
+  if (!cleaned || cleaned.length > 100) return "";
+  if (/^[\\\/\[\]"'\s]+$/.test(cleaned)) return "";
+
+  return cleaned;
+};
+
+// 🆕 Collect, clean and dedupe all sub-categories from a product object
+const collectCleanSubs = (p) => {
+  const allSubs = [];
+  if (p.subCategory) allSubs.push(p.subCategory);
+  if (p.subcategory) allSubs.push(p.subcategory);
+  if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
+  if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
+
+  if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
+    Object.values(p.categorySubcategoryMap).forEach((arr) => {
+      if (Array.isArray(arr)) allSubs.push(...arr);
+    });
+  }
+
+  const seen = new Set();
+  const out = [];
+  allSubs.forEach((s) => {
+    const val = cleanSubCategoryLabel(s);
+    if (!val) return;
+    const key = val.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(val);
+  });
+  return out;
+};
+
 const CategoryProducts = () => {
   const { pathname } = useLocation();
   const { categoryName: categorySlug, subCategoryName: subCategorySlug } =
@@ -207,36 +303,10 @@ const CategoryProducts = () => {
         }
 
         if (decodedSubCategory) {
-          const targetSub = decodedSubCategory.toLowerCase().trim();
+          const targetSub = cleanSubCategoryLabel(decodedSubCategory).toLowerCase();
 
           allProducts = allProducts.filter((p) => {
-            const allSubs = [];
-            if (p.subCategory) allSubs.push(p.subCategory);
-            if (p.subcategory) allSubs.push(p.subcategory);
-            if (Array.isArray(p.subCategories))
-              allSubs.push(...p.subCategories);
-            if (Array.isArray(p.subcategories))
-              allSubs.push(...p.subcategories);
-
-            if (
-              p.categorySubcategoryMap &&
-              typeof p.categorySubcategoryMap === "object"
-            ) {
-              Object.values(p.categorySubcategoryMap).forEach((arr) => {
-                if (Array.isArray(arr)) allSubs.push(...arr);
-              });
-            }
-
-            const cleanSubs = allSubs
-              .filter(Boolean)
-              .map((s) =>
-                String(s)
-                  .replace(/[\[\]"']/g, "")
-                  .trim()
-                  .toLowerCase(),
-              )
-              .filter(Boolean);
-
+            const cleanSubs = collectCleanSubs(p).map((s) => s.toLowerCase());
             return cleanSubs.includes(targetSub);
           });
 
@@ -277,7 +347,19 @@ const CategoryProducts = () => {
               )}/subcategories`
             );
             if (subRes.data && subRes.data.subCategories) {
-              subMap[cat.name] = subRes.data.subCategories;
+              // 🆕 Clean + dedupe sub-category labels
+              const rawList = subRes.data.subCategories;
+              const seen = new Set();
+              const cleanedList = [];
+              rawList.forEach((s) => {
+                const val = cleanSubCategoryLabel(s);
+                if (!val) return;
+                const key = val.toLowerCase();
+                if (seen.has(key)) return;
+                seen.add(key);
+                cleanedList.push(val);
+              });
+              subMap[cat.name] = cleanedList;
             }
           } catch (err) {
             subMap[cat.name] = [];
@@ -305,35 +387,13 @@ const CategoryProducts = () => {
     }
 
     if (selectedSubCategories.length > 0) {
+      const targets = selectedSubCategories
+        .map((s) => cleanSubCategoryLabel(s).toLowerCase())
+        .filter(Boolean);
+
       filtered = filtered.filter((p) => {
-        const allSubs = [];
-        if (p.subCategory) allSubs.push(p.subCategory);
-        if (p.subcategory) allSubs.push(p.subcategory);
-        if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
-        if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
-
-        if (
-          p.categorySubcategoryMap &&
-          typeof p.categorySubcategoryMap === "object"
-        ) {
-          Object.values(p.categorySubcategoryMap).forEach((arr) => {
-            if (Array.isArray(arr)) allSubs.push(...arr);
-          });
-        }
-
-        const cleanSubs = allSubs
-          .filter(Boolean)
-          .map((s) =>
-            String(s)
-              .replace(/[\[\]"']/g, "")
-              .trim()
-              .toLowerCase(),
-          )
-          .filter(Boolean);
-
-        return selectedSubCategories.some((selectedSub) =>
-          cleanSubs.includes(selectedSub.toLowerCase().trim()),
-        );
+        const cleanSubs = collectCleanSubs(p).map((s) => s.toLowerCase());
+        return targets.some((t) => cleanSubs.includes(t));
       });
     }
 
@@ -540,11 +600,20 @@ const CategoryProducts = () => {
 
   const getCategorySubCategories = () => {
     if (decodedCategory === "All") {
-      const allSubs = new Set();
+      // 🆕 Deduplicate case-insensitively after cleanup
+      const seen = new Set();
+      const out = [];
       Object.values(allSubCategories).forEach((subs) => {
-        subs.forEach((s) => allSubs.add(s));
+        subs.forEach((s) => {
+          const val = cleanSubCategoryLabel(s);
+          if (!val) return;
+          const key = val.toLowerCase();
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push(val);
+        });
       });
-      return Array.from(allSubs);
+      return out.sort((a, b) => a.localeCompare(b));
     }
     return allSubCategories[decodedCategory] || [];
   };
@@ -863,41 +932,10 @@ const CategoryProducts = () => {
                                 )}
                               </div>
 
-                              {/* {(() => {
-                                const allSubs = [];
-                                if (item.subCategory)
-                                  allSubs.push(item.subCategory);
-                                if (item.subcategory)
-                                  allSubs.push(item.subcategory);
-                                if (Array.isArray(item.subCategories))
-                                  allSubs.push(...item.subCategories);
-                                if (Array.isArray(item.subcategories))
-                                  allSubs.push(...item.subcategories);
-                                if (
-                                  item.categorySubcategoryMap &&
-                                  typeof item.categorySubcategoryMap ===
-                                  "object"
-                                ) {
-                                  Object.values(
-                                    item.categorySubcategoryMap
-                                  ).forEach((arr) => {
-                                    if (Array.isArray(arr))
-                                      allSubs.push(...arr);
-                                  });
-                                }
-
-                                const cleanSubs = allSubs
-                                  .filter(Boolean)
-                                  .map((s) =>
-                                    String(s)
-                                      .replace(/[\[\]"']/g, "")
-                                      .trim()
-                                  )
-                                  .filter(Boolean);
-
-                                const uniqueSubs = [...new Set(cleanSubs)];
+                              {/* 🆕 Cleaned sub-category badge */}
+                              {(() => {
+                                const uniqueSubs = collectCleanSubs(item);
                                 if (uniqueSubs.length === 0) return null;
-
                                 return (
                                   <div className="sub-category-badge">
                                     {uniqueSubs[0]}
@@ -905,7 +943,7 @@ const CategoryProducts = () => {
                                       ` +${uniqueSubs.length - 1}`}
                                   </div>
                                 );
-                              })()} */} 
+                              })()}
                             </div>
                             <Card.Body>
                               <div className="product-brand">

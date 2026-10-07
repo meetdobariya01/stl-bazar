@@ -200,3 +200,35 @@
 .form-control-custom {
   padding-right: 45px;
 }
+/* 🆕 "You are already logged in" friendly note */
+.already-logged-in-note {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  color: #1b5e20;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+}
+
+.already-logged-in-note .continue-shopping-link {
+  color: #0d3b2e;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.already-logged-in-note .continue-shopping-link:hover {
+  color: #1b5e20;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

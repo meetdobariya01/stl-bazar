@@ -33,7 +33,9 @@ import OAuthSuccess from "./pages/login/OAuthSuccess";
 import Breadcrumb from "./components/breadcrumb/breadcrumb";
 import FoundingBrandFAQ from "./pages/sellerfaqs/que";
 import BirdCursorFlock from "./BirdCursorFlock";
+
 import NotFound from "./pages/error/error";
+import Careers from "./pages/careers/careers";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
@@ -76,7 +78,8 @@ root.render(
           <Route path="/faqs" element={<Faqs />} />
           <Route path="/orderhistory" element={<Orderhistory />} />
           <Route path="/faqseller" element={<FoundingBrandFAQ />} />
-          <Route path="*" element={<NotFound />} />
+   <Route path="/careers" element={<Careers />} />          
+<Route path="*" element={<NotFound />} />
         </Routes>
         <Cookies />
       </Router>

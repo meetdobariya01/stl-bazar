@@ -58,7 +58,7 @@
 }
 
 .feature-card-order-complete::after {
-  content: ""; 
+  content: "";
   position: absolute;
   top: 20%;
   right: 0;
@@ -298,11 +298,18 @@
   .section-heading {
     font-size: 28px;
   }
+  .step-content h5 {
+    font-size: 15px;
+  }
+  .step-content p {
+    font-size: 12px;
+  }
 
   .step-card {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    padding: 0;
   }
 
   .support-content h4 {
