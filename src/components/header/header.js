@@ -2644,6 +2644,7 @@ const Header = () => {
     },
     { title: "Social Impact", link: "/social-impact" },
     { title: "Sell With Us", link: "/sell" },
+    { title: "Careers", link: "/careers" },
     { title: "About Us", link: "/aboutus" },
   ];
 
