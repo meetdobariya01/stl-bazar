@@ -101,6 +101,12 @@ const Footer = () => {
                 <li className="footer-links">
                   <NavLink to="#"> E-Gift Voucher</NavLink>
                 </li>
+                <li className="footer-links">
+                  <NavLink to="/social-impact"> Social Impact</NavLink>
+                </li>
+                <li className="footer-links">
+                  <NavLink to="/careers"> Careers</NavLink>
+                </li>
               </ul>
               <div className="d-flex align-items-center gap-3 mt-4 social-icons">
                 <h5 className="mb-0 lexend ">FOLLOW US ON</h5>
@@ -236,6 +242,12 @@ const Footer = () => {
                   <ul>
                     <li className="footer-links">
                       <NavLink to="#"> E-Gift Voucher</NavLink>
+                    </li>
+                    <li className="footer-links">
+                      <NavLink to="/social-impact"> Social Impact</NavLink>
+                    </li>
+                    <li className="footer-links">
+                      <NavLink to="/careers"> Careers</NavLink>
                     </li>
                   </ul>
                 </details>
