@@ -14,7 +14,7 @@ const StorySection = () => {
             <div className="jewellery-left-image">
               <img
                 src="./images/storycontent2.webp"
-                alt="Neephairen Jewels"
+                alt="Neephiren Jewels"
                 className="img-fluid"
               />
             </div>
@@ -27,7 +27,7 @@ const StorySection = () => {
 
               <div className="jewellery-line"></div>
 
-              <h1>Neephairen Jewels</h1>
+              <h1>Neephiren Jewels</h1>
 
               <h2>
                 Timeless Polki Jewellery,

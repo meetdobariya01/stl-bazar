@@ -32,14 +32,16 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 // All available product categories a seller can offer
 const PRODUCT_CATEGORIES = [
   "Organic Food & Healthy Snacks",
-  "Natural Skin Care & Wellness",
-  "Gifts & Hamper",
+  "Beauty & Wellness",
+  "Gifts & Hampers",
   "Handmade Home Decor",
   "Sustainable Lifestyle",
   "Jewelry & Accessories",
   "Pet Care",
   "Kids Fashion & Toys",
   "Desk Essentials",
+  "Ethnic Fashion",
+
 ];
 
 // ============================================================
