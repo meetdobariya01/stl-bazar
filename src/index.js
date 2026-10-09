@@ -1,3 +1,90 @@
+// import React from "react";
+// import ReactDOM from "react-dom/client";
+// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// import { CartProvider } from "./context/CartContext";
+// import { WishlistProvider } from "./context/WishlistContext";
+// import "bootstrap/dist/css/bootstrap.min.css";
+// import "./index.css";
+
+// import Home from "./pages/home/home";
+// import Aboutus from "./pages/aboutus/aboutus";
+// import ContactUs from "./pages/contactus/contactus";
+// import Product from "./pages/product/product";
+// import Login from "./pages/login/login";
+// import Signup from "./pages/signup/signup";
+// import Checkout from "./pages/checkout/checkout";
+// import Cart from "./pages/cart/cart";
+// import Wishlist from "./pages/wishlist/wishlist";
+// import Grid from "./pages/grid/grid";
+// import Productdetails from "./pages/productdetails/productdetails";
+// import CategoryProducts from "./pages/Categorygrid/Categorygrid";
+// import Sell from "./pages/sell/sell";
+// import Ordercomplate from "./pages/thankyou/ordercomplate";
+// import Condition from "./pages/termsandcondition/condition";
+// import Shipping from "./pages/shipping/shipping";
+// import Return from "./pages/returnpage/return";
+// import Privacypolicy from "./pages/privacypolicy/privacypolicy";
+// import Faqs from "./pages/faqs/faqs";
+// import ApplicationStatus from "./pages/ApplicationStatus";
+// import Orderhistory from "./pages/orderhistory/orderhistory";
+// import Cookies from "./components/cookies/cookies";
+// import Socialimpact from "./pages/socialimpact/socialimpact";
+// import OAuthSuccess from "./pages/login/OAuthSuccess";
+// import Breadcrumb from "./components/breadcrumb/breadcrumb";
+// import FoundingBrandFAQ from "./pages/sellerfaqs/que";
+// import BirdCursorFlock from "./BirdCursorFlock";
+// import NotFound from "./pages/error/error";
+// import Careers from "./pages/careers/careers";
+// const root = ReactDOM.createRoot(document.getElementById("root"));
+// root.render(
+//   <CartProvider>
+//     <WishlistProvider>
+//       <Router>
+//         {/* <Breadcrumb /> */}
+//         {/* <BirdCursorFlock birdCount={1} /> */}
+//         <Routes>
+//           <Route path="/" element={<Home />} />
+//           <Route path="/aboutus" element={<Aboutus />} />
+//           <Route path="/contactus" element={<ContactUs />} />
+//           <Route path="/product" element={<Product />} />
+//           <Route path="/login" element={<Login />} />
+//           <Route path="/oauth-success" element={<OAuthSuccess />} />
+//           <Route path="/signup" element={<Signup />} />
+//           <Route path="/social-impact" element={<Socialimpact />} />
+//           <Route path="/wishlist" element={<Wishlist />} />
+//           <Route path="/cart" element={<Cart />} />
+//           <Route path="/checkout" element={<Checkout />} />
+//           <Route path="/company/:companyName" element={<Grid />} />
+//           <Route path="/product/:slug" element={<Productdetails />} />
+//           <Route
+//             path="/category/:categoryName"
+//             element={<CategoryProducts />}
+//           />
+//           <Route
+//             path="/category/:categoryName/:subCategoryName"
+//             element={<CategoryProducts />}
+//           />
+//           <Route path="/sell" element={<Sell />} />
+//           <Route
+//             path="/application-status/:trackingId"
+//             element={<ApplicationStatus />}
+//           />
+//           <Route path="/Order-Complete" element={<Ordercomplate />} />
+//           <Route path="/terms-and-conditions" element={<Condition />} />
+//           <Route path="/shipping-policy" element={<Shipping />} />
+//           <Route path="/return-policy" element={<Return />} />
+//           <Route path="/privacypolicy" element={<Privacypolicy />} />
+//           <Route path="/faqs" element={<Faqs />} />
+//           <Route path="/orderhistory" element={<Orderhistory />} />
+//           <Route path="/faqseller" element={<FoundingBrandFAQ />} />
+//           <Route path="/careers" element={<Careers />} />
+//           <Route path="*" element={<NotFound />} />
+//         </Routes>
+//         <Cookies />
+//       </Router>
+//     </WishlistProvider>
+//   </CartProvider>,
+// );
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -35,6 +122,7 @@ import FoundingBrandFAQ from "./pages/sellerfaqs/que";
 import BirdCursorFlock from "./BirdCursorFlock";
 import NotFound from "./pages/error/error";
 import Careers from "./pages/careers/careers";
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <CartProvider>
@@ -46,7 +134,23 @@ root.render(
           <Route path="/" element={<Home />} />
           <Route path="/aboutus" element={<Aboutus />} />
           <Route path="/contactus" element={<ContactUs />} />
+
+          {/* ✅ Brands / All Products page */}
           <Route path="/product" element={<Product />} />
+
+          {/* ✅ "All" category — renders CategoryProducts with all products */}
+          <Route path="/category/All" element={<CategoryProducts />} />
+
+          {/* ✅ Category + SubCategory routes */}
+          <Route
+            path="/category/:categoryName"
+            element={<CategoryProducts />}
+          />
+          <Route
+            path="/category/:categoryName/:subCategoryName"
+            element={<CategoryProducts />}
+          />
+
           <Route path="/login" element={<Login />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/signup" element={<Signup />} />
@@ -56,14 +160,6 @@ root.render(
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/company/:companyName" element={<Grid />} />
           <Route path="/product/:slug" element={<Productdetails />} />
-          <Route
-            path="/category/:categoryName"
-            element={<CategoryProducts />}
-          />
-          <Route
-            path="/category/:categoryName/:subCategoryName"
-            element={<CategoryProducts />}
-          />
           <Route path="/sell" element={<Sell />} />
           <Route
             path="/application-status/:trackingId"
