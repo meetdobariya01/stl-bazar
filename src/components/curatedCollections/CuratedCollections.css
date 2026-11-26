@@ -1,0 +1,145 @@
+.home-curated-section {
+  background-color: #faf7f2;
+  padding: 20px 0;
+  font-family:
+    "Lexend",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+.home-split-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  align-items: center;
+}
+
+.section-eyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #7c746b;
+  margin-bottom: 10px;
+}
+
+.section-serif-heading {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.15;
+  color: #1f1c18;
+  margin: 0 0 12px 0;
+}
+
+.section-intro-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #6b635b;
+  margin: 0 0 16px 0;
+}
+
+.section-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1f1c18;
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.section-text-link:hover {
+  color: #1b3025;
+  transform: translateX(3px);
+}
+
+.curated-cards-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.curated-edit-card {
+  position: relative;
+  height: 230px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background-color: #e6dad0;
+}
+
+.curated-edit-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.curated-edit-card:hover .curated-edit-img {
+  transform: scale(1.06);
+}
+
+.curated-edit-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(20, 18, 16, 0.8) 0%,
+    rgba(20, 18, 16, 0.25) 55%,
+    rgba(20, 18, 16, 0.05) 100%
+  );
+}
+
+.curated-edit-content {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 16px;
+  z-index: 2;
+  color: #ffffff;
+}
+
+.curated-edit-content h3 {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 3px 0;
+}
+
+.curated-edit-content p {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 8px 0;
+}
+
+.curated-edit-link {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+@media (max-width: 991px) {
+  .home-split-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .curated-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .curated-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

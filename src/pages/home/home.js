@@ -1,25 +1,14 @@
 import React from "react";
 import Header from "../../components/header/header";
-import Mainnavbar from "../../components/navbar/navbar";
 import Footer from "../../components/footer/footer";
 import "./home.css";
-import Carouselhero from "../../components/carousel/carousel";
-import Ourbrand from "../../components/ourbrand/ourbrand";
-import Shopus from "../../components/shopus/shopus";
-import Testimonil from "../../components/testimonial/testimonil";
-import Category from "../../components/category/category";
-import Details from "../../components/details/details";
-import Explore from "../../components/explore/explore";
-import Features from "../../components/features/features";
-import Collections from "../collections/collections";
-import Arrival from "../../components/new-arrival/arrival";
-import Boxes from "../../components/boxes/boxes";
-import Bestseller from "../../components/bestseller/bestseller";
-import Email from "../../components/email/email";
-import StatsSection from "../../components/details/details";
-import CTASection from "../../components/email/email";
 import NativeHero from "../../components/banner/banner";
-import OfferMarquee from "../../components/label/label";
+import Category from "../../components/category/category";
+import CuratedCollections from "../../components/curatedCollections/CuratedCollections";
+import Bestseller from "../../components/bestseller/bestseller";
+import Features from "../../components/features/features";
+import Explore from "../../components/explore/explore";
+import Arrival from "../../components/new-arrival/arrival";
 
 const Home = () => {
   return (
@@ -27,46 +16,26 @@ const Home = () => {
       {/* header */}
       <Header />
 
-      {/* <Mainnavbar />/ */}
-
-      {/* <OfferMarquee /> */}
-
-      {/* carousel */}
-      {/* <Carouselhero /> */}
+      {/* hero */}
       <NativeHero />
-
-      {/* explore */}
-      <Explore />
 
       {/* category */}
       <Category />
 
-      {/* collection */}
-      {/* <Collections /> */}
+      {/* curated collections */}
+      <CuratedCollections />
+
+      {/* best seller */}
+      <Bestseller />
 
       {/* New Arrivals */}
       <Arrival />
 
-      {/* best seller */}
-      {/* <Bestseller /> */}
+      {/* explore / trust bar */}
+      <Explore />
 
-      {/* boxes */}
-      <Boxes />
-
-      {/* shop with us */}
-      <Shopus />
-
-      {/* testimonial */}
-      {/* <Testimonil /> */}
-
-      {/* features */}
+      {/* story / features */}
       <Features />
-
-      {/* Details */}
-      {/* <StatsSection /> */}
-
-      {/* Email subscription */}
-      {/* <CTASection /> */}
 
       {/* footer */}
       <Footer />

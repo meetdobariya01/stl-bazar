@@ -1,165 +1,229 @@
-/* Add these to your existing collections.css */
-
-.collection-section {
-  /* background-color: #f8f9fa; */
+.home-bestsellers-section {
+  background-color: #faf7f2;
+  padding: 20px 0;
+  font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
 }
 
-.section-title-seller {
-  font-size: 40px;
-  font-weight: 700;
-  color: #000;
-  position: relative;
-  margin-bottom: 0;
+.bestsellers-centered-header {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
-.section-title-seller:after {
-  content: "";
-  position: absolute;
-  bottom: -10px;
-  left: 0;
-  width: 60px;
-  height: 3px;
-  background: #c8a96b;
+.bestsellers-centered-header .section-eyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #7c746b;
+  margin-bottom: 10px;
 }
 
-.view-all-link {
-  color: #c8a96b;
-  text-decoration: none;
+.bestsellers-centered-header .section-serif-heading {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 32px;
   font-weight: 500;
-  transition: color 0.3s ease;
+  line-height: 1.15;
+  color: #1f1c18;
+  margin: 0;
 }
 
-.view-all-link:hover {
-  color: #a67e22;
-  text-decoration: underline;
+.bestsellers-scroll-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 8px 2px 14px;
+  cursor: grab;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.collection-card {
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+.bestsellers-scroll-track::-webkit-scrollbar {
+  display: none;
+}
+
+.bestsellers-scroll-track.is-dragging {
+  cursor: grabbing;
+}
+
+.bestseller-product-card {
+  flex: 0 0 calc((100% - 70px) / 6);
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  height: 100%;
+  border-radius: 12px;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease;
 }
 
-.collection-card:hover {
+.bestseller-product-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
 }
 
-.image-wrapper {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
+.bestseller-img-box {
   position: relative;
-  background-color: #f5f5f5;
+  width: 100%;
+  aspect-ratio: 1 / 1.02;
+  border-radius: 10px;
+  background-color: #ede3dc;
+  overflow: hidden;
+  margin-bottom: 10px;
+  transition: box-shadow 0.28s ease;
 }
 
-.image-wrapper img {
+.bestseller-product-card:hover .bestseller-img-box {
+  box-shadow: 0 10px 24px rgba(31, 28, 24, 0.09);
+}
+
+.bestseller-img-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.collection-card:hover .image-wrapper img {
-  transform: scale(1.05);
+.bestseller-product-card:hover .bestseller-img-box img {
+  transform: scale(1.07);
 }
 
-.card-content {
-  padding: 15px;
-  text-align: center;
+.bestseller-wishlist-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: #4a463f;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
 }
 
-.card-content h5 {
-  font-size: 1rem;
-  margin-bottom: 8px;
+.bestseller-wishlist-btn:hover {
+  transform: scale(1.08);
+}
+
+.bestseller-wishlist-btn.is-active {
+  color: #e53935;
+}
+
+.bestseller-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.bestseller-brand {
+  font-size: 10.5px;
+  color: #8a8278;
+  margin-bottom: 2px;
+}
+
+.bestseller-title {
+  font-size: 12.5px;
   font-weight: 600;
-  color: #333;
+  color: #1f1c18;
+  margin: 0 0 4px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.product-price {
-  /* color: #e67e22; */
-  font-weight: bold;
-  margin-bottom: 5px;
-  font-size: 1.1rem;
+.bestseller-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  margin-bottom: 6px;
 }
 
-.product-company {
-  font-size: 0.8rem;
-  color: #7f8c8d;
-  margin-bottom: 0;
+.rating-star {
+  color: #d49b2a;
 }
 
-.product-count {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 5px;
+.rating-val {
+  font-weight: 600;
+  color: #2e2b27;
 }
 
-.mobile-product-slider {
-  padding-bottom: 40px;
+.rating-count {
+  color: #8a8278;
 }
 
-.mobile-product-slider .swiper-slide {
-  height: auto;
+.bestseller-price-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
-@media (max-width: 768px) {
-  .collection-card {
-    width: 100%;
+.price-current {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f1c18;
+}
+
+.price-mrp {
+  font-size: 11px;
+  color: #9b9389;
+  text-decoration: line-through;
+}
+
+.price-off {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.bestseller-view-btn {
+  margin-top: auto;
+  width: 100%;
+  background-color: #1b3025;
+  color: #faf7f2;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.bestseller-view-btn:hover {
+  background-color: #276142;
+}
+
+@media (max-width: 1199px) {
+  .bestseller-product-card {
+    flex: 0 0 calc((100% - 42px) / 4);
   }
 }
-/* Responsive */
-@media (max-width: 768px) {
-  .section-title-seller {
-    font-size: 32px;
-  }
 
-  .image-wrapper {
-    height: 150px;
-  }
-
-  .card-content h5 {
-    font-size: 0.85rem;
-  }
-
-  .product-price {
-    font-size: 0.9rem;
+@media (max-width: 991px) {
+  .bestseller-product-card {
+    flex: 0 0 calc((100% - 28px) / 3);
   }
 }
 
 @media (max-width: 576px) {
-  .image-wrapper {
-    height: 120px;
-  }
-  .section-title-seller {
-    font-size: 18px;
+  .bestsellers-scroll-track {
+    gap: 12px;
   }
 
-  .card-content {
-    padding: 10px;
-  }
-
-  .card-content h5 {
-    font-size: 0.75rem;
-  }
-
-  .product-price {
-    font-size: 0.8rem;
-  }
-
-  .product-company {
-    font-size: 0.7rem;
-  }
-  .view-all-link {
-    font-size: 13px;
+  .bestseller-product-card {
+    flex: 0 0 46%;
   }
 }

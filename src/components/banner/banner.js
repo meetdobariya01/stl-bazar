@@ -1,80 +1,49 @@
 import React from "react";
-import { FaLeaf, FaHeart, FaSeedling, FaArrowRight } from "react-icons/fa";
+import { Container } from "react-bootstrap";
 import { NavLink } from "react-router-dom";
 import "./banner.css";
 
 const NativeHero = () => {
   return (
-    <section className="native-hero lexend">
-      <div className="native-hero-overlay"></div>
+    <section className="home-hero-section">
+      <div
+        className="home-hero-bg-image"
+        style={{
+          backgroundImage: 'url("/images/desktop-banner.webp")',
+        }}
+        aria-hidden="true"
+      />
 
-      <div className="container h-100">
-        <div className="row vh-100 banner-height ">
-          <div className="col-12 col-lg-6">
-            <div className="native-hero-content">
-              {/* Top Label */}
-              <div className="native-hero-topline">
-                <span>ROOTED IN INDIA</span>
-                <span className="dot">•</span>
-                <span>MADE WITH PURPOSE</span>
+      <div className="home-hero-gradient" aria-hidden="true" />
 
-                {/* <span className="line"></span>
-                <FaLeaf className="leaf-icon" /> */}
-              </div>
+      <Container className="home-hero-container">
+        <div className="home-hero-content">
+          <span className="home-hero-eyebrow">
+            A CURATED MARKETPLACE FOR EXCEPTIONAL INDIAN BRANDS
+          </span>
 
-              {/* Main Heading */}
-              <h1 className="native-hero-title">
-                Discover What’s
-                <br />
-                <span>Truly Native.</span>
-              </h1>
+          <h1 className="home-hero-title">
+            India&apos;s
+            <br />
+            Curated
+            <br />
+            Discovery
+          </h1>
 
-              {/* Description */}
-              <p className="native-hero-description ">
-                  Native91 brings together a carefully curated collection of homegrown Indian brands, thoughtfully selected for their products, design, craftsmanship and the stories behind them. From emerging names to brands you’ll soon wonder how you missed, this is where discovery begins.
-              </p>
+          <p className="home-hero-subtitle">
+            Handpicked brands.
+            <br />
+            Meaningful products.
+            <br />
+            Stories from across India.
+          </p>
 
-              {/* Buttons */}
-          <div className="native-hero-buttons">
-                <NavLink
-                  to="/sell"
-                  className="native-btn native-btn-primary"
-                >
-                  <span>For Brands</span>
-                  {/* <FaArrowRight /> */}
-                </NavLink>
-
-                <NavLink to="/category/All" className="native-btn native-btn-outline">
-                  <span>Start Exploring </span>
-                  {/* <FaArrowRight /> */}
-                </NavLink>
-              </div>
-
-              {/* Bottom Features */}
-              {/*<div className="native-hero-features">
-                <div className="native-feature">
-                  <FaLeaf />
-                  <span>DISCOVER</span>
-                </div>
-
-                <span className="feature-dot">•</span>
-
-                <div className="native-feature">
-                  <FaHeart />
-                  <span>SUPPORT</span>
-                </div>
-
-                <span className="feature-dot">•</span>
-
-                <div className="native-feature">
-                  <FaSeedling />
-                  <span>CELEBRATE HOMEGROWN INDIA</span>
-                </div>
-              </div>*/}
-            </div>
-          </div>
+          <NavLink to="/category/All" className="home-hero-cta">
+            <span>Explore the Collection</span>
+            <span aria-hidden="true">→</span>
+          </NavLink>
         </div>
-      </div>
+      </Container>
     </section>
   );
 };

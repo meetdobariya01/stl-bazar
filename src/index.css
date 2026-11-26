@@ -3,13 +3,13 @@ body,
 #root {
   overflow-x: hidden;
   background: #fdf7f1;
-  padding-top: 35px;
+  padding-top: 0;
 }
 @media (max-width: 991px) {
   html,
   body,
   #root {
-    padding-top: 25px;
+    padding-top: 0;
   }
 }
 
@@ -18,7 +18,7 @@ body,
   html,
   body,
   #root {
-    padding-top: 25px;
+    padding-top: 0;
   }
 }
 
@@ -27,7 +27,7 @@ body,
   html,
   body,
   #root {
-    padding-top: 25px;
+    padding-top: 0;
   }
 }
 

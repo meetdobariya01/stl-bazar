@@ -1,81 +1,59 @@
 import React from "react";
-import { Container, Row, Col } from "react-bootstrap";
-import { motion } from "framer-motion";
-
-import { FaLeaf, FaHandsHelping, FaCrown, FaGem, FaPagelines } from "react-icons/fa";
-import { GiOliveBranch } from "react-icons/gi";
+import { Container } from "react-bootstrap";
+import {
+  FiAward,
+  FiHeart,
+  FiGlobe,
+  FiRefreshCw,
+  FiShield,
+} from "react-icons/fi";
 import "./explore.css";
 
-const values = [
+const TRUST_PROPS = [
   {
-    icon: <FaLeaf />,
-    title: "CURATED",
-    text: "Thoughtful curation for a beautiful experience.",
+    icon: <FiAward />,
+    title: "Curated Brands",
+    subtitle: "Only the remarkable",
   },
   {
-    icon: <FaHandsHelping />,
-    title: "AUTHENTIC",
-    text: "Real stories. Real people. Real impact.",
+    icon: <FiShield />,
+    title: "Trusted Shopping",
+    subtitle: "Secure payments & data",
   },
   {
-    icon: <FaPagelines />,
-    title: "CONSCIOUS",
-    text: "Better choices for people and our planet.",
+    icon: <FiGlobe />,
+    title: "Easy Delivery",
+    subtitle: "Across India",
   },
   {
-    icon: <FaCrown />,
-    title: "EXCLUSIVE",
-    text: "Invite-only for brands. Curated for you.",
+    icon: <FiRefreshCw />,
+    title: "Hassle-free Exchange",
+    subtitle: "Shop with confidence",
   },
   {
-    icon: <FaGem />,
-    title: "MEANINGFUL",
-    text: "Products that enrich everyday living.",
+    icon: <FiHeart />,
+    title: "Meaningful Impact",
+    subtitle: "Supporting Indian makers",
   },
 ];
 
-const fadeUp = {
-  hidden: {
-    opacity: 0,
-    y: 40,
-  },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.18,
-      duration: 0.7,
-    },
-  }),
-};
-
 const Explore = () => {
   return (
-    <div>
-      <section className="values-section-explore lexend">
-        <Container className="values-container">
-          <Row className="g-0">
-            {values.map((item, index) => (
-              <Col lg={true} md={4} xs={true} key={index}>
-                <motion.div
-                  className={`value-item ${index !== values.length - 1 ? "border-right" : ""}`}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.15 }}
-                >
-                  <div className="value-icon">{item.icon}</div>
-
-                  <h4>{item.title}</h4>
-
-                  <p>{item.text}</p>
-                </motion.div>
-              </Col>
-            ))}
-          </Row>
-        </Container>
-      </section>
-    </div>
+    <section className="home-trust-strip">
+      <Container>
+        <div className="trust-strip-grid">
+          {TRUST_PROPS.map((item) => (
+            <div key={item.title} className="trust-strip-item">
+              <span className="trust-strip-icon">{item.icon}</span>
+              <div className="trust-strip-text">
+                <strong>{item.title}</strong>
+                <span>{item.subtitle}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
   );
 };
 

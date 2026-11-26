@@ -1,100 +1,59 @@
-.values-section-explore {
-  /* background: #f8f4ef; */
-  padding: 75px 0 0 0;
+.home-trust-strip {
+  background-color: #efefe5;
+  border-top: 1px solid #e3e2d5;
+  border-bottom: 1px solid #e3e2d5;
+  padding: 22px 0;
+  font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
 }
 
-.values-container {
-  max-width: 1450px;
+.trust-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.value-item {
-  position: relative;
-  text-align: center;
-  padding: 10px 42px 20px;
-  min-height: 285px;
+.trust-strip-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trust-strip-icon {
+  font-size: 18px;
+  color: #1b3025;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trust-strip-text {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
 }
 
-.border-right::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 15px;
-  width: 1px;
-  height: 190px;
-  background: #d9d1ca;
-}
-
-.value-icon {
-  font-size: 46px;
-  color: #c8a96b;
-  margin-bottom: 30px;
-}
-
-.value-item h4 {
-  font-size: 16px;
-  letter-spacing: 3px;
+.trust-strip-text strong {
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 18px;
-  color: #222;
+  color: #1f1c18;
+  line-height: 1.25;
 }
 
-.value-item p {
-  font-size: 17px;
-  /* line-height: 42px; */
-  color: #555;
-  max-width: 180px;
-  margin: 0 auto;
-}
-
-.value-item:hover {
-  transform: translateY(-8px);
-  transition: 0.4s;
-}
-
-.value-item:hover .value-icon {
-  transform: scale(1.08);
-  transition: 0.4s;
+.trust-strip-text span {
+  font-size: 10.5px;
+  color: #7c746b;
 }
 
 @media (max-width: 991px) {
-  .value-item {
-    padding: 40px 35px;
-    min-height: 260px;
-  }
-
-  .border-right:nth-child(2)::after {
-    display: none;
+  .trust-strip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
   }
 }
 
-@media (max-width: 767px) {
-  .values-section-explore {
-    padding: 30px 0 0 0;
-  }
-  .value-item {
-    padding: 0;
-    margin-top: 20px;
-    min-height: auto;
-  }
-
-  .border-right::after {
-    display: none;
-  }
-  .value-icon {
-    font-size: 30px;
-    margin-bottom: 15px;
-  }
-
-  .value-item p {
-    /* line-height: 32px; */
-    font-size: 9px;
-  }
-  .value-item h4{
-    font-size: 9px;
-    letter-spacing: 0px;
+@media (max-width: 576px) {
+  .trust-strip-grid {
+    grid-template-columns: 1fr;
   }
 }

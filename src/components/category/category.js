@@ -1,166 +1,212 @@
-// CategoriesSection.js - Updated version
-import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Spinner } from "react-bootstrap";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { Container } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
 import axios from "axios";
+import { createSlug } from "../../utils/slugUtils";
 import "./category.css";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || "https://api.native91.com/api";
+
 const ADMIN_BACKEND_URL = "https://api-admin.native91.com";
+
+const getImageUrl = (imagePath) => {
+  if (!imagePath || typeof imagePath !== "string") {
+    return null;
+  }
+
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith("/images/categories/")) {
+    return `${ADMIN_BACKEND_URL}${imagePath}`;
+  }
+
+  if (imagePath.startsWith("/images/")) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith("/")) {
+    return `${ADMIN_BACKEND_URL}${imagePath}`;
+  }
+
+  return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
+};
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); 
-  const navigate = useNavigate();
+  const [error, setError] = useState(false);
 
+  const archTrackRef = useRef(null);
+
+  const archDragState = useRef({
+    isDown: false,
+    startX: 0,
+    scrollLeft: 0,
+    hasMoved: false,
+  });
+
+  // Fetch categories from existing backend
   useEffect(() => {
+    let mounted = true;
+
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const response = await axios.get(`${API_URL}/categories`, {
+          params: { _t: Date.now() },
+          timeout: 10000,
+        });
+
+        let categoriesData = [];
+
+        if (response.data?.success && Array.isArray(response.data.categories)) {
+          categoriesData = response.data.categories;
+        } else if (Array.isArray(response.data)) {
+          categoriesData = response.data;
+        } else if (Array.isArray(response.data?.categories)) {
+          categoriesData = response.data.categories;
+        }
+
+        const activeCategories = categoriesData.filter((cat) => {
+          const name = String(cat.name || cat.title || "")
+            .trim()
+            .toLowerCase();
+
+          return (
+            (!cat.status || cat.status === "active") && name && name !== "all"
+          );
+        });
+
+        if (mounted) {
+          setCategories(activeCategories);
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+
+        if (mounted) {
+          setError(true);
+          setCategories([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchCategories();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_URL}/categories`, {
-        params: {
-          _t: Date.now(), // This ensures fresh data every time
-        },
-      });
-      console.log("Categories from API:", response.data);
+  // Mouse drag scrolling
+  const handleArchMouseDown = (e) => {
+    if (e.button !== 0) return;
 
-      // Handle both response formats
-      let categoriesData = [];
-      if (response.data.success && Array.isArray(response.data.categories)) {
-        categoriesData = response.data.categories;
-      } else if (Array.isArray(response.data)) {
-        categoriesData = response.data;
-      } else if (
-        response.data.categories &&
-        Array.isArray(response.data.categories)
-      ) {
-        categoriesData = response.data.categories;
-      } else {
-        categoriesData = response.data || [];
-      }
+    const track = archTrackRef.current;
+    if (!track) return;
 
-      setCategories(categoriesData);
-      setError(null);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      setError("Failed to load categories");
-      setCategories([]);
-    } finally {
-      setLoading(false);
+    archDragState.current = {
+      isDown: true,
+      startX: e.pageX - track.getBoundingClientRect().left,
+      scrollLeft: track.scrollLeft,
+      hasMoved: false,
+    };
+  };
+
+  const handleArchMouseMove = (e) => {
+    const track = archTrackRef.current;
+
+    if (!archDragState.current.isDown || !track) return;
+
+    const x = e.pageX - track.getBoundingClientRect().left;
+    const walk = x - archDragState.current.startX;
+
+    if (Math.abs(walk) > 6) {
+      archDragState.current.hasMoved = true;
+    }
+
+    if (archDragState.current.hasMoved) {
+      e.preventDefault();
+      track.scrollLeft = archDragState.current.scrollLeft - walk * 1.3;
     }
   };
 
-  const handleCategoryClick = (categoryName) => {
-    navigate(`/category/${encodeURIComponent(categoryName)}`);
+  const handleArchMouseEnd = () => {
+    if (!archDragState.current.isDown) return;
+
+    archDragState.current.isDown = false;
+
+    setTimeout(() => {
+      archDragState.current.hasMoved = false;
+    }, 0);
   };
-
-  // ✅ FIXED: Get correct image URL from admin backend
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-
-    // If it's already a full URL
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
-
-    // If it starts with /images/categories/ (stored by admin)
-    if (imagePath.startsWith("/images/categories/")) {
-      // return `${ADMIN_BACKEND_URL}${imagePath}`;
-      return `${ADMIN_BACKEND_URL}${imagePath}`;
-    }
-
-    // If it's just a filename
-    if (!imagePath.startsWith("/")) {
-      return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
-    }
-
-    // Default fallback
-    return `${imagePath}`;
-  };
-
-  if (loading) {
-    return (
-      <section className="category-section">
-        <Container>
-          <div className="category-heading text-start mb-5">
-            <span>POPULAR CATEGORIES</span>
-            <h2>Shop By Category</h2>
-            <p>Explore premium collections for your modern lifestyle.</p>
-          </div>
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-3">Loading categories...</p>
-          </div>
-        </Container>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className="category-section">
-        <Container>
-          <div className="category-heading text-start mb-5">
-            <span>POPULAR CATEGORIES</span>
-            <h2>Shop By Category</h2>
-            <p>Explore premium collections for your modern lifestyle.</p>
-          </div>
-          <div className="text-center py-5 text-danger">
-            <p>{error}</p>
-            <button className="btn btn-primary" onClick={fetchCategories}>
-              Try Again
-            </button>
-          </div>
-        </Container>
-      </section>
-    );
-  }
 
   return (
-    <Row className="g-4 justify-content-center container mx-auto lexend mt-2">
-      <div className="category-heading text-start mt-5">
-        <span>POPULAR CATEGORIES</span>
-        <h2 className="funnel-sans category-title">Explore Our World</h2>
-        {/* <p>Explore premium collections for your modern lifestyle.</p> */}
-      </div>
-      {categories.map((category, index) => {
-        const imageUrl = getImageUrl(category.image);
-
-        return (
-          <Col lg={2} md={3} sm={3} xs={3} key={category._id || index} className="p-1">
-            <motion.div
-              className="premium-category-card"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.08 }}
-              whileHover={{
-                y: -10,
-                scale: 1.03,
-              }}
-              onClick={() => handleCategoryClick(category.name)}
+    <section className="home-arch-categories">
+      <Container fluid className="arch-section-container">
+        <div className="arch-categories-wrapper">
+          {loading ? (
+            <div className="arch-categories-message">Loading categories...</div>
+          ) : error ? (
+            <div className="arch-categories-message">
+              Unable to load categories. Please try again later.
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="arch-categories-message">
+              No categories available.
+            </div>
+          ) : (
+            <div
+              ref={archTrackRef}
+              className="arch-categories-grid"
+              onMouseDown={handleArchMouseDown}
+              onMouseMove={handleArchMouseMove}
+              onMouseUp={handleArchMouseEnd}
+              onMouseLeave={handleArchMouseEnd}
             >
-              <div className="premium-category-image">  
-                <img
-                  src={imageUrl}
-                  alt={category.name}
-                  className="category-image"
-                />
-              </div>
+              {categories.map((cat) => {
+                const title = cat.name || cat.title;
+                const slug = cat.slug || createSlug(title);
 
-              <div className="premium-category-content">
-                <h5>{category.name}</h5>
-                {/* <span>Explore Collection</span> */}
-              </div>
-            </motion.div>
-          </Col>
-        );
-      })}
-    </Row>
+                return (
+                  <NavLink
+                    key={cat._id || slug}
+                    to={`/category/${slug}`}
+                    className="arch-category-card"
+                    draggable={false}
+                    onClick={(e) => {
+                      if (archDragState.current.hasMoved) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <div className="arch-image-frame">
+                      {getImageUrl(cat.image) && (
+                        <img
+                          src={getImageUrl(cat.image)}
+                          alt={title}
+                          loading="lazy"
+                          draggable={false}
+                        />
+                      )}
+                    </div>
+
+                    <span className="arch-category-label">{title}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Container>
+    </section>
   );
 };
 
