@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// pages/Product/Product.js
+import React, { useEffect, useState, useRef } from "react";
 import {
   Container,
   Row,
@@ -16,8 +17,31 @@ import axios from "axios";
 import "./product.css";
 import { FaXmark } from "react-icons/fa6";
 
-// ✅ Use consistent API URL
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:7000/api";
+// ============================================================
+// 🌐 API URLs
+// ============================================================
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://api.native91.com/api";
+
+// 🎯 IMAGE BASES — Admin FIRST (logo admin પર છે)
+const ADMIN_IMAGE_BASE =
+  process.env.REACT_APP_ADMIN_API_URL || "https://api-admin.native91.com";
+
+const VENDOR_BACKEND_URL =
+  process.env.REACT_APP_VENDOR_API_URL || "https://api-vendor.native91.com";
+
+// 🎯 Companies API — try multiple URLs
+const COMPANIES_API_CANDIDATES = [
+  process.env.REACT_APP_ADMIN_API_URL
+    ? `${process.env.REACT_APP_ADMIN_API_URL}/api/companies`
+    : null,
+  "https://api-admin.native91.com/api/companies",
+  "https://api.native91.com/api/companies",
+  process.env.REACT_APP_API_URL
+    ? `${process.env.REACT_APP_API_URL}/companies`
+    : null,
+  "https://api-vendor.native91.com/api/companies",
+].filter(Boolean);
 
 const fadeLeft = {
   hidden: { opacity: 0, x: -50 },
@@ -28,17 +52,195 @@ const fadeRight = {
   visible: { opacity: 1, x: 0 },
 };
 
+// ============================================================
+// 🎯 PARSE LOGO
+// ============================================================
+const parseLogo = (logo) => {
+  if (!logo) return { path: null, source: null };
+
+  if (typeof logo === "object" && !Array.isArray(logo)) {
+    if (logo.path) return { path: logo.path, source: logo.source || null };
+    if (logo.image) return { path: logo.image, source: logo.source || null };
+    if (logo.url) return { path: logo.url, source: logo.source || null };
+  }
+
+  if (Array.isArray(logo)) logo = logo[0];
+  if (typeof logo !== "string") return { path: null, source: null };
+
+  return { path: logo.trim(), source: null };
+};
+
+// ============================================================
+// 🎯 BUILD CANDIDATE URLs
+// - Handles ABSOLUTE URLs (extracts path, tries both backends)
+// - ADMIN FIRST, then VENDOR fallback
+// ============================================================
+const buildImageCandidates = (rawLogo) => {
+  const { path, source } = parseLogo(rawLogo);
+  if (!path) return [];
+
+  // ============================================================
+  // CASE 1: ABSOLUTE URL — extract path, try both backends
+  // ============================================================
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    try {
+      const url = new URL(path);
+      const relativePath = url.pathname; // "/uploads/documents/..."
+
+      const candidates = [];
+
+      // ✅ Admin FIRST
+      candidates.push(`${ADMIN_IMAGE_BASE}${relativePath}`);
+
+      // ✅ Original URL
+      if (!candidates.includes(path)) {
+        candidates.push(path);
+      }
+
+      // ✅ Vendor fallback
+      if (!path.includes(VENDOR_BACKEND_URL)) {
+        const vendorUrl = `${VENDOR_BACKEND_URL}${relativePath}`;
+        if (!candidates.includes(vendorUrl)) {
+          candidates.push(vendorUrl);
+        }
+      }
+
+      return candidates;
+    } catch (err) {
+      return [path];
+    }
+  }
+
+  // ============================================================
+  // CASE 2: Explicit source in DB
+  // ============================================================
+  if (source === "admin") {
+    return [`${ADMIN_IMAGE_BASE}${path}`];
+  }
+  if (source === "vendor") {
+    return [`${VENDOR_BACKEND_URL}${path}`];
+  }
+
+  // ============================================================
+  // CASE 3: Relative path
+  // ============================================================
+  const candidates = [];
+
+  if (path.startsWith("/uploads") || path.startsWith("/public")) {
+    candidates.push(`${ADMIN_IMAGE_BASE}${path}`);
+    candidates.push(`${VENDOR_BACKEND_URL}${path}`);
+  } else if (path.startsWith("/images")) {
+    candidates.push(`${ADMIN_IMAGE_BASE}${path}`);
+    candidates.push(`${VENDOR_BACKEND_URL}${path}`);
+  } else if (path.startsWith("/")) {
+    candidates.push(`${ADMIN_IMAGE_BASE}${path}`);
+    candidates.push(`${VENDOR_BACKEND_URL}${path}`);
+  } else {
+    candidates.push(`${ADMIN_IMAGE_BASE}/uploads/${path}`);
+    candidates.push(`${VENDOR_BACKEND_URL}/uploads/${path}`);
+  }
+
+  return candidates;
+};
+
+// ============================================================
+// 🆕 SMART IMAGE
+// - Tries admin first, then vendor
+// - Uses ref to avoid async bugs
+// - On fail → shows ONLY the image path
+// ============================================================
+const SmartImage = ({ src, alt, className, onError, style, ...props }) => {
+  const candidatesRef = useRef([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [imgKey, setImgKey] = useState(0);
+
+  useEffect(() => {
+    const list = buildImageCandidates(src);
+    console.log("🖼️ Candidates:", list);
+    candidatesRef.current = list;
+    setCurrentIdx(0);
+    setFailed(list.length === 0);
+    setImgKey((k) => k + 1);
+  }, [src]);
+
+  const handleError = () => {
+    const candidates = candidatesRef.current;
+    const nextIdx = currentIdx + 1;
+
+    console.log(`❌ Failed: ${candidates[currentIdx]}`);
+
+    if (nextIdx < candidates.length) {
+      console.log(`➡️ Trying next: ${candidates[nextIdx]}`);
+      setCurrentIdx(nextIdx);
+      setImgKey((k) => k + 1);
+    } else {
+      console.error("❌ All candidates failed for:", src);
+      setFailed(true);
+      if (onError) onError();
+    }
+  };
+
+  const handleLoad = (e) => {
+    console.log(
+      `✅ Loaded: ${candidatesRef.current[currentIdx]} — ${e.target.naturalWidth}x${e.target.naturalHeight}`
+    );
+  };
+
+  // ❌ FAIL — Show ONLY the path
+  if (failed || candidatesRef.current.length === 0) {
+    const { path } = parseLogo(src);
+    const displayPath = path || String(src) || "(no image path)";
+
+    return (
+      <div
+        className={className}
+        style={{
+          padding: "10px",
+          fontSize: "12px",
+          color: "#333",
+          fontFamily: "monospace",
+          wordBreak: "break-all",
+          textAlign: "center",
+          lineHeight: "1.4",
+          ...style,
+        }}
+        title={displayPath}
+      >
+        {displayPath}
+      </div>
+    );
+  }
+
+  const currentSrc = candidatesRef.current[currentIdx];
+
+  return (
+    <img
+      key={`${currentSrc}-${imgKey}`}
+      src={currentSrc}
+      alt={alt}
+      className={className}
+      style={style}
+      onError={handleError}
+      onLoad={handleLoad}
+      loading="lazy"
+      {...props}
+    />
+  );
+};
+
+// ============================================================
+// Component
+// ============================================================
 const Product = () => {
   const [brands, setBrands] = useState([]);
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [imageErrors, setImageErrors] = useState({});
   const [retryCount, setRetryCount] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
 
-  // ✅ Filter and Sort States
   const [sortBy, setSortBy] = useState("newest");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categories, setCategories] = useState([]);
@@ -47,38 +249,6 @@ const Product = () => {
     totalBrands: 0,
     totalCategories: 0,
   });
-
-  // ✅ IMAGE LOGIC
-  const getImageUrl = (logo) => {
-    if (!logo) return null;
-
-    if (typeof logo === "object" && !Array.isArray(logo)) {
-      if (logo.image && typeof logo.image === "string") {
-        logo = logo.image;
-      } else if (logo.url && typeof logo.url === "string") {
-        logo = logo.url;
-      } else {
-        return null;
-      }
-    }
-
-    if (Array.isArray(logo)) {
-      logo = logo[0];
-    }
-
-    if (!logo || typeof logo !== "string") return null;
-
-    if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
-    if (logo.startsWith("/images")) return `https://api-admin.native91.com${logo}`;
-    if (logo.startsWith("/uploads") || logo.startsWith("/public"))
-      return `https://api-vendor.native91.com${logo}`;
-
-    return `https://api-admin.native91.com/uploads/${logo}`;
-  };
-
-  const handleImageError = (brandId) => {
-    setImageErrors((prev) => ({ ...prev, [brandId]: true }));
-  };
 
   // ✅ Extract categories
   const extractCategories = (brandsData) => {
@@ -96,6 +266,11 @@ const Product = () => {
           });
         }
       }
+      if (Array.isArray(brand.categories)) {
+        brand.categories.forEach((cat) => {
+          if (cat && cat.trim()) categorySet.add(cat.trim());
+        });
+      }
     });
     return Array.from(categorySet).sort();
   };
@@ -109,7 +284,7 @@ const Product = () => {
         if (brand.category) {
           if (Array.isArray(brand.category)) {
             return brand.category.some(
-              (cat) => cat.toLowerCase() === selectedCategory.toLowerCase(),
+              (cat) => cat.toLowerCase() === selectedCategory.toLowerCase()
             );
           } else if (typeof brand.category === "string") {
             return brand.category
@@ -127,19 +302,19 @@ const Product = () => {
         (brand) =>
           brand.name?.toLowerCase().includes(term) ||
           brand.description?.toLowerCase().includes(term) ||
-          brand.category?.toString().toLowerCase().includes(term),
+          brand.category?.toString().toLowerCase().includes(term)
       );
     }
 
     switch (sortBy) {
       case "newest":
         result.sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         );
         break;
       case "oldest":
         result.sort(
-          (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+          (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
         );
         break;
       case "name_asc":
@@ -155,79 +330,88 @@ const Product = () => {
     return result;
   };
 
-  // ✅ FETCH BRANDS + CHECK PRODUCT COUNT
+  // ============================================================
+  // ✅ FETCH BRANDS — try multiple companies URLs
+  // ============================================================
   const fetchBrands = async () => {
     try {
       setLoading(true);
       setError("");
 
-      console.log(
-        `🟢 Fetching brands (attempt ${retryCount + 1}) from: ${API_URL}/companies`,
-      );
+      let response = null;
+      let lastError = null;
 
-      const response = await axios.get(`${API_URL}/companies`, {
-        timeout: 15000,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      });
+      for (const url of COMPANIES_API_CANDIDATES) {
+        try {
+          console.log("📡 Trying:", url);
+          response = await axios.get(url, {
+            timeout: 10000,
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          });
+          console.log("✅ Companies API works:", url);
+          break;
+        } catch (err) {
+          console.warn(
+            "❌ Failed:",
+            url,
+            "—",
+            err.response?.status || err.message
+          );
+          lastError = err;
+        }
+      }
 
-      console.log("🟢 Response status:", response.status);
+      if (!response) {
+        throw lastError || new Error("All companies API URLs failed");
+      }
 
       let brandsData = [];
 
-      // ✅ Handle different response formats
       if (response.data) {
         if (response.data.success && Array.isArray(response.data.companies)) {
           brandsData = response.data.companies;
         } else if (Array.isArray(response.data)) {
           brandsData = response.data;
-        } else if (response.data.companies && Array.isArray(response.data.companies)) {
+        } else if (
+          response.data.companies &&
+          Array.isArray(response.data.companies)
+        ) {
           brandsData = response.data.companies;
         }
       }
 
-      console.log(`📂 Fetched ${brandsData.length} brands from API`);
+      console.log(`📂 Fetched ${brandsData.length} brands`);
 
-      // ============================================================
-      // 🆕 STEP: Check if productCount field is RELIABLE
-      // ============================================================
+      // 🆕 productCount check
       const hasProductCountField = brandsData.some(
         (b) =>
           b.productCount !== undefined ||
           b.productsCount !== undefined ||
-          b.totalProducts !== undefined,
+          b.totalProducts !== undefined
       );
 
-      const allHaveZeroCount = hasProductCountField && brandsData.every(
-        (b) => {
-          const count = b.productCount ?? b.productsCount ?? b.totalProducts ?? 0;
+      const allHaveZeroCount =
+        hasProductCountField &&
+        brandsData.every((b) => {
+          const count =
+            b.productCount ?? b.productsCount ?? b.totalProducts ?? 0;
           return count === 0;
-        }
-      );
+        });
 
       let brandsWithProducts = brandsData;
 
       if (hasProductCountField && !allHaveZeroCount) {
-        // ✅ productCount RELIABLE — filter directly
-        console.log("🎯 Using productCount from API (reliable)");
+        console.log("🎯 Using productCount from API");
         brandsWithProducts = brandsData.filter((b) => {
-          const count = b.productCount ?? b.productsCount ?? b.totalProducts ?? 0;
-          if (count === 0) {
-            console.log(`⚠️ Skipping "${b.name}" — 0 products`);
-            return false;
-          }
-          return true;
+          const count =
+            b.productCount ?? b.productsCount ?? b.totalProducts ?? 0;
+          return count > 0;
         });
-        console.log(
-          `✅ ${brandsWithProducts.length}/${brandsData.length} brands kept (from productCount)`,
-        );
       } else {
-        // ❌ productCount BUGGY (all 0) — client-side fetch
-        console.log("🔧 productCount unreliable — checking products per brand...");
-
-        // Limit to first 30 brands to avoid too many requests
+        console.log("🔧 productCount unreliable — checking per brand...");
         const brandsToCheck = brandsData.slice(0, 30);
 
         const checkPromises = brandsToCheck.map(async (brand) => {
@@ -235,11 +419,16 @@ const Product = () => {
           if (!brandName) return { brand, hasProducts: false };
 
           try {
-            // 🎯 Try multiple endpoints (fallback strategy)
             const endpoints = [
-              `${API_URL}/companies/${encodeURIComponent(brandName)}/products?limit=1`,
-              `${API_URL}/products?company=${encodeURIComponent(brandName)}&limit=1`,
-              `${API_URL}/v2/products?company=${encodeURIComponent(brandName)}&limit=1`,
+              `${API_URL}/companies/${encodeURIComponent(
+                brandName
+              )}/products?limit=1`,
+              `${API_URL}/products?company=${encodeURIComponent(
+                brandName
+              )}&limit=1`,
+              `${API_URL}/v2/products?company=${encodeURIComponent(
+                brandName
+              )}&limit=1`,
             ];
 
             for (const url of endpoints) {
@@ -252,20 +441,14 @@ const Product = () => {
                   [];
 
                 if (Array.isArray(products) && products.length > 0) {
-                  console.log(`✅ "${brandName}" has products (via ${url.split('/api/')[1]})`);
                   return { brand, hasProducts: true };
                 }
               } catch (e) {
-                // Try next endpoint
                 continue;
               }
             }
-
-            console.log(`⚠️ "${brandName}" — no products found in any endpoint`);
             return { brand, hasProducts: false };
           } catch (err) {
-            console.warn(`Error checking "${brandName}":`, err.message);
-            // On error → include (safer than exclude)
             return { brand, hasProducts: true };
           }
         });
@@ -275,20 +458,14 @@ const Product = () => {
           .filter((r) => r.hasProducts)
           .map((r) => r.brand);
 
-        console.log(
-          `✅ ${brandsWithProducts.length}/${brandsToCheck.length} brands have products`,
-        );
-
-        // ⚠️ If ALL filtered out → show all (safety fallback)
         if (brandsWithProducts.length === 0) {
-          console.warn("⚠️ All brands filtered out — showing all as fallback");
+          console.warn("⚠️ All filtered — showing all as fallback");
           brandsWithProducts = brandsData;
         }
       }
 
       setBrands(brandsWithProducts);
 
-      // ✅ Extract categories
       const extractedCategories = extractCategories(brandsWithProducts);
       setCategories(extractedCategories);
       setBrandStats({
@@ -296,29 +473,24 @@ const Product = () => {
         totalCategories: extractedCategories.length,
       });
 
-      // ✅ Apply filters and sorting
       const filtered = applyFiltersAndSort(brandsWithProducts);
       setFilteredBrands(filtered);
 
       if (brandsWithProducts.length === 0) {
         setError("No brands with products found.");
       }
-
-      console.log(`✅ Displaying ${brandsWithProducts.length} brands`);
     } catch (err) {
-      console.error("🔴 ERROR FETCHING BRANDS:", err);
-
+      console.error("🔴 ERROR:", err);
       let errorMessage = "Failed to load brands. ";
       if (err.code === "ECONNABORTED") {
         errorMessage += "Request timed out.";
       } else if (err.response) {
-        errorMessage += `Server responded with status ${err.response.status}.`;
+        errorMessage += `Status ${err.response.status}.`;
       } else if (err.request) {
         errorMessage += "No response from server.";
       } else {
         errorMessage += err.message || "Unknown error.";
       }
-
       setError(errorMessage);
       setBrands([]);
       setFilteredBrands([]);
@@ -327,12 +499,12 @@ const Product = () => {
     }
   };
 
-  // ✅ Apply filters whenever dependencies change
   useEffect(() => {
     if (brands.length > 0) {
       const filtered = applyFiltersAndSort(brands);
       setFilteredBrands(filtered);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy, searchTerm, selectedCategory, brands]);
 
   const handleRetry = () => {
@@ -345,7 +517,7 @@ const Product = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ Loading State
+  // Loading
   if (loading) {
     return (
       <div>
@@ -359,7 +531,7 @@ const Product = () => {
     );
   }
 
-  // ✅ Error State
+  // Error
   if (error) {
     return (
       <div>
@@ -377,11 +549,7 @@ const Product = () => {
                 </small>
               </div>
               <div className="d-flex gap-2">
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={handleRetry}
-                >
+                <Button variant="outline-danger" size="sm" onClick={handleRetry}>
                   🔄 Retry
                 </Button>
                 <Button
@@ -400,7 +568,7 @@ const Product = () => {
     );
   }
 
-  // ✅ Empty State
+  // Empty
   if (brands.length === 0) {
     return (
       <div>
@@ -417,7 +585,7 @@ const Product = () => {
     );
   }
 
-  // ✅ Success State
+  // Success
   return (
     <div>
       <Header />
@@ -456,7 +624,6 @@ const Product = () => {
             </div>
           </div>
 
-          {/* FILTER PANEL */}
           {showFilters && (
             <div className="filters-section lexend">
               <div className="filter-header-product">
@@ -550,7 +717,6 @@ const Product = () => {
             </div>
           )}
 
-          {/* BRAND GRID */}
           {filteredBrands.length === 0 ? (
             <div className="text-center py-5">
               <h5>No brands match your filters</h5>
@@ -572,9 +738,6 @@ const Product = () => {
           ) : (
             <Row className="g-4">
               {filteredBrands.map((item, index) => {
-                const imageUrl = getImageUrl(item.logo);
-                const hasError = imageErrors[item._id];
-                const showImage = imageUrl && !hasError;
                 const isEven = index % 2 !== 0;
 
                 return (
@@ -593,26 +756,16 @@ const Product = () => {
                         transition={{ duration: 0.8 }}
                         viewport={{ once: true }}
                       >
-                        {showImage ? (
+                        {/* 🆕 SmartImage — admin first, vendor fallback */}
+                        {item.logo ? (
                           <div className="brand-image-container">
-                            <img
-                              src={imageUrl}
+                            <SmartImage
+                              src={item.logo}
                               alt={item.name}
                               className="brand-image"
-                              onError={() => handleImageError(item._id)}
-                              loading="lazy"
                             />
                           </div>
-                        ) : (
-                          <div className="brand-placeholder">
-                            <span className="brand-initial">
-                              {item.name?.charAt(0)?.toUpperCase() || "?"}
-                            </span>
-                            <span className="brand-name-display">
-                              {item.name || "Unknown"}
-                            </span>
-                          </div>
-                        )}
+                        ) : null}
                       </motion.div>
                     </Col>
 
@@ -635,7 +788,9 @@ const Product = () => {
                           {(() => {
                             const description =
                               item.description ||
-                              `${item.name || "This brand"} - Premium brand on Native91`;
+                              `${
+                                item.name || "This brand"
+                              } - Premium brand on Native91`;
 
                             const words = description.trim().split(/\s+/);
                             const isLong = words.length > 100;
@@ -669,7 +824,9 @@ const Product = () => {
 
                         <div className="d-flex flex-wrap gap-3 align-items-center mt-3">
                           <NavLink
-                            to={`/company/${encodeURIComponent(item.name || item._id)}`}
+                            to={`/company/${encodeURIComponent(
+                              item.name || item._id
+                            )}`}
                             className="nav-link p-0"
                           >
                             <motion.button

@@ -341,7 +341,7 @@
   display: none;
 }
 
-.product-accordion summary::after {
+/* .product-accordion summary::after {
   content: "+";
   position: absolute;
   right: 0;
@@ -350,12 +350,12 @@
   font-weight: 400;
   color: #b38b59;
   transition: transform 0.3s ease;
-}
+} */
 
-.product-accordion details[open] summary::after {
+/* .product-accordion details[open] summary::after {
   content: "−";
   transform: rotate(180deg);
-}
+} */
 
 .product-accordion p {
   margin: 16px 0 0;

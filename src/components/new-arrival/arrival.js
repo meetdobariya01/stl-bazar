@@ -38,25 +38,36 @@ const Arrival = () => {
     fetchAllBrands();
   }, []);
 
-  /* ========================================= IMAGE HELPER ========================================= */
+  /* ========================================= IMAGE HELPER (FORCE ADMIN URL) ========================================= */
   const getImageUrl = (logo) => {
     if (!logo) return null;
-    const image = Array.isArray(logo) ? logo[0] : logo;
-    if (!image) return null;
+    
+    let image = Array.isArray(logo) ? logo[0] : logo;
+    
+    // Handle object format if present
+    if (typeof image === "object" && image !== null) {
+      if (image.image) image = image.image;
+      else if (image.url) image = image.url;
+    }
 
-    if (image.startsWith("http://") || image.startsWith("https://")) {
-      return image;
+    if (!image || typeof image !== "string") return null;
+
+    let s = image.trim();
+
+    // 🚨 FORCE VENDOR URL TO ADMIN URL
+    if (s.includes("api-vendor.native91.com")) {
+      const parts = s.split("/uploads/");
+      if (parts.length > 1) {
+        return `${ADMIN_IMAGE_BASE_URL}/uploads/${parts[1]}`;
+      }
     }
-    if (image.startsWith("/images")) {
-      return `${ADMIN_IMAGE_BASE_URL}${image}`;
-    }
-    if (image.startsWith("/uploads")) {
-      return `${VENDOR_IMAGE_BASE_URL}${image}`;
-    }
-    if (image.startsWith("images/")) {
-      return `${OLD_IMAGE_BASE_URL}/${image}`;
-    }
-    return image;
+
+    if (s.startsWith("http://") || s.startsWith("https://")) return s;
+    if (s.startsWith("/images")) return `${ADMIN_IMAGE_BASE_URL}${s}`;
+    if (s.startsWith("/uploads") || s.startsWith("/public")) return `${ADMIN_IMAGE_BASE_URL}${s}`;
+    if (s.startsWith("images/")) return `${OLD_IMAGE_BASE_URL}/${s}`;
+
+    return `${ADMIN_IMAGE_BASE_URL}/uploads/${s}`;
   };
 
   /* ========================================= FETCH ALL BRANDS (WITH PRODUCTS FILTER) ========================================= */
@@ -375,16 +386,21 @@ const Arrival = () => {
                         alt={brand.name}
                         className="brand-logo-image"
                         onError={(e) => {
-                          console.error(
-                            `❌ Failed to load logo for: ${brand.name}`
-                          );
-                          e.target.style.display = "none";
-                          const parent = e.target.parentElement;
-                          const fallback = parent.querySelector(
-                            ".brand-name-fallback"
-                          );
-                          if (fallback) {
-                            fallback.style.display = "flex";
+                          const currentSrc = e.currentTarget.src;
+                          // જો એડમિન URL ફેલ થાય, તો વેન્ડર ટ્રાય કરો
+                          if (currentSrc.includes("api-admin.native91.com")) {
+                            e.currentTarget.src = currentSrc.replace(
+                              "api-admin.native91.com",
+                              "api-vendor.native91.com"
+                            );
+                          } else {
+                            // જો વેન્ડર પણ ફેલ થાય તો ફોલબેક દેખાડો
+                            e.currentTarget.style.display = "none";
+                            const parent = e.currentTarget.parentElement;
+                            const fallback = parent.querySelector(".brand-name-fallback");
+                            if (fallback) {
+                              fallback.style.display = "flex";
+                            }
                           }
                         }}
                       />

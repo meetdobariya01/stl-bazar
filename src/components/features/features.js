@@ -1,81 +1,29 @@
 import React from "react";
-import { FaGem, FaLeaf, FaHeart } from "react-icons/fa";
-import { GiLotus } from "react-icons/gi";
 import { NavLink } from "react-router-dom";
 import "./features.css";
 
 const StorySection = () => {
   return (
-    <section className="jewellery-brand-section lexend">
-      <div className="container-fluid px-0">
-        <div className="row g-0 jewellery-brand-row">
-          {/* LEFT IMAGE */}
-          <div className="col-lg-4 jewellery-image-col d-none d-md-block">
-            <div className="jewellery-left-image">
-              <img
-                src="./images/storycontent2.webp"
-                alt="Neephiren Jewels"
-                className="img-fluid"
-              />
-            </div>
-          </div>
-
-          {/* RIGHT CONTENT */}
-          <div className="col-lg-8 jewellery-content-col">
-            <div className="jewellery-content">
-              <span className="jewellery-small-title">THE BRAND EDIT</span>
-
-              <div className="jewellery-line"></div>
-
-              <h1>Neephiren Jewels</h1>
-
-              <h2>
-                Timeless Polki Jewellery,
-                <br />
-                Rooted in Indian Heritage
-              </h2>
-
-              <p>
-                Discover handcrafted polki jewellery that brings together
-                traditional Indian craftsmanship, intricate artistry and
-                timeless elegance.
-              </p>
-
-              <NavLink
-                to="/company/NEEPA%20HIREN%20JEWELS"
-                className="jewellery-btn"
-              >
-                EXPLORE NEEPAHIREN JEWELS
-                <span>→</span>
-              </NavLink>
-
-              {/* FEATURES */}
-              <div className="jewellery-features">
-                <div className="jewellery-feature">
-                  <FaGem className="feature-icon-home" />
-                  <span>AUTHENTIC</span>
-                  <small>POLKI CRAFT</small>
-                </div>
-
-                <div className="jewellery-feature">
-                  <GiLotus className="feature-icon-home" />
-                  <span>TIMELESS</span>
-                  <small>DESIGNS</small>
-                </div>
-
-                <div className="jewellery-feature">
-                  <FaLeaf className="feature-icon-home" />
-                  <span>HANDCRAFTED</span>
-                  <small>WITH CARE</small>
-                </div>
-
-                <div className="jewellery-feature">
-                  <FaHeart className="feature-icon-home" />
-                  <span>PROUDLY</span>
-                  <small>INDIAN</small>
-                </div>
-              </div>
-            </div>
+    <section className="home-story-section">
+      <div className="home-story-grid">
+        <div className="home-story-media">
+          <img
+            src="/images/storycontent3.webp"
+            alt="Indian craftsmanship"
+            loading="lazy"
+          />
+        </div>
+        <div className="home-story-content">
+          <div className="home-story-inner">
+            <span className="story-eyebrow">THE NATIVE91 STORY</span>
+            <h2 className="story-serif-heading">People. Craft. Purpose.</h2>
+            <p className="story-desc">
+              A platform that brings India&apos;s finest makers and mindful
+              shoppers together.
+            </p>
+            <NavLink to="/aboutus" className="story-text-link">
+              Read Our Story →
+            </NavLink>
           </div>
         </div>
       </div>
@@ -84,3 +32,4 @@ const StorySection = () => {
 };
 
 export default StorySection;
+
