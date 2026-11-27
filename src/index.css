@@ -1,3 +1,4 @@
+
 html,
 body,
 #root {
@@ -5,6 +6,7 @@ body,
   background: #fdf7f1;
   padding-top: 35px;
 }
+
 @media (max-width: 991px) {
   html,
   body,

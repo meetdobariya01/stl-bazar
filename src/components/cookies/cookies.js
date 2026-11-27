@@ -1,28 +1,52 @@
+// Cookies.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import './cookies.css';
 
 const Cookies = () => {
   const [show, setShow] = useState(false);
+  const API = process.env.REACT_APP_API_URL || "http://localhost:9000/api";
 
   useEffect(() => {
     const consent = localStorage.getItem('cookieConsent');
     if (!consent) {
-      const timer = setTimeout(() => {
-        setShow(true);
-      }, 2000);
+      const timer = setTimeout(() => setShow(true), 2000);
       return () => clearTimeout(timer);
     }
   }, []);
 
-  const handleAccept = () => {
-    localStorage.setItem('cookieConsent', 'accepted');
-    setShow(false);
+  // Helper function to send data to DB
+  const saveConsentToDB = async (status) => {
+    try {
+      const guestId = localStorage.getItem("guestId") || "Unknown Guest";
+      
+      await axios.post(`${API}/cookie-consent/save`, {
+        consentStatus: status,
+        guestId: guestId,
+      }, { withCredentials: true }); // withCredentials sends the login cookie
+
+      console.log(`✅ Consent '${status}' saved to DB`);
+    } catch (error) {
+      console.error("Failed to save consent to DB:", error);
+    }
   };
 
-  const handleDecline = () => {
+  const handleAccept = async () => {
+    localStorage.setItem('cookieConsent', 'accepted');
+    setShow(false);
+    await saveConsentToDB('accepted'); // 🆕 Send to DB
+  };
+
+  const handleDecline = async () => {
     localStorage.setItem('cookieConsent', 'declined');
     setShow(false);
+    await saveConsentToDB('declined'); // 🆕 Send to DB
+    
+    // Optional: Clear user data if declined
+    localStorage.removeItem('user');
+    localStorage.removeItem('userData');
+    window.dispatchEvent(new Event('userUpdated'));
   };
 
   return (
@@ -56,4 +80,3 @@ const Cookies = () => {
 };
 
 export default Cookies;
-

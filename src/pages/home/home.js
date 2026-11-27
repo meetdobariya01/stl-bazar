@@ -20,7 +20,7 @@ import StatsSection from "../../components/details/details";
 import CTASection from "../../components/email/email";
 import NativeHero from "../../components/banner/banner";
 import OfferMarquee from "../../components/label/label";
-
+import CuratedCollections from "../../components/curatedCollections/CuratedCollections";
 const Home = () => {
   return (
     <div>
@@ -41,6 +41,9 @@ const Home = () => {
       {/* category */}
       <Category />
 
+          {/* curated collections */}
+      <CuratedCollections />
+
       {/* collection */}
       {/* <Collections /> */}
 
@@ -48,13 +51,13 @@ const Home = () => {
       <Arrival />
 
       {/* best seller */}
-      {/* <Bestseller /> */}
+      <Bestseller />
 
       {/* boxes */}
-      <Boxes />
+      {/* <Boxes /> */}
 
       {/* shop with us */}
-      <Shopus />
+      {/* <Shopus /> */}
 
       {/* testimonial */}
       {/* <Testimonil /> */}

@@ -55,6 +55,118 @@ transporter.verify((error, success) => {
 });
 
 // ============================================================
+// BRANDS EMAIL TRANSPORTER (For Seller Invitations)
+// ============================================================
+
+
+// ============================================================
+// BRANDS EMAIL TRANSPORTER
+// ============================================================
+const brandsTransporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || "smtp.hostinger.com",
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true,
+  auth: {
+    user: "brands@native91.com",
+    pass: "Brands@#2026",
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+brandsTransporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Brands Email configuration error:", error);
+  } else {
+    console.log("✅ Brands Email server is ready to send messages");
+  }
+});
+
+// ============================================================
+// SEND SELL-WITH-US INVITE EMAIL
+// ============================================================
+const sendSellInviteEmail = async (email) => {
+  const registerLink = `${
+    process.env.FRONTEND_URL || "http://localhost:3002"
+  }/sell?email=${encodeURIComponent(email)}&ref=footer`;
+
+  const mailOptions = {
+    // 🟢 FIXED: Added the missing opening quote around "Native91 Brands"
+    from: `"Native91 Brands" <brands@native91.com>`,
+    to: email,
+    subject: "Partner With Native91 — Start Your Brand Application",
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sell With Us</title>
+  <style>
+    body { margin:0; padding:0; background:#f5f5f2; font-family:Arial,Helvetica,sans-serif; color:#30342f; }
+    .wrapper { width:100%; padding:30px 15px; background:#f5f5f2; }
+    .container { max-width:560px; margin:0 auto; background:#fff; border:1px solid #e8e5dc; border-radius:8px; overflow:hidden; }
+    .header { background:#073f31; padding:25px 20px; text-align:center; }
+    .brand { color:#e5d6a5; font-family:Georgia,serif; font-size:23px; letter-spacing:5px; margin:0; font-weight:normal; }
+    .subtitle { color:#fff; font-size:9px; letter-spacing:1.5px; margin-top:4px; text-transform:uppercase; }
+    .content { padding:30px 35px; }
+    .title { font-family:Georgia,serif; font-size:24px; line-height:1.25; color:#26362f; text-align:center; margin:0 0 20px; }
+    .para { font-size:13px; line-height:1.65; color:#50534e; margin:0 0 14px; }
+    .gold { color:#987d4e; font-weight:bold; }
+    .cta-wrap { text-align:center; margin:25px 0 20px; }
+    .cta { display:inline-block; background:#073f31; color:#fff !important; padding:13px 28px; border-radius:4px; font-size:12px; font-weight:bold; letter-spacing:0.4px; text-transform:uppercase; text-decoration:none; }
+    .link-fallback { font-size:11px; color:#777; word-break:break-all; text-align:center; margin-top:18px; }
+    .footer { text-align:center; padding:15px 25px 20px; font-size:10px; color:#999b94; }
+  </style>
+</head>
+<body>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td class="wrapper">
+        <table role="presentation" class="container" cellpadding="0" cellspacing="0" border="0" align="center">
+          <tr>
+            <td class="header">
+              <div class="brand">NATIVE91</div>
+              <div class="subtitle">RESERVED FOR THE REMARKABLE</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="content">
+              <h1 class="title">Partner With Native91</h1>
+              <p class="para">Hello,</p>
+              <p class="para">Thank you for your interest in becoming a <span class="gold">Native91 Brand Partner.</span></p>
+              <p class="para">Click the button below to start your brand application. It takes less than 3 minutes and is verified in two quick steps.</p>
+              <div class="cta-wrap">
+                <a href="${registerLink}" class="cta" target="_blank">Apply as a Brand →</a>
+              </div>
+              <p class="link-fallback">
+                Or copy this link into your browser:<br />
+                ${registerLink}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td class="footer">
+              <div style="margin-bottom:4px;">This is an automated email from Native91 Brands. Please do not reply to this message.</div>
+              © ${new Date().getFullYear()} Native91. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  // 🟢 MUST USE brandsTransporter HERE
+  return await brandsTransporter.sendMail(mailOptions);
+};
+
+
+// ============================================================
 // SEND ADMIN NOTIFICATION EMAIL
 // ============================================================
 const sendAdminNotificationEmail = async (sellerData) => {
@@ -535,6 +647,62 @@ const sendRejectionEmail = async (sellerData, reason) => {
 
   return await transporter.sendMail(mailOptions);
 };
+
+router.post("/send", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // If already a seller, don't resend an invite
+    const existingSeller = await Seller.findOne({ email: normalizedEmail });
+    if (existingSeller) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This email is already registered. Please check your application status or contact support.",
+      });
+    }
+
+    // Simple throttle: max 3 requests per email per 15 min
+    const throttleKey = `selllink:${normalizedEmail}`;
+    const now = Date.now();
+    const existing = tempStore.get(throttleKey);
+
+    if (existing && now - existing.createdAt < 15 * 60 * 1000) {
+      if (existing.count >= 3) {
+        return res.status(429).json({
+          success: false,
+          message: "Too many requests. Please try again later.",
+        });
+      }
+      existing.count += 1;
+    } else {
+      tempStore.set(throttleKey, { createdAt: now, count: 1 });
+    }
+
+    await sendSellInviteEmail(normalizedEmail);
+    console.log(`✅ Sell-with-us link sent to: ${normalizedEmail}`);
+
+    return res.json({
+      success: true,
+      message: "Seller registration link sent to your email!",
+    });
+  } catch (error) {
+    console.error("❌ Send seller link error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send email. Please try again.",
+    });
+  }
+});
 
 // ============================================================
 // STEP 1: SEND OTP (Temporary storage - NO SELLER CREATED YET)

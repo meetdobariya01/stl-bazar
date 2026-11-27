@@ -75,4 +75,3 @@ applicationSchema.index({ email: 1, applyingFor: 1 });
 applicationSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Application", applicationSchema);
-

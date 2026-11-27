@@ -41,100 +41,12 @@ const formatImagePath = (image) => {
   return `${VENDOR_BEND_URL}${imgPath}`;
 };
 
-// 🆕 Clean up sub-category strings that may contain stray backslashes,
-// brackets, quotes, JSON wrappers, or "/" delimiters from older data.
-const cleanSubCategoryLabel = (s) => {
-  if (!s) return "";
-  let cleaned = String(s).trim();
-  if (!cleaned) return "";
-
-  // Peel JSON-like wrappers: ["x"], "x"
-  let iter = 0;
-  while ((cleaned.startsWith("[") || cleaned.startsWith('"')) && iter < 5) {
-    try {
-      const parsed = JSON.parse(cleaned);
-      if (Array.isArray(parsed)) cleaned = String(parsed[0] || "").trim();
-      else if (typeof parsed === "string") cleaned = parsed.trim();
-      else break;
-    } catch {
-      break;
-    }
-    iter++;
-  }
-
-  // Strip any combination of backslashes / brackets / quotes from both ends
-  let prev = null;
-  let stripIter = 0;
-  while (cleaned !== prev && stripIter < 15) {
-    prev = cleaned;
-    cleaned = cleaned
-      .replace(/^[\s\\\[\]"'\/]+/, "")
-      .replace(/[\s\\\[\]"'\/]+$/, "")
-      .trim();
-    stripIter++;
-  }
-
-  // Remove remaining inner backslashes
-  cleaned = cleaned.replace(/\\+/g, "").trim();
-
-  // Re-strip once more in case escapes revealed new edges
-  cleaned = cleaned
-    .replace(/^[\s\\\[\]"'\/]+/, "")
-    .replace(/[\s\\\[\]"'\/]+$/, "")
+// ✅ Helper function to clean subcategory strings
+const cleanSubcategoryName = (name) => {
+  if (!name) return "";
+  return String(name)
+    .replace(/[\\[\]"']/g, "") // Remove backslashes, brackets, and quotes
     .trim();
-
-  // Keep first item if comma-separated list
-  if (cleaned.includes(",") && !cleaned.includes(" & ")) {
-    const parts = cleaned.split(",").map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 1) cleaned = parts[0];
-  }
-
-  // 🆕 Keep first item if "/" is used as a delimiter
-  //    "Freezedried/instantmoothies/so" → "Freezedried"
-  //    "travel-friendly/diet-friendly"  → "travel-friendly"
-  if (cleaned.includes("/") && !cleaned.startsWith("http")) {
-    const slashParts = cleaned.split("/").map((p) => p.trim()).filter(Boolean);
-    if (slashParts.length > 1) cleaned = slashParts[0];
-  }
-
-  // Final pass: strip stragglers including trailing dashes
-  cleaned = cleaned.replace(/\\+/g, "").trim();
-  cleaned = cleaned
-    .replace(/^[\s\[\]"'\/-]+/, "")
-    .replace(/[\s\[\]"'\/-]+$/, "")
-    .trim();
-
-  if (!cleaned || cleaned.length > 100) return "";
-  if (/^[\\\/\[\]"'\s]+$/.test(cleaned)) return "";
-
-  return cleaned;
-};
-
-// 🆕 Collect, clean and dedupe all sub-categories from a product object
-const collectCleanSubs = (p) => {
-  const allSubs = [];
-  if (p.subCategory) allSubs.push(p.subCategory);
-  if (p.subcategory) allSubs.push(p.subcategory);
-  if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
-  if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
-
-  if (p.categorySubcategoryMap && typeof p.categorySubcategoryMap === "object") {
-    Object.values(p.categorySubcategoryMap).forEach((arr) => {
-      if (Array.isArray(arr)) allSubs.push(...arr);
-    });
-  }
-
-  const seen = new Set();
-  const out = [];
-  allSubs.forEach((s) => {
-    const val = cleanSubCategoryLabel(s);
-    if (!val) return;
-    const key = val.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    out.push(val);
-  });
-  return out;
 };
 
 const CategoryProducts = () => {
@@ -163,7 +75,6 @@ const CategoryProducts = () => {
   const [isTogglingWishlist, setIsTogglingWishlist] = useState({});
   const [isAddingToCart, setIsAddingToCart] = useState({});
 
-  // 🆕 Quantity per product
   const [qtyMap, setQtyMap] = useState({});
 
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -174,7 +85,6 @@ const CategoryProducts = () => {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
 
-  // 🆕 Quantity helpers
   const getQty = (productId) => qtyMap[productId] || 1;
 
   const changeQty = (e, productId, delta, maxStock) => {
@@ -239,13 +149,13 @@ const CategoryProducts = () => {
 
           if (subCategorySlug && matchedCat.subcategories) {
             let matchedSub = matchedCat.subcategories.find(
-              (sc) => createSlug(sc.name) === subCategorySlug,
+              (sc) => createSlug(cleanSubcategoryName(sc.name)) === subCategorySlug,
             );
 
             if (!matchedSub) {
               const decodedSub = decodeURIComponent(subCategorySlug);
               matchedSub = matchedCat.subcategories.find(
-                (sc) => sc.name.toLowerCase() === decodedSub.toLowerCase(),
+                (sc) => cleanSubcategoryName(sc.name).toLowerCase() === decodedSub.toLowerCase(),
               );
             }
 
@@ -255,7 +165,7 @@ const CategoryProducts = () => {
                 .replace(/\b\w/g, (l) => l.toUpperCase());
               setDecodedSubCategory(rough);
             } else {
-              setDecodedSubCategory(matchedSub.name);
+              setDecodedSubCategory(cleanSubcategoryName(matchedSub.name));
             }
           }
         } else {
@@ -303,16 +213,33 @@ const CategoryProducts = () => {
         }
 
         if (decodedSubCategory) {
-          const targetSub = cleanSubCategoryLabel(decodedSubCategory).toLowerCase();
+          const targetSub = decodedSubCategory.toLowerCase().trim();
 
           allProducts = allProducts.filter((p) => {
-            const cleanSubs = collectCleanSubs(p).map((s) => s.toLowerCase());
+            const allSubs = [];
+            if (p.subCategory) allSubs.push(p.subCategory);
+            if (p.subcategory) allSubs.push(p.subcategory);
+            if (Array.isArray(p.subCategories))
+              allSubs.push(...p.subCategories);
+            if (Array.isArray(p.subcategories))
+              allSubs.push(...p.subcategories);
+
+            if (
+              p.categorySubcategoryMap &&
+              typeof p.categorySubcategoryMap === "object"
+            ) {
+              Object.values(p.categorySubcategoryMap).forEach((arr) => {
+                if (Array.isArray(arr)) allSubs.push(...arr);
+              });
+            }
+
+            const cleanSubs = allSubs
+              .filter(Boolean)
+              .map((s) => cleanSubcategoryName(s).toLowerCase())
+              .filter(Boolean);
+
             return cleanSubs.includes(targetSub);
           });
-
-          setSelectedSubCategories([decodedSubCategory]);
-        } else {
-          setSelectedSubCategories([]);
         }
 
         setProducts(allProducts);
@@ -347,19 +274,11 @@ const CategoryProducts = () => {
               )}/subcategories`
             );
             if (subRes.data && subRes.data.subCategories) {
-              // 🆕 Clean + dedupe sub-category labels
-              const rawList = subRes.data.subCategories;
-              const seen = new Set();
-              const cleanedList = [];
-              rawList.forEach((s) => {
-                const val = cleanSubCategoryLabel(s);
-                if (!val) return;
-                const key = val.toLowerCase();
-                if (seen.has(key)) return;
-                seen.add(key);
-                cleanedList.push(val);
-              });
-              subMap[cat.name] = cleanedList;
+              // ✅ Clean the subcategories immediately when fetching
+              const cleanedSubs = subRes.data.subCategories
+                .map(cleanSubcategoryName)
+                .filter(Boolean);
+              subMap[cat.name] = cleanedSubs;
             }
           } catch (err) {
             subMap[cat.name] = [];
@@ -387,13 +306,30 @@ const CategoryProducts = () => {
     }
 
     if (selectedSubCategories.length > 0) {
-      const targets = selectedSubCategories
-        .map((s) => cleanSubCategoryLabel(s).toLowerCase())
-        .filter(Boolean);
-
       filtered = filtered.filter((p) => {
-        const cleanSubs = collectCleanSubs(p).map((s) => s.toLowerCase());
-        return targets.some((t) => cleanSubs.includes(t));
+        const allSubs = [];
+        if (p.subCategory) allSubs.push(p.subCategory);
+        if (p.subcategory) allSubs.push(p.subcategory);
+        if (Array.isArray(p.subCategories)) allSubs.push(...p.subCategories);
+        if (Array.isArray(p.subcategories)) allSubs.push(...p.subcategories);
+
+        if (
+          p.categorySubcategoryMap &&
+          typeof p.categorySubcategoryMap === "object"
+        ) {
+          Object.values(p.categorySubcategoryMap).forEach((arr) => {
+            if (Array.isArray(arr)) allSubs.push(...arr);
+          });
+        }
+
+        const cleanSubs = allSubs
+          .filter(Boolean)
+          .map((s) => cleanSubcategoryName(s).toLowerCase())
+          .filter(Boolean);
+
+        return selectedSubCategories.some((selectedSub) =>
+          cleanSubs.includes(cleanSubcategoryName(selectedSub).toLowerCase()),
+        );
       });
     }
 
@@ -501,7 +437,6 @@ const CategoryProducts = () => {
     }
   };
 
-  // 🆕 ADD TO CART — with quantity + stock validation
   const handleAddToCart = async (e, item) => {
     e.stopPropagation();
 
@@ -540,15 +475,13 @@ const CategoryProducts = () => {
         price: parseFloat(item.price),
         originalPrice: parseFloat(item.price),
         image: primaryImage,
-        quantity: requestedQty, // 🆕 use selected qty
+        quantity: requestedQty,
         discountAmount: 0,
         couponCode: null,
         stock: item.stock,
       });
 
-      // Reset qty to 1 after adding
       setQtyMap((prev) => ({ ...prev, [item._id]: 1 }));
-
       setShowCart(true);
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
@@ -564,7 +497,7 @@ const CategoryProducts = () => {
 
   const handleCategorySelect = (category) => {
     if (category === "All") {
-      navigate("/category/All");
+      navigate("/product"); 
     } else {
       navigate(`/category/${createSlug(category)}`);
     }
@@ -572,17 +505,34 @@ const CategoryProducts = () => {
   };
 
   const handleSubCategoryToggle = (subCategory) => {
-    setSelectedSubCategories((prev) => {
-      if (prev.includes(subCategory)) {
-        return prev.filter((s) => s !== subCategory);
-      } else {
-        return [...prev, subCategory];
-      }
-    });
+    // ✅ Clean the subcategory name before checking state
+    const cleanSub = cleanSubcategoryName(subCategory);
+    
+    let newSubs;
+    if (selectedSubCategories.includes(cleanSub)) {
+      newSubs = selectedSubCategories.filter((s) => s !== cleanSub);
+    } else {
+      newSubs = [...selectedSubCategories, cleanSub];
+    }
+    setSelectedSubCategories(newSubs);
+
+    if (newSubs.length === 1) {
+      navigate(`/category/${createSlug(decodedCategory)}/${createSlug(cleanSub)}`);
+      setShowMobileFilters(false);
+    } else if (newSubs.length > 1) {
+      navigate(`/category/${createSlug(decodedCategory)}`);
+    } else {
+      navigate(`/category/${createSlug(decodedCategory)}`);
+    }
   };
 
   const handleAllSubCategoriesToggle = () => {
     setSelectedSubCategories([]);
+    if (decodedCategory && decodedCategory !== "All") {
+      navigate(`/category/${createSlug(decodedCategory)}`);
+    } else {
+      navigate("/product");
+    }
   };
 
   const clearFilters = () => {
@@ -592,30 +542,35 @@ const CategoryProducts = () => {
     setPriceMin("");
     setPriceMax("");
     setSelectedRating(0);
+
+    if (decodedCategory && decodedCategory !== "All") {
+      navigate(`/category/${createSlug(decodedCategory)}`);
+    } else {
+      navigate(`/product`);
+    }
+    setShowMobileFilters(false);
   };
 
   const sortedProducts = getSortedProducts();
-
   const checkIsInWishlist = (productId) => isInWishlist(productId);
 
+  // ✅ Updated to remove duplicates using Set()
   const getCategorySubCategories = () => {
+    let rawSubs = [];
+    
     if (decodedCategory === "All") {
-      // 🆕 Deduplicate case-insensitively after cleanup
-      const seen = new Set();
-      const out = [];
+      const allSubs = new Set();
       Object.values(allSubCategories).forEach((subs) => {
-        subs.forEach((s) => {
-          const val = cleanSubCategoryLabel(s);
-          if (!val) return;
-          const key = val.toLowerCase();
-          if (seen.has(key)) return;
-          seen.add(key);
-          out.push(val);
-        });
+        subs.forEach((s) => allSubs.add(cleanSubcategoryName(s)));
       });
-      return out.sort((a, b) => a.localeCompare(b));
+      rawSubs = Array.from(allSubs);
+    } else {
+      rawSubs = allSubCategories[decodedCategory] || [];
     }
-    return allSubCategories[decodedCategory] || [];
+
+    // Clean and deduplicate
+    const uniqueCleanedSubs = [...new Set(rawSubs.map(cleanSubcategoryName).filter(Boolean))];
+    return uniqueCleanedSubs;
   };
 
   const categorySubCategories = getCategorySubCategories();
@@ -640,7 +595,6 @@ const CategoryProducts = () => {
   return (
     <>
       <Header />
-
       <Breadcrumb />
       <div className="category-background lexend px-2">
         <Container className="category-page">
@@ -762,7 +716,7 @@ const CategoryProducts = () => {
                           <Form.Check
                             type="checkbox"
                             label="All Sub-Categories"
-                            checked={selectedSubCategories.length === 0}
+                            checked={selectedSubCategories.length === 0 && !decodedSubCategory}
                             onChange={handleAllSubCategoriesToggle}
                           />
                           {categorySubCategories.map((sub, index) => (
@@ -770,7 +724,10 @@ const CategoryProducts = () => {
                               key={index}
                               type="checkbox"
                               label={sub}
-                              checked={selectedSubCategories.includes(sub)}
+                              checked={
+                                selectedSubCategories.includes(sub) || 
+                                (decodedSubCategory && decodedSubCategory.toLowerCase() === sub.toLowerCase())
+                              }
                               onChange={() => handleSubCategoryToggle(sub)}
                             />
                           ))}
@@ -843,9 +800,18 @@ const CategoryProducts = () => {
                       ? `No products found in "${decodedSubCategory}" under "${decodedCategory}"`
                       : `No products found in "${decodedCategory}"`}
                   </p>
+
                   <Button
                     variant="outline-dark"
-                    onClick={() => navigate("/category/All")}
+                    onClick={() => {
+                      if (decodedSubCategory) {
+                        navigate(
+                          `/category/${createSlug(decodedCategory)}?subcategory=${encodeURIComponent(decodedSubCategory)}`
+                        );
+                      } else {
+                        navigate(`/category/${createSlug(decodedCategory)}`);
+                      }
+                    }}
                   >
                     View All Products
                   </Button>
@@ -931,19 +897,6 @@ const CategoryProducts = () => {
                                   <FaRegHeart />
                                 )}
                               </div>
-
-                              {/* 🆕 Cleaned sub-category badge */}
-                              {(() => {
-                                const uniqueSubs = collectCleanSubs(item);
-                                if (uniqueSubs.length === 0) return null;
-                                return (
-                                  <div className="sub-category-badge">
-                                    {uniqueSubs[0]}
-                                    {uniqueSubs.length > 1 &&
-                                      ` +${uniqueSubs.length - 1}`}
-                                  </div>
-                                );
-                              })()}
                             </div>
                             <Card.Body>
                               <div className="product-brand">
@@ -971,7 +924,6 @@ const CategoryProducts = () => {
                                 ₹{item.price?.toLocaleString() || item.price}
                               </div>
 
-                              {/* 🆕 QUANTITY SELECTOR */}
                               {!outOfStock && (
                                 <div
                                   className="qty-box-category"
@@ -1005,7 +957,6 @@ const CategoryProducts = () => {
                                   </button>
                                 </div>
                               )}
-
                               <Button
                                 className="add-to-cart-btn-category"
                                 onClick={(e) => handleAddToCart(e, item)}

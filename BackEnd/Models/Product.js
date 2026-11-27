@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const variantSchema = new mongoose.Schema({
   color: { type: String, default: "" },
   size: { type: String, default: "" },
+images: { type: [String], default: [] }, 
   image: { type: String, default: "" },
   stock: { type: Number, default: 0, min: 0 },
   isAvailable: { type: Boolean, default: true },

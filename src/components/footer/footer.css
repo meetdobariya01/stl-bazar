@@ -277,10 +277,24 @@
   text-decoration: none;
   color: #000;
   transition: all 0.3s ease;
-  font-weight: 500;
+ /*  font-weight: 500; */
 }
 
 .footer-links a:hover {
   color: #c8a96b;
   padding-left: 6px;
+}
+.footer-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+
+.footer-link-btn:hover {
+  text-decoration: underline;
 }

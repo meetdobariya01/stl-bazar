@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
@@ -105,7 +104,7 @@ const formatProduct = (p) => {
 
   const reserved = productObj.reservedStock || 0;
 
-  // 🆕 Full absolute URLs
+  // 🆕 Full absolute URLs for main product images
   let imageArray = [];
   if (Array.isArray(productObj.image) && productObj.image.length > 0) {
     imageArray = productObj.image.filter(Boolean).map(getFullImageUrl);
@@ -117,12 +116,20 @@ const formatProduct = (p) => {
     const vStock = Math.max(0, (v.stock || 0) - (v.reservedStock || 0));
     const variantId = v._id ? v._id.toString() : `${productObj._id}-v${idx}`;
 
-    // 🆕 Full absolute URL
+    // 🆕 Handle the single image
     let vImageSrc = "";
     if (v.image && typeof v.image === "object" && v.image.src) {
       vImageSrc = getFullImageUrl(v.image.src);
     } else if (typeof v.image === "string") {
       vImageSrc = getFullImageUrl(v.image);
+    }
+
+    // ✅ FIXED: Handle the multiple images array
+    let vImagesArr = [];
+    if (Array.isArray(v.images) && v.images.length > 0) {
+      vImagesArr = v.images.filter(Boolean).map(getFullImageUrl);
+    } else if (vImageSrc) {
+      vImagesArr = [vImageSrc]; // Fallback to single image if no array
     }
 
     return {
@@ -136,7 +143,7 @@ const formatProduct = (p) => {
       quantity: vStock,
       sku: v.sku || productObj.sku || "",
       image: vImageSrc,
-      images: vImageSrc ? [vImageSrc] : [],
+      images: vImagesArr, // ✅ Sends the whole array now
       isAvailable: vStock > 0,
       option_values: { Color: v.color || "", Size: v.size || "" }
     };
@@ -381,16 +388,10 @@ router.get("/search-suggestions", async (req, res) => {
 // ============================================================
 // GET COMPANIES
 // ============================================================
-
-// ============================================================
-// GET COMPANIES  (public — no sensitive fields)
-// ============================================================
 router.get("/companies", async (req, res) => {
   try {
-    // Keep `email` here ONLY for internal SellerDocument lookup.
-    // It is NOT returned to the client.
     const activeVendors = await Vendor.find({ status: 'active', role: 'vendor' })
-      .select('_id company name email categories category logo description');
+      .select('_id company name email createdAt updatedAt plan categories category logo description');
 
     const companies = [];
     const categoryMap = {};
@@ -401,28 +402,21 @@ router.get("/companies", async (req, res) => {
       let logo = vendor.logo || null;
       if (vendor.description) description = vendor.description;
       if (vendor.categories && vendor.categories.length > 0) categories = vendor.categories;
-      else if (vendor.category && typeof vendor.category === 'string')
-        categories = vendor.category.split(",").map(c => c.trim()).filter(Boolean);
+      else if (vendor.category && typeof vendor.category === 'string') categories = vendor.category.split(",").map(c => c.trim()).filter(Boolean);
 
       if (categories.length === 0 || !logo) {
         const sellerDoc = await SellerDocument.findOne({ email: vendor.email });
         if (sellerDoc) {
-          if (sellerDoc.categories && Array.isArray(sellerDoc.categories) && sellerDoc.categories.length > 0)
-            categories = sellerDoc.categories;
-          else if (sellerDoc.category && typeof sellerDoc.category === 'string')
-            categories = sellerDoc.category.split(",").map(c => c.trim()).filter(Boolean);
-          else if (sellerDoc.brand && Array.isArray(sellerDoc.brand.categories) && sellerDoc.brand.categories.length > 0)
-            categories = sellerDoc.brand.categories;
-          else if (sellerDoc.brand && sellerDoc.brand.category && typeof sellerDoc.brand.category === 'string')
-            categories = sellerDoc.brand.category.split(",").map(c => c.trim()).filter(Boolean);
+          if (sellerDoc.categories && Array.isArray(sellerDoc.categories) && sellerDoc.categories.length > 0) categories = sellerDoc.categories;
+          else if (sellerDoc.category && typeof sellerDoc.category === 'string') categories = sellerDoc.category.split(",").map(c => c.trim()).filter(Boolean);
+          else if (sellerDoc.brand && Array.isArray(sellerDoc.brand.categories) && sellerDoc.brand.categories.length > 0) categories = sellerDoc.brand.categories;
+          else if (sellerDoc.brand && sellerDoc.brand.category && typeof sellerDoc.brand.category === 'string') categories = sellerDoc.brand.category.split(",").map(c => c.trim()).filter(Boolean);
 
           if (!logo) {
-            if (sellerDoc.logo && typeof sellerDoc.logo === 'object')
-              logo = sellerDoc.logo.image || sellerDoc.logo.url || null;
+            if (sellerDoc.logo && typeof sellerDoc.logo === 'object') logo = sellerDoc.logo.image || sellerDoc.logo.url || null;
             else if (typeof sellerDoc.logo === 'string') logo = sellerDoc.logo;
           }
-          if (!description && sellerDoc.brand && sellerDoc.brand.description)
-            description = sellerDoc.brand.description;
+          if (!description && sellerDoc.brand && sellerDoc.brand.description) description = sellerDoc.brand.description;
           if (sellerDoc.businessName) vendor.company = sellerDoc.businessName;
         }
       }
@@ -430,27 +424,20 @@ router.get("/companies", async (req, res) => {
       if (categories.length === 0 || !logo) {
         const companyData = await Company.findOne({ name: vendor.company || vendor.name });
         if (companyData) {
-          if (companyData.categories && companyData.categories.length > 0)
-            categories = companyData.categories;
-          else if (companyData.category && typeof companyData.category === 'string')
-            categories = companyData.category.split(",").map(c => c.trim()).filter(Boolean);
+          if (companyData.categories && companyData.categories.length > 0) categories = companyData.categories;
+          else if (companyData.category && typeof companyData.category === 'string') categories = companyData.category.split(",").map(c => c.trim()).filter(Boolean);
           if (!description && companyData.description) description = companyData.description;
           if (!logo && companyData.logo) logo = companyData.logo;
         }
       }
 
       if (categories.length === 0) {
-        const products = await Product.find({
-          company: vendor.company,
-          stockQuantity: { $gt: 0 }
-        }).select('category').limit(10);
+        const products = await Product.find({ company: vendor.company, stockQuantity: { $gt: 0 } }).select('category').limit(10);
         const productCategories = new Set();
         products.forEach(p => {
           if (p.category) {
-            if (Array.isArray(p.category))
-              p.category.forEach(c => { if (c && c.trim()) productCategories.add(c.trim()); });
-            else if (typeof p.category === 'string')
-              p.category.split(',').forEach(c => { if (c && c.trim()) productCategories.add(c.trim()); });
+            if (Array.isArray(p.category)) p.category.forEach(c => { if (c && c.trim()) productCategories.add(c.trim()); });
+            else if (typeof p.category === 'string') p.category.split(',').forEach(c => { if (c && c.trim()) productCategories.add(c.trim()); });
           }
         });
         categories = Array.from(productCategories);
@@ -458,18 +445,25 @@ router.get("/companies", async (req, res) => {
 
       if (categories.length === 0) categories = ['Uncategorized'];
 
+      const productCount = await Product.countDocuments({ company: vendor.company, stockQuantity: { $gt: 0 } });
+
+      // 🆕 Full URL for logo
       const fullLogo = logo ? getFullImageUrl(logo) : null;
 
-      // 🚫 Sensitive fields intentionally REMOVED:
-      //    email, plan, status, productCount, createdAt, registeredAt
       companies.push({
         _id: vendor._id,
         name: vendor.company || vendor.name,
         description: description || `${vendor.company || vendor.name} - Premium brand on Native91`,
         logo: fullLogo,
+        email: vendor.email,
         hasLogo: !!fullLogo,
         categories: categories,
-        category: categories.length > 0 ? categories[0] : 'Uncategorized'
+        category: categories.length > 0 ? categories[0] : 'Uncategorized',
+        plan: vendor.plan || 'STARTER',
+        status: vendor.status || 'active',
+        productCount: productCount,
+        createdAt: vendor.createdAt,
+        registeredAt: vendor.createdAt
       });
 
       categories.forEach(cat => {
@@ -494,7 +488,6 @@ router.get("/companies", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch companies", error: err.message });
   }
 });
-
 
 // ============================================================
 // GET SUB-CATEGORIES
@@ -656,25 +649,64 @@ router.get("/product/:id", async (req, res) => {
 // ============================================================
 // BEST SELLERS
 // ============================================================
+//router.get("/best-sellers", async (req, res) => {
+  //try {
+    //const activeVendors = await Vendor.find({ status: 'active', role: 'vendor' }).select('company');
+    //const activeCompanyNames = activeVendors.map(v => v.company);
+    //const companies = await Company.find({ name: { $in: activeCompanyNames } }).sort({ createdAt: 1 }).limit(6);
+
+    //const result = [];
+    ///for (const company of companies) {
+      //const product = await Product.findOne({
+        //company: company.name, vendorId: { $ne: null }, stockQuantity: { $gt: 0 }
+      //}).sort({ createdAt: 1 });
+      //if (product) {
+        ///const vendor = await Vendor.findById(product.vendorId);
+        //if (vendor && vendor.status === 'active') result.push(formatProduct(product));
+      //}
+   // }
+    //res.json(result);
+  //} catch (err) {
+    //console.error(err);
+   // res.status(500).json({ message: "Failed to fetch best sellers" });
+  //}
+//});
+// ============================================================
+// BEST SELLERS — Reverted to original (No review requirement)
+// ============================================================
+
+// ============================================================
+// BEST SELLERS — Sorted by Rating (Only shows rated products)
+// ============================================================
 router.get("/best-sellers", async (req, res) => {
   try {
-    const activeVendors = await Vendor.find({ status: 'active', role: 'vendor' }).select('company');
-    const activeCompanyNames = activeVendors.map(v => v.company);
-    const companies = await Company.find({ name: { $in: activeCompanyNames } }).sort({ createdAt: 1 }).limit(6);
+    // 1. Find active vendors
+    const activeVendors = await Vendor.find({ status: "active", role: "vendor" }).select("_id");
+    const activeVendorIds = activeVendors.map((v) => v._id);
 
-    const result = [];
-    for (const company of companies) {
-      const product = await Product.findOne({
-        company: company.name, vendorId: { $ne: null }, stockQuantity: { $gt: 0 }
-      }).sort({ createdAt: 1 });
-      if (product) {
-        const vendor = await Vendor.findById(product.vendorId);
-        if (vendor && vendor.status === 'active') result.push(formatProduct(product));
-      }
-    }
+    // 2. Fetch products:
+    // - Belonging to active vendors
+    // - With stock > 0 (using 'stock' field, not 'stockQuantity')
+    // - With a rating greater than 0
+    // - Sorted by highest rating first
+    const products = await Product.find({
+      vendorId: { $in: activeVendorIds },
+      isActive: true,
+      $or: [
+        { stock: { $gt: 0 } },          // Based on your JSON
+        { stockQuantity: { $gt: 0 } }   // Fallback just in case
+      ],
+      averageRating: { $gt: 0 }         // MUST have a rating
+    })
+      .sort({ averageRating: -1, createdAt: -1 }) // Sort by highest rating
+      .limit(6);
+
+    // 3. Format them for the frontend
+    const result = products.map((product) => formatProduct(product));
+
     res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error("Best sellers error:", err);
     res.status(500).json({ message: "Failed to fetch best sellers" });
   }
 });

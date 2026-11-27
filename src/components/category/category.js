@@ -1,166 +1,293 @@
-// CategoriesSection.js - Updated version
-import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Spinner } from "react-bootstrap";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { Container } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
 import axios from "axios";
+import { createSlug } from "../../utils/slugUtils";
 import "./category.css";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || "https://api.native91.com/api";
+
 const ADMIN_BACKEND_URL = "https://api-admin.native91.com";
+
+// ======================================================
+// CANONICAL CATEGORY ORDER — must match Header.jsx
+// ======================================================
+
+const CATEGORY_ORDER = [
+  "Beauty & Personal Care",
+  "Organic Food & Healthy Snacks",
+  "Jewellery & Accessories",
+  "Gifts & Hampers",
+  "Home Decor & Handmade Living",
+  "Ethnic Wear & Fashion",
+  "Sustainable Living",
+  "Kids Fashion & Toys",
+  "Pet Care & Accessories",
+  "Stationery & Desk Essentials",
+];
+
+// Fast lookup: slug -> index in canonical order
+const ORDER_INDEX = CATEGORY_ORDER.reduce((acc, title, idx) => {
+  acc[createSlug(title)] = idx;
+  return acc;
+}, {});
+
+const getImageUrl = (imagePath) => {
+  if (!imagePath || typeof imagePath !== "string") {
+    return null;
+  }
+
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith("/images/categories/")) {
+    return `${ADMIN_BACKEND_URL}${imagePath}`;
+  }
+
+  if (imagePath.startsWith("/images/")) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith("/")) {
+    return `${ADMIN_BACKEND_URL}${imagePath}`;
+  }
+
+  return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
+};
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); 
-  const navigate = useNavigate();
+  const [error, setError] = useState(false);
 
+  const archTrackRef = useRef(null);
+
+  const archDragState = useRef({
+    isDown: false,
+    startX: 0,
+    scrollLeft: 0,
+    hasMoved: false,
+  });
+
+  // Fetch categories from existing backend
   useEffect(() => {
+    let mounted = true;
+
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const response = await axios.get(`${API_URL}/categories`, {
+          params: { _t: Date.now() },
+          timeout: 10000,
+        });
+
+        let categoriesData = [];
+
+        if (response.data?.success && Array.isArray(response.data.categories)) {
+          categoriesData = response.data.categories;
+        } else if (Array.isArray(response.data)) {
+          categoriesData = response.data;
+        } else if (Array.isArray(response.data?.categories)) {
+          categoriesData = response.data.categories;
+        }
+
+        const activeCategories = categoriesData.filter((cat) => {
+          const name = String(cat.name || cat.title || "")
+            .trim()
+            .toLowerCase();
+
+          return (
+            (!cat.status || cat.status === "active") && name && name !== "all"
+          );
+        });
+
+        // ✅ Enforce canonical order — only keep the 10 known categories,
+        //    sorted to match the header.
+        const ordered = activeCategories
+          .map((cat) => {
+            const title = cat.name || cat.title;
+            const slug = cat.slug || createSlug(title);
+            return { ...cat, _resolvedSlug: slug, _resolvedTitle: title };
+          })
+          .filter((cat) => ORDER_INDEX[cat._resolvedSlug] !== undefined)
+          .sort(
+            (a, b) =>
+              ORDER_INDEX[a._resolvedSlug] - ORDER_INDEX[b._resolvedSlug],
+          );
+
+        // ✅ If the API doesn't contain every category, fill in the missing
+        //    ones as placeholders (no image) so the order is always the same.
+        const existingSlugs = new Set(ordered.map((c) => c._resolvedSlug));
+
+        const placeholders = CATEGORY_ORDER.map((title, idx) => {
+          const slug = createSlug(title);
+          if (existingSlugs.has(slug)) return null;
+          return {
+            _id: `placeholder-${idx}`,
+            name: title,
+            title,
+            _resolvedSlug: slug,
+            _resolvedTitle: title,
+            image: null,
+            __placeholder: true,
+          };
+        }).filter(Boolean);
+
+        const finalList = [...ordered, ...placeholders].sort(
+          (a, b) =>
+            ORDER_INDEX[a._resolvedSlug] - ORDER_INDEX[b._resolvedSlug],
+        );
+
+        if (mounted) {
+          setCategories(finalList);
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+
+        if (mounted) {
+          // ✅ On error, still show the 10 canonical categories as placeholders
+          const fallback = CATEGORY_ORDER.map((title, idx) => ({
+            _id: `fallback-${idx}`,
+            name: title,
+            title,
+            _resolvedSlug: createSlug(title),
+            _resolvedTitle: title,
+            image: null,
+            __placeholder: true,
+          }));
+
+          setError(true);
+          setCategories(fallback);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchCategories();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_URL}/categories`, {
-        params: {
-          _t: Date.now(), // This ensures fresh data every time
-        },
-      });
-      console.log("Categories from API:", response.data);
+  // Mouse drag scrolling
+  const handleArchMouseDown = (e) => {
+    if (e.button !== 0) return;
 
-      // Handle both response formats
-      let categoriesData = [];
-      if (response.data.success && Array.isArray(response.data.categories)) {
-        categoriesData = response.data.categories;
-      } else if (Array.isArray(response.data)) {
-        categoriesData = response.data;
-      } else if (
-        response.data.categories &&
-        Array.isArray(response.data.categories)
-      ) {
-        categoriesData = response.data.categories;
-      } else {
-        categoriesData = response.data || [];
-      }
+    const track = archTrackRef.current;
+    if (!track) return;
 
-      setCategories(categoriesData);
-      setError(null);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      setError("Failed to load categories");
-      setCategories([]);
-    } finally {
-      setLoading(false);
+    archDragState.current = {
+      isDown: true,
+      startX: e.pageX - track.getBoundingClientRect().left,
+      scrollLeft: track.scrollLeft,
+      hasMoved: false,
+    };
+  };
+
+  const handleArchMouseMove = (e) => {
+    const track = archTrackRef.current;
+
+    if (!archDragState.current.isDown || !track) return;
+
+    const x = e.pageX - track.getBoundingClientRect().left;
+    const walk = x - archDragState.current.startX;
+
+    if (Math.abs(walk) > 6) {
+      archDragState.current.hasMoved = true;
+    }
+
+    if (archDragState.current.hasMoved) {
+      e.preventDefault();
+      track.scrollLeft = archDragState.current.scrollLeft - walk * 1.3;
     }
   };
 
-  const handleCategoryClick = (categoryName) => {
-    navigate(`/category/${encodeURIComponent(categoryName)}`);
+  const handleArchMouseEnd = () => {
+    if (!archDragState.current.isDown) return;
+
+    archDragState.current.isDown = false;
+
+    setTimeout(() => {
+      archDragState.current.hasMoved = false;
+    }, 0);
   };
-
-  // ✅ FIXED: Get correct image URL from admin backend
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-
-    // If it's already a full URL
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
-
-    // If it starts with /images/categories/ (stored by admin)
-    if (imagePath.startsWith("/images/categories/")) {
-      // return `${ADMIN_BACKEND_URL}${imagePath}`;
-      return `${ADMIN_BACKEND_URL}${imagePath}`;
-    }
-
-    // If it's just a filename
-    if (!imagePath.startsWith("/")) {
-      return `${ADMIN_BACKEND_URL}/images/categories/${imagePath}`;
-    }
-
-    // Default fallback
-    return `${imagePath}`;
-  };
-
-  if (loading) {
-    return (
-      <section className="category-section">
-        <Container>
-          <div className="category-heading text-start mb-5">
-            <span>POPULAR CATEGORIES</span>
-            <h2>Shop By Category</h2>
-            <p>Explore premium collections for your modern lifestyle.</p>
-          </div>
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-3">Loading categories...</p>
-          </div>
-        </Container>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className="category-section">
-        <Container>
-          <div className="category-heading text-start mb-5">
-            <span>POPULAR CATEGORIES</span>
-            <h2>Shop By Category</h2>
-            <p>Explore premium collections for your modern lifestyle.</p>
-          </div>
-          <div className="text-center py-5 text-danger">
-            <p>{error}</p>
-            <button className="btn btn-primary" onClick={fetchCategories}>
-              Try Again
-            </button>
-          </div>
-        </Container>
-      </section>
-    );
-  }
 
   return (
-    <Row className="g-4 justify-content-center container mx-auto lexend mt-2">
-      <div className="category-heading text-start mt-5">
-        <span>POPULAR CATEGORIES</span>
-        <h2 className="funnel-sans category-title">Explore Our World</h2>
-        {/* <p>Explore premium collections for your modern lifestyle.</p> */}
-      </div>
-      {categories.map((category, index) => {
-        const imageUrl = getImageUrl(category.image);
+    <section className="home-arch-categories">
+      <Container fluid className="arch-section-container">
+        <div className="arch-categories-wrapper">
+          {loading ? (
+            <div className="arch-categories-message">Loading categories...</div>
+          ) : categories.length === 0 ? (
+            <div className="arch-categories-message">
+              No categories available.
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="arch-categories-message">
+                  Unable to load categories. Showing default list.
+                </div>
+              )}
 
-        return (
-          <Col lg={2} md={3} sm={3} xs={3} key={category._id || index} className="p-1">
-            <motion.div
-              className="premium-category-card"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.08 }}
-              whileHover={{
-                y: -10,
-                scale: 1.03,
-              }}
-              onClick={() => handleCategoryClick(category.name)}
-            >
-              <div className="premium-category-image">  
-                <img
-                  src={imageUrl}
-                  alt={category.name}
-                  className="category-image"
-                />
-              </div>
+              <div
+                ref={archTrackRef}
+                className="arch-categories-grid"
+                onMouseDown={handleArchMouseDown}
+                onMouseMove={handleArchMouseMove}
+                onMouseUp={handleArchMouseEnd}
+                onMouseLeave={handleArchMouseEnd}
+              >
+                {categories.map((cat) => {
+                  const title = cat._resolvedTitle || cat.name || cat.title;
+                  const slug =
+                    cat._resolvedSlug || cat.slug || createSlug(title);
+                  const imgUrl = getImageUrl(cat.image);
 
-              <div className="premium-category-content">
-                <h5>{category.name}</h5>
-                {/* <span>Explore Collection</span> */}
+                  return (
+                    <NavLink
+                      key={cat._id || slug}
+                      to={`/category/${slug}`}
+                      className="arch-category-card"
+                      draggable={false}
+                      onClick={(e) => {
+                        if (archDragState.current.hasMoved) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      <div className="arch-image-frame">
+                        {imgUrl ? (
+                          <img
+                            src={imgUrl}
+                            alt={title}
+                            loading="lazy"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className="arch-image-placeholder">
+                            {title.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+
+                      <span className="arch-category-label">{title}</span>
+                    </NavLink>
+                  );
+                })}
               </div>
-            </motion.div>
-          </Col>
-        );
-      })}
-    </Row>
+            </>
+          )}
+        </div>
+      </Container>
+    </section>
   );
 };
 
